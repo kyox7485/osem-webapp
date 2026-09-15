@@ -3,6 +3,16 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffRoster } from "@/lib/lookups";
 import { NewNoteForm } from "./new-note-form";
+import { ResidentDashboard } from "./resident-dashboard";
+
+const PLAN_FIELDS = [
+  ["medical", "medical_plan"],
+  ["nursing", "nursing_plan"],
+  ["diet", "feeding_plan"],
+  ["dressing", "dressing_plan"],
+  ["monitoring", "monitoring_plan"],
+  ["physio", "physio_plan"],
+] as const;
 
 export default async function ProgressNotesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,13 +20,13 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
 
   const { data: resident } = await supabase
     .from("tbl_residents")
-    .select("id, resident_name, branch_id")
+    .select("id, resident_name, branch_id, allergy, past_medical_condition, current_medication_list")
     .eq("id", id)
     .single();
 
   if (!resident) notFound();
 
-  const [{ data: notes, error: notesError }, staffOptions] = await Promise.all([
+  const [{ data: notes, error: notesError }, staffOptions, { data: vitals }] = await Promise.all([
     supabase
       .from("tbl_progress_notes")
       // tbl_progress_notes has two FK paths to tbl_staff (reviewed_by,
@@ -25,7 +35,24 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       .eq("resident_id", id)
       .order("entry_timestamp", { ascending: false }),
     getStaffRoster(resident.branch_id),
+    supabase
+      .from("tbl_nursing_chart_entries")
+      .select("entry_timestamp, systolic_bp, diastolic_bp, heart_rate, temperature, spo2, spo2_condition")
+      .eq("resident_id", id)
+      .order("entry_timestamp", { ascending: false })
+      .limit(10),
   ]);
+
+  // Plan fields on a progress note are optional -- a doctor fills in only
+  // what's relevant on a given visit -- so "last ordered X plan" means the
+  // most recent note where that specific field was set, not the most
+  // recent note overall.
+  const plans = Object.fromEntries(
+    PLAN_FIELDS.map(([key, column]) => {
+      const match = notes?.find((n) => n[column]);
+      return [key, match ? { entry_timestamp: match.entry_timestamp, value: match[column] as string } : null];
+    })
+  ) as Record<(typeof PLAN_FIELDS)[number][0], { entry_timestamp: string; value: string } | null>;
 
   return (
     <div>
@@ -35,6 +62,14 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
         </Link>
         <h1 className="text-lg font-semibold text-gray-900">Progress notes</h1>
       </div>
+
+      <ResidentDashboard
+        allergy={resident.allergy}
+        pastMedicalCondition={resident.past_medical_condition}
+        currentMedicationList={resident.current_medication_list}
+        vitals={vitals ?? []}
+        plans={plans}
+      />
 
       <div className="mb-4">
         <NewNoteForm residentId={resident.id} staffOptions={staffOptions} />
