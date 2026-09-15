@@ -25,12 +25,23 @@ export async function getPositions(): Promise<LookupOption[]> {
   return (data ?? []).map((r) => ({ id: r.id, label: r.name }));
 }
 
+// Branches are displayed everywhere as "<BranchLocale> <BranchCode>"
+// (e.g. "ALMA AMN") rather than the full BranchName -- shorter and matches
+// how staff refer to branches day to day.
+export function formatBranch(branch: { locale: string | null; code: string } | null | undefined): string {
+  if (!branch) return "--";
+  return branch.locale ? `${branch.locale} ${branch.code}` : branch.code;
+}
+
 export async function getBranches(): Promise<LookupOption[]> {
   const supabase = await createClient();
-  // tbl_branches' columns are PascalCase (BranchID/BranchName) -- aliased
-  // back to id/name here so nothing downstream has to know that.
-  const { data } = await supabase.from("tbl_branches").select("id:BranchID, name:BranchName").order("BranchName");
-  return (data ?? []).map((r) => ({ id: r.id, label: r.name }));
+  // tbl_branches' columns are PascalCase (BranchID/BranchLocale/BranchCode)
+  // -- aliased back to lowercase here so nothing downstream has to know that.
+  const { data } = await supabase
+    .from("tbl_branches")
+    .select("id:BranchID, locale:BranchLocale, code:BranchCode")
+    .order("BranchCode");
+  return (data ?? []).map((r) => ({ id: r.id, label: formatBranch(r) }));
 }
 
 // Used for "who actually did this" pickers on entry forms (progress notes,

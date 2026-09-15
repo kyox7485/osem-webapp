@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
-import { getBranches } from "@/lib/lookups";
+import { getBranches, formatBranch } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
+import { ClickableRow } from "@/components/clickable-row";
+import { FilterPendingProvider } from "@/components/filter-pending";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -27,7 +29,7 @@ export default async function ResidentsPage({
     resident_name: string;
     ic_number: string | null;
     status: string;
-    tbl_branches: { name: string } | { name: string }[] | null;
+    tbl_branches: { locale: string | null; code: string } | { locale: string | null; code: string }[] | null;
   }[] = [];
   let error: { message: string } | null = null;
 
@@ -35,7 +37,7 @@ export default async function ResidentsPage({
     const supabase = await createClient();
     let query = supabase
       .from("tbl_residents")
-      .select("id, resident_name, ic_number, status, tbl_branches(name:BranchName)")
+      .select("id, resident_name, ic_number, status, tbl_branches(locale:BranchLocale, code:BranchCode)")
       .order("resident_name")
       .in("status", selectedStatuses);
 
@@ -69,66 +71,64 @@ export default async function ResidentsPage({
 
       {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
 
-      <div className="overflow-x-auto rounded-md border border-gray-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-            <tr>
-              <th className="px-4 py-2">
-                <ColumnFilter type="text" label="Name" paramName="q" placeholder="Search by name..." />
-              </th>
-              <th className="px-4 py-2">
-                <ColumnFilter type="text" label="IC" paramName="ic" placeholder="Search by IC..." />
-              </th>
-              {admin && (
+      <FilterPendingProvider>
+        <div className="overflow-x-auto rounded-md border border-gray-200 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+              <tr>
+                <th className="px-4 py-2">
+                  <ColumnFilter type="text" label="Name" paramName="q" placeholder="Search by name..." />
+                </th>
+                <th className="px-4 py-2">
+                  <ColumnFilter type="text" label="IC" paramName="ic" placeholder="Search by IC..." />
+                </th>
+                {admin && (
+                  <th className="px-4 py-2">
+                    <ColumnFilter
+                      type="select"
+                      label="Branch"
+                      paramName="branch_id"
+                      options={branches.map((b) => ({ value: String(b.id), label: b.label }))}
+                      defaultValues={branches.map((b) => String(b.id))}
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-2">
                   <ColumnFilter
                     type="select"
-                    label="Branch"
-                    paramName="branch_id"
-                    options={branches.map((b) => ({ value: String(b.id), label: b.label }))}
-                    defaultValues={branches.map((b) => String(b.id))}
+                    label="Status"
+                    paramName="status"
+                    options={RESIDENT_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                    defaultValues={DEFAULT_STATUSES}
                   />
                 </th>
-              )}
-              <th className="px-4 py-2">
-                <ColumnFilter
-                  type="select"
-                  label="Status"
-                  paramName="status"
-                  options={RESIDENT_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
-                  defaultValues={DEFAULT_STATUSES}
-                />
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {residents.map((r) => {
-              const branch = Array.isArray(r.tbl_branches) ? r.tbl_branches[0] : r.tbl_branches;
-              return (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <Link href={`/residents/${r.id}`} className="font-medium text-gray-900 hover:underline">
-                      {r.resident_name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-gray-600">{r.ic_number ?? "--"}</td>
-                  {admin && <td className="px-4 py-2 text-gray-600">{branch?.name ?? "--"}</td>}
-                  <td className="px-4 py-2">
-                    <StatusBadge status={r.status} />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {residents.map((r) => {
+                const branch = Array.isArray(r.tbl_branches) ? r.tbl_branches[0] : r.tbl_branches;
+                return (
+                  <ClickableRow key={r.id} href={`/residents/${r.id}`} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 font-medium text-gray-900">{r.resident_name}</td>
+                    <td className="px-4 py-2 text-gray-600">{r.ic_number ?? "--"}</td>
+                    {admin && <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>}
+                    <td className="px-4 py-2">
+                      <StatusBadge status={r.status} />
+                    </td>
+                  </ClickableRow>
+                );
+              })}
+              {residents.length === 0 && (
+                <tr>
+                  <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
+                    No residents found.
                   </td>
                 </tr>
-              );
-            })}
-            {residents.length === 0 && (
-              <tr>
-                <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
-                  No residents found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </FilterPendingProvider>
     </div>
   );
 }

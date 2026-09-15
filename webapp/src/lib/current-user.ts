@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatBranch } from "@/lib/lookups";
 
 // The signed-in login account (tbl_user_accounts), NOT the clinical/audit
 // roster (tbl_staff) -- those are deliberately separate. This is what RLS
@@ -30,7 +31,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data, error } = await supabase
     .from("tbl_user_accounts")
-    .select("id, username, email, rights, branch_id, tbl_branches(name:BranchName)")
+    .select("id, username, email, rights, branch_id, tbl_branches(locale:BranchLocale, code:BranchCode)")
     .eq("auth_user_id", user.id)
     .single();
 
@@ -44,7 +45,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: data.email,
     rights: data.rights,
     branch_id: data.branch_id,
-    branch_name: branch?.name ?? "",
+    branch_name: branch ? formatBranch(branch) : "",
   };
 }
 

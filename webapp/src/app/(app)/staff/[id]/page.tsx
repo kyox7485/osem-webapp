@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { formatBranch } from "@/lib/lookups";
 
 export default async function StaffViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,7 +11,7 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
 
   const { data: staff } = await supabase
     .from("tbl_staff")
-    .select("*, tbl_positions(name), tbl_branches(name:BranchName)")
+    .select("*, tbl_positions(name), tbl_branches(locale:BranchLocale, code:BranchCode)")
     .eq("StaffID", id)
     .single();
 
@@ -24,7 +25,7 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">{staff.staff_name}</h1>
-          <p className="text-sm text-gray-500">{position?.name} · {branch?.name}</p>
+          <p className="text-sm text-gray-500">{position?.name} · {formatBranch(branch)}</p>
         </div>
         {isAdmin(currentUser) && (
           <Link

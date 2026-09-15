@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { formatBranch } from "@/lib/lookups";
 
 export default async function AccountsPage() {
   const currentUser = await getCurrentUser();
@@ -10,7 +11,7 @@ export default async function AccountsPage() {
   const supabase = await createClient();
   const { data: accounts, error } = await supabase
     .from("tbl_user_accounts")
-    .select("id, email, username, rights, status, tbl_branches(name:BranchName)")
+    .select("id, email, username, rights, status, tbl_branches(locale:BranchLocale, code:BranchCode)")
     .order("username");
 
   return (
@@ -52,7 +53,7 @@ export default async function AccountsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-2 text-gray-600">{a.email}</td>
-                  <td className="px-4 py-2 text-gray-600">{branch?.name ?? "--"}</td>
+                  <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>
                   <td className="px-4 py-2 text-gray-600">{a.rights}</td>
                   <td className="px-4 py-2">
                     <span

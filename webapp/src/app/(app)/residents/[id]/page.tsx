@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { formatBranch } from "@/lib/lookups";
 
 export default async function ResidentViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -9,7 +10,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
   const { data: resident } = await supabase
     .from("tbl_residents")
     .select(
-      "*, tbl_branches(name:BranchName), tbl_nationalities(country_name), tbl_diet_types(name), tbl_feeding_types(name)"
+      "*, tbl_branches(locale:BranchLocale, code:BranchCode), tbl_nationalities(country_name), tbl_diet_types(name), tbl_feeding_types(name)"
     )
     .eq("id", id)
     .single();
@@ -26,7 +27,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">{resident.resident_name}</h1>
-          <p className="text-sm text-gray-500">{branch?.name} · {resident.status}</p>
+          <p className="text-sm text-gray-500">{formatBranch(branch)} · {resident.status}</p>
         </div>
         <div className="flex gap-2">
           <Link

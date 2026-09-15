@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { formatBranch } from "@/lib/lookups";
 
 export default async function AccountViewPage({ params }: { params: Promise<{ id: string }> }) {
   const currentUser = await getCurrentUser();
@@ -12,7 +13,7 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
 
   const { data: account } = await supabase
     .from("tbl_user_accounts")
-    .select("*, tbl_branches(name:BranchName)")
+    .select("*, tbl_branches(locale:BranchLocale, code:BranchCode)")
     .eq("id", id)
     .single();
 
@@ -25,7 +26,7 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">{account.username}</h1>
-          <p className="text-sm text-gray-500">{account.email} · {branch?.name}</p>
+          <p className="text-sm text-gray-500">{account.email} · {formatBranch(branch)}</p>
         </div>
         <Link
           href={`/accounts/${account.id}/edit`}

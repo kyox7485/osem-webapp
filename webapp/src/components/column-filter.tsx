@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useFilterNavigation } from "@/components/filter-pending";
 
 type Option = { value: string; label: string };
 
@@ -38,6 +39,7 @@ export function ColumnFilter(props: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const startNavigation = useFilterNavigation();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const [mounted, setMounted] = useState(false);
@@ -100,7 +102,7 @@ export function ColumnFilter(props: Props) {
   function pushParams(mutate: (next: URLSearchParams) => void) {
     const next = new URLSearchParams(searchParams.toString());
     mutate(next);
-    router.push(`${pathname}?${next.toString()}`);
+    startNavigation(() => router.push(`${pathname}?${next.toString()}`));
     setOpen(false);
   }
 
