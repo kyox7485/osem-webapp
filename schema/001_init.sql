@@ -16,9 +16,18 @@ create extension if not exists "pg_trgm";    -- fuzzy resident-name search
 -- 1. ENUMS
 -- ============================================================================
 
+-- tbl_staff.role: clinical/job-title category for the audit-trail roster.
+-- Unrelated to login access -- see id_rights below.
 create type staff_role as enum (
   'admin', 'management', 'doctor', 'nurse', 'caregiver', 'physio', 'pharmacist'
 );
+
+-- tbl_user_accounts.rights: login access level. Deliberately just 3 tiers,
+-- decoupled from staff_role -- a login's rights and a roster entry's job
+-- title are different concepts and must stay on separate enum types (they
+-- used to share staff_role, which meant relabeling one silently relabeled
+-- the other -- see git history on this file for how that went).
+create type id_rights as enum ('ADMIN', 'MODERATOR', 'STAFF');
 
 create type physio_setting_type as enum ('IP', 'OP');
 
@@ -61,10 +70,10 @@ create table tbl_positions (
   name  text not null unique
 );
 
--- RLS for tbl_positions is enabled further below, right after tbl_staff and
--- the auth_*() helper functions exist (auth_role() queries tbl_staff, and
--- tbl_positions is created before tbl_staff since tbl_staff references it —
--- see "MIGRATION FIX" note after tbl_staff).
+-- RLS for tbl_positions is enabled further below, right after
+-- tbl_user_accounts and the auth_*() helper functions exist (auth_role()
+-- queries tbl_user_accounts) -- see "MIGRATION FIX" note after
+-- tbl_user_accounts.
 
 insert into tbl_positions (name) values
   ('Medical Officer'),
@@ -114,7 +123,7 @@ create table tbl_user_accounts (
   email         text not null,
   username      text not null,
   branch_id     bigint not null references tbl_branches (id),
-  rights        staff_role not null,  -- access level; reuses the same enum as tbl_staff.role but is a distinct concept (rights, not job title)
+  rights        id_rights not null,
   status        text not null default 'ACTIVE' check (status in ('ACTIVE','INACTIVE')),
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
@@ -137,21 +146,21 @@ language sql stable security definer as $$
   select branch_id from tbl_user_accounts where auth_user_id = auth.uid();
 $$;
 
-create or replace function auth_role() returns staff_role
+create or replace function auth_role() returns id_rights
 language sql stable security definer as $$
   select rights from tbl_user_accounts where auth_user_id = auth.uid();
 $$;
 
 alter table tbl_user_accounts enable row level security;
 create policy user_accounts_read on tbl_user_accounts for select
-  using (auth_user_id = auth.uid() or auth_role() = 'admin');
+  using (auth_user_id = auth.uid() or auth_role() = 'ADMIN');
 create policy user_accounts_write on tbl_user_accounts for all
-  using (auth_role() = 'admin') with check (auth_role() = 'admin');
+  using (auth_role() = 'ADMIN') with check (auth_role() = 'ADMIN');
 
 alter table tbl_positions enable row level security;
 create policy tbl_positions_read on tbl_positions for select using (auth.role() = 'authenticated');
 create policy tbl_positions_write on tbl_positions for all
-  using (auth_role() = 'admin') with check (auth_role() = 'admin');
+  using (auth_role() = 'ADMIN') with check (auth_role() = 'ADMIN');
 
 -- ============================================================================
 -- 2B. LOOKUP VALUES — one generic, admin-editable table standing in for the
@@ -176,7 +185,7 @@ create table tbl_lookup_values (
 alter table tbl_lookup_values enable row level security;
 create policy lookup_values_read on tbl_lookup_values for select using (auth.role() = 'authenticated');
 create policy lookup_values_write on tbl_lookup_values for all
-  using (auth_role() = 'admin') with check (auth_role() = 'admin');
+  using (auth_role() = 'ADMIN') with check (auth_role() = 'ADMIN');
 
 -- ============================================================================
 -- 2C. DEDICATED REFERENCE TABLES
@@ -232,7 +241,7 @@ begin
   loop
     execute format('alter table %1$s enable row level security;', t);
     execute format('create policy %1$s_read on %1$s for select using (auth.role() = ''authenticated'');', t);
-    execute format('create policy %1$s_write on %1$s for all using (auth_role() = ''admin'') with check (auth_role() = ''admin'');', t);
+    execute format('create policy %1$s_write on %1$s for all using (auth_role() = ''ADMIN'') with check (auth_role() = ''ADMIN'');', t);
   end loop;
 end $$;
 
@@ -731,7 +740,7 @@ begin
   loop
     execute format('alter table %1$s enable row level security;', t);
     execute format('create policy %1$s_read on %1$s for select using (auth.role() = ''authenticated'');', t);
-    execute format('create policy %1$s_write on %1$s for all using (auth_role() = ''admin'') with check (auth_role() = ''admin'');', t);
+    execute format('create policy %1$s_write on %1$s for all using (auth_role() = ''ADMIN'') with check (auth_role() = ''ADMIN'');', t);
   end loop;
 end $$;
 
@@ -1489,42 +1498,43 @@ begin
     execute format(
       $f$create policy branch_scope_%1$s on %1$s
         using (
-          auth_role() in ('admin','management')
+          auth_role() in ('ADMIN','MODERATOR')
           or branch_id = auth_branch_id()
         )
         with check (
-          auth_role() in ('admin','management')
+          auth_role() in ('ADMIN','MODERATOR')
           or branch_id = auth_branch_id()
         );$f$, t);
   end loop;
 end $$;
 
 -- Shared catalog tables: everyone authenticated can read; only
--- admin/management/pharmacist can write (adjust if procurement is a
--- separate role later).
+-- ADMIN/MODERATOR can write (rights is a 3-tier access level now, not a job
+-- title, so there's no more pharmacist-specific carve-out here -- grant a
+-- real pharmacist MODERATOR rights if they need to manage products).
 alter table tbl_products enable row level security;
 create policy products_read on tbl_products for select using (auth.role() = 'authenticated');
-create policy products_write on tbl_products for insert with check (auth_role() in ('admin','management','pharmacist'));
+create policy products_write on tbl_products for insert with check (auth_role() in ('ADMIN','MODERATOR'));
 create policy products_update on tbl_products for update
-  using (auth_role() in ('admin','management','pharmacist'))
-  with check (auth_role() in ('admin','management','pharmacist'));
+  using (auth_role() in ('ADMIN','MODERATOR'))
+  with check (auth_role() in ('ADMIN','MODERATOR'));
 
 alter table tbl_suppliers enable row level security;
 create policy suppliers_read on tbl_suppliers for select using (auth.role() = 'authenticated');
 create policy suppliers_write on tbl_suppliers for all
-  using (auth_role() in ('admin','management','pharmacist'))
-  with check (auth_role() in ('admin','management','pharmacist'));
+  using (auth_role() in ('ADMIN','MODERATOR'))
+  with check (auth_role() in ('ADMIN','MODERATOR'));
 
--- Cross-branch table: visible to staff at either end of the transfer, plus admin/management.
+-- Cross-branch table: visible to staff at either end of the transfer, plus ADMIN/MODERATOR.
 alter table tbl_stock_transfers enable row level security;
 create policy transfers_scope on tbl_stock_transfers
   using (
-    auth_role() in ('admin','management')
+    auth_role() in ('ADMIN','MODERATOR')
     or from_branch_id = auth_branch_id()
     or to_branch_id = auth_branch_id()
   )
   with check (
-    auth_role() in ('admin','management')
+    auth_role() in ('ADMIN','MODERATOR')
     or from_branch_id = auth_branch_id()
     or to_branch_id = auth_branch_id()
   );
@@ -1532,11 +1542,11 @@ create policy transfers_scope on tbl_stock_transfers
 -- staff and branches: read for all authenticated staff, write restricted to admin.
 alter table tbl_staff enable row level security;
 create policy staff_read on tbl_staff for select using (auth.role() = 'authenticated');
-create policy staff_write on tbl_staff for all using (auth_role() = 'admin') with check (auth_role() = 'admin');
+create policy staff_write on tbl_staff for all using (auth_role() = 'ADMIN') with check (auth_role() = 'ADMIN');
 
 alter table tbl_branches enable row level security;
 create policy branches_read on tbl_branches for select using (auth.role() = 'authenticated');
-create policy branches_write on tbl_branches for all using (auth_role() = 'admin') with check (auth_role() = 'admin');
+create policy branches_write on tbl_branches for all using (auth_role() = 'ADMIN') with check (auth_role() = 'ADMIN');
 
 -- ============================================================================
 -- End of draft v2

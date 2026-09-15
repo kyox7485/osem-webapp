@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { UserAccount, LookupOption } from "@/lib/types";
-import { STAFF_ROLE_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
+import { RIGHTS_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
 
 type Props = {
   account?: UserAccount;
@@ -61,7 +61,7 @@ export function AccountForm({ account, branches, action }: Props) {
         Rights <span className="text-red-500">*</span>
         <select name="rights" defaultValue={account?.rights ?? ""} required className={inputCls}>
           <option value="" disabled>Select rights</option>
-          {STAFF_ROLE_OPTIONS.map((r) => (
+          {RIGHTS_OPTIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
         </select>

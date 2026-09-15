@@ -10,11 +10,13 @@ import { createClient } from "@/lib/supabase/server";
 // notes, resident admission, etc.) carry their own explicit staff-picker
 // field; never attribute an entry to account.id or assume the logged-in
 // account maps 1:1 to a person.
+export type Rights = "ADMIN" | "MODERATOR" | "STAFF";
+
 export type CurrentUser = {
   id: number;
   username: string;
   email: string;
-  rights: string;
+  rights: Rights;
   branch_id: number;
   branch_name: string;
 };
@@ -47,5 +49,5 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 export function isAdmin(account: CurrentUser | null): boolean {
-  return account?.rights === "admin";
+  return account?.rights === "ADMIN";
 }
