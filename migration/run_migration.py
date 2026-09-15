@@ -80,9 +80,12 @@ def main() -> int:
                 module_path = TRANSFORM_MODULES[table]
                 module = __import__(module_path, fromlist=["run"])
                 module.run(ctx)
-                # branch_id may only become available after the branches step runs
                 if table == "branches" and ctx.branch_id is None:
-                    ctx.branch_id = resolver.resolve_branch(cfg.branch_code) if dry_run else _refetch_branch_id(pg_conn, cfg.branch_code)
+                    # the branch row may have just been created (or, in
+                    # dry-run mode, would have been) -- reload the resolver's
+                    # cache from the DB before re-resolving.
+                    resolver.reload_branches(pg_conn)
+                    ctx.branch_id = resolver.resolve_branch(cfg.branch_code)
 
         except Exception:
             pg_conn.rollback()
@@ -96,13 +99,6 @@ def main() -> int:
     print(f"\nReport written to {report_path}")
     print(f"Mode: {'DRY RUN' if dry_run else 'COMMIT'}")
     return 0
-
-
-def _refetch_branch_id(pg_conn, branch_code: str) -> int | None:
-    cur = pg_conn.cursor()
-    cur.execute("select id from tbl_branches where code = %s", (branch_code,))
-    row = cur.fetchone()
-    return row[0] if row else None
 
 
 if __name__ == "__main__":

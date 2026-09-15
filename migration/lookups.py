@@ -68,9 +68,13 @@ class LookupResolver:
             resolver._tables[list_name] = table_map
             resolver._fuzzy_pool[list_name] = pool
 
-        cur.execute("select id, code from tbl_branches")
-        resolver.branch_ids = {code: bid for bid, code in cur.fetchall()}
+        resolver.reload_branches(conn)
         return resolver
+
+    def reload_branches(self, conn: psycopg2.extensions.connection) -> None:
+        cur = conn.cursor()
+        cur.execute("select id, code from tbl_branches")
+        self.branch_ids = {code: bid for bid, code in cur.fetchall()}
 
     def resolve(self, list_name: str, raw_value: str | None) -> int | None:
         """Returns the target row id for raw_value, or None (and logs it) if unresolved."""
