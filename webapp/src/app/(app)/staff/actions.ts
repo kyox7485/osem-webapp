@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentStaff, isAdmin } from "@/lib/current-staff";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
 
 function buildStaffPayload(formData: FormData) {
   return {
@@ -19,9 +19,9 @@ function buildStaffPayload(formData: FormData) {
 // insert/update is rejected by Postgres regardless of what the UI shows.
 // This check just gives a clean error message instead of a raw RLS failure.
 async function requireAdmin() {
-  const staff = await getCurrentStaff();
-  if (!staff) redirect("/login");
-  if (!isAdmin(staff)) {
+  const account = await getCurrentUser();
+  if (!account) redirect("/login");
+  if (!isAdmin(account)) {
     return { error: "Only admins can manage staff" };
   }
   return null;

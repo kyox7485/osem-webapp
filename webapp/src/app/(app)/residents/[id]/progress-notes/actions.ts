@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentStaff } from "@/lib/current-staff";
+import { getCurrentUser } from "@/lib/current-user";
 
 function optional(value: FormDataEntryValue | null): string | null {
   const s = value?.toString().trim();
@@ -11,8 +11,8 @@ function optional(value: FormDataEntryValue | null): string | null {
 }
 
 export async function createProgressNote(residentId: number, formData: FormData) {
-  const staff = await getCurrentStaff();
-  if (!staff) redirect("/login");
+  const account = await getCurrentUser();
+  if (!account) redirect("/login");
 
   const progressNote = optional(formData.get("progress_note"));
   if (!progressNote) {
@@ -21,7 +21,7 @@ export async function createProgressNote(residentId: number, formData: FormData)
 
   const supabase = await createClient();
   const { error } = await supabase.from("tbl_progress_notes").insert({
-    branch_id: staff.branch_id,
+    branch_id: account.branch_id,
     resident_id: residentId,
     progress_note: progressNote,
     physical_examination: optional(formData.get("physical_examination")),
@@ -31,7 +31,9 @@ export async function createProgressNote(residentId: number, formData: FormData)
     monitoring_plan: optional(formData.get("monitoring_plan")),
     current_medication_regime: optional(formData.get("current_medication_regime")),
     tca_notes: optional(formData.get("tca_notes")),
-    created_by: staff.id,
+    // created_by references tbl_staff, not tbl_user_accounts -- use the
+    // linked roster entry, if this login has one, rather than account.id.
+    created_by: account.staff_id,
   });
 
   if (error) {

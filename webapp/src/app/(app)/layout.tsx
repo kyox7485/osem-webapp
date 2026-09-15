@@ -1,23 +1,24 @@
 import Link from "next/link";
-import { getCurrentStaff } from "@/lib/current-staff";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const staff = await getCurrentStaff();
+  const account = await getCurrentUser();
 
-  if (!staff) {
-    // Authenticated in Supabase Auth but no matching tbl_staff row -- can't
-    // do anything useful in the app (branch_id/role come from tbl_staff).
-    // Rendered inline rather than redirected: redirecting to /login would
-    // bounce right back here (middleware sends an authenticated user away
-    // from /login), causing an infinite redirect loop / blank page.
+  if (!account) {
+    // Authenticated in Supabase Auth but no matching tbl_user_accounts row
+    // -- can't do anything useful in the app (branch_id/rights come from
+    // there). Rendered inline rather than redirected: redirecting to
+    // /login would bounce right back here (middleware sends an
+    // authenticated user away from /login), causing an infinite redirect
+    // loop / blank page.
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
           <h1 className="mb-2 text-lg font-semibold text-gray-900">Account not set up</h1>
           <p className="mb-6 text-sm text-gray-500">
-            You&apos;re signed in, but this account isn&apos;t linked to a staff record yet.
-            Ask an admin to add you under Staff, then sign out and back in.
+            You&apos;re signed in, but this login isn&apos;t linked to a user account yet.
+            Ask an admin to add you under Accounts, then sign out and back in.
           </p>
           <SignOutButton />
         </div>
@@ -37,10 +38,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/staff" className="text-sm text-gray-600 hover:text-gray-900">
               Staff
             </Link>
+            {isAdmin(account) && (
+              <Link href="/accounts" className="text-sm text-gray-600 hover:text-gray-900">
+                Accounts
+              </Link>
+            )}
           </nav>
           <div className="flex items-center gap-3 text-sm text-gray-600">
             <span>
-              {staff.staff_name} · {staff.branch_name || "All branches"} · {staff.role}
+              {account.username} · {account.branch_name || "All branches"} · {account.rights}
             </span>
             <SignOutButton />
           </div>

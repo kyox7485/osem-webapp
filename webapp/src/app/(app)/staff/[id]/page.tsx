@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentStaff, isAdmin } from "@/lib/current-staff";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
 
 export default async function StaffViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const currentStaff = await getCurrentStaff();
+  const currentUser = await getCurrentUser();
 
   const { data: staff } = await supabase
     .from("tbl_staff")
@@ -26,7 +26,7 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
           <h1 className="text-lg font-semibold text-gray-900">{staff.staff_name}</h1>
           <p className="text-sm text-gray-500">{position?.name} · {branch?.name}</p>
         </div>
-        {isAdmin(currentStaff) && (
+        {isAdmin(currentUser) && (
           <Link
             href={`/staff/${staff.id}/edit`}
             className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentStaff, isAdmin } from "@/lib/current-staff";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
 
 export default async function StaffPage() {
   const supabase = await createClient();
-  const currentStaff = await getCurrentStaff();
+  const currentUser = await getCurrentUser();
 
   const { data: staff, error } = await supabase
     .from("tbl_staff")
@@ -15,7 +15,7 @@ export default async function StaffPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-gray-900">Staff</h1>
-        {isAdmin(currentStaff) && (
+        {isAdmin(currentUser) && (
           <Link
             href="/staff/new"
             className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"

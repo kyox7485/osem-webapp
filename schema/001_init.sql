@@ -85,9 +85,13 @@ insert into tbl_positions (name) values
   ('Assist. Head Nurse'),
   ('Nursing Director');
 
+-- Clinical/operational roster: who did what, for audit trails and
+-- attribution only (reviewed_by / created_by / registered_by columns
+-- throughout this schema reference this table). Deliberately has nothing
+-- to do with app login -- a person can be in this roster with no login at
+-- all, or have a login that isn't tied to a roster entry.
 create table tbl_staff (
   id            bigint generated always as identity primary key,
-  auth_user_id  uuid unique references auth.users (id) on delete set null,
   branch_id     bigint not null references tbl_branches (id),
   staff_name    text not null,
   position_id   bigint not null references tbl_positions (id),
@@ -97,28 +101,51 @@ create table tbl_staff (
   updated_at    timestamptz not null default now()
 );
 create index idx_staff_branch on tbl_staff (branch_id);
-create index idx_staff_auth_user on tbl_staff (auth_user_id);
 
--- MIGRATION FIX: auth_staff_id()/auth_branch_id()/auth_role() moved here from
--- section 14 (and tbl_positions' RLS block moved here from right after
--- tbl_positions) — both need tbl_staff to exist first, and every RLS policy in
--- this file from here on needs these functions to exist first. Running the
--- file top-to-bottom in its original order failed at tbl_positions' policies
--- with "function auth_role() does not exist".
-create or replace function auth_staff_id() returns bigint
+-- Login accounts. This -- not tbl_staff -- is what RLS reads: who can sign
+-- in, which branch they're scoped to, what they're allowed to do.
+-- staff_id is optional: it lets a login be attributed to a specific roster
+-- entry (e.g. "this account belongs to Dr. Lim") without requiring it.
+create table tbl_user_accounts (
+  id            bigint generated always as identity primary key,
+  auth_user_id  uuid not null unique references auth.users (id) on delete cascade,
+  email         text not null,
+  username      text not null,
+  branch_id     bigint not null references tbl_branches (id),
+  rights        staff_role not null,  -- access level; reuses the same enum as tbl_staff.role but is a distinct concept (rights, not job title)
+  status        text not null default 'ACTIVE' check (status in ('ACTIVE','INACTIVE')),
+  staff_id      bigint references tbl_staff (id),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index idx_user_accounts_branch on tbl_user_accounts (branch_id);
+
+-- MIGRATION FIX: auth_account_id()/auth_branch_id()/auth_role() moved here
+-- from section 14 (and tbl_positions' RLS block moved here from right after
+-- tbl_positions) — both need tbl_user_accounts to exist first, and every RLS
+-- policy in this file from here on needs these functions to exist first.
+-- Running the file top-to-bottom in its original order failed at
+-- tbl_positions' policies with "function auth_role() does not exist".
+create or replace function auth_account_id() returns bigint
 language sql stable security definer as $$
-  select id from tbl_staff where auth_user_id = auth.uid();
+  select id from tbl_user_accounts where auth_user_id = auth.uid();
 $$;
 
 create or replace function auth_branch_id() returns bigint
 language sql stable security definer as $$
-  select branch_id from tbl_staff where auth_user_id = auth.uid();
+  select branch_id from tbl_user_accounts where auth_user_id = auth.uid();
 $$;
 
 create or replace function auth_role() returns staff_role
 language sql stable security definer as $$
-  select role from tbl_staff where auth_user_id = auth.uid();
+  select rights from tbl_user_accounts where auth_user_id = auth.uid();
 $$;
+
+alter table tbl_user_accounts enable row level security;
+create policy user_accounts_read on tbl_user_accounts for select
+  using (auth_user_id = auth.uid() or auth_role() = 'admin');
+create policy user_accounts_write on tbl_user_accounts for all
+  using (auth_role() = 'admin') with check (auth_role() = 'admin');
 
 alter table tbl_positions enable row level security;
 create policy tbl_positions_read on tbl_positions for select using (auth.role() = 'authenticated');
@@ -1439,10 +1466,11 @@ for each row execute function fn_transfer_confirm();
 -- ============================================================================
 -- 14. ROW LEVEL SECURITY
 -- ============================================================================
--- auth_staff_id() / auth_branch_id() / auth_role() are defined earlier, right
--- after tbl_staff (section 2) — every policy in this file depends on them, and
--- several (e.g. tbl_positions, tbl_lookup_values) are enabled before this
--- section even starts. See "MIGRATION FIX" note after tbl_staff.
+-- auth_account_id() / auth_branch_id() / auth_role() are defined earlier,
+-- right after tbl_user_accounts (section 2) — every policy in this file
+-- depends on them, and several (e.g. tbl_positions, tbl_lookup_values) are
+-- enabled before this section even starts. See "MIGRATION FIX" note after
+-- tbl_user_accounts.
 
 -- Standard single-branch scoping for tables with one branch_id column.
 do $$

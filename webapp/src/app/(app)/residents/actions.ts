@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentStaff } from "@/lib/current-staff";
+import { getCurrentUser } from "@/lib/current-user";
 
 function optional(value: FormDataEntryValue | null): string | null {
   const s = value?.toString().trim();
@@ -44,11 +44,11 @@ function buildResidentPayload(formData: FormData, branchId: number) {
 }
 
 export async function createResident(formData: FormData) {
-  const staff = await getCurrentStaff();
-  if (!staff) redirect("/login");
+  const account = await getCurrentUser();
+  if (!account) redirect("/login");
 
   const supabase = await createClient();
-  const payload = buildResidentPayload(formData, staff.branch_id);
+  const payload = buildResidentPayload(formData, account.branch_id);
 
   if (!payload.resident_name) {
     return { error: "Resident name is required" };
@@ -65,11 +65,11 @@ export async function createResident(formData: FormData) {
 }
 
 export async function updateResident(residentId: number, formData: FormData) {
-  const staff = await getCurrentStaff();
-  if (!staff) redirect("/login");
+  const account = await getCurrentUser();
+  if (!account) redirect("/login");
 
   const supabase = await createClient();
-  const payload = buildResidentPayload(formData, staff.branch_id);
+  const payload = buildResidentPayload(formData, account.branch_id);
   // don't clobber branch_id on edit -- only set it on create
   const { branch_id: _branch_id, ...updatePayload } = payload;
   void _branch_id;

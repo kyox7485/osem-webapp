@@ -1,14 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { StaffForm } from "@/components/staff-form";
 import { getPositions, getBranches } from "@/lib/lookups";
-import { getCurrentStaff, isAdmin } from "@/lib/current-staff";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Staff } from "@/lib/types";
 import { updateStaff } from "../../actions";
 
 export default async function EditStaffPage({ params }: { params: Promise<{ id: string }> }) {
-  const currentStaff = await getCurrentStaff();
-  if (!isAdmin(currentStaff)) redirect("/staff");
+  const currentUser = await getCurrentUser();
+  if (!isAdmin(currentUser)) redirect("/staff");
 
   const { id } = await params;
   const supabase = await createClient();
