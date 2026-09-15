@@ -55,16 +55,14 @@ export function NewNoteForm({
         Nursing plan
         <textarea name="nursing_plan" rows={2} className={inputCls} />
       </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm text-gray-700">
-          Feeding plan
-          <input name="feeding_plan" className={inputCls} />
-        </label>
-        <label className="block text-sm text-gray-700">
-          Monitoring plan
-          <input name="monitoring_plan" className={inputCls} />
-        </label>
-      </div>
+      <label className="block text-sm text-gray-700">
+        Feeding plan
+        <textarea name="feeding_plan" rows={2} className={inputCls} />
+      </label>
+      <label className="block text-sm text-gray-700">
+        Monitoring plan
+        <textarea name="monitoring_plan" rows={2} className={inputCls} />
+      </label>
       <label className="block text-sm text-gray-700">
         Entered by <span className="text-red-500">*</span>
         <select name="staff_id" required defaultValue="" className={inputCls}>
