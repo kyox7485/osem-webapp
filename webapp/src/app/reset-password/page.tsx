@@ -29,8 +29,8 @@ export default function ResetPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
     if (password !== confirm) {
@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
                 id="password"
                 type="password"
                 required
-                minLength={8}
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
                 id="confirm"
                 type="password"
                 required
-                minLength={8}
+                minLength={6}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"

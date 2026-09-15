@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -10,8 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,27 +28,6 @@ export default function LoginPage() {
 
     router.push("/residents");
     router.refresh();
-  }
-
-  async function handleForgotPassword() {
-    if (!email) {
-      setError("Enter your email above first, then click \"Forgot password?\"");
-      return;
-    }
-    setResetLoading(true);
-    setError(null);
-
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    setResetLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    setResetSent(true);
   }
 
   return (
@@ -87,11 +65,6 @@ export default function LoginPage() {
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {resetSent && (
-            <p className="text-sm text-green-700">
-              Check your email for a password reset link.
-            </p>
-          )}
 
           <button
             type="submit"
@@ -101,14 +74,12 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
 
-          <button
-            type="button"
-            onClick={handleForgotPassword}
-            disabled={resetLoading}
-            className="w-full text-center text-sm text-gray-500 hover:text-gray-900 disabled:opacity-50"
+          <Link
+            href="/forgot-password"
+            className="block text-center text-sm text-gray-500 hover:text-gray-900"
           >
-            {resetLoading ? "Sending..." : "Forgot password?"}
-          </button>
+            Forgot password?
+          </Link>
         </form>
       </div>
     </div>

@@ -28,8 +28,15 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  // /reset-password must stay reachable even for a logged-in user, since
+  // clicking a recovery link logs the user into a temporary session before
+  // this page ever loads.
+  const isPublicPage =
+    isLoginPage ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/reset-password");
 
-  if (!user && !isLoginPage) {
+  if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
