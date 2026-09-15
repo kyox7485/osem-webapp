@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffRoster } from "@/lib/lookups";
-import { NewNoteForm } from "./new-note-form";
-import { ResidentDashboard } from "./resident-dashboard";
+import { ProgressNotesTabs } from "./progress-notes-tabs";
 
 const PLAN_FIELDS = [
   ["medical", "medical_plan"],
@@ -20,7 +19,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
 
   const { data: resident } = await supabase
     .from("tbl_residents")
-    .select("id, resident_name, branch_id, allergy, past_medical_condition, current_medication_list")
+    .select("id, resident_name, branch_id, allergy, past_medical_condition, current_medication_list, tca_notes")
     .eq("id", id)
     .single();
 
@@ -54,66 +53,41 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
     })
   ) as Record<(typeof PLAN_FIELDS)[number][0], { entry_timestamp: string; value: string } | null>;
 
+  const noteRows = (notes ?? []).map((note) => {
+    const author = Array.isArray(note.tbl_staff) ? note.tbl_staff[0] : note.tbl_staff;
+    return {
+      id: note.id,
+      entry_timestamp: note.entry_timestamp,
+      progress_note: note.progress_note,
+      medical_plan: note.medical_plan,
+      nursing_plan: note.nursing_plan,
+      authorName: author?.staff_name ?? "Unknown",
+    };
+  });
+
   return (
     <div>
       <div className="mb-4">
         <Link href={`/residents/${resident.id}`} className="text-sm text-gray-500 hover:underline">
           &larr; {resident.resident_name}
         </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Progress notes</h1>
+        <h1 className="text-lg font-semibold text-gray-900">Medical Progress Notes</h1>
       </div>
 
-      <ResidentDashboard
-        allergy={resident.allergy}
-        pastMedicalCondition={resident.past_medical_condition}
-        currentMedicationList={resident.current_medication_list}
-        vitals={vitals ?? []}
-        plans={plans}
+      <ProgressNotesTabs
+        residentId={resident.id}
+        staffOptions={staffOptions}
+        notes={noteRows}
+        notesError={notesError?.message ?? null}
+        dashboard={{
+          allergy: resident.allergy,
+          pastMedicalCondition: resident.past_medical_condition,
+          currentMedicationList: resident.current_medication_list,
+          tcaNotes: resident.tca_notes,
+          vitals: vitals ?? [],
+          plans,
+        }}
       />
-
-      <div className="mb-4">
-        <NewNoteForm residentId={resident.id} staffOptions={staffOptions} />
-      </div>
-
-      {notesError && <p className="mb-4 text-sm text-red-600">{notesError.message}</p>}
-
-      <div className="space-y-3">
-        {notes?.map((note) => {
-          const author = Array.isArray(note.tbl_staff) ? note.tbl_staff[0] : note.tbl_staff;
-          return (
-            <div key={note.id} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
-                <span>{new Date(note.entry_timestamp).toLocaleString()}</span>
-                <span>{author?.staff_name ?? "Unknown"}</span>
-              </div>
-              <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
-              {note.medical_plan && (
-                <p className="mt-2 text-sm text-gray-600">
-                  <span className="font-medium text-gray-500">Medical plan: </span>
-                  {note.medical_plan}
-                </p>
-              )}
-              {note.nursing_plan && (
-                <p className="mt-1 text-sm text-gray-600">
-                  <span className="font-medium text-gray-500">Nursing plan: </span>
-                  {note.nursing_plan}
-                </p>
-              )}
-              {note.tca_notes && (
-                <p className="mt-1 text-sm text-gray-600">
-                  <span className="font-medium text-gray-500">TCA: </span>
-                  {note.tca_notes}
-                </p>
-              )}
-            </div>
-          );
-        })}
-        {notes?.length === 0 && (
-          <p className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-            No progress notes yet.
-          </p>
-        )}
-      </div>
     </div>
   );
 }

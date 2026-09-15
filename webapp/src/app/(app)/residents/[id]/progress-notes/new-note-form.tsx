@@ -10,13 +10,16 @@ const inputCls =
 export function NewNoteForm({
   residentId,
   staffOptions,
+  onSaved,
 }: {
   residentId: number;
   staffOptions: LookupOption[];
+  // Called after a successful save -- the New entry tab uses this to
+  // switch back to Review so the doctor sees the note they just added.
+  onSaved?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
   const formAction = createProgressNote.bind(null, residentId);
 
   async function handleSubmit(formData: FormData) {
@@ -26,21 +29,10 @@ export function NewNoteForm({
     if (result?.error) {
       setError(result.error);
     } else {
-      setOpen(false);
       (document.getElementById("new-note-form") as HTMLFormElement)?.reset();
+      onSaved?.();
     }
     setSubmitting(false);
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
-      >
-        New progress note
-      </button>
-    );
   }
 
   return (
@@ -74,15 +66,6 @@ export function NewNoteForm({
         </label>
       </div>
       <label className="block text-sm text-gray-700">
-        Current medication regime
-        <textarea name="current_medication_regime" rows={2} className={inputCls} />
-      </label>
-      <label className="block text-sm text-gray-700">
-        TCA notes
-        <input name="tca_notes" placeholder="e.g. MOPD 1/12/2026, SOPD 21/11/2026" className={inputCls} />
-      </label>
-
-      <label className="block text-sm text-gray-700">
         Entered by <span className="text-red-500">*</span>
         <select name="staff_id" required defaultValue="" className={inputCls}>
           <option value="" disabled>Select who&apos;s entering this</option>
@@ -92,22 +75,13 @@ export function NewNoteForm({
         </select>
       </label>
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {submitting ? "Saving..." : "Save"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={submitting}
+        className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
+      >
+        {submitting ? "Saving..." : "Save"}
+      </button>
     </form>
   );
 }

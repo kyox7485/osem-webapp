@@ -1038,12 +1038,16 @@ for each row execute function fn_fill_chart_hygiene_branch();
 -- 5. PROGRESS NOTES (doctor / general clinical note — one shared table)
 -- ============================================================================
 
+-- past_med_condition / current_medication_regime / tca_notes were dropped
+-- (see git history) -- they duplicated tbl_residents.past_medical_condition
+-- / .current_medication_list / .tca_notes, which is the single source of
+-- truth for that resident-level info; the progress-notes UI reads it from
+-- there instead of re-entering it per note.
 create table tbl_progress_notes (
   id                       bigint generated always as identity primary key,
   branch_id                bigint not null references tbl_branches ("BranchID"),
   resident_id              bigint not null references tbl_residents (id),
   entry_timestamp          timestamptz not null default now(),
-  past_med_condition       text,
   progress_note            text,
   physical_examination     text,
   medical_plan             text,
@@ -1052,8 +1056,6 @@ create table tbl_progress_notes (
   dressing_plan            text,
   nursing_plan             text,
   physio_plan              text,
-  current_medication_regime text,
-  tca_notes                text,  -- free text, e.g. 'MOPD 1/12/2026, SOPD 21/11/2026' -- not a single date
   reviewed_by              text references tbl_staff ("StaffID"),
   created_by               text references tbl_staff ("StaffID"),
   created_at               timestamptz not null default now()

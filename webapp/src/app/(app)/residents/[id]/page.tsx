@@ -34,7 +34,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
             href={`/residents/${resident.id}/progress-notes`}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Progress notes
+            Medical Progress Notes
           </Link>
           <Link
             href={`/residents/${resident.id}/edit`}

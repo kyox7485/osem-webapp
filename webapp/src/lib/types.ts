@@ -46,7 +46,6 @@ export type ProgressNote = {
   branch_id: number;
   resident_id: number;
   entry_timestamp: string;
-  past_med_condition: string | null;
   progress_note: string | null;
   physical_examination: string | null;
   medical_plan: string | null;
@@ -55,8 +54,6 @@ export type ProgressNote = {
   dressing_plan: string | null;
   nursing_plan: string | null;
   physio_plan: string | null;
-  current_medication_regime: string | null;
-  tca_notes: string | null;
   reviewed_by: string | null;  // tbl_staff.StaffID, e.g. "AMN-1"
   created_by: string | null;
 };

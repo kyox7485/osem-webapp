@@ -49,8 +49,6 @@ export async function createProgressNote(residentId: number, formData: FormData)
     nursing_plan: optional(formData.get("nursing_plan")),
     feeding_plan: optional(formData.get("feeding_plan")),
     monitoring_plan: optional(formData.get("monitoring_plan")),
-    current_medication_regime: optional(formData.get("current_medication_regime")),
-    tca_notes: optional(formData.get("tca_notes")),
     // created_by references tbl_staff -- the explicitly-picked person, not
     // the (possibly shared) login account.
     created_by: staffId,
