@@ -564,7 +564,7 @@ create table tbl_residents (
   languages                   text[], -- optional; Access has a tbl_Languages lookup, not yet exported
   care_goal                   text[]  -- multi-select in Access (ListBox) — see notes doc on which value set is current
                                 check (care_goal <@ array['Nursing/ADL care','Rehabilitation','Wound Care','Paliative Care','Others']::text[]),
-  tca_date                    date,
+  tca_notes                   text,  -- free text, e.g. 'MOPD 1/12/2026, SOPD 21/11/2026' -- not a single date
   assessment_and_summary      text,
   reviewed_by                 bigint references tbl_staff (id),
   created_at                  timestamptz not null default now(),
@@ -971,7 +971,7 @@ create table tbl_progress_notes (
   nursing_plan             text,
   physio_plan              text,
   current_medication_regime text,
-  tca_date                 date,
+  tca_notes                text,  -- free text, e.g. 'MOPD 1/12/2026, SOPD 21/11/2026' -- not a single date
   reviewed_by              bigint references tbl_staff (id),
   created_by               bigint references tbl_staff (id),
   created_at               timestamptz not null default now()

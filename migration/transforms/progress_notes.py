@@ -9,21 +9,6 @@ from etl_id_map import IdMap
 from multiselect import clean_scalar, normalize_for_match
 from staff_match import resolve_staff_name
 
-_DATE_FORMATS = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%y"]
-
-
-def _parse_tca(report, source_pk, raw) -> dt.date | None:
-    text = clean_scalar(raw)
-    if text is None:
-        return None
-    for fmt in _DATE_FORMATS:
-        try:
-            return dt.datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-    report.unparsed("tbl_ProgressNote.TCA", source_pk, text)
-    return None
-
 
 def _resolve_resident(ctx: MigrationContext, source_pk, resident_id_raw, name_raw) -> int | None:
     if resident_id_raw is not None:
@@ -69,7 +54,7 @@ def run(ctx: MigrationContext) -> None:
             nursing_plan=clean_scalar(row.get("NursingPlan")),
             physio_plan=clean_scalar(row.get("PhysioPlan")),
             current_medication_regime=clean_scalar(row.get("CurrMedRegime")),
-            tca_date=_parse_tca(ctx.report, source_id, row.get("TCA")),
+            tca_notes=clean_scalar(row.get("TCA")),
             reviewed_by=resolve_staff_name(ctx, "progress_note_reviewed_by", row.get("ReviewBy")),
         )
 

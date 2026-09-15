@@ -97,6 +97,7 @@ def run(ctx: MigrationContext) -> None:
             hygiene=resolve_checked_enum(ctx.report, "hygiene", row.get("Hygiene"), HYGIENE),
             diet_type_id=ctx.resolver.resolve("diet_type", clean_scalar(row.get("Diet"))),
             care_goal=care_goal_ids or None,
+            tca_notes=clean_scalar(row.get("TCA")),
             assessment_and_summary=clean_scalar(row.get("AssessmentAndSummary")),
             reviewed_by=resolve_staff_name(ctx, "resident_reviewed_by", row.get("ReviewBy")),
         )
