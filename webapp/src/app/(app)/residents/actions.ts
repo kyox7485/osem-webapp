@@ -15,9 +15,9 @@ function optionalInt(value: FormDataEntryValue | null): number | null {
   return s ? parseInt(s, 10) : null;
 }
 
-function buildResidentPayload(formData: FormData, branchId: number) {
+function buildResidentPayload(formData: FormData) {
   return {
-    branch_id: branchId,
+    branch_id: optionalInt(formData.get("branch_id")),
     resident_name: (formData.get("resident_name") as string)?.trim(),
     ic_number: optional(formData.get("ic_number")),
     age: optionalInt(formData.get("age")),
@@ -40,6 +40,9 @@ function buildResidentPayload(formData: FormData, branchId: number) {
     diet_type_id: optionalInt(formData.get("diet_type_id")),
     tca_notes: optional(formData.get("tca_notes")),
     assessment_and_summary: optional(formData.get("assessment_and_summary")),
+    // Explicitly picked on the form -- never inferred from the logged-in
+    // account, since branch logins can be shared by multiple people.
+    reviewed_by: optionalInt(formData.get("reviewed_by")),
   };
 }
 
@@ -48,10 +51,16 @@ export async function createResident(formData: FormData) {
   if (!account) redirect("/login");
 
   const supabase = await createClient();
-  const payload = buildResidentPayload(formData, account.branch_id);
+  const payload = buildResidentPayload(formData);
 
   if (!payload.resident_name) {
     return { error: "Resident name is required" };
+  }
+  if (!payload.branch_id) {
+    return { error: "Branch is required" };
+  }
+  if (!payload.reviewed_by) {
+    return { error: "Select who's entering this" };
   }
 
   const { data, error } = await supabase.from("tbl_residents").insert(payload).select("id").single();
@@ -69,16 +78,19 @@ export async function updateResident(residentId: number, formData: FormData) {
   if (!account) redirect("/login");
 
   const supabase = await createClient();
-  const payload = buildResidentPayload(formData, account.branch_id);
-  // don't clobber branch_id on edit -- only set it on create
-  const { branch_id: _branch_id, ...updatePayload } = payload;
-  void _branch_id;
+  const payload = buildResidentPayload(formData);
 
-  if (!updatePayload.resident_name) {
+  if (!payload.resident_name) {
     return { error: "Resident name is required" };
   }
+  if (!payload.branch_id) {
+    return { error: "Branch is required" };
+  }
+  if (!payload.reviewed_by) {
+    return { error: "Select who's entering this" };
+  }
 
-  const { error } = await supabase.from("tbl_residents").update(updatePayload).eq("id", residentId);
+  const { error } = await supabase.from("tbl_residents").update(payload).eq("id", residentId);
 
   if (error) {
     return { error: error.message };

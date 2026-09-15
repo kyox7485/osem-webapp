@@ -1,12 +1,16 @@
 import { ResidentForm } from "@/components/resident-form";
-import { getNationalities, getDietTypes, getFeedingTypes } from "@/lib/lookups";
+import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch } from "@/lib/lookups";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createResident } from "../actions";
 
 export default async function NewResidentPage() {
-  const [nationalities, dietTypes, feedingTypes] = await Promise.all([
+  const currentUser = await getCurrentUser();
+  const [nationalities, dietTypes, feedingTypes, branches, allStaff] = await Promise.all([
     getNationalities(),
     getDietTypes(),
     getFeedingTypes(),
+    getBranches(),
+    getAllStaffWithBranch(),
   ]);
 
   return (
@@ -16,6 +20,9 @@ export default async function NewResidentPage() {
         nationalities={nationalities}
         dietTypes={dietTypes}
         feedingTypes={feedingTypes}
+        branches={branches}
+        allStaff={allStaff}
+        defaultBranchId={isAdmin(currentUser) ? null : currentUser?.branch_id ?? null}
         action={createResident}
       />
     </div>

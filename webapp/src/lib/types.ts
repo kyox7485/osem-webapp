@@ -65,7 +65,6 @@ export type UserAccount = {
   branch_id: number;
   rights: "admin" | "management" | "doctor" | "nurse" | "caregiver" | "physio" | "pharmacist";
   status: "ACTIVE" | "INACTIVE";
-  staff_id: number | null;
 };
 
 export type LookupOption = { id: number; label: string };

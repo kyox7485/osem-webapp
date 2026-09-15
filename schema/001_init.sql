@@ -103,9 +103,11 @@ create table tbl_staff (
 create index idx_staff_branch on tbl_staff (branch_id);
 
 -- Login accounts. This -- not tbl_staff -- is what RLS reads: who can sign
--- in, which branch they're scoped to, what they're allowed to do.
--- staff_id is optional: it lets a login be attributed to a specific roster
--- entry (e.g. "this account belongs to Dr. Lim") without requiring it.
+-- in, which branch they're scoped to, what they're allowed to do. Logins
+-- can be shared by multiple people at a branch, so this is NOT assumed to
+-- identify who actually performed any given action -- forms that need that
+-- (progress notes, resident admission, etc.) carry their own explicit
+-- staff-picker field instead.
 create table tbl_user_accounts (
   id            bigint generated always as identity primary key,
   auth_user_id  uuid not null unique references auth.users (id) on delete cascade,
@@ -114,7 +116,6 @@ create table tbl_user_accounts (
   branch_id     bigint not null references tbl_branches (id),
   rights        staff_role not null,  -- access level; reuses the same enum as tbl_staff.role but is a distinct concept (rights, not job title)
   status        text not null default 'ACTIVE' check (status in ('ACTIVE','INACTIVE')),
-  staff_id      bigint references tbl_staff (id),
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );

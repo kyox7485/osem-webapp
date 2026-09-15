@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { AccountForm } from "@/components/account-form";
-import { getBranches, getStaffRoster } from "@/lib/lookups";
+import { SetPasswordForm } from "@/components/set-password-form";
+import { getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { UserAccount } from "@/lib/types";
@@ -13,10 +14,9 @@ export default async function EditAccountPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: account }, branches, staffRoster] = await Promise.all([
+  const [{ data: account }, branches] = await Promise.all([
     supabase.from("tbl_user_accounts").select("*").eq("id", id).single(),
     getBranches(),
-    getStaffRoster(),
   ]);
 
   if (!account) notFound();
@@ -24,14 +24,12 @@ export default async function EditAccountPage({ params }: { params: Promise<{ id
   const boundAction = updateAccount.bind(null, account.id);
 
   return (
-    <div>
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">Edit {account.username}</h1>
-      <AccountForm
-        account={account as UserAccount}
-        branches={branches}
-        staffRoster={staffRoster}
-        action={boundAction}
-      />
+    <div className="space-y-6">
+      <div>
+        <h1 className="mb-4 text-lg font-semibold text-gray-900">Edit {account.username}</h1>
+        <AccountForm account={account as UserAccount} branches={branches} action={boundAction} />
+      </div>
+      <SetPasswordForm accountId={account.id} />
     </div>
   );
 }

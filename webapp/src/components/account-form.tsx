@@ -7,14 +7,13 @@ import { STAFF_ROLE_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
 type Props = {
   account?: UserAccount;
   branches: LookupOption[];
-  staffRoster: LookupOption[];
   action: (formData: FormData) => Promise<{ error?: string } | void>;
 };
 
 const inputCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 
-export function AccountForm({ account, branches, staffRoster, action }: Props) {
+export function AccountForm({ account, branches, action }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,19 +65,6 @@ export function AccountForm({ account, branches, staffRoster, action }: Props) {
             <option key={r} value={r}>{r}</option>
           ))}
         </select>
-      </label>
-
-      <label className="block text-sm text-gray-700">
-        Linked staff roster entry (optional)
-        <select name="staff_id" defaultValue={account?.staff_id ?? ""} className={inputCls}>
-          <option value="">-- none --</option>
-          {staffRoster.map((s) => (
-            <option key={s.id} value={s.id}>{s.label}</option>
-          ))}
-        </select>
-        <span className="mt-1 block text-xs text-gray-400">
-          Attributes this login&apos;s entries (progress notes, etc.) to a specific person in the staff roster.
-        </span>
       </label>
 
       {account && (

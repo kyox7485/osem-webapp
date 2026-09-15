@@ -12,14 +12,13 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
 
   const { data: account } = await supabase
     .from("tbl_user_accounts")
-    .select("*, tbl_branches(name), tbl_staff(staff_name)")
+    .select("*, tbl_branches(name)")
     .eq("id", id)
     .single();
 
   if (!account) notFound();
 
   const branch = Array.isArray(account.tbl_branches) ? account.tbl_branches[0] : account.tbl_branches;
-  const staff = Array.isArray(account.tbl_staff) ? account.tbl_staff[0] : account.tbl_staff;
 
   return (
     <div>
@@ -40,7 +39,6 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
         <dl className="space-y-2 text-sm">
           <Row label="Rights" value={account.rights} />
           <Row label="Status" value={account.status} />
-          <Row label="Linked staff roster entry" value={staff?.staff_name ?? "-- none --"} />
         </dl>
       </div>
     </div>

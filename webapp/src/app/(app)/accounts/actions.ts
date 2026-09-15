@@ -33,7 +33,6 @@ export async function createAccount(formData: FormData) {
   const username = (formData.get("username") as string)?.trim();
   const branchId = optionalInt(formData.get("branch_id"));
   const rights = formData.get("rights") as string;
-  const staffId = optionalInt(formData.get("staff_id"));
 
   if (!email || !username || !branchId || !rights) {
     return { error: "Email, username, branch, and rights are required" };
@@ -59,7 +58,6 @@ export async function createAccount(formData: FormData) {
       username,
       branch_id: branchId,
       rights,
-      staff_id: staffId,
     })
     .select("id")
     .single();
@@ -83,7 +81,6 @@ export async function updateAccount(accountId: number, formData: FormData) {
   const branchId = optionalInt(formData.get("branch_id"));
   const rights = formData.get("rights") as string;
   const status = (formData.get("status") as string) || "ACTIVE";
-  const staffId = optionalInt(formData.get("staff_id"));
 
   if (!email || !username || !branchId || !rights) {
     return { error: "Email, username, branch, and rights are required" };
@@ -110,7 +107,7 @@ export async function updateAccount(accountId: number, formData: FormData) {
 
   const { error } = await supabase
     .from("tbl_user_accounts")
-    .update({ email, username, branch_id: branchId, rights, status, staff_id: staffId })
+    .update({ email, username, branch_id: branchId, rights, status })
     .eq("id", accountId);
 
   if (error) {
@@ -120,4 +117,36 @@ export async function updateAccount(accountId: number, formData: FormData) {
   revalidatePath("/accounts");
   revalidatePath(`/accounts/${accountId}`);
   redirect(`/accounts/${accountId}`);
+}
+
+// Sets a new password directly, bypassing email entirely -- the password is
+// never stored anywhere (not in tbl_user_accounts, not logged); it's handed
+// straight to Supabase Auth, same as the reset-password flow does.
+export async function setAccountPassword(accountId: number, formData: FormData) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const password = formData.get("password") as string;
+  if (!password || password.length < 6) {
+    return { error: "Password must be at least 6 characters" };
+  }
+
+  const supabase = await createClient();
+  const { data: existing, error: fetchError } = await supabase
+    .from("tbl_user_accounts")
+    .select("auth_user_id")
+    .eq("id", accountId)
+    .single();
+
+  if (fetchError || !existing) {
+    return { error: fetchError?.message ?? "Account not found" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(existing.auth_user_id, { password });
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
 }

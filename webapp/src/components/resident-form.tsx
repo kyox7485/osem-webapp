@@ -16,17 +16,39 @@ import {
   HYGIENE_OPTIONS,
 } from "@/lib/types";
 
+type StaffOption = LookupOption & { branch_id: number };
+
 type Props = {
   resident?: Resident;
   nationalities: LookupOption[];
   dietTypes: LookupOption[];
   feedingTypes: LookupOption[];
+  branches: LookupOption[];
+  allStaff: StaffOption[];
+  // The logged-in account's branch, preselected -- empty for an admin
+  // account, who must pick explicitly since admins aren't scoped to one
+  // branch.
+  defaultBranchId: number | null;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
 };
 
-export function ResidentForm({ resident, nationalities, dietTypes, feedingTypes, action }: Props) {
+export function ResidentForm({
+  resident,
+  nationalities,
+  dietTypes,
+  feedingTypes,
+  branches,
+  allStaff,
+  defaultBranchId,
+  action,
+}: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [branchId, setBranchId] = useState<string>(
+    resident ? String(resident.branch_id) : defaultBranchId ? String(defaultBranchId) : ""
+  );
+
+  const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
 
   async function handleSubmit(formData: FormData) {
     setSubmitting(true);
@@ -45,6 +67,20 @@ export function ResidentForm({ resident, nationalities, dietTypes, feedingTypes,
       <Section title="Basic details">
         <Field label="Name" required>
           <input name="resident_name" defaultValue={resident?.resident_name} required className={inputCls} />
+        </Field>
+        <Field label="Branch" required>
+          <select
+            name="branch_id"
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+            required
+            className={inputCls}
+          >
+            <option value="" disabled>Select a branch</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.label}</option>
+            ))}
+          </select>
         </Field>
         <Field label="IC number">
           <input name="ic_number" defaultValue={resident?.ic_number ?? ""} className={inputCls} />
@@ -177,6 +213,17 @@ export function ResidentForm({ resident, nationalities, dietTypes, feedingTypes,
         </Field>
         <Field label="Assessment and summary" full>
           <textarea name="assessment_and_summary" defaultValue={resident?.assessment_and_summary ?? ""} rows={3} className={inputCls} />
+        </Field>
+      </Section>
+
+      <Section title="Attribution">
+        <Field label="Reviewed by" required full>
+          <select name="reviewed_by" defaultValue={resident?.reviewed_by ?? ""} required disabled={!branchId} className={inputCls}>
+            <option value="" disabled>{branchId ? "Select who's entering this" : "Select a branch first"}</option>
+            {staffForBranch.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
         </Field>
       </Section>
 

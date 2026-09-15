@@ -2,11 +2,18 @@
 
 import { useState } from "react";
 import { createProgressNote } from "./actions";
+import type { LookupOption } from "@/lib/types";
 
 const inputCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 
-export function NewNoteForm({ residentId }: { residentId: number }) {
+export function NewNoteForm({
+  residentId,
+  staffOptions,
+}: {
+  residentId: number;
+  staffOptions: LookupOption[];
+}) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -73,6 +80,16 @@ export function NewNoteForm({ residentId }: { residentId: number }) {
       <label className="block text-sm text-gray-700">
         TCA notes
         <input name="tca_notes" placeholder="e.g. MOPD 1/12/2026, SOPD 21/11/2026" className={inputCls} />
+      </label>
+
+      <label className="block text-sm text-gray-700">
+        Entered by <span className="text-red-500">*</span>
+        <select name="staff_id" required defaultValue="" className={inputCls}>
+          <option value="" disabled>Select who&apos;s entering this</option>
+          {staffOptions.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
       </label>
 
       <div className="flex gap-2">

@@ -1,14 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getStaffRoster } from "@/lib/lookups";
 import { NewNoteForm } from "./new-note-form";
 
 export default async function ProgressNotesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: resident }, { data: notes, error: notesError }] = await Promise.all([
-    supabase.from("tbl_residents").select("id, resident_name").eq("id", id).single(),
+  const { data: resident } = await supabase
+    .from("tbl_residents")
+    .select("id, resident_name, branch_id")
+    .eq("id", id)
+    .single();
+
+  if (!resident) notFound();
+
+  const [{ data: notes, error: notesError }, staffOptions] = await Promise.all([
     supabase
       .from("tbl_progress_notes")
       // tbl_progress_notes has two FK paths to tbl_staff (reviewed_by,
@@ -16,9 +24,8 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       .select("*, tbl_staff!created_by(staff_name)")
       .eq("resident_id", id)
       .order("entry_timestamp", { ascending: false }),
+    getStaffRoster(resident.branch_id),
   ]);
-
-  if (!resident) notFound();
 
   return (
     <div>
@@ -30,7 +37,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mb-4">
-        <NewNoteForm residentId={resident.id} />
+        <NewNoteForm residentId={resident.id} staffOptions={staffOptions} />
       </div>
 
       {notesError && <p className="mb-4 text-sm text-red-600">{notesError.message}</p>}
