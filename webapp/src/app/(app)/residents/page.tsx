@@ -1,24 +1,46 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getBranches } from "@/lib/lookups";
+import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
+
+const inputCls =
+  "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 
 export default async function ResidentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; ic?: string; status?: string; branch_id?: string }>;
 }) {
-  const { q } = await searchParams;
-  const supabase = await createClient();
+  const { q, ic, status, branch_id } = await searchParams;
+  const currentUser = await getCurrentUser();
+  const admin = isAdmin(currentUser);
+  const effectiveStatus = status ?? "ACTIVE"; // default filter
 
+  const supabase = await createClient();
   let query = supabase
     .from("tbl_residents")
-    .select("id, resident_name, ic_number, status, care_type, admission_date, tbl_branches(name)")
+    .select("id, resident_name, ic_number, status, tbl_branches(name)")
     .order("resident_name");
 
-  if (q) {
-    query = query.ilike("resident_name", `%${q}%`);
+  if (q) query = query.ilike("resident_name", `%${q}%`);
+  if (ic) query = query.ilike("ic_number", `%${ic}%`);
+  if (effectiveStatus !== "ALL") query = query.eq("status", effectiveStatus);
+
+  if (admin) {
+    // Admins can see/filter across branches; only apply a branch filter if
+    // they actually picked one.
+    if (branch_id) query = query.eq("branch_id", branch_id);
+  } else if (currentUser) {
+    // Non-admin logins (branch emails, possibly shared) never see other
+    // branches here -- there's no filter control for it, this is fixed.
+    query = query.eq("branch_id", currentUser.branch_id);
   }
 
-  const { data: residents, error } = await query;
+  const [{ data: residents, error }, branches] = await Promise.all([
+    query,
+    admin ? getBranches() : Promise.resolve([]),
+  ]);
 
   return (
     <div>
@@ -32,14 +54,41 @@ export default async function ResidentsPage({
         </Link>
       </div>
 
-      <form className="mb-4">
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name..."
-          className="w-full max-w-xs rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
-        />
+      <form className="mb-4 flex flex-wrap items-end gap-3">
+        <label className="text-sm text-gray-700">
+          Name
+          <input type="text" name="q" defaultValue={q} placeholder="Search by name..." className={`mt-1 block ${inputCls}`} />
+        </label>
+        <label className="text-sm text-gray-700">
+          IC
+          <input type="text" name="ic" defaultValue={ic} placeholder="Search by IC..." className={`mt-1 block ${inputCls}`} />
+        </label>
+        <label className="text-sm text-gray-700">
+          Status
+          <select name="status" defaultValue={effectiveStatus} className={`mt-1 block ${inputCls}`}>
+            <option value="ALL">All</option>
+            {RESIDENT_STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </label>
+        {admin && (
+          <label className="text-sm text-gray-700">
+            Branch
+            <select name="branch_id" defaultValue={branch_id ?? ""} className={`mt-1 block ${inputCls}`}>
+              <option value="">All branches</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button
+          type="submit"
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Filter
+        </button>
       </form>
 
       {error && <p className="text-sm text-red-600">{error.message}</p>}
@@ -50,10 +99,8 @@ export default async function ResidentsPage({
             <tr>
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">IC</th>
-              <th className="px-4 py-2 font-medium">Branch</th>
+              {admin && <th className="px-4 py-2 font-medium">Branch</th>}
               <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Care type</th>
-              <th className="px-4 py-2 font-medium">Admitted</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -67,18 +114,16 @@ export default async function ResidentsPage({
                     </Link>
                   </td>
                   <td className="px-4 py-2 text-gray-600">{r.ic_number ?? "--"}</td>
-                  <td className="px-4 py-2 text-gray-600">{branch?.name ?? "--"}</td>
+                  {admin && <td className="px-4 py-2 text-gray-600">{branch?.name ?? "--"}</td>}
                   <td className="px-4 py-2">
                     <StatusBadge status={r.status} />
                   </td>
-                  <td className="px-4 py-2 text-gray-600">{r.care_type ?? "--"}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.admission_date ?? "--"}</td>
                 </tr>
               );
             })}
             {residents?.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
                   No residents found.
                 </td>
               </tr>
