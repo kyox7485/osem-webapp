@@ -12,7 +12,7 @@ type Props = {
 };
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-500 focus:outline-none";
+  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
 
 export function StaffForm({ staff, positions, branches, action }: Props) {
   const [error, setError] = useState<string | null>(null);
