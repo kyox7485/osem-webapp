@@ -10,5 +10,6 @@ __pycache__/
 *.pyc
 *.log
 migration_report_*.md
+new_auth_user.json
 .DS_Store
 Thumbs.db
