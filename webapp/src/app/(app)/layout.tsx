@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
+import { NavLinks } from "@/components/nav-links";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const account = await getCurrentUser();
@@ -26,27 +26,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const navItems = [
+    { href: "/residents", label: "Residents" },
+    { href: "/staff", label: "Staff" },
+    ...(isAdmin(account) ? [{ href: "/accounts", label: "Accounts" }] : []),
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <nav className="flex items-center gap-6">
-            <span className="font-semibold text-gray-900">OSEM</span>
-            <Link href="/residents" className="text-sm text-gray-600 hover:text-gray-900">
-              Residents
-            </Link>
-            <Link href="/staff" className="text-sm text-gray-600 hover:text-gray-900">
-              Staff
-            </Link>
-            {isAdmin(account) && (
-              <Link href="/accounts" className="text-sm text-gray-600 hover:text-gray-900">
-                Accounts
-              </Link>
-            )}
+      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <nav className="flex items-center gap-1">
+            <span className="mr-3 flex items-center gap-1.5 font-semibold text-gray-900">
+              <span className="h-2 w-2 rounded-full bg-indigo-600" />
+              OSEM
+            </span>
+            <NavLinks items={navItems} />
           </nav>
-          <div className="flex items-center gap-3 text-sm text-gray-600">
-            <span>
-              {account.username} · {account.branch_name || "All branches"} · {account.rights}
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            <span className="hidden sm:inline">
+              <span className="font-medium text-gray-700">{account.username}</span>
+              {" · "}
+              {account.branch_name || "All branches"}
+              {" · "}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+              {account.rights}
             </span>
             <SignOutButton />
           </div>

@@ -230,7 +230,7 @@ export function ResidentForm({
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
       >
         {submitting ? "Saving..." : resident ? "Save changes" : "Create resident"}
       </button>
@@ -239,11 +239,11 @@ export function ResidentForm({
 }
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
+  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="rounded-md border border-gray-200 bg-white p-4">
+    <fieldset className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       <legend className="px-1 text-sm font-medium text-gray-900">{title}</legend>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">{children}</div>
     </fieldset>

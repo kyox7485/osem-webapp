@@ -5,7 +5,7 @@ import { createProgressNote } from "./actions";
 import type { LookupOption } from "@/lib/types";
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
+  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 export function NewNoteForm({
   residentId,
@@ -36,7 +36,7 @@ export function NewNoteForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+        className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
       >
         New progress note
       </button>
@@ -44,7 +44,7 @@ export function NewNoteForm({
   }
 
   return (
-    <form id="new-note-form" action={handleSubmit} className="space-y-3 rounded-md border border-gray-200 bg-white p-4">
+    <form id="new-note-form" action={handleSubmit} className="space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <label className="block text-sm text-gray-700">
@@ -96,7 +96,7 @@ export function NewNoteForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
         >
           {submitting ? "Saving..." : "Save"}
         </button>

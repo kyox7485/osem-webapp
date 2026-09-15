@@ -37,7 +37,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
           </Link>
           <Link
             href={`/residents/${resident.id}/edit`}
-            className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
             Edit
           </Link>
@@ -83,7 +83,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4">
+    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       <h2 className="mb-3 text-sm font-medium text-gray-900">{title}</h2>
       <dl className="space-y-2">{children}</dl>
     </div>

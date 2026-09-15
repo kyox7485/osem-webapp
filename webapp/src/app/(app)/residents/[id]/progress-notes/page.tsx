@@ -46,7 +46,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
         {notes?.map((note) => {
           const author = Array.isArray(note.tbl_staff) ? note.tbl_staff[0] : note.tbl_staff;
           return (
-            <div key={note.id} className="rounded-md border border-gray-200 bg-white p-4">
+            <div key={note.id} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
               <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
                 <span>{new Date(note.entry_timestamp).toLocaleString()}</span>
                 <span>{author?.staff_name ?? "Unknown"}</span>

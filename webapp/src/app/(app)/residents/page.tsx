@@ -3,9 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getBranches } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
+import { ColumnFilter } from "@/components/column-filter";
 
-const inputCls =
-  "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none";
+const DEFAULT_STATUSES = ["ACTIVE"];
 
 export default async function ResidentsPage({
   searchParams,
@@ -15,32 +15,45 @@ export default async function ResidentsPage({
   const { q, ic, status, branch_id } = await searchParams;
   const currentUser = await getCurrentUser();
   const admin = isAdmin(currentUser);
-  const effectiveStatus = status ?? "ACTIVE"; // default filter
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("tbl_residents")
-    .select("id, resident_name, ic_number, status, tbl_branches(name)")
-    .order("resident_name");
+  const selectedStatuses = status !== undefined ? status.split(",").filter(Boolean) : DEFAULT_STATUSES;
+  const selectedBranches = admin && branch_id !== undefined ? branch_id.split(",").filter(Boolean) : null;
 
-  if (q) query = query.ilike("resident_name", `%${q}%`);
-  if (ic) query = query.ilike("ic_number", `%${ic}%`);
-  if (effectiveStatus !== "ALL") query = query.eq("status", effectiveStatus);
+  const branches = admin ? await getBranches() : [];
+  const noResults = selectedStatuses.length === 0 || (selectedBranches !== null && selectedBranches.length === 0);
 
-  if (admin) {
-    // Admins can see/filter across branches; only apply a branch filter if
-    // they actually picked one.
-    if (branch_id) query = query.eq("branch_id", branch_id);
-  } else if (currentUser) {
-    // Non-admin logins (branch emails, possibly shared) never see other
-    // branches here -- there's no filter control for it, this is fixed.
-    query = query.eq("branch_id", currentUser.branch_id);
+  let residents: {
+    id: number;
+    resident_name: string;
+    ic_number: string | null;
+    status: string;
+    tbl_branches: { name: string } | { name: string }[] | null;
+  }[] = [];
+  let error: { message: string } | null = null;
+
+  if (!noResults) {
+    const supabase = await createClient();
+    let query = supabase
+      .from("tbl_residents")
+      .select("id, resident_name, ic_number, status, tbl_branches(name)")
+      .order("resident_name")
+      .in("status", selectedStatuses);
+
+    if (q) query = query.ilike("resident_name", `%${q}%`);
+    if (ic) query = query.ilike("ic_number", `%${ic}%`);
+
+    if (admin) {
+      if (selectedBranches) query = query.in("branch_id", selectedBranches);
+    } else if (currentUser) {
+      // Non-admin logins (branch emails, possibly shared) never see other
+      // branches here -- there's no filter control for it, this is fixed.
+      query = query.eq("branch_id", currentUser.branch_id);
+    }
+
+    const result = await query;
+    residents = result.data ?? [];
+    error = result.error;
   }
-
-  const [{ data: residents, error }, branches] = await Promise.all([
-    query,
-    admin ? getBranches() : Promise.resolve([]),
-  ]);
 
   return (
     <div>
@@ -48,63 +61,48 @@ export default async function ResidentsPage({
         <h1 className="text-lg font-semibold text-gray-900">Residents</h1>
         <Link
           href="/residents/new"
-          className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
           New resident
         </Link>
       </div>
 
-      <form className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-gray-700">
-          Name
-          <input type="text" name="q" defaultValue={q} placeholder="Search by name..." className={`mt-1 block ${inputCls}`} />
-        </label>
-        <label className="text-sm text-gray-700">
-          IC
-          <input type="text" name="ic" defaultValue={ic} placeholder="Search by IC..." className={`mt-1 block ${inputCls}`} />
-        </label>
-        <label className="text-sm text-gray-700">
-          Status
-          <select name="status" defaultValue={effectiveStatus} className={`mt-1 block ${inputCls}`}>
-            <option value="ALL">All</option>
-            {RESIDENT_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        {admin && (
-          <label className="text-sm text-gray-700">
-            Branch
-            <select name="branch_id" defaultValue={branch_id ?? ""} className={`mt-1 block ${inputCls}`}>
-              <option value="">All branches</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.label}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <button
-          type="submit"
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Filter
-        </button>
-      </form>
+      {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
 
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
-
-      <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-md border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">IC</th>
-              {admin && <th className="px-4 py-2 font-medium">Branch</th>}
-              <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2">
+                <ColumnFilter type="text" label="Name" paramName="q" placeholder="Search by name..." />
+              </th>
+              <th className="px-4 py-2">
+                <ColumnFilter type="text" label="IC" paramName="ic" placeholder="Search by IC..." />
+              </th>
+              {admin && (
+                <th className="px-4 py-2">
+                  <ColumnFilter
+                    type="select"
+                    label="Branch"
+                    paramName="branch_id"
+                    options={branches.map((b) => ({ value: String(b.id), label: b.label }))}
+                    defaultValues={branches.map((b) => String(b.id))}
+                  />
+                </th>
+              )}
+              <th className="px-4 py-2">
+                <ColumnFilter
+                  type="select"
+                  label="Status"
+                  paramName="status"
+                  options={RESIDENT_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                  defaultValues={DEFAULT_STATUSES}
+                />
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {residents?.map((r) => {
+            {residents.map((r) => {
               const branch = Array.isArray(r.tbl_branches) ? r.tbl_branches[0] : r.tbl_branches;
               return (
                 <tr key={r.id} className="hover:bg-gray-50">
@@ -121,7 +119,7 @@ export default async function ResidentsPage({
                 </tr>
               );
             })}
-            {residents?.length === 0 && (
+            {residents.length === 0 && (
               <tr>
                 <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
                   No residents found.

@@ -29,13 +29,13 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
         </div>
         <Link
           href={`/accounts/${account.id}/edit`}
-          className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
           Edit
         </Link>
       </div>
 
-      <div className="max-w-md rounded-md border border-gray-200 bg-white p-4">
+      <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
           <Row label="Rights" value={account.rights} />
           <Row label="Status" value={account.status} />

@@ -24,7 +24,7 @@ export function SetPasswordForm({ accountId }: { accountId: number }) {
   }
 
   return (
-    <form action={handleSubmit} className="max-w-lg space-y-3 rounded-md border border-gray-200 bg-white p-4">
+    <form action={handleSubmit} className="max-w-lg space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       <h2 className="text-sm font-medium text-gray-900">Set new password</h2>
       <p className="text-xs text-gray-400">
         Sets it directly -- no email involved. Not stored anywhere; tell the person once.
@@ -38,7 +38,7 @@ export function SetPasswordForm({ accountId }: { accountId: number }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="New password (min 6 characters)"
-        className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
+        className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
       />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
