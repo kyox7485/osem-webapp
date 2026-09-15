@@ -9,7 +9,7 @@ export default async function NewResidentPage() {
     getNationalities(),
     getDietTypes(),
     getFeedingTypes(),
-    getBranches(),
+    getBranches("NUR"),
     getAllStaffWithBranch(),
   ]);
 
@@ -23,6 +23,7 @@ export default async function NewResidentPage() {
         branches={branches}
         allStaff={allStaff}
         defaultBranchId={isAdmin(currentUser) ? null : currentUser?.branch_id ?? null}
+        isAdmin={isAdmin(currentUser)}
         action={createResident}
       />
     </div>

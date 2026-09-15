@@ -29,6 +29,10 @@ type Props = {
   // account, who must pick explicitly since admins aren't scoped to one
   // branch.
   defaultBranchId: number | null;
+  // Only ADMIN accounts may pick a different (nursing) branch -- everyone
+  // else is locked to their own branch, which is why defaultBranchId
+  // exists in the first place.
+  isAdmin: boolean;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
 };
 
@@ -40,6 +44,7 @@ export function ResidentForm({
   branches,
   allStaff,
   defaultBranchId,
+  isAdmin,
   action,
 }: Props) {
   const [error, setError] = useState<string | null>(null);
@@ -69,18 +74,27 @@ export function ResidentForm({
           <input name="resident_name" defaultValue={resident?.resident_name} required className={inputCls} />
         </Field>
         <Field label="Branch" required>
-          <select
-            name="branch_id"
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            required
-            className={inputCls}
-          >
-            <option value="" disabled>Select a branch</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.label}</option>
-            ))}
-          </select>
+          {isAdmin ? (
+            <select
+              name="branch_id"
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              required
+              className={inputCls}
+            >
+              <option value="" disabled>Select a branch</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <div className={`${inputCls} bg-gray-50 text-gray-500`}>
+                {branches.find((b) => String(b.id) === branchId)?.label ?? "--"}
+              </div>
+              <input type="hidden" name="branch_id" value={branchId} />
+            </>
+          )}
         </Field>
         <Field label="IC number">
           <input name="ic_number" defaultValue={resident?.ic_number ?? ""} className={inputCls} />

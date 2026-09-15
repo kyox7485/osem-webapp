@@ -25,22 +25,25 @@ export async function getPositions(): Promise<LookupOption[]> {
   return (data ?? []).map((r) => ({ id: r.id, label: r.name }));
 }
 
-// Branches are displayed everywhere as "<BranchLocale> <BranchCode>"
-// (e.g. "ALMA AMN") rather than the full BranchName -- shorter and matches
-// how staff refer to branches day to day.
+// Branches are displayed everywhere as just "<BranchLocale>" (e.g. "ALMA")
+// rather than the full BranchName -- shorter and matches how staff refer
+// to branches day to day.
 export function formatBranch(branch: { locale: string | null; code: string } | null | undefined): string {
   if (!branch) return "--";
-  return branch.locale ? `${branch.locale} ${branch.code}` : branch.code;
+  return branch.locale ?? branch.code;
 }
 
-export async function getBranches(): Promise<LookupOption[]> {
+// onlyFunction restricts to branches whose tbl_branches.Function matches
+// (e.g. "NUR" for the resident-admission branch picker, which should only
+// ever offer nursing branches -- "PHY" physiotherapy branches like AMP
+// don't register residents). Omit for every branch, unfiltered.
+export async function getBranches(onlyFunction?: string): Promise<LookupOption[]> {
   const supabase = await createClient();
   // tbl_branches' columns are PascalCase (BranchID/BranchLocale/BranchCode)
   // -- aliased back to lowercase here so nothing downstream has to know that.
-  const { data } = await supabase
-    .from("tbl_branches")
-    .select("id:BranchID, locale:BranchLocale, code:BranchCode")
-    .order("BranchCode");
+  let query = supabase.from("tbl_branches").select("id:BranchID, locale:BranchLocale, code:BranchCode");
+  if (onlyFunction) query = query.eq("Function", onlyFunction);
+  const { data } = await query.order("BranchCode");
   return (data ?? []).map((r) => ({ id: r.id, label: formatBranch(r) }));
 }
 
