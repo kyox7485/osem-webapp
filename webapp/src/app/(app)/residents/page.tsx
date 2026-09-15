@@ -35,7 +35,7 @@ export default async function ResidentsPage({
     const supabase = await createClient();
     let query = supabase
       .from("tbl_residents")
-      .select("id, resident_name, ic_number, status, tbl_branches(name)")
+      .select("id, resident_name, ic_number, status, tbl_branches(name:BranchName)")
       .order("resident_name")
       .in("status", selectedStatuses);
 

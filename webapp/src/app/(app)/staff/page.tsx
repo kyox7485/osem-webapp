@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getBranches, getPositions } from "@/lib/lookups";
-import { STAFF_STATUS_OPTIONS } from "@/lib/types";
+import { STAFF_STATUS_OPTIONS, STAFF_ROLE_OPTIONS, DEPARTMENT_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
@@ -10,9 +10,16 @@ const DEFAULT_STATUSES = ["ACTIVE"];
 export default async function StaffPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; position_id?: string; status?: string; branch_id?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    position_id?: string;
+    status?: string;
+    branch_id?: string;
+    role?: string;
+    department?: string;
+  }>;
 }) {
-  const { q, position_id, status, branch_id } = await searchParams;
+  const { q, position_id, status, branch_id, role, department } = await searchParams;
   const currentUser = await getCurrentUser();
   const admin = isAdmin(currentUser);
 
@@ -21,15 +28,21 @@ export default async function StaffPage({
   const selectedStatuses = status !== undefined ? status.split(",").filter(Boolean) : DEFAULT_STATUSES;
   const selectedPositions = position_id !== undefined ? position_id.split(",").filter(Boolean) : positions.map((p) => String(p.id));
   const selectedBranches = admin && branch_id !== undefined ? branch_id.split(",").filter(Boolean) : null;
+  const selectedRoles = role !== undefined ? role.split(",").filter(Boolean) : [...STAFF_ROLE_OPTIONS];
+  const selectedDepartments = department !== undefined ? department.split(",").filter(Boolean) : [...DEPARTMENT_OPTIONS];
 
   const noResults =
     selectedStatuses.length === 0 ||
     selectedPositions.length === 0 ||
+    selectedRoles.length === 0 ||
+    selectedDepartments.length === 0 ||
     (selectedBranches !== null && selectedBranches.length === 0);
 
   let staff: {
     id: number;
     staff_name: string;
+    role: string;
+    department: string | null;
     status: string;
     tbl_positions: { name: string } | { name: string }[] | null;
     tbl_branches: { name: string } | { name: string }[] | null;
@@ -40,11 +53,15 @@ export default async function StaffPage({
     const supabase = await createClient();
     let query = supabase
       .from("tbl_staff")
-      .select("id, staff_name, status, tbl_positions(name), tbl_branches(name)")
+      .select("id, staff_name, role, department, status, tbl_positions(name), tbl_branches(name:BranchName)")
       .order("staff_name")
       .in("status", selectedStatuses)
-      .in("position_id", selectedPositions);
+      .in("position_id", selectedPositions)
+      .in("role", selectedRoles);
 
+    if (selectedDepartments.length !== DEPARTMENT_OPTIONS.length) {
+      query = query.in("department", selectedDepartments);
+    }
     if (q) query = query.ilike("staff_name", `%${q}%`);
 
     if (admin) {
@@ -106,6 +123,24 @@ export default async function StaffPage({
               <th className="px-4 py-2">
                 <ColumnFilter
                   type="select"
+                  label="Role"
+                  paramName="role"
+                  options={STAFF_ROLE_OPTIONS.map((r) => ({ value: r, label: r }))}
+                  defaultValues={[...STAFF_ROLE_OPTIONS]}
+                />
+              </th>
+              <th className="px-4 py-2">
+                <ColumnFilter
+                  type="select"
+                  label="Department"
+                  paramName="department"
+                  options={DEPARTMENT_OPTIONS.map((d) => ({ value: d, label: d }))}
+                  defaultValues={[...DEPARTMENT_OPTIONS]}
+                />
+              </th>
+              <th className="px-4 py-2">
+                <ColumnFilter
+                  type="select"
                   label="Status"
                   paramName="status"
                   options={STAFF_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
@@ -127,6 +162,8 @@ export default async function StaffPage({
                   </td>
                   <td className="px-4 py-2 text-gray-600">{position?.name ?? "--"}</td>
                   {admin && <td className="px-4 py-2 text-gray-600">{branch?.name ?? "--"}</td>}
+                  <td className="px-4 py-2 text-gray-600">{s.role}</td>
+                  <td className="px-4 py-2 text-gray-600">{s.department ?? "--"}</td>
                   <td className="px-4 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -141,7 +178,7 @@ export default async function StaffPage({
             })}
             {staff.length === 0 && (
               <tr>
-                <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={admin ? 6 : 5} className="px-4 py-6 text-center text-gray-400">
                   No staff found.
                 </td>
               </tr>

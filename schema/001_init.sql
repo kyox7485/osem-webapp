@@ -16,11 +16,20 @@ create extension if not exists "pg_trgm";    -- fuzzy resident-name search
 -- 1. ENUMS
 -- ============================================================================
 
--- tbl_staff.role: clinical/job-title category for the audit-trail roster.
--- Unrelated to login access -- see id_rights below.
-create type staff_role as enum (
-  'admin', 'management', 'doctor', 'nurse', 'caregiver', 'physio', 'pharmacist'
-);
+-- tbl_staff.role: coarse category for the audit-trail roster, used to
+-- scope which staff show up in role-restricted staff-picker dropdowns
+-- (e.g. nursing chart entries only offer STAFF, stock entries only offer
+-- MODERATOR, ADMIN shows up everywhere). Started as a 7-value clinical
+-- job-title list; collapsed to these 3 once it became clear the app only
+-- ever needed this coarse a distinction -- tbl_positions is what carries
+-- the real job title. Still a separate enum type from id_rights (login
+-- access) even though the labels now match -- see id_rights below for why
+-- they must stay decoupled.
+create type staff_role as enum ('ADMIN', 'MODERATOR', 'STAFF');
+
+-- tbl_staff.department: which clinical department the roster entry
+-- belongs to. Added directly in Supabase after the initial rollout.
+create type staff_dept as enum ('Nursing', 'Medical', 'Physiotherapy');
 
 -- tbl_user_accounts.rights: login access level. Deliberately just 3 tiers,
 -- decoupled from staff_role -- a login's rights and a roster entry's job
@@ -49,15 +58,22 @@ create type stock_request_status as enum ('draft', 'submitted', 'ordered', 'rece
 -- 2. BRANCHES & STAFF
 -- ============================================================================
 
+-- Column names are PascalCase (BranchID/BranchName/...) -- renamed directly
+-- in Supabase after the initial rollout, out of step with the rest of the
+-- schema's snake_case convention. The app aliases them back to id/name/etc.
+-- in its select() calls (see lib/lookups.ts, lib/current-user.ts) rather
+-- than assume this table's naming everywhere else.
 create table tbl_branches (
-  id            bigint generated always as identity primary key,
-  name          text not null,
-  code          text not null unique,
-  contact       text,
-  address       text,
-  locale        text,
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  "BranchID"      bigint generated always as identity primary key,
+  "BranchName"    text not null,
+  "BranchCode"    text not null unique,
+  "BranchContact" text,
+  "BranchAddress" text,
+  "BranchLocale"  text,
+  "Active"        text,   -- 'YES'/'NO', not boolean
+  "Function"      text,   -- department code, e.g. 'NUR'
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
 
 -- Staff positions: real data from tbl_Position (17 rows), not a guess.
@@ -101,10 +117,11 @@ insert into tbl_positions (name) values
 -- all, or have a login that isn't tied to a roster entry.
 create table tbl_staff (
   id            bigint generated always as identity primary key,
-  branch_id     bigint not null references tbl_branches (id),
+  branch_id     bigint not null references tbl_branches ("BranchID"),
   staff_name    text not null,
   position_id   bigint not null references tbl_positions (id),
   role          staff_role not null,
+  department    staff_dept,
   status        text not null default 'ACTIVE' check (status in ('ACTIVE','INACTIVE')),
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
@@ -122,7 +139,7 @@ create table tbl_user_accounts (
   auth_user_id  uuid not null unique references auth.users (id) on delete cascade,
   email         text not null,
   username      text not null,
-  branch_id     bigint not null references tbl_branches (id),
+  branch_id     bigint not null references tbl_branches ("BranchID"),
   rights        id_rights not null,
   status        text not null default 'ACTIVE' check (status in ('ACTIVE','INACTIVE')),
   created_at    timestamptz not null default now(),
@@ -574,7 +591,7 @@ insert into tbl_uoms (code) values
 
 create table tbl_residents (
   id                          bigint generated always as identity primary key,
-  branch_id                   bigint not null references tbl_branches (id),
+  branch_id                   bigint not null references tbl_branches ("BranchID"),
   resident_name               text not null,
   ic_number                   text,
   age                         int,
@@ -616,7 +633,7 @@ create index idx_residents_name on tbl_residents using gin (resident_name gin_tr
 -- which stays free text for narrative detail a fixed list can't capture.
 create table tbl_resident_diagnoses (
   id                  bigint generated always as identity primary key,
-  branch_id           bigint not null references tbl_branches (id),  -- auto-filled, see trigger
+  branch_id           bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
   resident_id         bigint not null references tbl_residents (id) on delete cascade,
   diagnosis_option_id bigint not null references tbl_diagnosis_options (id),
   remark              text,
@@ -891,7 +908,7 @@ insert into tbl_avpu_options (code, label) values
 
 create table tbl_nursing_chart_entries (
   id                    bigint generated always as identity primary key,
-  branch_id             bigint not null references tbl_branches (id),
+  branch_id             bigint not null references tbl_branches ("BranchID"),
   resident_id           bigint not null references tbl_residents (id),
   entry_timestamp       timestamptz not null default now(),
   tube_feeding          text check (tube_feeding in ('Oral Feed','Tube Feeding')),  -- feeding route, not a yes/no
@@ -937,7 +954,7 @@ create index idx_nce_branch on tbl_nursing_chart_entries (branch_id, entry_times
 -- it gets its own table, one row per meal actually logged.
 create table tbl_nursing_chart_meals (
   id               bigint generated always as identity primary key,
-  branch_id        bigint not null references tbl_branches (id),  -- auto-filled, see trigger
+  branch_id        bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
   chart_entry_id   bigint not null references tbl_nursing_chart_entries (id) on delete cascade,
   meal_type_id     bigint references tbl_meal_types (id),
   meal_portion_id  bigint references tbl_meal_portions (id),
@@ -966,7 +983,7 @@ for each row execute function fn_fill_chart_meal_branch();
 -- (not a time split). At most one episode of each kind per entry.
 create table tbl_nursing_chart_hygiene_episodes (
   id                bigint generated always as identity primary key,
-  branch_id         bigint not null references tbl_branches (id),  -- auto-filled, see trigger
+  branch_id         bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
   chart_entry_id    bigint not null references tbl_nursing_chart_entries (id) on delete cascade,
   assistance_level  text not null check (assistance_level in ('By Self','With Assistance')),
   activity_ids      bigint[],  -- multi-select against tbl_hygiene_care_activities
@@ -995,7 +1012,7 @@ for each row execute function fn_fill_chart_hygiene_branch();
 
 create table tbl_progress_notes (
   id                       bigint generated always as identity primary key,
-  branch_id                bigint not null references tbl_branches (id),
+  branch_id                bigint not null references tbl_branches ("BranchID"),
   resident_id              bigint not null references tbl_residents (id),
   entry_timestamp          timestamptz not null default now(),
   past_med_condition       text,
@@ -1027,7 +1044,7 @@ create index idx_pn_resident on tbl_progress_notes (resident_id, entry_timestamp
 
 create table tbl_physio_op_patients (
   id              bigint generated always as identity primary key,
-  branch_id       bigint not null references tbl_branches (id),
+  branch_id       bigint not null references tbl_branches ("BranchID"),
   patient_name    text not null,
   ic_number       text,
   age             int,
@@ -1044,7 +1061,7 @@ create table tbl_physio_op_patients (
 -- SOAP-style physiotherapy progress notes (IP + OP combined into one table).
 create table tbl_physio_progress_notes (
   id                     bigint generated always as identity primary key,
-  branch_id              bigint not null references tbl_branches (id),
+  branch_id              bigint not null references tbl_branches ("BranchID"),
   care_setting           physio_setting_type not null,  -- IP or OP
   resident_id            bigint references tbl_residents (id),          -- set when care_setting = 'IP'
   op_patient_id          bigint references tbl_physio_op_patients (id), -- set when care_setting = 'OP'
@@ -1079,7 +1096,7 @@ create index idx_ppn_op_patient on tbl_physio_progress_notes (op_patient_id, ent
 
 create table tbl_hospital_referrals (
   id                    bigint generated always as identity primary key,
-  branch_id             bigint not null references tbl_branches (id),
+  branch_id             bigint not null references tbl_branches ("BranchID"),
   resident_id           bigint not null references tbl_residents (id),
   referral_datetime     timestamptz not null default now(),
   chief_complaints      text,
@@ -1098,7 +1115,7 @@ create index idx_hr_resident on tbl_hospital_referrals (resident_id, referral_da
 
 create table tbl_fall_incidents (
   id                  bigint generated always as identity primary key,
-  branch_id           bigint not null references tbl_branches (id),
+  branch_id           bigint not null references tbl_branches ("BranchID"),
   resident_id         bigint references tbl_residents (id),
   resident_name_text  text,
   incident_timestamp  timestamptz not null default now(),
@@ -1142,7 +1159,7 @@ create table tbl_suppliers (
 
 create table tbl_storage_locations (
   id            bigint generated always as identity primary key,
-  branch_id     bigint not null references tbl_branches (id),
+  branch_id     bigint not null references tbl_branches ("BranchID"),
   name          text not null,        -- e.g. 'Store', 'Floor', 'Transit'
   is_transit    boolean not null default false,
   created_at    timestamptz not null default now(),
@@ -1170,7 +1187,7 @@ create unique index idx_products_barcode on tbl_products (barcode) where barcode
 -- branch_id is denormalized from the storage location, purely for RLS speed.
 create table tbl_product_stock (
   id                  bigint generated always as identity primary key,
-  branch_id           bigint not null references tbl_branches (id),
+  branch_id           bigint not null references tbl_branches ("BranchID"),
   product_id          bigint not null references tbl_products (id),
   storage_location_id bigint not null references tbl_storage_locations (id),
   quantity_in_stock   numeric not null default 0,
@@ -1183,7 +1200,7 @@ create table tbl_product_stock (
 -- This is the audit trail for every unit that moves, for any reason.
 create table tbl_stock_movements (
   id                    bigint generated always as identity primary key,
-  branch_id             bigint not null references tbl_branches (id),  -- branch owning storage_location_id
+  branch_id             bigint not null references tbl_branches ("BranchID"),  -- branch owning storage_location_id
   storage_location_id   bigint not null references tbl_storage_locations (id),
   product_id            bigint not null references tbl_products (id),
   movement_type         stock_movement_type not null,
@@ -1207,8 +1224,8 @@ create index idx_sm_reference on tbl_stock_movements (reference_type, reference_
 -- and won't double-count on either side.
 create table tbl_stock_transfers (
   id                        bigint generated always as identity primary key,
-  from_branch_id            bigint not null references tbl_branches (id),
-  to_branch_id              bigint not null references tbl_branches (id),
+  from_branch_id            bigint not null references tbl_branches ("BranchID"),
+  to_branch_id              bigint not null references tbl_branches ("BranchID"),
   product_id                bigint not null references tbl_products (id),
   quantity                  numeric not null check (quantity > 0),
   from_storage_location_id  bigint not null references tbl_storage_locations (id),
@@ -1231,7 +1248,7 @@ create index idx_transfers_from_branch on tbl_stock_transfers (from_branch_id, s
 -- The app doesn't place orders on these channels — it just tracks the list.
 create table tbl_stock_requests (
   id             bigint generated always as identity primary key,
-  branch_id      bigint not null references tbl_branches (id),
+  branch_id      bigint not null references tbl_branches ("BranchID"),
   request_date   date not null default current_date,
   requested_by   bigint references tbl_staff (id),   -- nurse who drafted it
   status         stock_request_status not null default 'draft',
@@ -1241,7 +1258,7 @@ create table tbl_stock_requests (
 
 create table tbl_stock_request_details (
   id                          bigint generated always as identity primary key,
-  branch_id                   bigint not null references tbl_branches (id),  -- auto-filled, see trigger
+  branch_id                   bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
   stock_request_id            bigint not null references tbl_stock_requests (id) on delete cascade,
   product_id                  bigint not null references tbl_products (id),
   storage_location_id         bigint references tbl_storage_locations (id),
@@ -1279,7 +1296,7 @@ for each row execute function fn_fill_request_detail_branch();
 
 create table tbl_charging_summary (
   id                   bigint generated always as identity primary key,
-  branch_id            bigint not null references tbl_branches (id),
+  branch_id            bigint not null references tbl_branches ("BranchID"),
   resident_id          bigint not null references tbl_residents (id),
   sale_date            date not null default current_date,
   product_id           bigint not null references tbl_products (id),

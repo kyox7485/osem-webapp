@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Staff, LookupOption } from "@/lib/types";
-import { STAFF_ROLE_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
+import { STAFF_ROLE_OPTIONS, DEPARTMENT_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
 
 type Props = {
   staff?: Staff;
@@ -63,6 +63,16 @@ export function StaffForm({ staff, positions, branches, action }: Props) {
           <option value="" disabled>Select a role</option>
           {STAFF_ROLE_OPTIONS.map((r) => (
             <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block text-sm text-gray-700">
+        Department
+        <select name="department" defaultValue={staff?.department ?? ""} className={inputCls}>
+          <option value="">--</option>
+          {DEPARTMENT_OPTIONS.map((d) => (
+            <option key={d} value={d}>{d}</option>
           ))}
         </select>
       </label>

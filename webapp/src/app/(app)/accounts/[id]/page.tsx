@@ -12,7 +12,7 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
 
   const { data: account } = await supabase
     .from("tbl_user_accounts")
-    .select("*, tbl_branches(name)")
+    .select("*, tbl_branches(name:BranchName)")
     .eq("id", id)
     .single();
 

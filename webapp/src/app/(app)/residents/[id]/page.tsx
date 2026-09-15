@@ -9,7 +9,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
   const { data: resident } = await supabase
     .from("tbl_residents")
     .select(
-      "*, tbl_branches(name), tbl_nationalities(country_name), tbl_diet_types(name), tbl_feeding_types(name)"
+      "*, tbl_branches(name:BranchName), tbl_nationalities(country_name), tbl_diet_types(name), tbl_feeding_types(name)"
     )
     .eq("id", id)
     .single();

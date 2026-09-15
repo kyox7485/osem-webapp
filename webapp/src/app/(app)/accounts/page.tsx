@@ -10,7 +10,7 @@ export default async function AccountsPage() {
   const supabase = await createClient();
   const { data: accounts, error } = await supabase
     .from("tbl_user_accounts")
-    .select("id, email, username, rights, status, tbl_branches(name)")
+    .select("id, email, username, rights, status, tbl_branches(name:BranchName)")
     .order("username");
 
   return (

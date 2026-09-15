@@ -10,7 +10,7 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
 
   const { data: staff } = await supabase
     .from("tbl_staff")
-    .select("*, tbl_positions(name), tbl_branches(name)")
+    .select("*, tbl_positions(name), tbl_branches(name:BranchName)")
     .eq("id", id)
     .single();
 
@@ -39,6 +39,7 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
       <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
           <Row label="Role" value={staff.role} />
+          <Row label="Department" value={staff.department} />
           <Row label="Status" value={staff.status} />
         </dl>
       </div>

@@ -6,11 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 
 function buildStaffPayload(formData: FormData) {
+  const department = (formData.get("department") as string) || null;
   return {
     staff_name: (formData.get("staff_name") as string)?.trim(),
     position_id: parseInt(formData.get("position_id") as string, 10),
     branch_id: parseInt(formData.get("branch_id") as string, 10),
     role: formData.get("role") as string,
+    department,
     status: (formData.get("status") as string) || "ACTIVE",
   };
 }

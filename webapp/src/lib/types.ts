@@ -34,7 +34,8 @@ export type Staff = {
   branch_id: number;
   staff_name: string;
   position_id: number;
-  role: "admin" | "management" | "doctor" | "nurse" | "caregiver" | "physio" | "pharmacist";
+  role: "ADMIN" | "MODERATOR" | "STAFF";
+  department: "Nursing" | "Medical" | "Physiotherapy" | null;
   status: "ACTIVE" | "INACTIVE";
 };
 
@@ -78,8 +79,12 @@ export const ACCOMPANIED_BY_OPTIONS = ["Self", "Family", "Friends", "Social Work
 export const MOBILITY_OPTIONS = ["Walking Independent", "Walking Aid", "Wheelchair", "Bedbound"] as const;
 export const HYGIENE_OPTIONS = ["Self Toileting", "Urinal", "Bedpan", "Commode Chair", "Pampers"] as const;
 export const CARE_GOAL_OPTIONS = ["Nursing/ADL care", "Rehabilitation", "Wound Care", "Paliative Care", "Others"] as const;
-// tbl_staff.role -- clinical/job-title category, unrelated to login access.
-export const STAFF_ROLE_OPTIONS = ["admin", "management", "doctor", "nurse", "caregiver", "physio", "pharmacist"] as const;
+// tbl_staff.role -- coarse category used to scope role-restricted
+// staff-picker dropdowns (see getStaffRoster/getAllStaffWithBranch in
+// lib/lookups.ts). Separate enum from id_rights even though the labels
+// now match -- see schema notes.
+export const STAFF_ROLE_OPTIONS = ["ADMIN", "MODERATOR", "STAFF"] as const;
+export const DEPARTMENT_OPTIONS = ["Nursing", "Medical", "Physiotherapy"] as const;
 export const STAFF_STATUS_OPTIONS = ["ACTIVE", "INACTIVE"] as const;
 // tbl_user_accounts.rights -- login access level. Deliberately just 3 tiers,
 // unrelated to tbl_staff.role.
