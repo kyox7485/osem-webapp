@@ -42,7 +42,8 @@ function buildResidentPayload(formData: FormData) {
     assessment_and_summary: optional(formData.get("assessment_and_summary")),
     // Explicitly picked on the form -- never inferred from the logged-in
     // account, since branch logins can be shared by multiple people.
-    reviewed_by: optionalInt(formData.get("reviewed_by")),
+    // tbl_staff's PK is a text code (e.g. "AMN-1"), not a bigint.
+    reviewed_by: optional(formData.get("reviewed_by")),
   };
 }
 

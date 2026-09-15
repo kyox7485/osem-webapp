@@ -68,9 +68,9 @@ export function StaffForm({ staff, positions, branches, action }: Props) {
       </label>
 
       <label className="block text-sm text-gray-700">
-        Department
-        <select name="department" defaultValue={staff?.department ?? ""} className={inputCls}>
-          <option value="">--</option>
+        Department <span className="text-red-500">*</span>
+        <select name="department" defaultValue={staff?.department ?? ""} required className={inputCls}>
+          <option value="" disabled>Select a department</option>
           {DEPARTMENT_OPTIONS.map((d) => (
             <option key={d} value={d}>{d}</option>
           ))}

@@ -48,7 +48,7 @@ export async function getStaffRoster(branchId: number, allowedRoles?: string[]):
   const supabase = await createClient();
   let query = supabase
     .from("tbl_staff")
-    .select("id, staff_name")
+    .select("id:StaffID, staff_name")
     .eq("branch_id", branchId)
     .eq("status", "ACTIVE");
   if (allowedRoles) query = query.in("role", [...new Set([...allowedRoles, "ADMIN"])]);
@@ -63,7 +63,7 @@ export async function getAllStaffWithBranch(
   allowedRoles?: string[]
 ): Promise<(LookupOption & { branch_id: number })[]> {
   const supabase = await createClient();
-  let query = supabase.from("tbl_staff").select("id, staff_name, branch_id").eq("status", "ACTIVE");
+  let query = supabase.from("tbl_staff").select("id:StaffID, staff_name, branch_id").eq("status", "ACTIVE");
   if (allowedRoles) query = query.in("role", [...new Set([...allowedRoles, "ADMIN"])]);
   const { data } = await query.order("staff_name");
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));

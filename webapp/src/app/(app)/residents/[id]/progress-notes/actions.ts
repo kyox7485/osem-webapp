@@ -10,11 +10,6 @@ function optional(value: FormDataEntryValue | null): string | null {
   return s ? s : null;
 }
 
-function optionalInt(value: FormDataEntryValue | null): number | null {
-  const s = optional(value);
-  return s ? parseInt(s, 10) : null;
-}
-
 export async function createProgressNote(residentId: number, formData: FormData) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
@@ -24,7 +19,8 @@ export async function createProgressNote(residentId: number, formData: FormData)
     return { error: "Progress note is required" };
   }
 
-  const staffId = optionalInt(formData.get("staff_id"));
+  // tbl_staff's PK is a text code (e.g. "AMN-1"), not a bigint.
+  const staffId = optional(formData.get("staff_id"));
   if (!staffId) {
     return { error: "Select who's entering this note" };
   }

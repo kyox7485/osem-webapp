@@ -39,7 +39,7 @@ export default async function StaffPage({
     (selectedBranches !== null && selectedBranches.length === 0);
 
   let staff: {
-    id: number;
+    id: string;
     staff_name: string;
     role: string;
     department: string | null;
@@ -53,7 +53,7 @@ export default async function StaffPage({
     const supabase = await createClient();
     let query = supabase
       .from("tbl_staff")
-      .select("id, staff_name, role, department, status, tbl_positions(name), tbl_branches(name:BranchName)")
+      .select("id:StaffID, staff_name, role, department, status, tbl_positions(name), tbl_branches(name:BranchName)")
       .order("staff_name")
       .in("status", selectedStatuses)
       .in("position_id", selectedPositions)

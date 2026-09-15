@@ -14,14 +14,14 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
   const supabase = await createClient();
 
   const [{ data: staff }, positions, branches] = await Promise.all([
-    supabase.from("tbl_staff").select("*").eq("id", id).single(),
+    supabase.from("tbl_staff").select("*").eq("StaffID", id).single(),
     getPositions(),
     getBranches(),
   ]);
 
   if (!staff) notFound();
 
-  const boundAction = updateStaff.bind(null, staff.id);
+  const boundAction = updateStaff.bind(null, staff.StaffID);
 
   return (
     <div>

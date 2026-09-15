@@ -6,13 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 
 function buildStaffPayload(formData: FormData) {
-  const department = (formData.get("department") as string) || null;
   return {
     staff_name: (formData.get("staff_name") as string)?.trim(),
     position_id: parseInt(formData.get("position_id") as string, 10),
     branch_id: parseInt(formData.get("branch_id") as string, 10),
     role: formData.get("role") as string,
-    department,
+    department: (formData.get("department") as string) || null,
     status: (formData.get("status") as string) || "ACTIVE",
   };
 }
@@ -36,29 +35,29 @@ export async function createStaff(formData: FormData) {
   const supabase = await createClient();
   const payload = buildStaffPayload(formData);
 
-  if (!payload.staff_name || !payload.position_id || !payload.branch_id || !payload.role) {
-    return { error: "Name, position, branch, and role are required" };
+  if (!payload.staff_name || !payload.position_id || !payload.branch_id || !payload.role || !payload.department) {
+    return { error: "Name, position, branch, role, and department are required" };
   }
 
-  const { data, error } = await supabase.from("tbl_staff").insert(payload).select("id").single();
+  const { data, error } = await supabase.from("tbl_staff").insert(payload).select("id:StaffID").single();
   if (error) return { error: error.message };
 
   revalidatePath("/staff");
   redirect(`/staff/${data.id}`);
 }
 
-export async function updateStaff(staffId: number, formData: FormData) {
+export async function updateStaff(staffId: string, formData: FormData) {
   const denied = await requireAdmin();
   if (denied) return denied;
 
   const supabase = await createClient();
   const payload = buildStaffPayload(formData);
 
-  if (!payload.staff_name || !payload.position_id || !payload.branch_id || !payload.role) {
-    return { error: "Name, position, branch, and role are required" };
+  if (!payload.staff_name || !payload.position_id || !payload.branch_id || !payload.role || !payload.department) {
+    return { error: "Name, position, branch, role, and department are required" };
   }
 
-  const { error } = await supabase.from("tbl_staff").update(payload).eq("id", staffId);
+  const { error } = await supabase.from("tbl_staff").update(payload).eq("StaffID", staffId);
   if (error) return { error: error.message };
 
   revalidatePath("/staff");
