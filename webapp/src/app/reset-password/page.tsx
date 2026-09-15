@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -14,17 +15,53 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // The recovery link logs the user into a temporary "recovery" session
-    // before this page loads. Wait for that session to be present before
-    // showing the form -- otherwise updateUser() below has nothing to act on.
+    // The invite/recovery link can hand off a session in three different
+    // shapes depending on how Supabase's mail server delivered it --
+    // #access_token=... in the URL fragment (implicit flow, picked up
+    // automatically by detectSessionInUrl), ?token_hash=...&type=... (OTP
+    // style, needs verifyOtp), or ?code=... (PKCE, needs
+    // exchangeCodeForSession). Handle all three rather than assume one --
+    // this is what was silently failing invite links that arrived in a
+    // shape the old implicit-only check never handled.
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => {
+
+    async function establishSession() {
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type") as EmailOtpType | null;
+      const code = params.get("code");
+
+      if (tokenHash && type) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+        if (error) {
+          setError("This invite/reset link is invalid or has expired. Request a new one.");
+          return;
+        }
+        setReady(true);
+        return;
+      }
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setError("This invite/reset link is invalid or has expired. Request a new one.");
+          return;
+        }
+        setReady(true);
+        return;
+      }
+
+      // Neither query param is present -- fall back to checking whether
+      // detectSessionInUrl already picked up an implicit-flow hash fragment.
+      const { data } = await supabase.auth.getSession();
       if (data.session) {
         setReady(true);
       } else {
         setError("This reset link is invalid or has expired. Request a new one from the login page.");
       }
-    });
+    }
+
+    establishSession();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

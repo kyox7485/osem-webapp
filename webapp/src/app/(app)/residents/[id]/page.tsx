@@ -45,7 +45,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <InfoCard title="Basic details">
           <Row label="IC number" value={resident.ic_number} />
           <Row label="Age" value={resident.age} />
@@ -60,7 +60,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
           <Row label="Discharge date" value={resident.discharge_date} />
           <Row label="Transfer from" value={resident.transfer_from} />
           <Row label="Accompanied by" value={resident.accompanied_by} />
-          <Row label="Emergency contact" value={resident.emergency_contact} />
+          <Row label="Emergency contact" value={resident.emergency_contact} multiline />
         </InfoCard>
 
         <InfoCard title="Care">
@@ -69,13 +69,15 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
           <Row label="Diet type" value={dietType?.name} />
           <Row label="Feeding type" value={feedingType?.name} />
         </InfoCard>
+      </div>
 
+      <div className="mt-4">
         <InfoCard title="Clinical notes">
           <Row label="Allergy" value={resident.allergy} />
           <Row label="Past medical condition" value={resident.past_medical_condition} multiline />
+          <Row label="Assessment and summary" value={resident.assessment_and_summary} multiline />
           <Row label="Current medication list" value={resident.current_medication_list} multiline />
           <Row label="TCA notes" value={resident.tca_notes} multiline />
-          <Row label="Assessment and summary" value={resident.assessment_and_summary} multiline />
         </InfoCard>
       </div>
     </div>
@@ -85,7 +87,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-medium text-gray-900">{title}</h2>
+      <h2 className="mb-3 text-sm font-bold text-gray-900">{title}</h2>
       <dl className="space-y-2">{children}</dl>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   Resident,
   LookupOption,
@@ -15,6 +15,7 @@ import {
   MOBILITY_OPTIONS,
   HYGIENE_OPTIONS,
 } from "@/lib/types";
+import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
 
 type StaffOption = LookupOption & { branch_id: number };
 
@@ -52,8 +53,24 @@ export function ResidentForm({
   const [branchId, setBranchId] = useState<string>(
     resident ? String(resident.branch_id) : defaultBranchId ? String(defaultBranchId) : ""
   );
+  const [status, setStatus] = useState<string>(resident?.status ?? "ACTIVE");
+  const [icNumber, setIcNumber] = useState(resident?.ic_number ?? "");
+  const [nationalityId, setNationalityId] = useState<string>(
+    resident?.nationality_id != null ? String(resident.nationality_id) : ""
+  );
+  const [age, setAge] = useState(resident?.age != null ? String(resident.age) : "");
 
   const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
+  const malaysiaId = nationalities.find((n) => n.label === "Malaysia")?.id;
+
+  // Malaysian IC numbers encode date of birth in the first 6 digits --
+  // derive age from it automatically rather than have it re-entered by
+  // hand (and risk it drifting from what the IC actually says).
+  useEffect(() => {
+    if (malaysiaId === undefined || String(malaysiaId) !== nationalityId) return;
+    const calculated = ageFromMalaysianIC(icNumber);
+    if (calculated !== null) setAge(String(calculated));
+  }, [icNumber, nationalityId, malaysiaId]);
 
   async function handleSubmit(formData: FormData) {
     setSubmitting(true);
@@ -97,10 +114,16 @@ export function ResidentForm({
           )}
         </Field>
         <Field label="IC number">
-          <input name="ic_number" defaultValue={resident?.ic_number ?? ""} className={inputCls} />
+          <input name="ic_number" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={inputCls} />
         </Field>
         <Field label="Age">
-          <input name="age" type="number" defaultValue={resident?.age ?? ""} className={inputCls} />
+          <input
+            name="age"
+            type="number"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            className={inputCls}
+          />
         </Field>
         <Field label="Gender">
           <select name="gender" defaultValue={resident?.gender ?? ""} className={inputCls}>
@@ -119,7 +142,7 @@ export function ResidentForm({
           </select>
         </Field>
         <Field label="Nationality">
-          <select name="nationality_id" defaultValue={resident?.nationality_id ?? ""} className={inputCls}>
+          <select name="nationality_id" value={nationalityId} onChange={(e) => setNationalityId(e.target.value)} className={inputCls}>
             <option value="">--</option>
             {nationalities.map((n) => (
               <option key={n.id} value={n.id}>{n.label}</option>
@@ -130,7 +153,7 @@ export function ResidentForm({
 
       <Section title="Admission">
         <Field label="Status">
-          <select name="status" defaultValue={resident?.status ?? "ACTIVE"} className={inputCls}>
+          <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
             {RESIDENT_STATUS_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
@@ -147,9 +170,11 @@ export function ResidentForm({
         <Field label="Admission date">
           <input name="admission_date" type="date" defaultValue={resident?.admission_date ?? ""} className={inputCls} />
         </Field>
-        <Field label="Discharge date">
-          <input name="discharge_date" type="date" defaultValue={resident?.discharge_date ?? ""} className={inputCls} />
-        </Field>
+        {(status === "DISCHARGED" || status === "DECEASED") && (
+          <Field label="Discharge date">
+            <input name="discharge_date" type="date" defaultValue={resident?.discharge_date ?? ""} className={inputCls} />
+          </Field>
+        )}
         <Field label="Transfer from">
           <select name="transfer_from" defaultValue={resident?.transfer_from ?? ""} className={inputCls}>
             <option value="">--</option>
@@ -166,8 +191,14 @@ export function ResidentForm({
             ))}
           </select>
         </Field>
-        <Field label="Emergency contact">
-          <input name="emergency_contact" defaultValue={resident?.emergency_contact ?? ""} className={inputCls} />
+        <Field label="Emergency contact" full>
+          <textarea
+            name="emergency_contact"
+            defaultValue={resident?.emergency_contact ?? ""}
+            rows={2}
+            placeholder="e.g. Jasmin (Daughter) - 012-4948717"
+            className={inputCls}
+          />
         </Field>
       </Section>
 
@@ -213,6 +244,9 @@ export function ResidentForm({
         <Field label="Past medical condition" full>
           <textarea name="past_medical_condition" defaultValue={resident?.past_medical_condition ?? ""} rows={3} className={inputCls} />
         </Field>
+        <Field label="Assessment and summary" full>
+          <textarea name="assessment_and_summary" defaultValue={resident?.assessment_and_summary ?? ""} rows={3} className={inputCls} />
+        </Field>
         <Field label="Current medication list" full>
           <textarea name="current_medication_list" defaultValue={resident?.current_medication_list ?? ""} rows={3} className={inputCls} />
         </Field>
@@ -224,9 +258,6 @@ export function ResidentForm({
             placeholder="e.g. MOPD 1/12/2026, SOPD 21/11/2026"
             className={inputCls}
           />
-        </Field>
-        <Field label="Assessment and summary" full>
-          <textarea name="assessment_and_summary" defaultValue={resident?.assessment_and_summary ?? ""} rows={3} className={inputCls} />
         </Field>
       </Section>
 

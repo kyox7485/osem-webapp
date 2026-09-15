@@ -1,4 +1,5 @@
 import { ResidentForm } from "@/components/resident-form";
+import { BackButton } from "@/components/back-button";
 import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createResident } from "../actions";
@@ -15,6 +16,7 @@ export default async function NewResidentPage() {
 
   return (
     <div>
+      <BackButton />
       <h1 className="mb-4 text-lg font-semibold text-gray-900">New resident</h1>
       <ResidentForm
         nationalities={nationalities}
