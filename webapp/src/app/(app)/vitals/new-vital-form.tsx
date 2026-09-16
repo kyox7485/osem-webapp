@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createVital, getStaffForResident } from "./actions";
+import { useState } from "react";
+import { createVital } from "./actions";
 import type { LookupOption } from "@/lib/types";
 
 type Resident = {
@@ -12,6 +12,12 @@ type Resident = {
 
 type Props = {
   residents: Resident[];
+  // Every active staff member across all branches, with branch_id --
+  // filtered client-side by the selected resident's branch, same pattern
+  // as ResidentForm's "Reviewed by" picker. No per-selection network
+  // round-trip (that was the old approach here, and the visible lag/flicker
+  // from it was the "doesn't work like other tabs" symptom).
+  allStaff: (LookupOption & { branch_id: number })[];
   onClose: () => void;
   onSaved: () => void;
 };
@@ -32,7 +38,7 @@ const SPO2_CONDITION_OPTIONS = [
 
 const DXT_REMARK_OPTIONS = ["Fasting", "Post-Meal 1hr", "Post-Meal 2hr", "Post-Meal >4hr"];
 
-export function NewVitalForm({ residents, onClose, onSaved }: Props) {
+export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
   const [residentId, setResidentId] = useState("");
   const [systolicBp, setSystolicBp] = useState("");
   const [diastolicBp, setDiastolicBp] = useState("");
@@ -44,27 +50,11 @@ export function NewVitalForm({ residents, onClose, onSaved }: Props) {
   const [dxtRemark, setDxtRemark] = useState("");
   const [insulinAdjustment, setInsulinAdjustment] = useState("");
   const [reviewedBy, setReviewedBy] = useState("");
-  const [staffOptions, setStaffOptions] = useState<LookupOption[]>([]);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load staff roster when resident is selected
-  useEffect(() => {
-    if (!residentId) {
-      setStaffOptions([]);
-      return;
-    }
-    console.log("Fetching staff for resident:", residentId);
-    getStaffForResident(parseInt(residentId))
-      .then((staff) => {
-        console.log("Received staff options:", staff);
-        setStaffOptions(staff);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch staff:", err);
-        setStaffOptions([]);
-      });
-  }, [residentId]);
+  const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

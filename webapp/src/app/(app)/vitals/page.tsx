@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
+import { getAllStaffWithBranch } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { VitalsTable } from "./vitals-table";
 
@@ -29,7 +30,7 @@ export default async function VitalsPage({
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
   }
 
-  const { data: residents } = await residentQuery;
+  const [{ data: residents }, allStaff] = await Promise.all([residentQuery, getAllStaffWithBranch()]);
 
   // Fetch vitals with filters
   let vitalsQuery = supabase
@@ -89,6 +90,7 @@ export default async function VitalsPage({
       <VitalsTable
         vitals={vitals || []}
         residents={residents || []}
+        allStaff={allStaff}
         currentResident={residentFilter}
         currentStart={startDate}
         currentEnd={endDate}

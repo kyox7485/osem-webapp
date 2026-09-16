@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
-import type { LookupOption } from "@/lib/types";
 
 type CreateVitalInput = {
   residentId: number;
@@ -18,63 +17,6 @@ type CreateVitalInput = {
   insulinAdjustment: string | null;
   reviewedBy: string | null;
 };
-
-export async function getStaffForResident(residentId: number): Promise<LookupOption[]> {
-  try {
-    const supabase = await createClient();
-
-    // First get the resident's branch
-    const { data: resident, error: residentError } = await supabase
-      .from("tbl_residents")
-      .select("branch_id")
-      .eq("id", residentId)
-      .single();
-
-    console.log("[getStaffForResident] Resident query:", { residentId, resident, residentError });
-
-    if (residentError) {
-      console.error("[getStaffForResident] Failed to fetch resident:", residentError);
-      return [];
-    }
-
-    if (!resident) {
-      console.error("[getStaffForResident] No resident found");
-      return [];
-    }
-
-    // Then get active staff from that branch
-    const { data, error } = await supabase
-      .from("tbl_staff")
-      .select("*")
-      .eq("branch_id", resident.branch_id)
-      .eq("status", "ACTIVE")
-      .order("staff_name");
-
-    console.log("[getStaffForResident] Staff query:", { branch_id: resident.branch_id, data, error });
-
-    if (error) {
-      console.error("[getStaffForResident] Failed to fetch staff:", error);
-      return [];
-    }
-
-    // Log the first row to see what keys are actually available
-    if (data && data.length > 0) {
-      console.log("[getStaffForResident] First row keys:", Object.keys(data[0]));
-      console.log("[getStaffForResident] First row sample:", data[0]);
-    }
-
-    const result = (data ?? []).map((r: any) => {
-      // Try multiple possible key names
-      const staffId = r.StaffID || r.staffid || r.staff_id || r.id;
-      return { id: staffId, label: r.staff_name };
-    });
-    console.log("[getStaffForResident] Returning:", result);
-    return result;
-  } catch (err) {
-    console.error("[getStaffForResident] Unexpected error:", err);
-    return [];
-  }
-}
 
 export async function createVital(input: CreateVitalInput): Promise<{ success: boolean; error?: string }> {
   const account = await getCurrentUser();

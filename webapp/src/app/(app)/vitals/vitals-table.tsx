@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format-date";
 import { NewVitalForm } from "./new-vital-form";
+import type { LookupOption } from "@/lib/types";
 
 type Vital = {
   id: number;
@@ -32,13 +33,14 @@ type Resident = {
 type Props = {
   vitals: Vital[];
   residents: Resident[];
+  allStaff: (LookupOption & { branch_id: number })[];
   currentResident: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
 };
 
-export function VitalsTable({ vitals, residents, currentResident, currentStart, currentEnd, error }: Props) {
+export function VitalsTable({ vitals, residents, allStaff, currentResident, currentStart, currentEnd, error }: Props) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
 
@@ -184,6 +186,7 @@ export function VitalsTable({ vitals, residents, currentResident, currentStart, 
       {showForm && (
         <NewVitalForm
           residents={residents}
+          allStaff={allStaff}
           onClose={() => setShowForm(false)}
           onSaved={() => {
             setShowForm(false);
