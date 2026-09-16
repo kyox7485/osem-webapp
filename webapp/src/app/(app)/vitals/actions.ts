@@ -22,22 +22,32 @@ type CreateVitalInput = {
 export async function getStaffForResident(residentId: number): Promise<LookupOption[]> {
   const supabase = await createClient();
 
-  const { data: resident } = await supabase
+  const { data: resident, error: residentError } = await supabase
     .from("tbl_residents")
     .select("branch_id")
     .eq("id", residentId)
     .single();
 
+  if (residentError) {
+    console.error("Failed to fetch resident:", residentError);
+    return [];
+  }
+
   if (!resident) return [];
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("tbl_staff")
-    .select("id:StaffID, staff_name")
+    .select("StaffID, staff_name")
     .eq("branch_id", resident.branch_id)
     .eq("status", "ACTIVE")
     .order("staff_name");
 
-  return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name }));
+  if (error) {
+    console.error("Failed to fetch staff:", error);
+    return [];
+  }
+
+  return (data ?? []).map((r) => ({ id: r.StaffID, label: r.staff_name }));
 }
 
 export async function createVital(input: CreateVitalInput): Promise<{ success: boolean; error?: string }> {
