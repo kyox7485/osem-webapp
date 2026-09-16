@@ -1,3 +1,5 @@
+import { formatDateTime, formatDate } from "@/lib/format-date";
+
 // Quick-glance panel for a doctor reviewing this resident: static clinical
 // background (history/medication/allergy/TCA, from tbl_residents) plus the
 // most recent nursing-chart vitals and the last-ordered value of each
@@ -83,7 +85,7 @@ export function ResidentDashboard({
               <tbody className="divide-y divide-gray-100">
                 {vitals.map((v, i) => (
                   <tr key={i}>
-                    <td className="py-1 pr-3 text-gray-500">{new Date(v.entry_timestamp).toLocaleString()}</td>
+                    <td className="py-1 pr-3 text-gray-500">{formatDateTime(v.entry_timestamp)}</td>
                     <td className="py-1 pr-3 text-gray-800">
                       {v.systolic_bp ?? "--"}/{v.diastolic_bp ?? "--"}
                     </td>
@@ -164,7 +166,7 @@ function PlanRow({ label, entry }: { label: string; entry: PlanEntry }) {
       {entry ? (
         <dd className="text-sm text-gray-800">
           {entry.value}
-          <span className="block text-xs text-gray-400">{new Date(entry.entry_timestamp).toLocaleDateString()}</span>
+          <span className="block text-xs text-gray-400">{formatDate(entry.entry_timestamp)}</span>
         </dd>
       ) : (
         <dd className="text-sm text-gray-400">No entry yet</dd>

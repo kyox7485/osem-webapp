@@ -934,6 +934,10 @@ insert into tbl_avpu_options (code, label) values
 -- 4. NURSING CHART (frequent vitals + daily care documentation)
 -- ============================================================================
 
+-- Vital sign readings live in tbl_vital, not here -- see section 4B below.
+-- Was columns on this table originally; split out since a resident can
+-- have several vitals readings between full nursing chart entries and
+-- the dashboard only ever needs "last N vitals", not a full chart entry.
 create table tbl_nursing_chart_entries (
   id                    bigint generated always as identity primary key,
   branch_id             bigint not null references tbl_branches ("BranchID"),
@@ -951,19 +955,7 @@ create table tbl_nursing_chart_entries (
   disturbance_level_ids       bigint[],  -- multi-select against tbl_disturbance_levels
   psycho_social_behaviour_ids bigint[],  -- multi-select against tbl_psycho_social_behaviours
   active_complaint_ids         bigint[],  -- multi-select against tbl_active_complaints
-  systolic_bp           numeric,
-  diastolic_bp          numeric,
-  heart_rate            numeric,
-  temperature            numeric,
-  spo2                   numeric,
-  spo2_condition          text check (spo2_condition in (
-                            'under RA','under 1LPM O2','under 2LPM O2','under 3LPM O2','under 4LPM O2',
-                            'under 5LPM O2','under 6LPM O2','under 7LPM O2','under 8LPM O2',
-                            'under 9LPM O2','under 10LPM O2')),
   respiration_rate       numeric,
-  dxt                    numeric,
-  dxt_remark              text check (dxt_remark in ('Fasting','Post-Meal 1hr','Post-Meal 2hr','Post-Meal >4hr')),
-  insulin_adjustment      text,
   gcs_eye_id              bigint references tbl_gcs_eye_responses (id),
   gcs_verbal_id           bigint references tbl_gcs_verbal_responses (id),
   gcs_motor_id            bigint references tbl_gcs_motor_responses (id),
@@ -976,6 +968,33 @@ create table tbl_nursing_chart_entries (
 );
 create index idx_nce_resident on tbl_nursing_chart_entries (resident_id, entry_timestamp desc);
 create index idx_nce_branch on tbl_nursing_chart_entries (branch_id, entry_timestamp desc);
+
+-- ============================================================================
+-- 4B. VITAL SIGN READINGS (own table -- see note above)
+-- ============================================================================
+
+create table tbl_vital (
+  id                  bigint generated always as identity primary key,
+  branch_id           bigint not null references tbl_branches ("BranchID"),
+  resident_id         bigint not null references tbl_residents (id),
+  entry_timestamp     timestamptz not null default now(),
+  systolic_bp         numeric,
+  diastolic_bp        numeric,
+  heart_rate          numeric,
+  temperature         numeric,
+  spo2                numeric,
+  spo2_condition      text check (spo2_condition in (
+                        'under RA','under 1LPM O2','under 2LPM O2','under 3LPM O2','under 4LPM O2',
+                        'under 5LPM O2','under 6LPM O2','under 7LPM O2','under 8LPM O2',
+                        'under 9LPM O2','under 10LPM O2')),
+  dxt                 numeric,
+  dxt_remark          text check (dxt_remark in ('Fasting','Post-Meal 1hr','Post-Meal 2hr','Post-Meal >4hr')),
+  insulin_adjustment  text,
+  reviewed_by         text references tbl_staff ("StaffID"),
+  created_at          timestamptz not null default now()
+);
+create index idx_vital_resident on tbl_vital (resident_id, entry_timestamp desc);
+create index idx_vital_branch on tbl_vital (branch_id, entry_timestamp desc);
 
 -- Meals: Access has up to 6 meal slots per chart entry (meal type + portion
 -- + time each), not one meal_portion field — this is a repeating group, so
@@ -1412,6 +1431,7 @@ declare t text;
 begin
   foreach t in array array[
     'tbl_residents','tbl_nursing_chart_entries','tbl_nursing_chart_meals','tbl_nursing_chart_hygiene_episodes',
+    'tbl_vital',
     'tbl_progress_notes','tbl_physio_progress_notes',
     'tbl_physio_op_patients','tbl_resident_diagnoses','tbl_hospital_referrals','tbl_fall_incidents',
     'tbl_products','tbl_product_stock','tbl_stock_movements','tbl_stock_transfers',
@@ -1544,6 +1564,7 @@ declare t text;
 begin
   foreach t in array array[
     'tbl_residents','tbl_nursing_chart_entries','tbl_nursing_chart_meals','tbl_nursing_chart_hygiene_episodes',
+    'tbl_vital',
     'tbl_progress_notes','tbl_physio_progress_notes',
     'tbl_physio_op_patients','tbl_resident_diagnoses','tbl_hospital_referrals','tbl_fall_incidents',
     'tbl_product_stock','tbl_stock_movements','tbl_stock_requests','tbl_stock_request_details',

@@ -35,7 +35,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       .order("entry_timestamp", { ascending: false }),
     getStaffRoster(resident.branch_id),
     supabase
-      .from("tbl_nursing_chart_entries")
+      .from("tbl_vital")
       .select("entry_timestamp, systolic_bp, diastolic_bp, heart_rate, temperature, spo2, spo2_condition")
       .eq("resident_id", id)
       .order("entry_timestamp", { ascending: false })

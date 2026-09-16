@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ResidentDashboard } from "./resident-dashboard";
 import { NewNoteForm } from "./new-note-form";
+import { formatDateTime } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
 
 type Note = {
@@ -75,7 +76,7 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
             {notes.map((note) => (
               <div key={note.id} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
-                  <span>{new Date(note.entry_timestamp).toLocaleString()}</span>
+                  <span>{formatDateTime(note.entry_timestamp)}</span>
                   <span>{note.authorName}</span>
                 </div>
                 <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
