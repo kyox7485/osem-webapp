@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   buildEmptyExamRows,
   computePhysioScore,
+  getTreatmentTypesForDept,
   EMPTY_BALANCE,
   EMPTY_COORDINATION,
   EMPTY_FUNCTIONAL,
@@ -12,15 +13,18 @@ import {
   type CoordinationScores,
   type ExamRow,
   type FunctionalScores,
+  type PhysioCareSetting,
 } from "@/lib/physio-scoring";
+import { fromDatetimeLocalValue } from "@/lib/format-date";
 import { createPhysioAssessment } from "./actions";
+import { usePhysioDirty } from "./physio-dirty-context";
 import { ResidentInfoSection } from "./sections/resident-info-section";
 import { SubjectiveSection } from "./sections/subjective-section";
 import { BodyChartSection, type BodyChartEntry } from "./sections/body-chart-section";
 import { ExaminationSection } from "./sections/examination-section";
-import { FunctionalSection } from "./sections/functional-section";
 import { BalanceSection } from "./sections/balance-section";
 import { CoordinationSection } from "./sections/coordination-section";
+import { FunctionalSection } from "./sections/functional-section";
 import { ScoreSummary } from "./sections/score-summary";
 import { NarrativeSection } from "./sections/narrative-section";
 import { ComplianceSignoff } from "./sections/compliance-signoff";
@@ -56,7 +60,8 @@ type Props = {
   icNumber: string | null;
   gender: string | null;
   age: number | null;
-  entryDateLabel: string;
+  careSetting: PhysioCareSetting;
+  defaultEntryTimestamp: string;
   pastMedicalCondition: string | null;
   staffOptions: LookupOption[];
   previous: PreviousAssessment | null;
@@ -69,14 +74,19 @@ export function NewPhysioAssessmentForm({
   icNumber,
   gender,
   age,
-  entryDateLabel,
+  careSetting,
+  defaultEntryTimestamp,
   pastMedicalCondition,
   staffOptions,
   previous,
   onSaved,
 }: Props) {
   const router = useRouter();
+  const { setDirty, setRequestSave } = usePhysioDirty();
 
+  const treatmentTypeOptions = useMemo(() => getTreatmentTypesForDept(careSetting), [careSetting]);
+
+  const [entryTimestamp, setEntryTimestamp] = useState(defaultEntryTimestamp);
   const [treatmentType, setTreatmentType] = useState(previous?.treatment_type ?? "");
   const [creditHours, setCreditHours] = useState(previous?.credit_hours != null ? String(previous.credit_hours) : "");
   const [chiefComplaint, setChiefComplaint] = useState(previous?.chief_complaint ?? "");
@@ -100,19 +110,49 @@ export function NewPhysioAssessmentForm({
     [examRows, functional, balance, coordination]
   );
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // Marks the form dirty on any real edit -- skips the very first render so
+  // carried-forward prefill (or a fresh mount) never counts as "dirty" on
+  // its own, only an actual change made after that.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    setDirty(true);
+  }, [
+    entryTimestamp,
+    treatmentType,
+    creditHours,
+    chiefComplaint,
+    currentHistory,
+    socialHistory,
+    bodyChart,
+    examRows,
+    functional,
+    balance,
+    coordination,
+    impression,
+    planIntervention,
+    evaluation,
+    treatmentCompliance,
+    documentedBy,
+  ]);
+
+  async function doSave(): Promise<boolean> {
     setError("");
 
     if (!documentedBy) {
       setError("Please select who documented this assessment");
-      return;
+      return false;
     }
 
     setIsSaving(true);
 
     const result = await createPhysioAssessment({
       residentId,
+      careSetting,
+      entryTimestamp: fromDatetimeLocalValue(entryTimestamp),
       treatmentType: treatmentType || null,
       creditHours: creditHours ? parseFloat(creditHours) : null,
       chiefComplaint: chiefComplaint || null,
@@ -135,11 +175,44 @@ export function NewPhysioAssessmentForm({
 
     if (!result.success) {
       setError(result.error || "Failed to save assessment");
-      return;
+      return false;
     }
 
+    setDirty(false);
     router.refresh();
-    onSaved();
+    return true;
+  }
+
+  // Registers this form's save logic with the shared dirty-tracking context
+  // so the resident picker (a sibling, not a descendant) can trigger a save
+  // before switching residents when this form has unsaved changes.
+  useEffect(() => {
+    setRequestSave(doSave);
+    return () => setRequestSave(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    entryTimestamp,
+    treatmentType,
+    creditHours,
+    chiefComplaint,
+    currentHistory,
+    socialHistory,
+    bodyChart,
+    examRows,
+    functional,
+    balance,
+    coordination,
+    impression,
+    planIntervention,
+    evaluation,
+    treatmentCompliance,
+    documentedBy,
+  ]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await doSave();
+    if (ok) onSaved();
   }
 
   return (
@@ -151,7 +224,9 @@ export function NewPhysioAssessmentForm({
         icNumber={icNumber}
         gender={gender}
         age={age}
-        entryDateLabel={entryDateLabel}
+        entryTimestamp={entryTimestamp}
+        setEntryTimestamp={setEntryTimestamp}
+        treatmentTypeOptions={treatmentTypeOptions}
         treatmentType={treatmentType}
         setTreatmentType={setTreatmentType}
         creditHours={creditHours}
@@ -172,11 +247,11 @@ export function NewPhysioAssessmentForm({
 
       <ExaminationSection examRows={examRows} setExamRows={setExamRows} />
 
-      <FunctionalSection value={functional} onChange={setFunctional} />
-
       <BalanceSection value={balance} onChange={setBalance} />
 
       <CoordinationSection value={coordination} onChange={setCoordination} />
+
+      <FunctionalSection value={functional} onChange={setFunctional} />
 
       <ScoreSummary currentScore={currentScore} previousScore={previous?.total_score ?? null} />
 

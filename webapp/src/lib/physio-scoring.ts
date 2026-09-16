@@ -65,6 +65,49 @@ export const FUNCTIONAL_OPTIONS: ScoreOption[] = withLabels([
   [4, "Unable to perform"],
 ]);
 
+export type PhysioCareSetting = "IP" | "OP";
+
+export type TreatmentTypeOption = {
+  label: string;
+  creditHours: number;
+  dept: PhysioCareSetting;
+};
+
+// Exact list + credit-hour mapping from the client's TreatmentType reference
+// table. "SilverFit (Individual)"/"SilverFit (Group)" appear once per dept
+// with the same credit hours in both -- kept as separate entries so the
+// dropdown only ever offers the current module's dept.
+export const PHYSIO_TREATMENT_TYPES: TreatmentTypeOption[] = [
+  { label: "Assessment", creditHours: 0, dept: "IP" },
+  { label: "Basic Physio", creditHours: 0.25, dept: "IP" },
+  { label: "Full Physio (1hr)", creditHours: 1, dept: "IP" },
+  { label: "Full Physio (30m)", creditHours: 0.5, dept: "IP" },
+  { label: "SilverFit (Group)", creditHours: 0.25, dept: "IP" },
+  { label: "SilverFit (Individual)", creditHours: 1, dept: "IP" },
+  { label: "Patient Refused", creditHours: 0, dept: "IP" },
+  { label: "Patient Not Available", creditHours: 0, dept: "IP" },
+  { label: "Neuro Rehabilitation", creditHours: 1, dept: "OP" },
+  { label: "Sport Rehabilitation", creditHours: 1, dept: "OP" },
+  { label: "Shoulder Rehabilitation", creditHours: 1, dept: "OP" },
+  { label: "Back Pain", creditHours: 1, dept: "OP" },
+  { label: "Pain Management", creditHours: 1, dept: "OP" },
+  { label: "Chest Physio", creditHours: 1, dept: "OP" },
+  { label: "SilverFit (Individual)", creditHours: 1, dept: "OP" },
+  { label: "SilverFit (Group)", creditHours: 0.25, dept: "OP" },
+  { label: "Housecall", creditHours: 1, dept: "OP" },
+  { label: "Other Physio (1hr)", creditHours: 1, dept: "OP" },
+  { label: "Other Physio (30m)", creditHours: 0.5, dept: "OP" },
+];
+
+export function getTreatmentTypesForDept(dept: PhysioCareSetting): TreatmentTypeOption[] {
+  return PHYSIO_TREATMENT_TYPES.filter((t) => t.dept === dept);
+}
+
+export function getTreatmentTypeCreditHours(dept: PhysioCareSetting, label: string): number | null {
+  const match = PHYSIO_TREATMENT_TYPES.find((t) => t.dept === dept && t.label === label);
+  return match ? match.creditHours : null;
+}
+
 // Limb -> region -> movement list, exactly as laid out in the Excel's
 // Examination section (rows 48-78). Trunk sits under the Lower Limb half of
 // the sheet in the source template (Bending/Rotation are genuinely sided;

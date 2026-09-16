@@ -1154,8 +1154,19 @@ create table physio_assessments (
   id                   bigint generated always as identity primary key,
   branch_id            bigint not null references tbl_branches ("BranchID"),
   resident_id          bigint not null references tbl_residents (id),
+  care_setting         text not null default 'IP' check (care_setting in ('IP','OP')),
   entry_timestamp      timestamptz not null default now(),
-  treatment_type       text check (treatment_type in ('Basic','Full','Assessment','Housecall','Neuro','Backpain')),
+  -- Full TreatmentType reference list (both IP and OP dept values) -- the
+  -- app filters the dropdown by care_setting, this check just guards the
+  -- column against anything outside the known set. SilverFit (Individual)/
+  -- SilverFit (Group) are shared labels between both depts so they appear
+  -- once each here, not duplicated per dept.
+  treatment_type       text check (treatment_type in (
+                          'Assessment','Basic Physio','Full Physio (1hr)','Full Physio (30m)',
+                          'SilverFit (Group)','SilverFit (Individual)','Patient Refused','Patient Not Available',
+                          'Neuro Rehabilitation','Sport Rehabilitation','Shoulder Rehabilitation','Back Pain',
+                          'Pain Management','Chest Physio','Housecall','Other Physio (1hr)','Other Physio (30m)'
+                        )),
   credit_hours         numeric,
   chief_complaint      text,
   current_history      text,

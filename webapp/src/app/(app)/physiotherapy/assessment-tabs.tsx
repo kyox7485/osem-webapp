@@ -4,6 +4,7 @@ import { useState } from "react";
 import { NewPhysioAssessmentForm, type PreviousAssessment } from "./new-physio-assessment-form";
 import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-review";
 import type { LookupOption } from "@/lib/types";
+import type { PhysioCareSetting } from "@/lib/physio-scoring";
 
 type Props = {
   residentId: number;
@@ -11,7 +12,8 @@ type Props = {
   icNumber: string | null;
   gender: string | null;
   age: number | null;
-  entryDateLabel: string;
+  careSetting: PhysioCareSetting;
+  defaultEntryTimestamp: string;
   pastMedicalCondition: string | null;
   staffOptions: LookupOption[];
   previous: PreviousAssessment | null;
@@ -24,13 +26,16 @@ export function PhysioAssessmentTabs({
   icNumber,
   gender,
   age,
-  entryDateLabel,
+  careSetting,
+  defaultEntryTimestamp,
   pastMedicalCondition,
   staffOptions,
   previous,
   reviewAssessments,
 }: Props) {
-  const [tab, setTab] = useState<"review" | "new">(reviewAssessments.length === 0 ? "new" : "review");
+  // Always starts on New Entry -- picking a resident (or landing here fresh)
+  // should go straight to a clean entry form, not the review list.
+  const [tab, setTab] = useState<"review" | "new">("new");
 
   return (
     <div>
@@ -52,7 +57,8 @@ export function PhysioAssessmentTabs({
           icNumber={icNumber}
           gender={gender}
           age={age}
-          entryDateLabel={entryDateLabel}
+          careSetting={careSetting}
+          defaultEntryTimestamp={defaultEntryTimestamp}
           pastMedicalCondition={pastMedicalCondition}
           staffOptions={staffOptions}
           previous={previous}

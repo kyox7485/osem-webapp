@@ -126,7 +126,6 @@ export type PhysioCoordinationAssessment = {
   lower_limb_left: number | null;
 };
 
-export const PHYSIO_TREATMENT_TYPE_OPTIONS = ["Basic", "Full", "Assessment", "Housecall", "Neuro", "Backpain"] as const;
 export const PHYSIO_COMPLIANCE_OPTIONS = ["100%", "75%", "50%", "25%"] as const;
 
 export type UserAccount = {

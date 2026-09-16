@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { getAllStaffWithBranch } from "@/lib/lookups";
-import { formatDateTime } from "@/lib/format-date";
+import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 import {
   EMPTY_BALANCE,
@@ -11,8 +11,11 @@ import {
   type CoordinationScores,
   type ExamRow,
   type FunctionalScores,
+  type PhysioCareSetting,
 } from "@/lib/physio-scoring";
+import { CareSettingTabs } from "./care-setting-tabs";
 import { PhysioAssessmentTabs } from "./assessment-tabs";
+import { PhysioDirtyProvider } from "./physio-dirty-context";
 import { ResidentPicker } from "./resident-picker";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
 import type { ReviewAssessment } from "./assessment-review";
@@ -55,12 +58,13 @@ function pickCoordination(row: any): CoordinationScores {
 export default async function PhysiotherapyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ resident?: string }>;
+  searchParams: Promise<{ type?: string; resident?: string }>;
 }) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
 
-  const { resident: residentIdParam } = await searchParams;
+  const { type, resident: residentIdParam } = await searchParams;
+  const careSetting: PhysioCareSetting = type === "op" ? "OP" : "IP";
   const supabase = await createClient();
 
   let residentQuery = supabase
@@ -85,16 +89,34 @@ export default async function PhysiotherapyPage({
         <h1 className="text-2xl font-bold text-gray-900">Physiotherapy</h1>
       </div>
 
-      <ResidentPicker residents={residents ?? []} currentResident={residentIdParam || ""} />
+      <CareSettingTabs current={careSetting} />
 
-      {!selectedResident ? (
+      {careSetting === "OP" ? (
         <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          Select a resident to view or add a physiotherapy assessment.
+          Outpatient module coming soon.
         </div>
       ) : (
-        <div className="mt-4">
-          <PhysiotherapyResidentContent residentId={selectedResident.id} account={account} />
-        </div>
+        <PhysioDirtyProvider>
+          <ResidentPicker residents={residents ?? []} currentResident={residentIdParam || ""} />
+
+          {!selectedResident ? (
+            <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+              Select a resident to view or add a physiotherapy assessment.
+            </div>
+          ) : (
+            <div className="mt-4">
+              {/* Keyed by resident so switching residents fully remounts the
+                  form (fresh state, tab reset to New Entry) instead of
+                  reusing the previous resident's component instance. */}
+              <PhysiotherapyResidentContent
+                key={selectedResident.id}
+                residentId={selectedResident.id}
+                careSetting={careSetting}
+                account={account}
+              />
+            </div>
+          )}
+        </PhysioDirtyProvider>
       )}
     </div>
   );
@@ -102,9 +124,11 @@ export default async function PhysiotherapyPage({
 
 async function PhysiotherapyResidentContent({
   residentId,
+  careSetting,
   account,
 }: {
   residentId: number;
+  careSetting: PhysioCareSetting;
   account: { rights: string; branch_id: number };
 }) {
   const supabase = await createClient();
@@ -128,6 +152,7 @@ async function PhysiotherapyResidentContent({
       .from("physio_assessments")
       .select("*, tbl_staff!documented_by(staff_name)")
       .eq("resident_id", residentId)
+      .eq("care_setting", careSetting)
       .order("entry_timestamp", { ascending: false }),
     getAllStaffWithBranch(undefined, "Physiotherapy"),
   ]);
@@ -210,7 +235,8 @@ async function PhysiotherapyResidentContent({
         icNumber={resident.ic_number}
         gender={resident.gender}
         age={resident.age}
-        entryDateLabel={formatDateTime(new Date().toISOString())}
+        careSetting={careSetting}
+        defaultEntryTimestamp={toDatetimeLocalValue(new Date().toISOString())}
         pastMedicalCondition={resident.past_medical_condition}
         staffOptions={staffOptions}
         previous={previous}

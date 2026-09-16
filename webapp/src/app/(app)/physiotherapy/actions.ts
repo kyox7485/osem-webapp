@@ -3,12 +3,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
-import { computePhysioScore, type ExamRow, type FunctionalScores, type BalanceScores, type CoordinationScores } from "@/lib/physio-scoring";
+import {
+  computePhysioScore,
+  type ExamRow,
+  type FunctionalScores,
+  type BalanceScores,
+  type CoordinationScores,
+  type PhysioCareSetting,
+} from "@/lib/physio-scoring";
 
 type BodyChartInput = { region: string; side: "R" | "L" | null; comment: string };
 
 type CreatePhysioAssessmentInput = {
   residentId: number;
+  careSetting: PhysioCareSetting;
+  entryTimestamp: string;
   treatmentType: string | null;
   creditHours: number | null;
   chiefComplaint: string | null;
@@ -62,6 +71,8 @@ export async function createPhysioAssessment(
     .insert({
       branch_id: resident.branch_id,
       resident_id: input.residentId,
+      care_setting: input.careSetting,
+      entry_timestamp: input.entryTimestamp,
       treatment_type: input.treatmentType,
       credit_hours: input.creditHours,
       chief_complaint: input.chiefComplaint,
