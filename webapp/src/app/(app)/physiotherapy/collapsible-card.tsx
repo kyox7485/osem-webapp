@@ -4,25 +4,33 @@ import { useState } from "react";
 
 type Props = {
   title: string;
-  defaultOpen?: boolean;
   badge?: string | null;
   children: React.ReactNode;
 };
 
-// Shared top-level collapsible section wrapper for Body Chart, Physical
-// Examination, Functional Assessment, Balance and Coordination -- not every
-// one of these is touched at every visit, so each collapses independently,
-// closed by default unless it already carries data (e.g. carried forward
-// from a previous note). Own open/closed state (seeded once) rather than
-// deriving `open` live from props, so clearing the section's last value
-// doesn't auto-collapse it out from under the therapist mid-edit.
-export function CollapsibleCard({ title, defaultOpen = false, badge, children }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
+// Shared collapsible section wrapper -- used both for the top-level blocks
+// (Body Chart, Physical Examination, Functional Assessment, Balance,
+// Coordination) and for the nested groups inside Physical Examination
+// (Upper/Lower Limb, and each body part within them). Always starts closed,
+// even when it already carries data (e.g. carried forward from a previous
+// note) -- the therapist expands only what they mean to look at or edit.
+// Independent per-instance open state (not derived from props on every
+// render) means toggling one block/region never affects its parent or
+// siblings, and clearing its last value doesn't auto-collapse it out from
+// under the therapist mid-edit.
+export function CollapsibleCard({ title, badge, children }: Props) {
+  const [open, setOpen] = useState(false);
 
   return (
     <details
       open={open}
-      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+      // currentTarget, not target -- Physical Examination nests further
+      // collapsible groups (Limb, then Region) inside this one, and a
+      // toggle on one of those can reach this handler; e.target would then
+      // be the nested element that actually toggled, incorrectly flipping
+      // this card's own state (e.g. collapsing a body part would also
+      // collapse the whole Physical Examination card above it).
+      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
       className="group rounded-md border border-gray-200 bg-white shadow-sm"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 hover:bg-gray-50">

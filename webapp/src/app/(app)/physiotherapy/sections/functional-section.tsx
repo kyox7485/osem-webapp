@@ -21,11 +21,7 @@ export function FunctionalSection({ value, onChange }: Props) {
   const assessedCount = Object.values(value).filter((v) => v !== null).length;
 
   return (
-    <CollapsibleCard
-      title="Functional Assessment"
-      defaultOpen={assessedCount > 0}
-      badge={assessedCount > 0 ? `${assessedCount} assessed` : null}
-    >
+    <CollapsibleCard title="Functional Assessment" badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ITEMS.map(([key, label]) => (
           <ScoreSelect

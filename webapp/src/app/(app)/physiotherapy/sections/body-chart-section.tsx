@@ -40,7 +40,6 @@ export function BodyChartSection({ findings, setFindings }: Props) {
   return (
     <CollapsibleCard
       title="Body Chart / Anatomical Findings"
-      defaultOpen={findings.length > 0}
       badge={findings.length > 0 ? `${findings.length} finding${findings.length > 1 ? "s" : ""}` : null}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

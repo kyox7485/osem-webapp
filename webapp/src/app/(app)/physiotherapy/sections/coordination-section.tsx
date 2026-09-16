@@ -13,7 +13,7 @@ export function CoordinationSection({ value, onChange }: Props) {
   const assessedCount = Object.values(value).filter((v) => v !== null).length;
 
   return (
-    <CollapsibleCard title="Coordination" defaultOpen={assessedCount > 0} badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
+    <CollapsibleCard title="Coordination" badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upper Limb</h3>
