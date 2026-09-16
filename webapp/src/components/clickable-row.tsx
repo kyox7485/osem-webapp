@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useNavPush } from "@/components/nav-loading";
 
 type Props = {
   href: string;
@@ -13,12 +13,13 @@ type Props = {
 // tr with a click handler rather than an anchor, so this trades away
 // keyboard/middle-click/ctrl-click support for a much larger, lower-effort
 // click target, which is the tradeoff asked for on these internal list
-// pages.
+// pages. Routed through useNavPush (not router.push directly) so the shared
+// NavLoadingProvider overlay shows while the detail page loads.
 export function ClickableRow({ href, children, className }: Props) {
-  const router = useRouter();
+  const push = useNavPush();
   return (
     <tr
-      onClick={() => router.push(href)}
+      onClick={() => push(href)}
       className={`cursor-pointer ${className ?? ""}`}
     >
       {children}

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getBranches, getPositions, formatBranch } from "@/lib/lookups";
@@ -6,6 +5,7 @@ import { STAFF_STATUS_OPTIONS, STAFF_ROLE_OPTIONS, DEPARTMENT_OPTIONS } from "@/
 import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
 import { FilterPendingProvider } from "@/components/filter-pending";
+import { NavButton } from "@/components/nav-button";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -86,12 +86,12 @@ export default async function StaffPage({
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-gray-900">Staff</h1>
         {admin && (
-          <Link
+          <NavButton
             href="/staff/new"
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
             New staff
-          </Link>
+          </NavButton>
         )}
       </div>
 

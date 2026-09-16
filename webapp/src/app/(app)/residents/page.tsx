@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getBranches, formatBranch } from "@/lib/lookups";
@@ -6,6 +5,7 @@ import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
 import { FilterPendingProvider } from "@/components/filter-pending";
+import { NavButton } from "@/components/nav-button";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -61,12 +61,12 @@ export default async function ResidentsPage({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-gray-900">Residents</h1>
-        <Link
+        <NavButton
           href="/residents/new"
           className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
           New resident
-        </Link>
+        </NavButton>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}

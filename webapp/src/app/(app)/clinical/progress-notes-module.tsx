@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format-date";
 import { NewProgressNoteForm } from "./new-progress-note-form";
+import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 
 type ProgressNote = {
@@ -41,6 +42,16 @@ type Props = {
   error: string | null;
 };
 
+const PLAN_LABELS: [keyof ProgressNote, string][] = [
+  ["physical_examination", "Physical examination"],
+  ["medical_plan", "Medical / treatment plan"],
+  ["nursing_plan", "Nursing plan"],
+  ["feeding_plan", "Feeding / diet plan"],
+  ["dressing_plan", "Dressing plan"],
+  ["monitoring_plan", "Monitoring plan"],
+  ["physio_plan", "Physio plan"],
+];
+
 export function ProgressNotesModule({
   notes,
   residents,
@@ -51,7 +62,9 @@ export function ProgressNotesModule({
   error,
 }: Props) {
   const router = useRouter();
+  const push = useNavPush();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   function applyFilters(residentId: string, start: string, end: string) {
     const params = new URLSearchParams();
@@ -59,7 +72,7 @@ export function ProgressNotesModule({
     if (residentId) params.set("resident", residentId);
     if (start) params.set("start", start);
     if (end) params.set("end", end);
-    router.push(`/clinical?${params.toString()}`);
+    push(`/clinical?${params.toString()}`);
   }
 
   return (
@@ -135,31 +148,66 @@ export function ProgressNotesModule({
                 No progress notes yet.
               </div>
             ) : (
-              notes.map((note) => (
-                <div key={note.id} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-                  <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
-                    <span>{formatDateTime(note.entry_timestamp)}</span>
-                    <span>{note.tbl_residents?.resident_name}</span>
+              notes.map((note) => {
+                const isExpanded = expandedId === note.id;
+                const details = PLAN_LABELS.filter(([key]) => note[key]);
+                return (
+                  <div
+                    key={note.id}
+                    onClick={() => setExpandedId(isExpanded ? null : note.id)}
+                    className="cursor-pointer rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-indigo-200"
+                  >
+                    <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
+                      <span>{formatDateTime(note.entry_timestamp)}</span>
+                      <span className="flex items-center gap-2">
+                        {note.tbl_residents?.resident_name}
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          className={`text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                        >
+                          <path
+                            d="M6 3.5L10.5 8L6 12.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
+
+                    {!isExpanded && details.length > 0 && (
+                      <p className="mt-2 text-xs text-gray-400">
+                        {details.length} more field{details.length > 1 ? "s" : ""} recorded -- click to view
+                      </p>
+                    )}
+
+                    {isExpanded && (
+                      <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                        {details.length === 0 ? (
+                          <p className="text-sm text-gray-400">No additional plan fields recorded.</p>
+                        ) : (
+                          details.map(([key, label]) => (
+                            <p key={key} className="text-sm text-gray-600">
+                              <span className="font-medium text-gray-500">{label}: </span>
+                              {note[key] as string}
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-2 text-xs text-gray-400">
+                      Created by: {note.author?.staff_name || "--"}
+                      {note.reviewer && <span> · Reviewed by: {note.reviewer.staff_name}</span>}
+                    </div>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
-                  {note.medical_plan && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      <span className="font-medium text-gray-500">Medical plan: </span>
-                      {note.medical_plan}
-                    </p>
-                  )}
-                  {note.nursing_plan && (
-                    <p className="mt-1 text-sm text-gray-600">
-                      <span className="font-medium text-gray-500">Nursing plan: </span>
-                      {note.nursing_plan}
-                    </p>
-                  )}
-                  <div className="mt-2 text-xs text-gray-400">
-                    Created by: {note.author?.staff_name || "--"}
-                    {note.reviewer && <span> · Reviewed by: {note.reviewer.staff_name}</span>}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </>

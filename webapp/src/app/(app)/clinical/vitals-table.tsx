@@ -4,6 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format-date";
 import { NewVitalForm } from "./new-vital-form";
+import { useNavPush } from "@/components/nav-loading";
+import {
+  flagVital,
+  vitalFlagClass,
+  vitalRowClass,
+  flagSystolic,
+  flagDiastolic,
+  flagHeartRate,
+  flagTemperature,
+  flagSpo2,
+  flagDxt,
+} from "@/lib/vital-thresholds";
 import type { LookupOption } from "@/lib/types";
 
 type Vital = {
@@ -42,14 +54,16 @@ type Props = {
 
 export function VitalsTable({ vitals, residents, allStaff, currentResident, currentStart, currentEnd, error }: Props) {
   const router = useRouter();
+  const push = useNavPush();
   const [showForm, setShowForm] = useState(false);
 
   function applyFilters(residentId: string, start: string, end: string) {
     const params = new URLSearchParams();
+    params.set("tab", "vitals");
     if (residentId) params.set("resident", residentId);
     if (start) params.set("start", start);
     if (end) params.set("end", end);
-    router.push(`/vitals?${params.toString()}`);
+    push(`/clinical?${params.toString()}`);
   }
 
   function handlePrint() {
@@ -128,12 +142,22 @@ export function VitalsTable({ vitals, residents, allStaff, currentResident, curr
       {/* Error */}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
+      <div className="flex items-center gap-4 text-xs text-gray-500 print-hidden">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded-sm bg-red-100" /> Critical reading
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded-sm bg-amber-100" /> Out of normal range
+        </span>
+      </div>
+
       {/* Table */}
       <div className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
+                <th className="px-4 py-3 font-medium text-gray-900"></th>
                 <th className="px-4 py-3 font-medium text-gray-900">Date/Time</th>
                 <th className="px-4 py-3 font-medium text-gray-900">Resident</th>
                 <th className="px-4 py-3 font-medium text-gray-900">Systolic BP</th>
@@ -149,33 +173,48 @@ export function VitalsTable({ vitals, residents, allStaff, currentResident, curr
             <tbody className="divide-y divide-gray-100">
               {vitals.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
                     No vital signs recorded yet.
                   </td>
                 </tr>
               ) : (
-                vitals.map((v) => (
-                  <tr key={v.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-900">{formatDateTime(v.entry_timestamp)}</td>
-                    <td className="px-4 py-3 text-gray-900">{v.tbl_residents?.resident_name || "--"}</td>
-                    <td className="px-4 py-3 text-gray-800">{v.systolic_bp ?? "--"}</td>
-                    <td className="px-4 py-3 text-gray-800">{v.diastolic_bp ?? "--"}</td>
-                    <td className="px-4 py-3 text-gray-800">{v.heart_rate ?? "--"}</td>
-                    <td className="px-4 py-3 text-gray-800">{v.temperature ?? "--"}</td>
-                    <td className="px-4 py-3 text-gray-800">
-                      {v.spo2 ?? "--"}
-                      {v.spo2_condition && (
-                        <span className="ml-1 text-xs text-gray-500">({v.spo2_condition})</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-800">
-                      {v.dxt ?? "--"}
-                      {v.dxt_remark && <span className="ml-1 text-xs text-gray-500">({v.dxt_remark})</span>}
-                    </td>
-                    <td className="px-4 py-3 text-gray-800">{v.insulin_adjustment || "--"}</td>
-                    <td className="px-4 py-3 text-gray-800">{v.tbl_staff?.staff_name || "--"}</td>
-                  </tr>
-                ))
+                vitals.map((v) => {
+                  const rowSeverity = flagVital(v);
+                  return (
+                    <tr key={v.id} className={vitalRowClass(rowSeverity)}>
+                      <td className="px-2 py-3 text-center" title={rowSeverity ?? undefined}>
+                        {rowSeverity === "critical" && <span aria-label="critical">🔴</span>}
+                        {rowSeverity === "warning" && <span aria-label="warning">🟠</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-900">{formatDateTime(v.entry_timestamp)}</td>
+                      <td className="px-4 py-3 text-gray-900">{v.tbl_residents?.resident_name || "--"}</td>
+                      <td className={`px-4 py-3 ${vitalFlagClass(flagSystolic(v.systolic_bp))}`}>
+                        {v.systolic_bp ?? "--"}
+                      </td>
+                      <td className={`px-4 py-3 ${vitalFlagClass(flagDiastolic(v.diastolic_bp))}`}>
+                        {v.diastolic_bp ?? "--"}
+                      </td>
+                      <td className={`px-4 py-3 ${vitalFlagClass(flagHeartRate(v.heart_rate))}`}>
+                        {v.heart_rate ?? "--"}
+                      </td>
+                      <td className={`px-4 py-3 ${vitalFlagClass(flagTemperature(v.temperature))}`}>
+                        {v.temperature ?? "--"}
+                      </td>
+                      <td className={`px-4 py-3 ${vitalFlagClass(flagSpo2(v.spo2))}`}>
+                        {v.spo2 ?? "--"}
+                        {v.spo2_condition && (
+                          <span className="ml-1 text-xs text-gray-500">({v.spo2_condition})</span>
+                        )}
+                      </td>
+                      <td className={`px-4 py-3 ${vitalFlagClass(flagDxt(v.dxt))}`}>
+                        {v.dxt ?? "--"}
+                        {v.dxt_remark && <span className="ml-1 text-xs text-gray-500">({v.dxt_remark})</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-800">{v.insulin_adjustment || "--"}</td>
+                      <td className="px-4 py-3 text-gray-800">{v.tbl_staff?.staff_name || "--"}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

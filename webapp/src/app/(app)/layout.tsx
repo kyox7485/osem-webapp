@@ -1,6 +1,7 @@
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLinks } from "@/components/nav-links";
+import { NavLoadingProvider } from "@/components/nav-loading";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const account = await getCurrentUser();
@@ -34,31 +35,33 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <nav className="flex items-center gap-1">
-            <span className="mr-3 flex items-center gap-1.5 font-semibold text-gray-900">
-              <span className="h-2 w-2 rounded-full bg-indigo-600" />
-              OSEM
-            </span>
-            <NavLinks items={navItems} />
-          </nav>
-          <div className="flex items-center gap-3 text-sm text-gray-500">
-            <span className="hidden sm:inline">
-              <span className="font-medium text-gray-700">{account.username}</span>
-              {" · "}
-              {account.branch_name || "All branches"}
-              {" · "}
-            </span>
-            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-              {account.rights}
-            </span>
-            <SignOutButton />
+    <NavLoadingProvider>
+      <div className="min-h-screen bg-gray-50">
+        <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
+            <nav className="flex items-center gap-1">
+              <span className="mr-3 flex items-center gap-1.5 font-semibold text-gray-900">
+                <span className="h-2 w-2 rounded-full bg-indigo-600" />
+                OSEM
+              </span>
+              <NavLinks items={navItems} />
+            </nav>
+            <div className="flex items-center gap-3 text-sm text-gray-500">
+              <span className="hidden sm:inline">
+                <span className="font-medium text-gray-700">{account.username}</span>
+                {" · "}
+                {account.branch_name || "All branches"}
+                {" · "}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                {account.rights}
+              </span>
+              <SignOutButton />
+            </div>
           </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
-    </div>
+        </header>
+        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      </div>
+    </NavLoadingProvider>
   );
 }

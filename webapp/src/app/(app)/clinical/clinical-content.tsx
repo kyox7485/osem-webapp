@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { VitalsTable } from "./vitals-table";
 import { ProgressNotesModule } from "./progress-notes-module";
+import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 
 type Vital = {
@@ -70,7 +71,7 @@ export function ClinicalContent({
   currentEnd,
   error,
 }: Props) {
-  const router = useRouter();
+  const push = useNavPush();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"vitals" | "progress-notes">(
     (searchParams.get("tab") as "vitals" | "progress-notes") || "vitals"
@@ -89,7 +90,7 @@ export function ClinicalContent({
     setActiveTab(tab);
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
-    router.push(`/clinical?${params.toString()}`, { scroll: false });
+    push(`/clinical?${params.toString()}`);
   }
 
   return (

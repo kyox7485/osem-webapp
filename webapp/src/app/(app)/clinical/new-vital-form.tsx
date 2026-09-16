@@ -300,7 +300,7 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
 
           <div>
             <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
-              Reviewed By
+              Reviewed By <span className="font-normal text-gray-400">(optional)</span>
             </label>
             <select
               id="reviewed-by"

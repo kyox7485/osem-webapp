@@ -62,6 +62,6 @@ export async function createVital(input: CreateVitalInput): Promise<{ success: b
     return { success: false, error: error.message };
   }
 
-  revalidatePath("/vitals");
+  revalidatePath("/clinical");
   return { success: true };
 }
