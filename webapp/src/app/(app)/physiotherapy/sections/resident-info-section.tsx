@@ -4,6 +4,7 @@ import { PHYSIO_TREATMENT_TYPE_OPTIONS } from "@/lib/types";
 
 type Props = {
   residentName: string;
+  icNumber: string | null;
   gender: string | null;
   age: number | null;
   // Formatted server-side (page.tsx) and passed down as a plain string --
@@ -19,6 +20,7 @@ type Props = {
 
 export function ResidentInfoSection({
   residentName,
+  icNumber,
   gender,
   age,
   entryDateLabel,
@@ -34,6 +36,7 @@ export function ResidentInfoSection({
         <div>
           <p className="text-xs text-gray-400">Resident</p>
           <p className="text-sm font-medium text-gray-900">{residentName}</p>
+          <p className="text-xs text-gray-500">{icNumber ?? "--"}</p>
         </div>
         <div>
           <p className="text-xs text-gray-400">Gender</p>

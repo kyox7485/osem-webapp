@@ -2,6 +2,7 @@
 
 import { BALANCE_OPTIONS, type BalanceScores } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
+import { CollapsibleCard } from "../collapsible-card";
 
 type Props = {
   value: BalanceScores;
@@ -17,9 +18,10 @@ const ITEMS: [keyof BalanceScores, string][] = [
 ];
 
 export function BalanceSection({ value, onChange }: Props) {
+  const assessedCount = Object.values(value).filter((v) => v !== null).length;
+
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">Balance</h2>
+    <CollapsibleCard title="Balance" defaultOpen={assessedCount > 0} badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ITEMS.map(([key, label]) => (
           <ScoreSelect
@@ -31,6 +33,6 @@ export function BalanceSection({ value, onChange }: Props) {
           />
         ))}
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }

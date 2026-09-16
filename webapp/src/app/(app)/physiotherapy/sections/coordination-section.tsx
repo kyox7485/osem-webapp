@@ -2,6 +2,7 @@
 
 import { COORDINATION_OPTIONS, type CoordinationScores } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
+import { CollapsibleCard } from "../collapsible-card";
 
 type Props = {
   value: CoordinationScores;
@@ -9,9 +10,10 @@ type Props = {
 };
 
 export function CoordinationSection({ value, onChange }: Props) {
+  const assessedCount = Object.values(value).filter((v) => v !== null).length;
+
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">Coordination</h2>
+    <CollapsibleCard title="Coordination" defaultOpen={assessedCount > 0} badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upper Limb</h3>
@@ -48,6 +50,6 @@ export function CoordinationSection({ value, onChange }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }

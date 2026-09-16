@@ -118,6 +118,6 @@ export async function createPhysioAssessment(
     return { success: false, error: failed.error?.message ?? "Failed to save assessment details" };
   }
 
-  revalidatePath(`/residents/${input.residentId}/physio-assessment`);
+  revalidatePath(`/physiotherapy`);
   return { success: true };
 }

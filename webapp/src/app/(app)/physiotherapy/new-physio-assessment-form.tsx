@@ -53,6 +53,7 @@ export type PreviousAssessment = {
 type Props = {
   residentId: number;
   residentName: string;
+  icNumber: string | null;
   gender: string | null;
   age: number | null;
   entryDateLabel: string;
@@ -65,6 +66,7 @@ type Props = {
 export function NewPhysioAssessmentForm({
   residentId,
   residentName,
+  icNumber,
   gender,
   age,
   entryDateLabel,
@@ -146,6 +148,7 @@ export function NewPhysioAssessmentForm({
 
       <ResidentInfoSection
         residentName={residentName}
+        icNumber={icNumber}
         gender={gender}
         age={age}
         entryDateLabel={entryDateLabel}

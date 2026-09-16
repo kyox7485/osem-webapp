@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BodyDiagram, NOT_VISIBLE_REGIONS, type BodyRegion } from "../body-diagram";
+import { CollapsibleCard } from "../collapsible-card";
 
 export type BodyChartEntry = { region: string; side: "R" | "L" | null; comment: string };
 
@@ -37,9 +38,11 @@ export function BodyChartSection({ findings, setFindings }: Props) {
   const markedRegionNames = new Set(findings.map((f) => f.region));
 
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">Body Chart / Anatomical Findings</h2>
-
+    <CollapsibleCard
+      title="Body Chart / Anatomical Findings"
+      defaultOpen={findings.length > 0}
+      badge={findings.length > 0 ? `${findings.length} finding${findings.length > 1 ? "s" : ""}` : null}
+    >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <BodyDiagram onSelectRegion={selectRegion} markedRegionNames={markedRegionNames} />
@@ -118,6 +121,6 @@ export function BodyChartSection({ findings, setFindings }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }

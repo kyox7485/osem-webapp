@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EXAM_STRUCTURE, POWER_OPTIONS, TONE_OPTIONS, ROM_OPTIONS, REFLEXES_OPTIONS, type ExamLimb, type ExamRow } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
+import { CollapsibleCard } from "../collapsible-card";
 
 type Props = {
   examRows: ExamRow[];
@@ -83,9 +84,14 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
     return examRows.filter((r) => r.limb === limb && r.region === region);
   }
 
+  const assessedTotal = examRows.filter(hasScore).length;
+
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-1 text-sm font-bold text-gray-900">Physical Examination</h2>
+    <CollapsibleCard
+      title="Physical Examination"
+      defaultOpen={assessedTotal > 0}
+      badge={assessedTotal > 0 ? `${assessedTotal} assessed` : null}
+    >
       <p className="mb-3 text-xs text-gray-400">
         Power, Tone, ROM and Reflexes -- leave any field "Not assessed" where not applicable. Tap a body part to record it.
       </p>
@@ -149,6 +155,6 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
           </details>
         ))}
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }

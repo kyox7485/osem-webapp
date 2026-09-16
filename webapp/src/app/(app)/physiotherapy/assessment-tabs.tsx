@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { NewPhysioAssessmentForm, type PreviousAssessment } from "./new-physio-assessment-form";
-import { PhysioAssessmentReview, type ReviewAssessment } from "./physio-assessment-review";
+import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-review";
 import type { LookupOption } from "@/lib/types";
 
 type Props = {
   residentId: number;
   residentName: string;
+  icNumber: string | null;
   gender: string | null;
   age: number | null;
   entryDateLabel: string;
@@ -20,6 +21,7 @@ type Props = {
 export function PhysioAssessmentTabs({
   residentId,
   residentName,
+  icNumber,
   gender,
   age,
   entryDateLabel,
@@ -47,6 +49,7 @@ export function PhysioAssessmentTabs({
         <NewPhysioAssessmentForm
           residentId={residentId}
           residentName={residentName}
+          icNumber={icNumber}
           gender={gender}
           age={age}
           entryDateLabel={entryDateLabel}

@@ -2,6 +2,7 @@
 
 import { FUNCTIONAL_OPTIONS, type FunctionalScores } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
+import { CollapsibleCard } from "../collapsible-card";
 
 type Props = {
   value: FunctionalScores;
@@ -17,9 +18,14 @@ const ITEMS: [keyof FunctionalScores, string][] = [
 ];
 
 export function FunctionalSection({ value, onChange }: Props) {
+  const assessedCount = Object.values(value).filter((v) => v !== null).length;
+
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">Functional Assessment</h2>
+    <CollapsibleCard
+      title="Functional Assessment"
+      defaultOpen={assessedCount > 0}
+      badge={assessedCount > 0 ? `${assessedCount} assessed` : null}
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ITEMS.map(([key, label]) => (
           <ScoreSelect
@@ -31,6 +37,6 @@ export function FunctionalSection({ value, onChange }: Props) {
           />
         ))}
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }

@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/current-user";
 import { getAllStaffWithBranch } from "@/lib/lookups";
 import { formatDateTime } from "@/lib/format-date";
+import { redirect } from "next/navigation";
 import {
   EMPTY_BALANCE,
   EMPTY_COORDINATION,
@@ -12,9 +12,10 @@ import {
   type ExamRow,
   type FunctionalScores,
 } from "@/lib/physio-scoring";
-import { PhysioAssessmentTabs } from "./physio-assessment-tabs";
+import { PhysioAssessmentTabs } from "./assessment-tabs";
+import { ResidentPicker } from "./resident-picker";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
-import type { ReviewAssessment } from "./physio-assessment-review";
+import type { ReviewAssessment } from "./assessment-review";
 
 // These rows come from `select("*")`, which also carries id/branch_id/
 // assessment_id -- pick only the named score fields so those extra numeric
@@ -51,23 +52,82 @@ function pickCoordination(row: any): CoordinationScores {
   };
 }
 
-export default async function PhysioAssessmentPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function PhysiotherapyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ resident?: string }>;
+}) {
+  const account = await getCurrentUser();
+  if (!account) redirect("/login");
+
+  const { resident: residentIdParam } = await searchParams;
+  const supabase = await createClient();
+
+  let residentQuery = supabase
+    .from("tbl_residents")
+    .select("id, resident_name, branch_id")
+    .eq("status", "ACTIVE")
+    .order("resident_name");
+
+  if (account.rights !== "ADMIN") {
+    residentQuery = residentQuery.eq("branch_id", account.branch_id);
+  }
+
+  const { data: residents } = await residentQuery;
+
+  const selectedResident = residentIdParam
+    ? (residents ?? []).find((r) => String(r.id) === residentIdParam)
+    : undefined;
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Physiotherapy</h1>
+      </div>
+
+      <ResidentPicker residents={residents ?? []} currentResident={residentIdParam || ""} />
+
+      {!selectedResident ? (
+        <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+          Select a resident to view or add a physiotherapy assessment.
+        </div>
+      ) : (
+        <div className="mt-4">
+          <PhysiotherapyResidentContent residentId={selectedResident.id} account={account} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function PhysiotherapyResidentContent({
+  residentId,
+  account,
+}: {
+  residentId: number;
+  account: { rights: string; branch_id: number };
+}) {
   const supabase = await createClient();
 
   const { data: resident } = await supabase
     .from("tbl_residents")
-    .select("id, resident_name, branch_id, gender, age, past_medical_condition")
-    .eq("id", id)
+    .select("id, resident_name, ic_number, branch_id, gender, age, past_medical_condition")
+    .eq("id", residentId)
     .single();
 
-  if (!resident) notFound();
+  if (!resident) {
+    return <p className="text-sm text-red-600">Resident not found.</p>;
+  }
+
+  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+    return <p className="text-sm text-red-600">Access denied.</p>;
+  }
 
   const [{ data: assessments, error: assessmentsError }, staffOptions] = await Promise.all([
     supabase
       .from("physio_assessments")
       .select("*, tbl_staff!documented_by(staff_name)")
-      .eq("resident_id", id)
+      .eq("resident_id", residentId)
       .order("entry_timestamp", { ascending: false }),
     getAllStaffWithBranch(undefined, "Physiotherapy"),
   ]);
@@ -134,9 +194,6 @@ export default async function PhysioAssessmentPage({ params }: { params: Promise
         credit_hours: latest.credit_hours,
         total_score: latest.total_score,
         examRows: examByAssessment.get(latest.id) ?? [],
-        // Pick only the named score fields -- these rows come from `select("*")`
-        // and also carry id/branch_id/assessment_id, which must never reach
-        // computePhysioScore (it sums every value in these objects).
         functional: pickFunctional(functionalByAssessment.get(latest.id)),
         balance: pickBalance(balanceByAssessment.get(latest.id)),
         coordination: pickCoordination(coordinationByAssessment.get(latest.id)),
@@ -144,19 +201,13 @@ export default async function PhysioAssessmentPage({ params }: { params: Promise
     : null;
 
   return (
-    <div>
-      <div className="mb-4">
-        <Link href={`/residents/${resident.id}`} className="text-sm text-gray-500 hover:underline">
-          &larr; {resident.resident_name}
-        </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Physiotherapy Assessment</h1>
-      </div>
-
+    <>
       {assessmentsError && <p className="mb-4 text-sm text-red-600">{assessmentsError.message}</p>}
 
       <PhysioAssessmentTabs
         residentId={resident.id}
         residentName={resident.resident_name}
+        icNumber={resident.ic_number}
         gender={resident.gender}
         age={resident.age}
         entryDateLabel={formatDateTime(new Date().toISOString())}
@@ -165,6 +216,6 @@ export default async function PhysioAssessmentPage({ params }: { params: Promise
         previous={previous}
         reviewAssessments={reviewAssessments}
       />
-    </div>
+    </>
   );
 }
