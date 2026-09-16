@@ -222,25 +222,27 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
               />
             </div>
 
-            <div>
-              <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-gray-700">
-                SpO2 Condition {spo2 && <span className="text-red-500">*</span>}
-              </label>
-              <select
-                id="spo2-condition"
-                value={spo2Condition}
-                onChange={(e) => setSpo2Condition(e.target.value)}
-                required={!!spo2}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">Select condition</option>
-                {SPO2_CONDITION_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {spo2 && (
+              <div>
+                <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-gray-700">
+                  SpO2 Condition <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="spo2-condition"
+                  value={spo2Condition}
+                  onChange={(e) => setSpo2Condition(e.target.value)}
+                  required
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Select condition</option>
+                  {SPO2_CONDITION_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label htmlFor="dxt" className="mb-1 block text-sm font-medium text-gray-700">
@@ -257,40 +259,44 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
               />
             </div>
 
-            <div>
-              <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-gray-700">
-                DXT Remark {dxt && <span className="text-red-500">*</span>}
-              </label>
-              <select
-                id="dxt-remark"
-                value={dxtRemark}
-                onChange={(e) => setDxtRemark(e.target.value)}
-                required={!!dxt}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">Select remark</option>
-                {DXT_REMARK_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {dxt && (
+              <div>
+                <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-gray-700">
+                  DXT Remark <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="dxt-remark"
+                  value={dxtRemark}
+                  onChange={(e) => setDxtRemark(e.target.value)}
+                  required
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Select remark</option>
+                  {DXT_REMARK_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          <div>
-            <label htmlFor="insulin-adjustment" className="mb-1 block text-sm font-medium text-gray-700">
-              Insulin Adjustment
-            </label>
-            <textarea
-              id="insulin-adjustment"
-              value={insulinAdjustment}
-              onChange={(e) => setInsulinAdjustment(e.target.value)}
-              rows={2}
-              placeholder="Notes on insulin adjustment..."
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
+          {dxt && (
+            <div>
+              <label htmlFor="insulin-adjustment" className="mb-1 block text-sm font-medium text-gray-700">
+                Insulin Adjustment
+              </label>
+              <textarea
+                id="insulin-adjustment"
+                value={insulinAdjustment}
+                onChange={(e) => setInsulinAdjustment(e.target.value)}
+                rows={2}
+                placeholder="Notes on insulin adjustment..."
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          )}
 
           <div>
             <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
