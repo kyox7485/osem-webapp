@@ -57,7 +57,17 @@ export async function getStaffForResident(residentId: number): Promise<LookupOpt
       return [];
     }
 
-    const result = (data ?? []).map((r: any) => ({ id: r.StaffID, label: r.staff_name }));
+    // Log the first row to see what keys are actually available
+    if (data && data.length > 0) {
+      console.log("[getStaffForResident] First row keys:", Object.keys(data[0]));
+      console.log("[getStaffForResident] First row sample:", data[0]);
+    }
+
+    const result = (data ?? []).map((r: any) => {
+      // Try multiple possible key names
+      const staffId = r.StaffID || r.staffid || r.staff_id || r.id;
+      return { id: staffId, label: r.staff_name };
+    });
     console.log("[getStaffForResident] Returning:", result);
     return result;
   } catch (err) {
