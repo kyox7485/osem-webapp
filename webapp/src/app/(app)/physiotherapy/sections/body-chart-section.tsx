@@ -44,7 +44,11 @@ export function BodyChartSection({ findings, setFindings }: Props) {
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <BodyDiagram onSelectRegion={selectRegion} markedRegionNames={markedRegionNames} />
+          <BodyDiagram
+            onSelectRegion={selectRegion}
+            markedRegionNames={markedRegionNames}
+            pendingRegionName={pendingRegion?.name}
+          />
           <p className="mt-2 text-center text-xs text-gray-400">Tap a point on the diagram to add a finding</p>
 
           {pendingRegion && (

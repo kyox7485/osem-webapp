@@ -46,15 +46,19 @@ export const ALL_REGIONS: BodyRegion[] = [...FRONT_REGIONS, ...BACK_REGIONS];
 type Props = {
   onSelectRegion: (region: BodyRegion) => void;
   markedRegionNames: Set<string>;
+  pendingRegionName?: string | null;
 };
 
-export function BodyDiagram({ onSelectRegion, markedRegionNames }: Props) {
+export function BodyDiagram({ onSelectRegion, markedRegionNames, pendingRegionName }: Props) {
   return (
     <div className="relative mx-auto w-full max-w-md">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/body-chart.png" alt="Body chart (front, side and back views)" className="block w-full select-none" draggable={false} />
       {ALL_REGIONS.map((region) => {
         const marked = markedRegionNames.has(region.name);
+        // Pending = tapped, comment box open, not yet added -- a lighter
+        // highlight than a saved finding so the two states read distinctly.
+        const pending = !marked && region.name === pendingRegionName;
         return (
           <button
             key={region.name}
@@ -65,13 +69,15 @@ export function BodyDiagram({ onSelectRegion, markedRegionNames }: Props) {
             className={`absolute flex items-center justify-center rounded-full border transition-colors ${
               marked
                 ? "border-indigo-700 bg-indigo-600"
-                : "border-indigo-400 bg-indigo-100/80 hover:bg-indigo-300"
+                : pending
+                  ? "border-indigo-500 bg-indigo-400"
+                  : "border-indigo-400 bg-indigo-100/80 hover:bg-indigo-300"
             }`}
             style={{
               left: `${region.x}%`,
               top: `${region.y}%`,
-              width: marked ? 14 : 11,
-              height: marked ? 14 : 11,
+              width: marked || pending ? 14 : 11,
+              height: marked || pending ? 14 : 11,
               transform: "translate(-50%, -50%)",
             }}
           />
