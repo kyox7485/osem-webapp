@@ -65,6 +65,18 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
       return;
     }
 
+    // Validate SpO2 condition when SpO2 is filled
+    if (spo2 && !spo2Condition) {
+      setError("SpO2 condition is required when SpO2 is recorded");
+      return;
+    }
+
+    // Validate DXT remark when DXT is filled
+    if (dxt && !dxtRemark) {
+      setError("DXT remark is required when DXT is recorded");
+      return;
+    }
+
     setIsSaving(true);
 
     const result = await createVital({
@@ -212,12 +224,13 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
 
             <div>
               <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-gray-700">
-                SpO2 Condition
+                SpO2 Condition {spo2 && <span className="text-red-500">*</span>}
               </label>
               <select
                 id="spo2-condition"
                 value={spo2Condition}
                 onChange={(e) => setSpo2Condition(e.target.value)}
+                required={!!spo2}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">Select condition</option>
@@ -246,12 +259,13 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
 
             <div>
               <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-gray-700">
-                DXT Remark
+                DXT Remark {dxt && <span className="text-red-500">*</span>}
               </label>
               <select
                 id="dxt-remark"
                 value={dxtRemark}
                 onChange={(e) => setDxtRemark(e.target.value)}
+                required={!!dxt}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">Select remark</option>
