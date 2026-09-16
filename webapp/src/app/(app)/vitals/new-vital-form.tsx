@@ -54,7 +54,16 @@ export function NewVitalForm({ residents, onClose, onSaved }: Props) {
       setStaffOptions([]);
       return;
     }
-    getStaffForResident(parseInt(residentId)).then(setStaffOptions);
+    console.log("Fetching staff for resident:", residentId);
+    getStaffForResident(parseInt(residentId))
+      .then((staff) => {
+        console.log("Received staff options:", staff);
+        setStaffOptions(staff);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch staff:", err);
+        setStaffOptions([]);
+      });
   }, [residentId]);
 
   async function handleSubmit(e: React.FormEvent) {

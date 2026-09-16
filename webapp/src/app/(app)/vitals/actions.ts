@@ -20,34 +20,50 @@ type CreateVitalInput = {
 };
 
 export async function getStaffForResident(residentId: number): Promise<LookupOption[]> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const { data: resident, error: residentError } = await supabase
-    .from("tbl_residents")
-    .select("branch_id")
-    .eq("id", residentId)
-    .single();
+    // First get the resident's branch
+    const { data: resident, error: residentError } = await supabase
+      .from("tbl_residents")
+      .select("branch_id")
+      .eq("id", residentId)
+      .single();
 
-  if (residentError) {
-    console.error("Failed to fetch resident:", residentError);
+    console.log("[getStaffForResident] Resident query:", { residentId, resident, residentError });
+
+    if (residentError) {
+      console.error("[getStaffForResident] Failed to fetch resident:", residentError);
+      return [];
+    }
+
+    if (!resident) {
+      console.error("[getStaffForResident] No resident found");
+      return [];
+    }
+
+    // Then get active staff from that branch
+    const { data, error } = await supabase
+      .from("tbl_staff")
+      .select("*")
+      .eq("branch_id", resident.branch_id)
+      .eq("status", "ACTIVE")
+      .order("staff_name");
+
+    console.log("[getStaffForResident] Staff query:", { branch_id: resident.branch_id, data, error });
+
+    if (error) {
+      console.error("[getStaffForResident] Failed to fetch staff:", error);
+      return [];
+    }
+
+    const result = (data ?? []).map((r: any) => ({ id: r.StaffID, label: r.staff_name }));
+    console.log("[getStaffForResident] Returning:", result);
+    return result;
+  } catch (err) {
+    console.error("[getStaffForResident] Unexpected error:", err);
     return [];
   }
-
-  if (!resident) return [];
-
-  const { data, error } = await supabase
-    .from("tbl_staff")
-    .select("StaffID, staff_name")
-    .eq("branch_id", resident.branch_id)
-    .eq("status", "ACTIVE")
-    .order("staff_name");
-
-  if (error) {
-    console.error("Failed to fetch staff:", error);
-    return [];
-  }
-
-  return (data ?? []).map((r) => ({ id: r.StaffID, label: r.staff_name }));
 }
 
 export async function createVital(input: CreateVitalInput): Promise<{ success: boolean; error?: string }> {
