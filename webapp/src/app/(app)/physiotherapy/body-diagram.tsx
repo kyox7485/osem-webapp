@@ -1,44 +1,47 @@
 "use client";
 
-// Simple front-view body outline with tappable hotspots -- deliberately not
-// a sophisticated 3D/anatomical rendering, just enough for a therapist to
-// point at a region and attach a comment. Two regions that aren't visible
-// from the front (Upper Back, Lower Back) are offered as plain buttons
-// below the diagram instead of a second (back) view.
+// Anatomical body chart backed by a real front/side/back illustration
+// (public/body-chart.png). Hotspots are positioned as percentages over the
+// image so a therapist can tap a region -- front and back are both visible
+// in the artwork, so front-only limb regions plus the two back regions
+// (Upper Back, Lower Back) are all real tappable points on the image.
 export type BodyRegion = { name: string; side: "R" | "L" | null; x: number; y: number };
 
 export const FRONT_REGIONS: BodyRegion[] = [
-  { name: "Head / Neck", side: null, x: 100, y: 28 },
-  { name: "Right Shoulder", side: "R", x: 62, y: 66 },
-  { name: "Left Shoulder", side: "L", x: 138, y: 66 },
-  { name: "Chest", side: null, x: 100, y: 82 },
-  { name: "Right Upper Arm", side: "R", x: 46, y: 100 },
-  { name: "Left Upper Arm", side: "L", x: 154, y: 100 },
-  { name: "Abdomen", side: null, x: 100, y: 118 },
-  { name: "Right Elbow", side: "R", x: 42, y: 140 },
-  { name: "Left Elbow", side: "L", x: 158, y: 140 },
-  { name: "Right Forearm", side: "R", x: 40, y: 168 },
-  { name: "Left Forearm", side: "L", x: 160, y: 168 },
-  { name: "Right Hand", side: "R", x: 38, y: 196 },
-  { name: "Left Hand", side: "L", x: 162, y: 196 },
-  { name: "Right Hip", side: "R", x: 82, y: 200 },
-  { name: "Left Hip", side: "L", x: 118, y: 200 },
-  { name: "Right Thigh", side: "R", x: 82, y: 240 },
-  { name: "Left Thigh", side: "L", x: 118, y: 240 },
-  { name: "Right Knee", side: "R", x: 82, y: 278 },
-  { name: "Left Knee", side: "L", x: 118, y: 278 },
-  { name: "Right Lower Leg", side: "R", x: 82, y: 316 },
-  { name: "Left Lower Leg", side: "L", x: 118, y: 316 },
-  { name: "Right Ankle", side: "R", x: 82, y: 350 },
-  { name: "Left Ankle", side: "L", x: 118, y: 350 },
-  { name: "Right Foot", side: "R", x: 82, y: 368 },
-  { name: "Left Foot", side: "L", x: 118, y: 368 },
+  { name: "Head", side: null, x: 17.19, y: 6.82 },
+  { name: "Neck", side: null, x: 17.19, y: 18.59 },
+  { name: "Right Shoulder", side: "R", x: 10.74, y: 22.92 },
+  { name: "Left Shoulder", side: "L", x: 23.63, y: 22.92 },
+  { name: "Chest", side: null, x: 17.19, y: 28.50 },
+  { name: "Right Upper Arm", side: "R", x: 9.77, y: 30.36 },
+  { name: "Left Upper Arm", side: "L", x: 24.61, y: 30.36 },
+  { name: "Abdomen", side: null, x: 17.19, y: 35.94 },
+  { name: "Right Elbow", side: "R", x: 8.79, y: 38.41 },
+  { name: "Left Elbow", side: "L", x: 25.59, y: 38.41 },
+  { name: "Right Hip", side: "R", x: 13.35, y: 42.75 },
+  { name: "Left Hip", side: "L", x: 21.03, y: 42.75 },
+  { name: "Right Forearm", side: "R", x: 7.62, y: 46.47 },
+  { name: "Left Forearm", side: "L", x: 26.76, y: 46.47 },
+  { name: "Right Hand", side: "R", x: 5.53, y: 55.14 },
+  { name: "Left Hand", side: "L", x: 28.84, y: 55.14 },
+  { name: "Right Thigh", side: "R", x: 14.06, y: 57.87 },
+  { name: "Left Thigh", side: "L", x: 20.31, y: 57.87 },
+  { name: "Right Knee", side: "R", x: 14.78, y: 73.11 },
+  { name: "Left Knee", side: "L", x: 19.53, y: 73.11 },
+  { name: "Right Lower Leg", side: "R", x: 14.84, y: 81.16 },
+  { name: "Left Lower Leg", side: "L", x: 19.53, y: 81.16 },
+  { name: "Right Ankle", side: "R", x: 15.17, y: 90.46 },
+  { name: "Left Ankle", side: "L", x: 19.08, y: 90.46 },
+  { name: "Right Foot", side: "R", x: 14.65, y: 96.03 },
+  { name: "Left Foot", side: "L", x: 18.88, y: 96.03 },
 ];
 
-export const NOT_VISIBLE_REGIONS: BodyRegion[] = [
-  { name: "Upper Back", side: null, x: 0, y: 0 },
-  { name: "Lower Back", side: null, x: 0, y: 0 },
+export const BACK_REGIONS: BodyRegion[] = [
+  { name: "Upper Back", side: null, x: 61.85, y: 30.98 },
+  { name: "Lower Back", side: null, x: 61.85, y: 47.09 },
 ];
+
+export const ALL_REGIONS: BodyRegion[] = [...FRONT_REGIONS, ...BACK_REGIONS];
 
 type Props = {
   onSelectRegion: (region: BodyRegion) => void;
@@ -47,43 +50,33 @@ type Props = {
 
 export function BodyDiagram({ onSelectRegion, markedRegionNames }: Props) {
   return (
-    <svg viewBox="0 0 200 400" className="mx-auto h-auto w-full max-w-[220px]" role="img" aria-label="Body chart">
-      {/* Simple outline silhouette */}
-      <circle cx="100" cy="28" r="18" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="70" y="55" width="60" height="90" rx="12" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="45" y="60" width="20" height="90" rx="8" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="135" y="60" width="20" height="90" rx="8" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="45" y="150" width="16" height="55" rx="7" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="139" y="150" width="16" height="55" rx="7" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="72" y="145" width="56" height="65" rx="10" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="75" y="210" width="22" height="90" rx="10" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="103" y="210" width="22" height="90" rx="10" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="76" y="300" width="20" height="60" rx="8" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="104" y="300" width="20" height="60" rx="8" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <ellipse cx="82" cy="368" rx="12" ry="6" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <ellipse cx="118" cy="368" rx="12" ry="6" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-
-      {/* Tappable hotspots */}
-      {FRONT_REGIONS.map((region) => {
+    <div className="relative mx-auto w-full max-w-md">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/body-chart.png" alt="Body chart (front, side and back views)" className="block w-full select-none" draggable={false} />
+      {ALL_REGIONS.map((region) => {
         const marked = markedRegionNames.has(region.name);
         return (
-          <g key={region.name}>
-            <circle
-              cx={region.x}
-              cy={region.y}
-              r={marked ? 9 : 7}
-              className={`cursor-pointer transition-colors ${
-                marked ? "fill-indigo-600" : "fill-indigo-100 hover:fill-indigo-300"
-              }`}
-              stroke={marked ? "#4338ca" : "#818cf8"}
-              strokeWidth="1.5"
-              onClick={() => onSelectRegion(region)}
-            >
-              <title>{region.name}</title>
-            </circle>
-          </g>
+          <button
+            key={region.name}
+            type="button"
+            onClick={() => onSelectRegion(region)}
+            title={region.name}
+            aria-label={region.name}
+            className={`absolute flex items-center justify-center rounded-full border transition-colors ${
+              marked
+                ? "border-indigo-700 bg-indigo-600"
+                : "border-indigo-400 bg-indigo-100/80 hover:bg-indigo-300"
+            }`}
+            style={{
+              left: `${region.x}%`,
+              top: `${region.y}%`,
+              width: marked ? 14 : 11,
+              height: marked ? 14 : 11,
+              transform: "translate(-50%, -50%)",
+            }}
+          />
         );
       })}
-    </svg>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BodyDiagram, NOT_VISIBLE_REGIONS, type BodyRegion } from "../body-diagram";
+import { BodyDiagram, type BodyRegion } from "../body-diagram";
 import { CollapsibleCard } from "../collapsible-card";
 
 export type BodyChartEntry = { region: string; side: "R" | "L" | null; comment: string };
@@ -12,9 +12,9 @@ type Props = {
 };
 
 // No pain scoring -- just region + side + a free-text finding/comment, per
-// spec. Tap a hotspot (or a not-visible-from-front region button), type a
-// comment, add it to the list; existing findings show below and can be
-// removed before saving.
+// spec. Tap a hotspot on the front/back/side body chart, type a comment,
+// add it to the list; existing findings show below and can be removed
+// before saving.
 export function BodyChartSection({ findings, setFindings }: Props) {
   const [pendingRegion, setPendingRegion] = useState<BodyRegion | null>(null);
   const [comment, setComment] = useState("");
@@ -46,23 +46,6 @@ export function BodyChartSection({ findings, setFindings }: Props) {
         <div>
           <BodyDiagram onSelectRegion={selectRegion} markedRegionNames={markedRegionNames} />
           <p className="mt-2 text-center text-xs text-gray-400">Tap a point on the diagram to add a finding</p>
-
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {NOT_VISIBLE_REGIONS.map((region) => (
-              <button
-                key={region.name}
-                type="button"
-                onClick={() => selectRegion(region)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  markedRegionNames.has(region.name)
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {region.name}
-              </button>
-            ))}
-          </div>
 
           {pendingRegion && (
             <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50 p-3">
