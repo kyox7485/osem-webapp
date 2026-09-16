@@ -15,13 +15,17 @@ type CreateVitalInput = {
   dxt: number | null;
   dxtRemark: string | null;
   insulinAdjustment: string | null;
-  reviewedBy: string | null;
+  reviewedBy: string;
 };
 
 export async function createVital(input: CreateVitalInput): Promise<{ success: boolean; error?: string }> {
   const account = await getCurrentUser();
   if (!account) {
     return { success: false, error: "Not authenticated" };
+  }
+
+  if (!input.reviewedBy) {
+    return { success: false, error: "Reviewed by is required" };
   }
 
   const supabase = await createClient();

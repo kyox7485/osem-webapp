@@ -65,6 +65,11 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
       return;
     }
 
+    if (!reviewedBy) {
+      setError("Please select who reviewed this reading");
+      return;
+    }
+
     // Validate SpO2 condition when SpO2 is filled
     if (spo2 && !spo2Condition) {
       setError("SpO2 condition is required when SpO2 is recorded");
@@ -90,7 +95,7 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
       dxt: dxt ? parseFloat(dxt) : null,
       dxtRemark: dxtRemark || null,
       insulinAdjustment: insulinAdjustment || null,
-      reviewedBy: reviewedBy || null,
+      reviewedBy,
     });
 
     setIsSaving(false);
@@ -300,12 +305,13 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
 
           <div>
             <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
-              Reviewed By <span className="font-normal text-gray-400">(optional)</span>
+              Reviewed By <span className="text-red-500">*</span>
             </label>
             <select
               id="reviewed-by"
               value={reviewedBy}
               onChange={(e) => setReviewedBy(e.target.value)}
+              required
               disabled={!residentId}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
             >
