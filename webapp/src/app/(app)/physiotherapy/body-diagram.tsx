@@ -56,31 +56,43 @@ export function BodyDiagram({ onSelectRegion, markedRegionNames, pendingRegionNa
       <img src="/body-chart.png" alt="Body chart (front, side and back views)" className="block w-full select-none" draggable={false} />
       {ALL_REGIONS.map((region) => {
         const marked = markedRegionNames.has(region.name);
-        // Pending = tapped, comment box open, not yet added -- a lighter
-        // highlight than a saved finding so the two states read distinctly.
+        // Pending = tapped, comment box open, not yet added -- stays lit
+        // (driven by parent state, not :hover) until "Add finding" is
+        // pressed, Cancel is pressed, or a different region is tapped.
         const pending = !marked && region.name === pendingRegionName;
         return (
+          // Hit area is deliberately larger than the visible dot -- the
+          // dots are small against the full illustration, and a near-miss
+          // tap used to land on the plain <img> and do nothing, which read
+          // as the highlight "not sticking". The dot itself keeps its
+          // original size; only the tappable area grows.
           <button
             key={region.name}
             type="button"
             onClick={() => onSelectRegion(region)}
             title={region.name}
             aria-label={region.name}
-            className={`absolute flex items-center justify-center rounded-full border transition-colors ${
-              marked
-                ? "border-indigo-700 bg-indigo-600"
-                : pending
-                  ? "border-indigo-500 bg-indigo-400"
-                  : "border-indigo-400 bg-indigo-100/80 hover:bg-indigo-300"
-            }`}
+            className="group absolute flex items-center justify-center rounded-full"
             style={{
               left: `${region.x}%`,
               top: `${region.y}%`,
-              width: marked || pending ? 14 : 11,
-              height: marked || pending ? 14 : 11,
+              width: 26,
+              height: 26,
               transform: "translate(-50%, -50%)",
+              WebkitTapHighlightColor: "transparent",
             }}
-          />
+          >
+            <span
+              className={`block rounded-full border transition-colors ${
+                marked
+                  ? "border-indigo-700 bg-indigo-600"
+                  : pending
+                    ? "border-indigo-600 bg-indigo-400 ring-2 ring-indigo-300"
+                    : "border-indigo-400 bg-indigo-100/80 group-hover:bg-indigo-300"
+              }`}
+              style={{ width: marked || pending ? 14 : 11, height: marked || pending ? 14 : 11 }}
+            />
+          </button>
         );
       })}
     </div>
