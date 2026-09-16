@@ -29,7 +29,6 @@ export function NewProgressNoteForm({ residents, allStaff, onClose, onSaved }: P
   const [monitoringPlan, setMonitoringPlan] = useState("");
   const [dressingPlan, setDressingPlan] = useState("");
   const [physioPlan, setPhysioPlan] = useState("");
-  const [reviewedBy, setReviewedBy] = useState("");
   const [createdBy, setCreatedBy] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -52,7 +51,7 @@ export function NewProgressNoteForm({ residents, allStaff, onClose, onSaved }: P
     }
 
     if (!createdBy) {
-      setError("Please select who created this note");
+      setError("Please select who entered this note");
       return;
     }
 
@@ -68,7 +67,6 @@ export function NewProgressNoteForm({ residents, allStaff, onClose, onSaved }: P
       monitoringPlan: monitoringPlan || null,
       dressingPlan: dressingPlan || null,
       physioPlan: physioPlan || null,
-      reviewedBy: reviewedBy || null,
       createdBy,
     });
 
@@ -111,7 +109,6 @@ export function NewProgressNoteForm({ residents, allStaff, onClose, onSaved }: P
               value={residentId}
               onChange={(e) => {
                 setResidentId(e.target.value);
-                setReviewedBy("");
                 setCreatedBy("");
               }}
               required
@@ -235,7 +232,7 @@ export function NewProgressNoteForm({ residents, allStaff, onClose, onSaved }: P
 
             <div>
               <label htmlFor="created-by" className="mb-1 block text-sm font-medium text-gray-700">
-                Created By <span className="text-red-500">*</span>
+                Entered By <span className="text-red-500">*</span>
               </label>
               <select
                 id="created-by"
@@ -246,26 +243,6 @@ export function NewProgressNoteForm({ residents, allStaff, onClose, onSaved }: P
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
               >
                 <option value="">Select staff</option>
-                {staffOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
-                Reviewed By
-              </label>
-              <select
-                id="reviewed-by"
-                value={reviewedBy}
-                onChange={(e) => setReviewedBy(e.target.value)}
-                disabled={!residentId}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
-              >
-                <option value="">Select staff (optional)</option>
                 {staffOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.label}

@@ -14,7 +14,6 @@ type CreateProgressNoteInput = {
   monitoringPlan: string | null;
   dressingPlan: string | null;
   physioPlan: string | null;
-  reviewedBy: string | null;
   createdBy: string;
 };
 
@@ -53,7 +52,7 @@ export async function createProgressNote(input: CreateProgressNoteInput): Promis
     monitoring_plan: input.monitoringPlan,
     dressing_plan: input.dressingPlan,
     physio_plan: input.physioPlan,
-    reviewed_by: input.reviewedBy,
+    reviewed_by: input.createdBy,
     created_by: input.createdBy,
   });
 
