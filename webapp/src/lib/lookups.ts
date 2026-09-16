@@ -73,12 +73,19 @@ export async function getStaffRoster(branchId: number, allowedRoles?: string[]):
 // Same idea as getStaffRoster, but unscoped + carries branch_id -- for forms
 // (like resident admission) where the branch itself is also a form field, so
 // filtering has to happen client-side as the user picks a branch.
+//
+// department restricts to a single tbl_staff.department (e.g. "Physiotherapy"
+// for the physio assessment's "Documented by" picker) -- ADMIN staff are
+// still always included regardless of department, same "admins can act
+// anywhere" convention as allowedRoles below.
 export async function getAllStaffWithBranch(
-  allowedRoles?: string[]
+  allowedRoles?: string[],
+  department?: string
 ): Promise<(LookupOption & { branch_id: number })[]> {
   const supabase = await createClient();
   let query = supabase.from("tbl_staff").select("id:StaffID, staff_name, branch_id").eq("status", "ACTIVE");
   if (allowedRoles) query = query.in("role", [...new Set([...allowedRoles, "ADMIN"])]);
+  if (department) query = query.or(`department.eq.${department},role.eq.ADMIN`);
   const { data } = await query.order("staff_name");
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
 }

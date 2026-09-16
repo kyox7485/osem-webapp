@@ -1140,6 +1140,127 @@ create index idx_ppn_resident on tbl_physio_progress_notes (resident_id, entry_t
 create index idx_ppn_op_patient on tbl_physio_progress_notes (op_patient_id, entry_timestamp desc);
 
 -- ============================================================================
+-- 6B. PHYSIOTHERAPY INPATIENT ASSESSMENT + PROGRESS NOTE
+--    Structured, scored inpatient assessment (manual muscle testing per
+--    limb/region/side, body chart, functional/balance/coordination grading,
+--    auto-computed score) -- deliberately separate from the flat SOAP-style
+--    tbl_physio_progress_notes above, which can't represent this. One
+--    combined form for both the first assessment and every later progress
+--    note; each save is an independent historical snapshot (insert-only,
+--    never updated).
+-- ============================================================================
+
+create table physio_assessments (
+  id                   bigint generated always as identity primary key,
+  branch_id            bigint not null references tbl_branches ("BranchID"),
+  resident_id          bigint not null references tbl_residents (id),
+  entry_timestamp      timestamptz not null default now(),
+  treatment_type       text check (treatment_type in ('Basic','Full','Assessment','Housecall','Neuro','Backpain')),
+  credit_hours         numeric,
+  chief_complaint      text,
+  current_history      text,
+  past_medical_history text,
+  social_history       text,
+  impression           text,   -- Physiotherapist Impression / Analysis
+  plan_intervention    text,
+  evaluation           text,
+  treatment_compliance text check (treatment_compliance in ('100%','75%','50%','25%')),
+  total_score          numeric,  -- computed server-side at insert time, never client-editable
+  documented_by        text not null references tbl_staff ("StaffID"),
+  created_at           timestamptz not null default now()
+);
+create index idx_physio_assess_resident on physio_assessments (resident_id, entry_timestamp desc);
+create index idx_physio_assess_branch on physio_assessments (branch_id, entry_timestamp desc);
+
+-- One row per (limb, region, movement, side) actually assessed -- manual
+-- muscle testing chart, normalized rather than one column per movement.
+create table physio_examinations (
+  id             bigint generated always as identity primary key,
+  branch_id      bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
+  assessment_id  bigint not null references physio_assessments (id) on delete cascade,
+  limb           text not null check (limb in ('lower','upper')),
+  region         text not null,   -- 'Hip','Knee','Ankle','Foot','Trunk','Shoulder','Elbow','Forearm','Wrist','Fingers'
+  movement       text not null,   -- e.g. 'Flexors','Lateral Rotation'
+  side           text not null check (side in ('R','L')),
+  power          int check (power between 0 and 5),
+  tone           int check (tone between 0 and 4),
+  rom            int check (rom between 0 and 4),
+  reflexes       int check (reflexes between 0 and 4),
+  created_at     timestamptz not null default now(),
+  unique (assessment_id, limb, region, movement, side)
+);
+create index idx_physio_exam_assessment on physio_examinations (assessment_id);
+
+create table physio_body_chart_findings (
+  id             bigint generated always as identity primary key,
+  branch_id      bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
+  assessment_id  bigint not null references physio_assessments (id) on delete cascade,
+  region         text not null,                   -- e.g. 'Neck','Right Shoulder','Lower Back'
+  side           text check (side in ('R','L')),   -- null for midline regions
+  comment        text not null,
+  created_at     timestamptz not null default now()
+);
+create index idx_physio_body_chart_assessment on physio_body_chart_findings (assessment_id);
+
+create table physio_functional_assessments (
+  id                    bigint generated always as identity primary key,
+  branch_id             bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
+  assessment_id         bigint not null unique references physio_assessments (id) on delete cascade,
+  supine_to_side_lying  int check (supine_to_side_lying between 0 and 4),
+  side_lying_to_sitting int check (side_lying_to_sitting between 0 and 4),
+  sitting_to_standing   int check (sitting_to_standing between 0 and 4),
+  sit_at_edge_of_bed    int check (sit_at_edge_of_bed between 0 and 4),
+  ambulation            int check (ambulation between 0 and 4)
+);
+
+-- No Right/Left -- balance is assessed as a whole, not per side.
+create table physio_balance_assessments (
+  id               bigint generated always as identity primary key,
+  branch_id        bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
+  assessment_id    bigint not null unique references physio_assessments (id) on delete cascade,
+  sitting_static   int check (sitting_static between 0 and 3),
+  sitting_dynamic  int check (sitting_dynamic between 0 and 3),
+  standing_static  int check (standing_static between 0 and 3),
+  standing_dynamic int check (standing_dynamic between 0 and 3)
+);
+
+create table physio_coordination_assessments (
+  id                bigint generated always as identity primary key,
+  branch_id         bigint not null references tbl_branches ("BranchID"),  -- auto-filled, see trigger
+  assessment_id     bigint not null unique references physio_assessments (id) on delete cascade,
+  upper_limb_right  int check (upper_limb_right between 0 and 4),
+  upper_limb_left   int check (upper_limb_left between 0 and 4),
+  lower_limb_right  int check (lower_limb_right between 0 and 4),
+  lower_limb_left   int check (lower_limb_left between 0 and 4)
+);
+
+-- Same "auto-fill branch_id from the parent" pattern as fn_fill_chart_meal_branch.
+create or replace function fn_fill_physio_child_branch() returns trigger
+language plpgsql as $$
+begin
+  if new.branch_id is null then
+    select branch_id into new.branch_id from physio_assessments where id = new.assessment_id;
+  end if;
+  return new;
+end;
+$$;
+
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'physio_examinations','physio_body_chart_findings','physio_functional_assessments',
+    'physio_balance_assessments','physio_coordination_assessments'
+  ]
+  loop
+    execute format(
+      'create trigger trg_fill_%1$s_branch before insert on %1$s
+       for each row execute function fn_fill_physio_child_branch();', t
+    );
+  end loop;
+end $$;
+
+-- ============================================================================
 -- 7. HOSPITAL REFERRALS
 -- ============================================================================
 
@@ -1435,7 +1556,9 @@ begin
     'tbl_progress_notes','tbl_physio_progress_notes',
     'tbl_physio_op_patients','tbl_resident_diagnoses','tbl_hospital_referrals','tbl_fall_incidents',
     'tbl_products','tbl_product_stock','tbl_stock_movements','tbl_stock_transfers',
-    'tbl_stock_requests','tbl_stock_request_details','tbl_charging_summary','tbl_staff'
+    'tbl_stock_requests','tbl_stock_request_details','tbl_charging_summary','tbl_staff',
+    'physio_assessments','physio_examinations','physio_body_chart_findings',
+    'physio_functional_assessments','physio_balance_assessments','physio_coordination_assessments'
   ]
   loop
     execute format(
@@ -1568,7 +1691,9 @@ begin
     'tbl_progress_notes','tbl_physio_progress_notes',
     'tbl_physio_op_patients','tbl_resident_diagnoses','tbl_hospital_referrals','tbl_fall_incidents',
     'tbl_product_stock','tbl_stock_movements','tbl_stock_requests','tbl_stock_request_details',
-    'tbl_charging_summary','tbl_storage_locations'
+    'tbl_charging_summary','tbl_storage_locations',
+    'physio_assessments','physio_examinations','physio_body_chart_findings',
+    'physio_functional_assessments','physio_balance_assessments','physio_coordination_assessments'
   ]
   loop
     execute format('alter table %1$s enable row level security;', t);

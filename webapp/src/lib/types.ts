@@ -58,6 +58,77 @@ export type ProgressNote = {
   created_by: string | null;
 };
 
+export type PhysioAssessment = {
+  id: number;
+  branch_id: number;
+  resident_id: number;
+  entry_timestamp: string;
+  treatment_type: string | null;
+  credit_hours: number | null;
+  chief_complaint: string | null;
+  current_history: string | null;
+  past_medical_history: string | null;
+  social_history: string | null;
+  impression: string | null;
+  plan_intervention: string | null;
+  evaluation: string | null;
+  treatment_compliance: string | null;
+  total_score: number | null;
+  documented_by: string | null;  // tbl_staff.StaffID, e.g. "AMN-1"
+};
+
+export type PhysioExamination = {
+  id: number;
+  assessment_id: number;
+  limb: "lower" | "upper";
+  region: string;
+  movement: string;
+  side: "R" | "L";
+  power: number | null;
+  tone: number | null;
+  rom: number | null;
+  reflexes: number | null;
+};
+
+export type PhysioBodyChartFinding = {
+  id: number;
+  assessment_id: number;
+  region: string;
+  side: "R" | "L" | null;
+  comment: string;
+};
+
+export type PhysioFunctionalAssessment = {
+  id: number;
+  assessment_id: number;
+  supine_to_side_lying: number | null;
+  side_lying_to_sitting: number | null;
+  sitting_to_standing: number | null;
+  sit_at_edge_of_bed: number | null;
+  ambulation: number | null;
+};
+
+export type PhysioBalanceAssessment = {
+  id: number;
+  assessment_id: number;
+  sitting_static: number | null;
+  sitting_dynamic: number | null;
+  standing_static: number | null;
+  standing_dynamic: number | null;
+};
+
+export type PhysioCoordinationAssessment = {
+  id: number;
+  assessment_id: number;
+  upper_limb_right: number | null;
+  upper_limb_left: number | null;
+  lower_limb_right: number | null;
+  lower_limb_left: number | null;
+};
+
+export const PHYSIO_TREATMENT_TYPE_OPTIONS = ["Basic", "Full", "Assessment", "Housecall", "Neuro", "Backpain"] as const;
+export const PHYSIO_COMPLIANCE_OPTIONS = ["100%", "75%", "50%", "25%"] as const;
+
 export type UserAccount = {
   id: number;
   email: string;

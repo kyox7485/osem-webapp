@@ -1,0 +1,75 @@
+"use client";
+
+import { useState } from "react";
+import { NewPhysioAssessmentForm, type PreviousAssessment } from "./new-physio-assessment-form";
+import { PhysioAssessmentReview, type ReviewAssessment } from "./physio-assessment-review";
+import type { LookupOption } from "@/lib/types";
+
+type Props = {
+  residentId: number;
+  residentName: string;
+  gender: string | null;
+  age: number | null;
+  entryDateLabel: string;
+  pastMedicalCondition: string | null;
+  staffOptions: LookupOption[];
+  previous: PreviousAssessment | null;
+  reviewAssessments: ReviewAssessment[];
+};
+
+export function PhysioAssessmentTabs({
+  residentId,
+  residentName,
+  gender,
+  age,
+  entryDateLabel,
+  pastMedicalCondition,
+  staffOptions,
+  previous,
+  reviewAssessments,
+}: Props) {
+  const [tab, setTab] = useState<"review" | "new">(reviewAssessments.length === 0 ? "new" : "review");
+
+  return (
+    <div>
+      <div className="mb-4 flex gap-1 border-b border-gray-200">
+        <TabButton active={tab === "review"} onClick={() => setTab("review")}>
+          Review Notes
+        </TabButton>
+        <TabButton active={tab === "new"} onClick={() => setTab("new")}>
+          New Entry
+        </TabButton>
+      </div>
+
+      {tab === "review" ? (
+        <PhysioAssessmentReview assessments={reviewAssessments} />
+      ) : (
+        <NewPhysioAssessmentForm
+          residentId={residentId}
+          residentName={residentName}
+          gender={gender}
+          age={age}
+          entryDateLabel={entryDateLabel}
+          pastMedicalCondition={pastMedicalCondition}
+          staffOptions={staffOptions}
+          previous={previous}
+          onSaved={() => setTab("review")}
+        />
+      )}
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+        active ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:text-gray-800"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
