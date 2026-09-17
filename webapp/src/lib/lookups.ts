@@ -101,3 +101,76 @@ export async function getAllStaffWithBranch(
   const { data } = await query.order("staff_name");
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
 }
+
+export type NursingChartLookups = {
+  bowelOutputTypes: LookupOption[];
+  passUrineTypes: LookupOption[];
+  activities: LookupOption[];
+  disturbanceLevels: LookupOption[];
+  psychoSocialBehaviours: LookupOption[];
+  activeComplaints: LookupOption[];
+  hygieneCareActivities: (LookupOption & { category: string })[];
+  gcsEyeResponses: LookupOption[];
+  gcsVerbalResponses: LookupOption[];
+  gcsMotorResponses: LookupOption[];
+  avpuOptions: LookupOption[];
+  mealTypes: LookupOption[];
+  mealPortions: LookupOption[];
+  feedingTimes: LookupOption[];
+};
+
+// Every fixed-vocabulary field on the Nursing Chart new-entry form and its
+// two child tables (hygiene episodes, meals) -- bundled into one call since
+// the form needs all of them at once and none are large enough to bother
+// paginating or lazy-loading.
+export async function getNursingChartLookups(): Promise<NursingChartLookups> {
+  const supabase = await createClient();
+  const [
+    bowel,
+    urine,
+    activities,
+    disturbance,
+    psychoSocial,
+    complaints,
+    hygiene,
+    gcsEye,
+    gcsVerbal,
+    gcsMotor,
+    avpu,
+    mealTypes,
+    mealPortions,
+    feedingTimes,
+  ] = await Promise.all([
+    supabase.from("tbl_bowel_output_types").select("id, name").order("id"),
+    supabase.from("tbl_pass_urine_types").select("id, name").order("id"),
+    supabase.from("tbl_activities").select("id, name").order("id"),
+    supabase.from("tbl_disturbance_levels").select("id, description").order("level"),
+    supabase.from("tbl_psycho_social_behaviours").select("id, name").order("id"),
+    supabase.from("tbl_active_complaints").select("id, name_en").order("id"),
+    supabase.from("tbl_hygiene_care_activities").select("id, category, activity").order("id"),
+    supabase.from("tbl_gcs_eye_responses").select("id, description").order("score", { ascending: false }),
+    supabase.from("tbl_gcs_verbal_responses").select("id, description").order("score", { ascending: false }),
+    supabase.from("tbl_gcs_motor_responses").select("id, description").order("score", { ascending: false }),
+    supabase.from("tbl_avpu_options").select("id, label").order("id"),
+    supabase.from("tbl_meal_types").select("id, name").order("id"),
+    supabase.from("tbl_meal_portions").select("id, name").order("id"),
+    supabase.from("tbl_feeding_times").select("id, time_of_day").order("id"),
+  ]);
+
+  return {
+    bowelOutputTypes: (bowel.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    passUrineTypes: (urine.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    activities: (activities.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    disturbanceLevels: (disturbance.data ?? []).map((r) => ({ id: r.id, label: r.description })),
+    psychoSocialBehaviours: (psychoSocial.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    activeComplaints: (complaints.data ?? []).map((r) => ({ id: r.id, label: r.name_en })),
+    hygieneCareActivities: (hygiene.data ?? []).map((r) => ({ id: r.id, label: r.activity, category: r.category })),
+    gcsEyeResponses: (gcsEye.data ?? []).map((r) => ({ id: r.id, label: r.description })),
+    gcsVerbalResponses: (gcsVerbal.data ?? []).map((r) => ({ id: r.id, label: r.description })),
+    gcsMotorResponses: (gcsMotor.data ?? []).map((r) => ({ id: r.id, label: r.description })),
+    avpuOptions: (avpu.data ?? []).map((r) => ({ id: r.id, label: r.label })),
+    mealTypes: (mealTypes.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    mealPortions: (mealPortions.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    feedingTimes: (feedingTimes.data ?? []).map((r) => ({ id: r.id, label: String(r.time_of_day).slice(0, 5) })),
+  };
+}
