@@ -67,20 +67,22 @@ export default async function PhysiotherapyPage({
   const careSetting: PhysioCareSetting = type === "op" ? "OP" : "IP";
   const supabase = await createClient();
 
-  let residentQuery = supabase
-    .from("tbl_residents")
-    .select("id, resident_name, branch_id")
-    .eq("status", "ACTIVE")
-    .order("resident_name");
+  // IP patients are active tbl_residents; OP patients are the separate
+  // tbl_physio_op_patients list (no "ACTIVE" status column of its own --
+  // every row in that table is a standing outpatient registration).
+  let patientQuery =
+    careSetting === "OP"
+      ? supabase.from("tbl_physio_op_patients").select("id, resident_name:patient_name, branch_id").order("patient_name")
+      : supabase.from("tbl_residents").select("id, resident_name, branch_id").eq("status", "ACTIVE").order("resident_name");
 
   if (account.rights !== "ADMIN") {
-    residentQuery = residentQuery.eq("branch_id", account.branch_id);
+    patientQuery = patientQuery.eq("branch_id", account.branch_id);
   }
 
-  const { data: residents } = await residentQuery;
+  const { data: patients } = await patientQuery;
 
-  const selectedResident = residentIdParam
-    ? (residents ?? []).find((r) => String(r.id) === residentIdParam)
+  const selectedPatient = residentIdParam
+    ? (patients ?? []).find((r) => String(r.id) === residentIdParam)
     : undefined;
 
   return (
@@ -91,33 +93,32 @@ export default async function PhysiotherapyPage({
 
       <CareSettingTabs current={careSetting} />
 
-      {careSetting === "OP" ? (
-        <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          Outpatient module coming soon.
-        </div>
-      ) : (
-        <PhysioDirtyProvider>
-          <ResidentPicker residents={residents ?? []} currentResident={residentIdParam || ""} />
+      <PhysioDirtyProvider>
+        <ResidentPicker
+          residents={patients ?? []}
+          currentResident={residentIdParam || ""}
+          careSetting={careSetting}
+          label={careSetting === "OP" ? "Patient" : "Resident"}
+        />
 
-          {!selectedResident ? (
-            <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-              Select a resident to view or add a physiotherapy assessment.
-            </div>
-          ) : (
-            <div className="mt-4">
-              {/* Keyed by resident so switching residents fully remounts the
-                  form (fresh state, tab reset to New Entry) instead of
-                  reusing the previous resident's component instance. */}
-              <PhysiotherapyResidentContent
-                key={selectedResident.id}
-                residentId={selectedResident.id}
-                careSetting={careSetting}
-                account={account}
-              />
-            </div>
-          )}
-        </PhysioDirtyProvider>
-      )}
+        {!selectedPatient ? (
+          <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+            Select a {careSetting === "OP" ? "patient" : "resident"} to view or add a physiotherapy assessment.
+          </div>
+        ) : (
+          <div className="mt-4">
+            {/* Keyed by patient so switching fully remounts the form (fresh
+                state, tab reset to New Entry) instead of reusing the
+                previous patient's component instance. */}
+            <PhysiotherapyResidentContent
+              key={`${careSetting}-${selectedPatient.id}`}
+              residentId={selectedPatient.id}
+              careSetting={careSetting}
+              account={account}
+            />
+          </div>
+        )}
+      </PhysioDirtyProvider>
     </div>
   );
 }
@@ -133,25 +134,40 @@ async function PhysiotherapyResidentContent({
 }) {
   const supabase = await createClient();
 
-  const { data: resident } = await supabase
-    .from("tbl_residents")
-    .select("id, resident_name, ic_number, branch_id, gender, age, past_medical_condition")
-    .eq("id", residentId)
-    .single();
+  // OP patients don't have past_medical_condition -- their equivalent
+  // free-text field is "remark" -- so pull the columns that exist on each
+  // source table and normalize to the same shape below.
+  const { data: resident } =
+    careSetting === "OP"
+      ? await supabase
+          .from("tbl_physio_op_patients")
+          .select("id, patient_name, ic_number, branch_id, gender, age, remark")
+          .eq("id", residentId)
+          .single()
+      : await supabase
+          .from("tbl_residents")
+          .select("id, resident_name, ic_number, branch_id, gender, age, past_medical_condition")
+          .eq("id", residentId)
+          .single();
 
   if (!resident) {
-    return <p className="text-sm text-red-600">Resident not found.</p>;
+    return <p className="text-sm text-red-600">{careSetting === "OP" ? "Patient" : "Resident"} not found.</p>;
   }
 
   if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
     return <p className="text-sm text-red-600">Access denied.</p>;
   }
 
+  const residentName = careSetting === "OP" ? (resident as { patient_name: string }).patient_name : (resident as { resident_name: string }).resident_name;
+  const pastMedicalCondition =
+    careSetting === "OP" ? (resident as { remark: string | null }).remark : (resident as { past_medical_condition: string | null }).past_medical_condition;
+
+  const patientColumn = careSetting === "OP" ? "op_patient_id" : "resident_id";
   const [{ data: assessments, error: assessmentsError }, staffOptions] = await Promise.all([
     supabase
       .from("physio_assessments")
       .select("*, tbl_staff!documented_by(staff_name)")
-      .eq("resident_id", residentId)
+      .eq(patientColumn, residentId)
       .eq("care_setting", careSetting)
       .order("entry_timestamp", { ascending: false }),
     getAllStaffWithBranch(undefined, "Physiotherapy"),
@@ -231,13 +247,13 @@ async function PhysiotherapyResidentContent({
 
       <PhysioAssessmentTabs
         residentId={resident.id}
-        residentName={resident.resident_name}
+        residentName={residentName}
         icNumber={resident.ic_number}
         gender={resident.gender}
         age={resident.age}
         careSetting={careSetting}
         defaultEntryTimestamp={toDatetimeLocalValue(new Date().toISOString())}
-        pastMedicalCondition={resident.past_medical_condition}
+        pastMedicalCondition={pastMedicalCondition}
         staffOptions={staffOptions}
         previous={previous}
         reviewAssessments={reviewAssessments}

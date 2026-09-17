@@ -3,19 +3,25 @@
 import { useEffect, useState } from "react";
 import { useNavPush } from "@/components/nav-loading";
 import { usePhysioDirty } from "./physio-dirty-context";
+import type { PhysioCareSetting } from "@/lib/physio-scoring";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
 type Props = {
   residents: Resident[];
   currentResident: string;
+  careSetting: PhysioCareSetting;
+  // "Resident" for IP, "Patient" for OP -- everything else about this
+  // picker (dirty-check on switch, URL param, etc.) is identical between
+  // the two care settings, only the source list and this label differ.
+  label?: string;
 };
 
 // Switching resident while the New Entry form has unsaved changes would
 // silently discard them (the form remounts fresh for the new resident), so
 // this intercepts the change and asks the therapist first via the shared
 // dirty-tracking context. When the form isn't dirty, switching is instant.
-export function ResidentPicker({ residents, currentResident }: Props) {
+export function ResidentPicker({ residents, currentResident, careSetting, label = "Resident" }: Props) {
   const push = useNavPush();
   const { isDirty, requestSave } = usePhysioDirty();
 
@@ -32,7 +38,7 @@ export function ResidentPicker({ residents, currentResident }: Props) {
 
   function navigateTo(residentId: string) {
     const params = new URLSearchParams();
-    params.set("type", "ip");
+    params.set("type", careSetting === "OP" ? "op" : "ip");
     if (residentId) params.set("resident", residentId);
     push(`/physiotherapy?${params.toString()}`);
   }
@@ -80,7 +86,7 @@ export function ResidentPicker({ residents, currentResident }: Props) {
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       <label htmlFor="resident-picker" className="mb-1 block text-sm font-medium text-gray-700">
-        Resident
+        {label}
       </label>
       <select
         id="resident-picker"
@@ -88,7 +94,7 @@ export function ResidentPicker({ residents, currentResident }: Props) {
         onChange={(e) => handleChange(e.target.value)}
         className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       >
-        <option value="">Select resident</option>
+        <option value="">Select {label.toLowerCase()}</option>
         {residents.map((r) => (
           <option key={r.id} value={r.id}>
             {r.resident_name}
@@ -101,7 +107,7 @@ export function ResidentPicker({ residents, currentResident }: Props) {
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-sm font-bold text-gray-900">Unsaved changes</h3>
             <p className="mb-4 text-sm text-gray-600">
-              This assessment has unsaved changes. Save it before switching resident?
+              This assessment has unsaved changes. Save it before switching {label.toLowerCase()}?
             </p>
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
             <div className="flex flex-wrap justify-end gap-2">

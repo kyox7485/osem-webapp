@@ -85,6 +85,7 @@ export function NewPhysioAssessmentForm({
   const { setDirty, setRequestSave } = usePhysioDirty();
 
   const treatmentTypeOptions = useMemo(() => getTreatmentTypesForDept(careSetting), [careSetting]);
+  const patientLabel = careSetting === "OP" ? "Patient" : "Resident";
 
   const [entryTimestamp, setEntryTimestamp] = useState(defaultEntryTimestamp);
   const [treatmentType, setTreatmentType] = useState(previous?.treatment_type ?? "");
@@ -224,6 +225,7 @@ export function NewPhysioAssessmentForm({
         icNumber={icNumber}
         gender={gender}
         age={age}
+        label={patientLabel}
         entryTimestamp={entryTimestamp}
         setEntryTimestamp={setEntryTimestamp}
         treatmentTypeOptions={treatmentTypeOptions}

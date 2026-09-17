@@ -50,17 +50,22 @@ export async function createPhysioAssessment(
 
   const supabase = await createClient();
 
-  const { data: resident } = await supabase
-    .from("tbl_residents")
+  // IP patients are tbl_residents rows; OP patients live in the separate
+  // tbl_physio_op_patients table (their own id space -- see physio_assessments'
+  // resident_id/op_patient_id split). Same shape either way, just a
+  // different source table to check branch access against.
+  const patientTable = input.careSetting === "OP" ? "tbl_physio_op_patients" : "tbl_residents";
+  const { data: patient } = await supabase
+    .from(patientTable)
     .select("branch_id")
     .eq("id", input.residentId)
     .single();
 
-  if (!resident) {
-    return { success: false, error: "Resident not found" };
+  if (!patient) {
+    return { success: false, error: input.careSetting === "OP" ? "Patient not found" : "Resident not found" };
   }
 
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+  if (account.rights !== "ADMIN" && patient.branch_id !== account.branch_id) {
     return { success: false, error: "Access denied" };
   }
 
@@ -69,8 +74,9 @@ export async function createPhysioAssessment(
   const { data: assessment, error: assessmentError } = await supabase
     .from("physio_assessments")
     .insert({
-      branch_id: resident.branch_id,
-      resident_id: input.residentId,
+      branch_id: patient.branch_id,
+      resident_id: input.careSetting === "OP" ? null : input.residentId,
+      op_patient_id: input.careSetting === "OP" ? input.residentId : null,
       care_setting: input.careSetting,
       entry_timestamp: input.entryTimestamp,
       treatment_type: input.treatmentType,

@@ -14,6 +14,9 @@ type Props = {
   setTreatmentType: (v: string) => void;
   creditHours: string;
   setCreditHours: (v: string) => void;
+  // "Resident" for IP, "Patient" for OP -- everything else on this card is
+  // identical between care settings.
+  label?: string;
 };
 
 export function ResidentInfoSection({
@@ -28,6 +31,7 @@ export function ResidentInfoSection({
   setTreatmentType,
   creditHours,
   setCreditHours,
+  label = "Resident",
 }: Props) {
   function handleTreatmentTypeChange(value: string) {
     setTreatmentType(value);
@@ -40,10 +44,10 @@ export function ResidentInfoSection({
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">Resident / Assessment Information</h2>
+      <h2 className="mb-3 text-sm font-bold text-gray-900">{label} / Assessment Information</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-xs text-gray-400">Resident</p>
+          <p className="text-xs text-gray-400">{label}</p>
           <p className="text-sm font-medium text-gray-900">{residentName}</p>
           <p className="text-xs text-gray-500">{icNumber ?? "--"}</p>
         </div>
