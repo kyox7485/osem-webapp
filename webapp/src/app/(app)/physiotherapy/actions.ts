@@ -14,6 +14,54 @@ import {
 
 type BodyChartInput = { region: string; side: "R" | "L" | null; comment: string };
 
+type CreateOpPatientInput = {
+  patientName: string;
+  icNumber: string | null;
+  age: number | null;
+  gender: "M" | "F" | null;
+  contact: string | null;
+};
+
+// Lets a physiotherapist register a walk-in outpatient right from the
+// Outpatient tab, without going through the (resident-only) Residents
+// module -- OP patients aren't residents, they live in their own table.
+// Scoped to the logged-in account's own branch, same as every other
+// branch-scoped write in this app.
+export async function createOpPatient(
+  input: CreateOpPatientInput
+): Promise<{ success: boolean; error?: string; id?: number }> {
+  const account = await getCurrentUser();
+  if (!account) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const patientName = input.patientName.trim();
+  if (!patientName) {
+    return { success: false, error: "Patient name is required" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tbl_physio_op_patients")
+    .insert({
+      branch_id: account.branch_id,
+      patient_name: patientName,
+      ic_number: input.icNumber,
+      age: input.age,
+      gender: input.gender,
+      contact: input.contact,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { success: false, error: error?.message ?? "Failed to register patient" };
+  }
+
+  revalidatePath("/physiotherapy");
+  return { success: true, id: data.id };
+}
+
 type CreatePhysioAssessmentInput = {
   residentId: number;
   careSetting: PhysioCareSetting;

@@ -17,6 +17,7 @@ import { CareSettingTabs } from "./care-setting-tabs";
 import { PhysioAssessmentTabs } from "./assessment-tabs";
 import { PhysioDirtyProvider } from "./physio-dirty-context";
 import { ResidentPicker } from "./resident-picker";
+import { NewOpPatientForm } from "./new-op-patient-form";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
 import type { ReviewAssessment } from "./assessment-review";
 
@@ -100,6 +101,8 @@ export default async function PhysiotherapyPage({
           careSetting={careSetting}
           label={careSetting === "OP" ? "Patient" : "Resident"}
         />
+
+        {careSetting === "OP" && <NewOpPatientForm />}
 
         {!selectedPatient ? (
           <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
