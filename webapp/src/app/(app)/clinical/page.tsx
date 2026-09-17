@@ -199,7 +199,7 @@ export default async function ClinicalPage({
         ? await Promise.all([
             supabase
               .from("tbl_nursing_chart_meals")
-              .select("chart_entry_id, meal_type_id, meal_portion_id, feeding_time_id")
+              .select("chart_entry_id, meal_type_id, meal_portion_id, feeding_time_id, feeding_volume")
               .in("chart_entry_id", entryIds),
             supabase
               .from("tbl_nursing_chart_hygiene_episodes")
@@ -222,9 +222,12 @@ export default async function ClinicalPage({
 
     const mealsByEntry = new Map<number, string[]>();
     (mealsRaw ?? []).forEach((m: any) => {
-      const parts = [mealTypeById.get(m.meal_type_id), mealPortionById.get(m.meal_portion_id), feedingTimeById.get(m.feeding_time_id)].filter(
-        Boolean
-      );
+      const parts = [
+        mealTypeById.get(m.meal_type_id),
+        mealPortionById.get(m.meal_portion_id),
+        feedingTimeById.get(m.feeding_time_id),
+        m.feeding_volume,
+      ].filter(Boolean);
       const list = mealsByEntry.get(m.chart_entry_id) ?? [];
       list.push(parts.join(" - "));
       mealsByEntry.set(m.chart_entry_id, list);

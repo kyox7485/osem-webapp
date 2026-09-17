@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { createNursingChartEntry } from "./nursing-chart-actions";
+import { useState, useEffect } from "react";
+import { createNursingChartEntry, getLastFeedingVolume } from "./nursing-chart-actions";
 import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
-type Meal = { mealTypeId: string; mealPortionId: string; feedingTimeId: string };
+type Meal = { mealTypeId: string; mealPortionId: string; feedingTimeId: string; feedingVolume: string };
 
 type Props = {
   residents: Resident[];
@@ -19,10 +19,10 @@ type Props = {
 
 const fieldCls =
   "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
-const emptyMeal: Meal = { mealTypeId: "", mealPortionId: "", feedingTimeId: "" };
-// tbl_hygiene_care_activities ids -- when either is checked under "By self",
-// something was recorded that Elimination is the place to detail (what
-// came out, how much, etc.), so that section only appears then.
+const emptyMeal: Meal = { mealTypeId: "", mealPortionId: "", feedingTimeId: "", feedingVolume: "" };
+// tbl_hygiene_care_activities ids -- when either is checked (under either
+// hygiene group), something was recorded that Elimination is the place to
+// detail (what came out, how much, etc.), so that section only appears then.
 const CHANGE_DIAPERS_ID = 8;
 const IN_OUT_CATHETER_ID = 9;
 
@@ -45,18 +45,38 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const [intervention, setIntervention] = useState("");
   const [doctorsPlan, setDoctorsPlan] = useState("");
   const [enteredBy, setEnteredBy] = useState("");
+  const [defaultFeedingVolume, setDefaultFeedingVolume] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
-  const selfActivities = lookups.hygieneCareActivities.filter((a) => a.category === "Self Toileting");
-  const assistedActivities = lookups.hygieneCareActivities.filter((a) => a.category === "Assisted Hygiene");
-  const showElimination = bySelfIds.includes(CHANGE_DIAPERS_ID) || bySelfIds.includes(IN_OUT_CATHETER_ID);
+  const showElimination =
+    bySelfIds.includes(CHANGE_DIAPERS_ID) ||
+    bySelfIds.includes(IN_OUT_CATHETER_ID) ||
+    withAssistIds.includes(CHANGE_DIAPERS_ID) ||
+    withAssistIds.includes(IN_OUT_CATHETER_ID);
+
+  // Carries the tube feeding regime comment forward from the resident's last
+  // recorded entry, so staff amend it instead of retyping it every shift.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const volume = residentId ? await getLastFeedingVolume(parseInt(residentId, 10)) : null;
+      if (cancelled) return;
+      setDefaultFeedingVolume(volume);
+      if (volume) {
+        setMeals((prev) => (prev.length > 0 && !prev[0].feedingVolume ? [{ ...prev[0], feedingVolume: volume }, ...prev.slice(1)] : prev));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [residentId]);
 
   function resetForm() {
     setTubeFeeding("");
-    setMeals([{ ...emptyMeal }]);
+    setMeals([{ ...emptyMeal, feedingVolume: defaultFeedingVolume ?? "" }]);
     setBySelfIds([]);
     setWithAssistIds([]);
     setBowelOutputIds([]);
@@ -115,9 +135,10 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         { assistanceLevel: "With Assistance", activityIds: withAssistIds },
       ],
       meals: meals.map((m) => ({
-        mealTypeId: m.mealTypeId ? parseInt(m.mealTypeId, 10) : null,
-        mealPortionId: m.mealPortionId ? parseInt(m.mealPortionId, 10) : null,
-        feedingTimeId: m.feedingTimeId ? parseInt(m.feedingTimeId, 10) : null,
+        mealTypeId: tubeFeeding === "Tube Feeding" ? null : m.mealTypeId ? parseInt(m.mealTypeId, 10) : null,
+        mealPortionId: tubeFeeding === "Tube Feeding" ? null : m.mealPortionId ? parseInt(m.mealPortionId, 10) : null,
+        feedingTimeId: tubeFeeding === "Tube Feeding" ? (m.feedingTimeId ? parseInt(m.feedingTimeId, 10) : null) : null,
+        feedingVolume: tubeFeeding === "Tube Feeding" ? m.feedingVolume.trim() || null : null,
       })),
       intervention: intervention.trim() || null,
       doctorsPlan: doctorsPlan.trim() || null,
@@ -178,7 +199,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         <Section title="Feeding">
           <label className="block text-sm text-gray-700">
-            Tube feeding
+            Type
             <select value={tubeFeeding} onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)} className={`mt-1 max-w-xs ${fieldCls}`}>
               <option value="">--</option>
               <option value="Oral Feed">Oral Feed</option>
@@ -190,46 +211,55 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             <p className="text-sm font-medium text-gray-700">Meals</p>
             {meals.map((meal, i) => (
               <div key={i} className="flex flex-wrap items-end gap-2">
-                <select
-                  value={meal.mealTypeId}
-                  onChange={(e) => updateMeal(i, { mealTypeId: e.target.value })}
-                  className={`w-40 ${fieldCls}`}
-                >
-                  <option value="">Meal type</option>
-                  {lookups.mealTypes.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={meal.mealPortionId}
-                  onChange={(e) => updateMeal(i, { mealPortionId: e.target.value })}
-                  className={`w-32 ${fieldCls}`}
-                >
-                  <option value="">Portion</option>
-                  {lookups.mealPortions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {/* Feeding time is a schedule slot for tube feeds -- oral
-                    meals are already timed by their meal type (Breakfast,
-                    Lunch, ...), so this only matters when tube feeding. */}
-                {tubeFeeding === "Tube Feeding" && (
-                  <select
-                    value={meal.feedingTimeId}
-                    onChange={(e) => updateMeal(i, { feedingTimeId: e.target.value })}
-                    className={`w-28 ${fieldCls}`}
-                  >
-                    <option value="">Time</option>
-                    {lookups.feedingTimes.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                {tubeFeeding === "Tube Feeding" ? (
+                  <>
+                    <select
+                      value={meal.feedingTimeId}
+                      onChange={(e) => updateMeal(i, { feedingTimeId: e.target.value })}
+                      className={`w-28 ${fieldCls}`}
+                    >
+                      <option value="">Time</option>
+                      {lookups.feedingTimes.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={meal.feedingVolume}
+                      onChange={(e) => updateMeal(i, { feedingVolume: e.target.value })}
+                      placeholder="Feeding volume / regime"
+                      className={`min-w-[220px] flex-1 ${fieldCls}`}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <select
+                      value={meal.mealTypeId}
+                      onChange={(e) => updateMeal(i, { mealTypeId: e.target.value })}
+                      className={`w-40 ${fieldCls}`}
+                    >
+                      <option value="">Meal type</option>
+                      {lookups.mealTypes.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={meal.mealPortionId}
+                      onChange={(e) => updateMeal(i, { mealPortionId: e.target.value })}
+                      className={`w-32 ${fieldCls}`}
+                    >
+                      <option value="">Portion</option>
+                      {lookups.mealPortions.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 )}
                 {meals.length > 1 && (
                   <button
@@ -244,7 +274,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             ))}
             <button
               type="button"
-              onClick={() => setMeals((prev) => [...prev, { ...emptyMeal }])}
+              onClick={() => setMeals((prev) => [...prev, { ...emptyMeal, feedingVolume: defaultFeedingVolume ?? "" }])}
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
             >
               + Add meal
@@ -254,8 +284,12 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         <Section title="Hygiene care">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CheckboxGroup label="By self" options={selfActivities} value={bySelfIds} onChange={setBySelfIds} />
-            <CheckboxGroup label="With assistance" options={assistedActivities} value={withAssistIds} onChange={setWithAssistIds} />
+            <CollapsibleGroup title="By self">
+              <CheckboxGroup options={lookups.hygieneCareActivities} value={bySelfIds} onChange={setBySelfIds} />
+            </CollapsibleGroup>
+            <CollapsibleGroup title="With assistance">
+              <CheckboxGroup options={lookups.hygieneCareActivities} value={withAssistIds} onChange={setWithAssistIds} />
+            </CollapsibleGroup>
           </div>
         </Section>
 
@@ -283,15 +317,22 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         )}
 
         <Section title="Active complaint">
-          <CheckboxGroup label="Active complaint" options={lookups.activeComplaints} value={activeComplaintIds} onChange={setActiveComplaintIds} />
+          <CheckboxGroup options={lookups.activeComplaints} value={activeComplaintIds} onChange={setActiveComplaintIds} />
         </Section>
 
         <Section title="Activity &amp; behaviour">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CheckboxGroup label="Activity" options={lookups.activities} value={activityIds} onChange={setActivityIds} />
+          <div className="grid grid-cols-1 gap-4">
+            <CheckboxGroup label="Activity" boldLabel options={lookups.activities} value={activityIds} onChange={setActivityIds} />
+            <CheckboxGroup
+              label="Psycho-social behaviour"
+              boldLabel
+              options={lookups.psychoSocialBehaviours}
+              value={psychoSocialIds}
+              onChange={setPsychoSocialIds}
+            />
             <label className="block text-sm text-gray-700">
-              Disturbance level
-              <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-1 ${fieldCls}`}>
+              <span className="font-bold">Disturbance level</span>
+              <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-1 max-w-xs ${fieldCls}`}>
                 <option value="">--</option>
                 {lookups.disturbanceLevels.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -300,7 +341,6 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                 ))}
               </select>
             </label>
-            <CheckboxGroup label="Psycho-social behaviour" options={lookups.psychoSocialBehaviours} value={psychoSocialIds} onChange={setPsychoSocialIds} />
           </div>
         </Section>
 
@@ -368,13 +408,40 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function CollapsibleGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-indigo-700"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 16 16"
+          fill="none"
+          className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`}
+        >
+          <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        {title}
+      </button>
+      {open && <div className="mt-2">{children}</div>}
+    </div>
+  );
+}
+
 function CheckboxGroup({
   label,
+  boldLabel,
   options,
   value,
   onChange,
 }: {
-  label: string;
+  label?: string;
+  boldLabel?: boolean;
   options: LookupOption[];
   value: number[];
   onChange: (ids: number[]) => void;
@@ -385,7 +452,7 @@ function CheckboxGroup({
 
   return (
     <div>
-      <p className="mb-1 text-sm font-medium text-gray-700">{label}</p>
+      {label && <p className={`mb-1 text-sm text-gray-700 ${boldLabel ? "font-bold" : "font-medium"}`}>{label}</p>}
       <div className="flex flex-wrap gap-x-3 gap-y-1">
         {options.map((o) => {
           const id = Number(o.id);

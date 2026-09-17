@@ -5,7 +5,12 @@ import { getCurrentUser } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
 type HygieneEpisodeInput = { assistanceLevel: "By Self" | "With Assistance"; activityIds: number[] };
-type MealInput = { mealTypeId: number | null; mealPortionId: number | null; feedingTimeId: number | null };
+type MealInput = {
+  mealTypeId: number | null;
+  mealPortionId: number | null;
+  feedingTimeId: number | null;
+  feedingVolume: string | null;
+};
 
 type CreateNursingChartEntryInput = {
   residentId: number;
@@ -98,13 +103,14 @@ export async function createNursingChartEntry(
   }
 
   const mealRows = input.meals
-    .filter((m) => m.mealTypeId !== null)
+    .filter((m) => m.mealTypeId !== null || m.feedingTimeId !== null || m.feedingVolume !== null)
     .map((m) => ({
       branch_id: resident.branch_id,
       chart_entry_id: entryId,
       meal_type_id: m.mealTypeId,
       meal_portion_id: m.mealPortionId,
       feeding_time_id: m.feedingTimeId,
+      feeding_volume: m.feedingVolume,
     }));
   if (mealRows.length > 0) {
     childInserts.push(supabase.from("tbl_nursing_chart_meals").insert(mealRows));
@@ -123,4 +129,22 @@ export async function createNursingChartEntry(
 
   revalidatePath("/clinical");
   return { success: true };
+}
+
+// Carries the tube feeding regime comment forward onto a new entry's form so
+// staff amend it rather than retype it every shift -- looks up the most
+// recent meal row with a feeding_volume recorded for this resident, across
+// any past entry, regardless of that entry's own meal count.
+export async function getLastFeedingVolume(residentId: number): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_nursing_chart_meals")
+    .select("feeding_volume, tbl_nursing_chart_entries!inner(resident_id, entry_timestamp)")
+    .eq("tbl_nursing_chart_entries.resident_id", residentId)
+    .not("feeding_volume", "is", null)
+    .order("entry_timestamp", { referencedTable: "tbl_nursing_chart_entries", ascending: false })
+    .limit(1);
+
+  const row = data?.[0] as { feeding_volume: string | null } | undefined;
+  return row?.feeding_volume ?? null;
 }
