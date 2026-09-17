@@ -7,7 +7,7 @@ import { ProgressNotesModule } from "./progress-notes-module";
 import { NursingChartModule, type NursingChartEntry } from "./nursing-chart-module";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
-import type { NursingChartLookups } from "@/lib/lookups";
+import type { ClinicalLookups } from "@/lib/lookups";
 
 type Vital = {
   id: number;
@@ -22,6 +22,9 @@ type Vital = {
   dxt: number | null;
   dxt_remark: string | null;
   insulin_adjustment: string | null;
+  respiration_rate: number | null;
+  gcs_label: string | null;
+  avpu_label: string | null;
   reviewed_by: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   tbl_staff: { StaffID: string; staff_name: string } | null;
@@ -58,7 +61,7 @@ type Props = {
   vitals: Vital[];
   notes: ProgressNote[];
   nursingChartEntries: NursingChartEntry[];
-  nursingChartLookups: NursingChartLookups;
+  nursingChartLookups: ClinicalLookups;
   currentResident: string;
   currentStart: string;
   currentEnd: string;
@@ -81,14 +84,14 @@ export function ClinicalContent({
 }: Props) {
   const push = useNavPush();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabKey>((searchParams.get("tab") as TabKey) || "vitals");
+  const [activeTab, setActiveTab] = useState<TabKey>((searchParams.get("tab") as TabKey) || "nursing-chart");
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "progress-notes" || tab === "nursing-chart") {
+    if (tab === "vitals" || tab === "progress-notes") {
       setActiveTab(tab);
     } else {
-      setActiveTab("vitals");
+      setActiveTab("nursing-chart");
     }
   }, [searchParams]);
 
@@ -102,23 +105,36 @@ export function ClinicalContent({
   return (
     <div>
       <div className="mb-6 flex gap-1 border-b border-gray-200">
+        <TabButton active={activeTab === "nursing-chart"} onClick={() => switchTab("nursing-chart")}>
+          Nursing Chart
+        </TabButton>
         <TabButton active={activeTab === "vitals"} onClick={() => switchTab("vitals")}>
           Vital Signs
         </TabButton>
         <TabButton active={activeTab === "progress-notes"} onClick={() => switchTab("progress-notes")}>
           Medical Progress Notes
         </TabButton>
-        <TabButton active={activeTab === "nursing-chart"} onClick={() => switchTab("nursing-chart")}>
-          Nursing Chart
-        </TabButton>
       </div>
 
       <div className="mt-6">
+        {activeTab === "nursing-chart" && (
+          <NursingChartModule
+            entries={nursingChartEntries}
+            residents={residents}
+            allStaff={allStaff}
+            lookups={nursingChartLookups}
+            currentResident={currentResident}
+            currentStart={currentStart}
+            currentEnd={currentEnd}
+            error={error}
+          />
+        )}
         {activeTab === "vitals" && (
           <VitalsTable
             vitals={vitals}
             residents={residents}
             allStaff={allStaff}
+            lookups={nursingChartLookups}
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}
@@ -130,18 +146,6 @@ export function ClinicalContent({
             notes={notes}
             residents={residents}
             allStaff={allStaff}
-            currentResident={currentResident}
-            currentStart={currentStart}
-            currentEnd={currentEnd}
-            error={error}
-          />
-        )}
-        {activeTab === "nursing-chart" && (
-          <NursingChartModule
-            entries={nursingChartEntries}
-            residents={residents}
-            allStaff={allStaff}
-            lookups={nursingChartLookups}
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}

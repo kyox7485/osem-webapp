@@ -157,10 +157,10 @@ export function ProgressNotesModule({
                     onClick={() => setExpandedId(isExpanded ? null : note.id)}
                     className="cursor-pointer rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-indigo-200"
                   >
-                    <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
-                      <span>{formatDateTime(note.entry_timestamp)}</span>
-                      <span className="flex items-center gap-2">
-                        {note.tbl_residents?.resident_name}
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="font-bold text-gray-900">{note.tbl_residents?.resident_name}</span>
+                      <span className="flex items-center gap-2 text-xs text-gray-400">
+                        {formatDateTime(note.entry_timestamp)}
                         <svg
                           width="14"
                           height="14"
@@ -202,8 +202,7 @@ export function ProgressNotesModule({
                     )}
 
                     <div className="mt-2 text-xs text-gray-400">
-                      Created by: {note.author?.staff_name || "--"}
-                      {note.reviewer && <span> · Reviewed by: {note.reviewer.staff_name}</span>}
+                      Reviewed by: {note.reviewer?.staff_name || "--"}
                     </div>
                   </div>
                 );

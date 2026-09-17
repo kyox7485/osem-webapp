@@ -17,6 +17,7 @@ import {
   flagDxt,
 } from "@/lib/vital-thresholds";
 import type { LookupOption } from "@/lib/types";
+import type { ClinicalLookups } from "@/lib/lookups";
 
 type Vital = {
   id: number;
@@ -31,6 +32,9 @@ type Vital = {
   dxt: number | null;
   dxt_remark: string | null;
   insulin_adjustment: string | null;
+  respiration_rate: number | null;
+  gcs_label: string | null;
+  avpu_label: string | null;
   reviewed_by: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   tbl_staff: { StaffID: string; staff_name: string } | null;
@@ -46,13 +50,14 @@ type Props = {
   vitals: Vital[];
   residents: Resident[];
   allStaff: (LookupOption & { branch_id: number })[];
+  lookups: ClinicalLookups;
   currentResident: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
 };
 
-export function VitalsTable({ vitals, residents, allStaff, currentResident, currentStart, currentEnd, error }: Props) {
+export function VitalsTable({ vitals, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const [showForm, setShowForm] = useState(false);
@@ -167,13 +172,14 @@ export function VitalsTable({ vitals, residents, allStaff, currentResident, curr
                 <th className="px-4 py-3 font-medium text-gray-900">SpO2</th>
                 <th className="px-4 py-3 font-medium text-gray-900">DXT</th>
                 <th className="px-4 py-3 font-medium text-gray-900">Insulin Adj.</th>
+                <th className="px-4 py-3 font-medium text-gray-900">Advanced Obs.</th>
                 <th className="px-4 py-3 font-medium text-gray-900">Reviewed By</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {vitals.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
                     No vital signs recorded yet.
                   </td>
                 </tr>
@@ -211,6 +217,12 @@ export function VitalsTable({ vitals, residents, allStaff, currentResident, curr
                         {v.dxt_remark && <span className="ml-1 text-xs text-gray-500">({v.dxt_remark})</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-800">{v.insulin_adjustment || "--"}</td>
+                      <td className="px-4 py-3 text-gray-800">
+                        {v.respiration_rate !== null && <span className="mr-1">RR{v.respiration_rate}</span>}
+                        {v.gcs_label && <span className="mr-1">{v.gcs_label}</span>}
+                        {v.avpu_label && <span>{v.avpu_label}</span>}
+                        {v.respiration_rate === null && !v.gcs_label && !v.avpu_label && "--"}
+                      </td>
                       <td className="px-4 py-3 text-gray-800">{v.tbl_staff?.staff_name || "--"}</td>
                     </tr>
                   );
@@ -226,6 +238,7 @@ export function VitalsTable({ vitals, residents, allStaff, currentResident, curr
         <NewVitalForm
           residents={residents}
           allStaff={allStaff}
+          lookups={lookups}
           onClose={() => setShowForm(false)}
           onSaved={() => {
             setShowForm(false);

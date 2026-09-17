@@ -102,7 +102,7 @@ export async function getAllStaffWithBranch(
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
 }
 
-export type NursingChartLookups = {
+export type ClinicalLookups = {
   bowelOutputTypes: LookupOption[];
   passUrineTypes: LookupOption[];
   activities: LookupOption[];
@@ -110,6 +110,9 @@ export type NursingChartLookups = {
   psychoSocialBehaviours: LookupOption[];
   activeComplaints: LookupOption[];
   hygieneCareActivities: (LookupOption & { category: string })[];
+  // GCS/AVPU live on tbl_vital ("Advanced Observation"), not the nursing
+  // chart -- kept in this same bundle since Vitals needs them fetched the
+  // same way, not because they're nursing-chart fields.
   gcsEyeResponses: LookupOption[];
   gcsVerbalResponses: LookupOption[];
   gcsMotorResponses: LookupOption[];
@@ -119,11 +122,11 @@ export type NursingChartLookups = {
   feedingTimes: LookupOption[];
 };
 
-// Every fixed-vocabulary field on the Nursing Chart new-entry form and its
-// two child tables (hygiene episodes, meals) -- bundled into one call since
-// the form needs all of them at once and none are large enough to bother
-// paginating or lazy-loading.
-export async function getNursingChartLookups(): Promise<NursingChartLookups> {
+// Every fixed-vocabulary field the Nursing Chart new-entry form (and its
+// two child tables, hygiene episodes + meals) and the Vitals "Advanced
+// Observation" section need -- bundled into one call since none of these
+// are large enough to bother paginating or lazy-loading.
+export async function getClinicalLookups(): Promise<ClinicalLookups> {
   const supabase = await createClient();
   const [
     bowel,

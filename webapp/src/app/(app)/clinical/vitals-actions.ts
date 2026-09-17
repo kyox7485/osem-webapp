@@ -15,6 +15,11 @@ type CreateVitalInput = {
   dxt: number | null;
   dxtRemark: string | null;
   insulinAdjustment: string | null;
+  respirationRate: number | null;
+  gcsEyeId: number | null;
+  gcsVerbalId: number | null;
+  gcsMotorId: number | null;
+  avpuId: number | null;
   reviewedBy: string;
 };
 
@@ -58,6 +63,11 @@ export async function createVital(input: CreateVitalInput): Promise<{ success: b
     dxt: input.dxt,
     dxt_remark: input.dxtRemark,
     insulin_adjustment: input.insulinAdjustment,
+    respiration_rate: input.respirationRate,
+    gcs_eye_id: input.gcsEyeId,
+    gcs_verbal_id: input.gcsVerbalId,
+    gcs_motor_id: input.gcsMotorId,
+    avpu_id: input.avpuId,
     reviewed_by: input.reviewedBy,
   });
 

@@ -20,11 +20,6 @@ type CreateNursingChartEntryInput = {
   disturbanceLevelIds: number[];
   psychoSocialBehaviourIds: number[];
   activeComplaintIds: number[];
-  respirationRate: number | null;
-  gcsEyeId: number | null;
-  gcsVerbalId: number | null;
-  gcsMotorId: number | null;
-  avpuId: number | null;
   intervention: string | null;
   doctorsPlan: string | null;
   createdBy: string;
@@ -73,11 +68,6 @@ export async function createNursingChartEntry(
       disturbance_level_ids: input.disturbanceLevelIds.length > 0 ? input.disturbanceLevelIds : null,
       psycho_social_behaviour_ids: input.psychoSocialBehaviourIds.length > 0 ? input.psychoSocialBehaviourIds : null,
       active_complaint_ids: input.activeComplaintIds.length > 0 ? input.activeComplaintIds : null,
-      respiration_rate: input.respirationRate,
-      gcs_eye_id: input.gcsEyeId,
-      gcs_verbal_id: input.gcsVerbalId,
-      gcs_motor_id: input.gcsMotorId,
-      avpu_id: input.avpuId,
       intervention: input.intervention,
       doctors_plan: input.doctorsPlan,
       created_by: input.createdBy,

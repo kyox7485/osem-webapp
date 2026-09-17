@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createVital } from "./vitals-actions";
 import type { LookupOption } from "@/lib/types";
+import type { ClinicalLookups } from "@/lib/lookups";
 
 type Resident = {
   id: number;
@@ -18,6 +19,7 @@ type Props = {
   // round-trip (that was the old approach here, and the visible lag/flicker
   // from it was the "doesn't work like other tabs" symptom).
   allStaff: (LookupOption & { branch_id: number })[];
+  lookups: ClinicalLookups;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -38,7 +40,7 @@ const SPO2_CONDITION_OPTIONS = [
 
 const DXT_REMARK_OPTIONS = ["Fasting", "Post-Meal 1hr", "Post-Meal 2hr", "Post-Meal >4hr"];
 
-export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
+export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }: Props) {
   const [residentId, setResidentId] = useState("");
   const [systolicBp, setSystolicBp] = useState("");
   const [diastolicBp, setDiastolicBp] = useState("");
@@ -49,6 +51,11 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
   const [dxt, setDxt] = useState("");
   const [dxtRemark, setDxtRemark] = useState("");
   const [insulinAdjustment, setInsulinAdjustment] = useState("");
+  const [respirationRate, setRespirationRate] = useState("");
+  const [gcsEyeId, setGcsEyeId] = useState("");
+  const [gcsVerbalId, setGcsVerbalId] = useState("");
+  const [gcsMotorId, setGcsMotorId] = useState("");
+  const [avpuId, setAvpuId] = useState("");
   const [reviewedBy, setReviewedBy] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +102,11 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
       dxt: dxt ? parseFloat(dxt) : null,
       dxtRemark: dxtRemark || null,
       insulinAdjustment: insulinAdjustment || null,
+      respirationRate: respirationRate ? parseFloat(respirationRate) : null,
+      gcsEyeId: gcsEyeId ? parseInt(gcsEyeId, 10) : null,
+      gcsVerbalId: gcsVerbalId ? parseInt(gcsVerbalId, 10) : null,
+      gcsMotorId: gcsMotorId ? parseInt(gcsMotorId, 10) : null,
+      avpuId: avpuId ? parseInt(avpuId, 10) : null,
       reviewedBy,
     });
 
@@ -302,6 +314,102 @@ export function NewVitalForm({ residents, allStaff, onClose, onSaved }: Props) {
               />
             </div>
           )}
+
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-gray-800">Advanced Observation</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="respiration-rate" className="mb-1 block text-sm font-medium text-gray-700">
+                  Respiration Rate (breaths/min)
+                </label>
+                <input
+                  type="number"
+                  id="respiration-rate"
+                  value={respirationRate}
+                  onChange={(e) => setRespirationRate(e.target.value)}
+                  step="0.1"
+                  placeholder="e.g. 16"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="avpu" className="mb-1 block text-sm font-medium text-gray-700">
+                  AVPU
+                </label>
+                <select
+                  id="avpu"
+                  value={avpuId}
+                  onChange={(e) => setAvpuId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Select AVPU</option>
+                  {lookups.avpuOptions.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="gcs-eye" className="mb-1 block text-sm font-medium text-gray-700">
+                  GCS Eye
+                </label>
+                <select
+                  id="gcs-eye"
+                  value={gcsEyeId}
+                  onChange={(e) => setGcsEyeId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Select response</option>
+                  {lookups.gcsEyeResponses.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="gcs-verbal" className="mb-1 block text-sm font-medium text-gray-700">
+                  GCS Verbal
+                </label>
+                <select
+                  id="gcs-verbal"
+                  value={gcsVerbalId}
+                  onChange={(e) => setGcsVerbalId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Select response</option>
+                  {lookups.gcsVerbalResponses.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="gcs-motor" className="mb-1 block text-sm font-medium text-gray-700">
+                  GCS Motor
+                </label>
+                <select
+                  id="gcs-motor"
+                  value={gcsMotorId}
+                  onChange={(e) => setGcsMotorId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Select response</option>
+                  {lookups.gcsMotorResponses.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
 
           <div>
             <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">

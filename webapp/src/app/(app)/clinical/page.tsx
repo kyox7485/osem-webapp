@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch, getNursingChartLookups } from "@/lib/lookups";
+import { getAllStaffWithBranch, getClinicalLookups } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import type { NursingChartEntry } from "./nursing-chart-module";
@@ -19,7 +19,7 @@ export default async function ClinicalPage({
   if (!account) redirect("/login");
 
   const params = await searchParams;
-  const currentTab = params.tab || "vitals";
+  const currentTab = params.tab || "nursing-chart";
   const residentFilter = params.resident || "";
   const startDate = params.start || "";
   const endDate = params.end || "";
@@ -40,7 +40,7 @@ export default async function ClinicalPage({
   const [{ data: residents }, allStaff, nursingChartLookups] = await Promise.all([
     residentQuery,
     getAllStaffWithBranch(),
-    getNursingChartLookups(),
+    getClinicalLookups(),
   ]);
 
   // Fetch data based on active tab
@@ -67,6 +67,11 @@ export default async function ClinicalPage({
         dxt,
         dxt_remark,
         insulin_adjustment,
+        respiration_rate,
+        gcs_eye_id,
+        gcs_verbal_id,
+        gcs_motor_id,
+        avpu_id,
         reviewed_by,
         tbl_residents!resident_id(id, resident_name, branch_id),
         tbl_staff!reviewed_by(StaffID, staff_name)
@@ -84,11 +89,26 @@ export default async function ClinicalPage({
 
     const { data: rawVitals, error: vitalsError } = await vitalsQuery;
 
-    vitals = (rawVitals || []).map((v: any) => ({
-      ...v,
-      tbl_residents: Array.isArray(v.tbl_residents) ? v.tbl_residents[0] : v.tbl_residents,
-      tbl_staff: Array.isArray(v.tbl_staff) ? v.tbl_staff[0] : v.tbl_staff,
-    }));
+    const gcsEyeById = new Map(nursingChartLookups.gcsEyeResponses.map((o) => [Number(o.id), o.label]));
+    const gcsVerbalById = new Map(nursingChartLookups.gcsVerbalResponses.map((o) => [Number(o.id), o.label]));
+    const gcsMotorById = new Map(nursingChartLookups.gcsMotorResponses.map((o) => [Number(o.id), o.label]));
+    const avpuById = new Map(nursingChartLookups.avpuOptions.map((o) => [Number(o.id), o.label]));
+
+    vitals = (rawVitals || []).map((v: any) => {
+      const gcsParts = [
+        v.gcs_eye_id ? `E${gcsEyeById.get(v.gcs_eye_id)?.split(" - ")[0]}` : null,
+        v.gcs_verbal_id ? `V${gcsVerbalById.get(v.gcs_verbal_id)?.split(" - ")[0]}` : null,
+        v.gcs_motor_id ? `M${gcsMotorById.get(v.gcs_motor_id)?.split(" - ")[0]}` : null,
+      ].filter(Boolean);
+
+      return {
+        ...v,
+        gcs_label: gcsParts.length > 0 ? gcsParts.join(" ") : null,
+        avpu_label: v.avpu_id ? avpuById.get(v.avpu_id) ?? null : null,
+        tbl_residents: Array.isArray(v.tbl_residents) ? v.tbl_residents[0] : v.tbl_residents,
+        tbl_staff: Array.isArray(v.tbl_staff) ? v.tbl_staff[0] : v.tbl_staff,
+      };
+    });
 
     error = vitalsError?.message || null;
   } else if (currentTab === "progress-notes") {
@@ -153,18 +173,11 @@ export default async function ClinicalPage({
         disturbance_level_ids,
         psycho_social_behaviour_ids,
         active_complaint_ids,
-        respiration_rate,
-        gcs_eye_id,
-        gcs_verbal_id,
-        gcs_motor_id,
-        avpu_id,
         intervention,
         doctors_plan,
-        reviewed_by,
         created_by,
         tbl_residents!resident_id(id, resident_name, branch_id),
-        author:tbl_staff!created_by(StaffID, staff_name),
-        reviewer:tbl_staff!reviewed_by(StaffID, staff_name)
+        author:tbl_staff!created_by(StaffID, staff_name)
       `
       )
       .order("entry_timestamp", { ascending: false });
@@ -203,10 +216,6 @@ export default async function ClinicalPage({
     const psychoById = byId(nursingChartLookups.psychoSocialBehaviours);
     const complaintById = byId(nursingChartLookups.activeComplaints);
     const hygieneActivityById = byId(nursingChartLookups.hygieneCareActivities);
-    const gcsEyeById = byId(nursingChartLookups.gcsEyeResponses);
-    const gcsVerbalById = byId(nursingChartLookups.gcsVerbalResponses);
-    const gcsMotorById = byId(nursingChartLookups.gcsMotorResponses);
-    const avpuById = byId(nursingChartLookups.avpuOptions);
     const mealTypeById = byId(nursingChartLookups.mealTypes);
     const mealPortionById = byId(nursingChartLookups.mealPortions);
     const feedingTimeById = byId(nursingChartLookups.feedingTimes);
@@ -235,12 +244,6 @@ export default async function ClinicalPage({
     nursingChartEntries = (rawEntries ?? []).map((e: any) => {
       const resident = Array.isArray(e.tbl_residents) ? e.tbl_residents[0] : e.tbl_residents;
       const author = Array.isArray(e.author) ? e.author[0] : e.author;
-      const reviewer = Array.isArray(e.reviewer) ? e.reviewer[0] : e.reviewer;
-      const gcsParts = [
-        e.gcs_eye_id ? `E${gcsEyeById.get(e.gcs_eye_id)?.split(" - ")[0]}` : null,
-        e.gcs_verbal_id ? `V${gcsVerbalById.get(e.gcs_verbal_id)?.split(" - ")[0]}` : null,
-        e.gcs_motor_id ? `M${gcsMotorById.get(e.gcs_motor_id)?.split(" - ")[0]}` : null,
-      ].filter(Boolean);
 
       return {
         id: e.id,
@@ -250,7 +253,6 @@ export default async function ClinicalPage({
         fluid_input: e.fluid_input,
         fluid_output: e.fluid_output,
         cbd_drainage: e.cbd_drainage,
-        respiration_rate: e.respiration_rate,
         intervention: e.intervention,
         doctors_plan: e.doctors_plan,
         bowel_output_labels: mapIds(e.bowel_output_ids, bowelById),
@@ -259,13 +261,10 @@ export default async function ClinicalPage({
         disturbance_level_labels: mapIds(e.disturbance_level_ids, disturbanceById),
         psycho_social_labels: mapIds(e.psycho_social_behaviour_ids, psychoById),
         active_complaint_labels: mapIds(e.active_complaint_ids, complaintById),
-        gcs_label: gcsParts.length > 0 ? gcsParts.join(" ") : null,
-        avpu_label: e.avpu_id ? avpuById.get(e.avpu_id) ?? null : null,
         meal_labels: mealsByEntry.get(e.id) ?? [],
         hygiene_labels: hygieneByEntry.get(e.id) ?? [],
         resident_name: resident?.resident_name ?? "--",
-        created_by_name: author?.staff_name ?? "--",
-        reviewed_by_name: reviewer?.staff_name ?? null,
+        entered_by_name: author?.staff_name ?? "--",
       };
     });
   }
