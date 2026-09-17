@@ -66,12 +66,16 @@ export const BACK_LIMB_REGIONS: BodyRegion[] = [
 export const SIDE_REGIONS: BodyRegion[] = [
   { name: "Right Shoulder (Side)", side: "R", x: 40.36, y: 19.21 },
   { name: "Left Shoulder (Side)", side: "L", x: 82.16, y: 19.21 },
-  { name: "Right Elbow (Side)", side: "R", x: 39.39, y: 34.08 },
-  { name: "Left Elbow (Side)", side: "L", x: 83.14, y: 34.08 },
+  // Elbow sits on the back-of-arm contour (not the front crease) and hip
+  // is pulled down onto the upper thigh -- both moved off their original
+  // spots, which sat almost on top of each other and were hard to tap
+  // individually.
+  { name: "Right Elbow (Side)", side: "R", x: 41.99, y: 34.70 },
+  { name: "Left Elbow (Side)", side: "L", x: 80.53, y: 34.70 },
   { name: "Right Hand (Side)", side: "R", x: 39.39, y: 57.00 },
   { name: "Left Hand (Side)", side: "L", x: 83.14, y: 57.00 },
-  { name: "Right Hip (Side)", side: "R", x: 37.44, y: 35.32 },
-  { name: "Left Hip (Side)", side: "L", x: 85.09, y: 35.32 },
+  { name: "Right Hip (Side)", side: "R", x: 36.46, y: 40.27 },
+  { name: "Left Hip (Side)", side: "L", x: 86.07, y: 40.27 },
   { name: "Right Knee (Side)", side: "R", x: 38.41, y: 74.35 },
   { name: "Left Knee (Side)", side: "L", x: 84.11, y: 74.35 },
   { name: "Right Ankle (Side)", side: "R", x: 40.04, y: 91.70 },
