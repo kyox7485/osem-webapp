@@ -53,6 +53,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <InfoCard title="Basic details">
+          <Row label="Resident ID" value={resident.ResidentID} />
           <Row label="IC number" value={resident.ic_number} />
           <Row label="Age" value={resident.age} />
           <Row label="Gender" value={resident.gender} />
