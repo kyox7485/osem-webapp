@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -33,7 +34,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-xl font-semibold text-gray-900">OSEM</h1>
+        <Image src="/logo.png" alt="OSEM" width={78} height={48} className="mb-1 h-12 w-auto" priority />
         <p className="mb-6 text-sm text-gray-500">Sign in with your branch account</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLinks } from "@/components/nav-links";
@@ -41,10 +43,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
             <nav className="flex items-center gap-1">
-              <span className="mr-3 flex items-center gap-1.5 font-semibold text-gray-900">
-                <span className="h-2 w-2 rounded-full bg-indigo-600" />
-                OSEM
-              </span>
+              <Link href="/" className="mr-3 flex shrink-0 items-center" aria-label="OSEM home">
+                <Image src="/logo.png" alt="OSEM" width={52} height={32} className="h-8 w-auto" priority />
+              </Link>
               <NavLinks items={navItems} />
             </nav>
             <div className="flex items-center gap-3 text-sm text-gray-500">
