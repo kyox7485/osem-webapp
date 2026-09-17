@@ -7,6 +7,7 @@ import { NewNursingChartForm } from "./new-nursing-chart-form";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
+import { useTranslation } from "@/components/language-provider";
 
 export type NursingChartEntry = {
   id: number;
@@ -55,6 +56,7 @@ const TAG_GROUPS: [keyof NursingChartEntry, string][] = [
 export function NursingChartModule({ entries, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error }: Props) {
   const router = useRouter();
   const push = useNavPush();
+  const t = useTranslation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -71,10 +73,10 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-gray-200">
         <InnerTabButton active={innerTab === "review"} onClick={() => setInnerTab("review")}>
-          Review Notes
+          {t("Review Notes")}
         </InnerTabButton>
         <InnerTabButton active={innerTab === "new"} onClick={() => setInnerTab("new")}>
-          New Entry
+          {t("New Entry")}
         </InnerTabButton>
       </div>
 
@@ -84,7 +86,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700">
-                  Resident
+                  {t("Resident")}
                 </label>
                 <select
                   id="resident-filter"
@@ -92,7 +94,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                   onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">All residents</option>
+                  <option value="">{t("All residents")}</option>
                   {residents.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.resident_name}
@@ -103,7 +105,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
 
               <div>
                 <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700">
-                  Start date
+                  {t("Start date")}
                 </label>
                 <input
                   type="date"
@@ -116,7 +118,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
 
               <div>
                 <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700">
-                  End date
+                  {t("End date")}
                 </label>
                 <input
                   type="date"
@@ -134,7 +136,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
           <div className="space-y-3">
             {entries.length === 0 ? (
               <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-                No nursing chart entries yet.
+                {t("No nursing chart entries yet.")}
               </div>
             ) : (
               entries.map((entry) => {
@@ -165,9 +167,11 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                     {!isExpanded && (
                       <p className="text-sm text-gray-700">
                         {tagGroups.length > 0 ? (
-                          <span className="text-gray-400">{tagGroups.length} area{tagGroups.length > 1 ? "s" : ""} recorded -- click to view</span>
+                          <span className="text-gray-400">
+                            {tagGroups.length} {t(tagGroups.length > 1 ? "areas" : "area")} {t("recorded -- click to view")}
+                          </span>
                         ) : (
-                          <span className="text-gray-400">Click to view</span>
+                          <span className="text-gray-400">{t("Click to view")}</span>
                         )}
                       </p>
                     )}
@@ -176,44 +180,44 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                       <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
                         {entry.tube_feeding && (
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">Tube feeding: </span>
+                            <span className="font-medium text-gray-500">{t("Tube feeding")}: </span>
                             {entry.tube_feeding}
                           </p>
                         )}
                         {tagGroups.map(([key, label]) => (
                           <p key={key} className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">{label}: </span>
+                            <span className="font-medium text-gray-500">{t(label)}: </span>
                             {(entry[key] as string[]).join(key === "elimination_labels" ? " | " : ", ")}
                           </p>
                         ))}
                         {(entry.fluid_input !== null || entry.fluid_output !== null) && (
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">Fluid I/O: </span>
-                            {entry.fluid_input ?? "--"} / {entry.fluid_output ?? "--"} ml
+                            <span className="font-medium text-gray-500">{t("Fluid I/O")}: </span>
+                            {entry.fluid_input ?? "--"} / {entry.fluid_output ?? "--"} {t("ml")}
                           </p>
                         )}
                         {entry.cbd_drainage && (
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">CBD drainage: </span>
+                            <span className="font-medium text-gray-500">{t("CBD drainage")}: </span>
                             {entry.cbd_drainage}
                           </p>
                         )}
                         {entry.intervention && (
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">Intervention: </span>
+                            <span className="font-medium text-gray-500">{t("Intervention")}: </span>
                             {entry.intervention}
                           </p>
                         )}
                         {entry.doctors_plan && (
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">Doctor&apos;s plan: </span>
+                            <span className="font-medium text-gray-500">{t("Doctor's plan")}: </span>
                             {entry.doctors_plan}
                           </p>
                         )}
                       </div>
                     )}
 
-                    <div className="mt-2 text-xs text-gray-400">Entered by: {entry.entered_by_name}</div>
+                    <div className="mt-2 text-xs text-gray-400">{t("Entered by")}: {entry.entered_by_name}</div>
                   </div>
                 );
               })

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { EXAM_STRUCTURE, POWER_OPTIONS, TONE_OPTIONS, ROM_OPTIONS, REFLEXES_OPTIONS, type ExamLimb, type ExamRow } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
 import { CollapsibleCard } from "../collapsible-card";
+import { useTranslation } from "@/components/language-provider";
 
 type Props = {
   examRows: ExamRow[];
@@ -31,6 +32,7 @@ function ExamGroup({
   labelClassName: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   const assessedCount = rows.filter(hasScore).length;
 
@@ -51,7 +53,7 @@ function ExamGroup({
         <span className="flex items-center gap-2">
           {assessedCount > 0 && (
             <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
-              {assessedCount} assessed
+              {assessedCount} {t("assessed")}
             </span>
           )}
           <svg
@@ -83,6 +85,7 @@ function ExamGroup({
 // affects its parent or siblings; the "N assessed" badge lets a therapist
 // see at a glance whether a collapsed group has data without opening it.
 export function ExaminationSection({ examRows, setExamRows }: Props) {
+  const t = useTranslation();
   function updateCell(limb: ExamLimb, region: string, movement: string, side: "R" | "L", field: keyof ExamRow, value: number | null) {
     setExamRows(
       examRows.map((row) =>
@@ -108,9 +111,9 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
   const assessedTotal = examRows.filter(hasScore).length;
 
   return (
-    <CollapsibleCard title="Physical Examination" badge={assessedTotal > 0 ? `${assessedTotal} assessed` : null}>
+    <CollapsibleCard title={t("Physical Examination")} badge={assessedTotal > 0 ? `${assessedTotal} ${t("assessed")}` : null}>
       <p className="mb-3 text-xs text-gray-400">
-        Power, Tone, ROM and Reflexes -- leave any field "Not assessed" where not applicable. Tap a body part to record it.
+        {t('Power, Tone, ROM and Reflexes -- leave any field "Not assessed" where not applicable. Tap a body part to record it.')}
       </p>
 
       <div className="space-y-3">
@@ -136,28 +139,28 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
                         const cell = findCell(limb, region, movement, side);
                         return (
                           <div key={side} className="rounded-md bg-gray-50 p-2">
-                            <p className="mb-1 text-xs font-semibold text-gray-500">{side === "R" ? "Right" : "Left"}</p>
+                            <p className="mb-1 text-xs font-semibold text-gray-500">{side === "R" ? t("Right") : t("Left")}</p>
                             <div className="grid grid-cols-2 gap-2">
                               <ScoreSelect
-                                label="Power"
+                                label={t("Power")}
                                 value={cell?.power ?? null}
                                 onChange={(v) => updateCell(limb, region, movement, side, "power", v)}
                                 options={POWER_OPTIONS}
                               />
                               <ScoreSelect
-                                label="Tone"
+                                label={t("Tone")}
                                 value={cell?.tone ?? null}
                                 onChange={(v) => updateCell(limb, region, movement, side, "tone", v)}
                                 options={TONE_OPTIONS}
                               />
                               <ScoreSelect
-                                label="ROM"
+                                label={t("ROM")}
                                 value={cell?.rom ?? null}
                                 onChange={(v) => updateCell(limb, region, movement, side, "rom", v)}
                                 options={ROM_OPTIONS}
                               />
                               <ScoreSelect
-                                label="Reflexes"
+                                label={t("Reflexes")}
                                 value={cell?.reflexes ?? null}
                                 onChange={(v) => updateCell(limb, region, movement, side, "reflexes", v)}
                                 options={REFLEXES_OPTIONS}

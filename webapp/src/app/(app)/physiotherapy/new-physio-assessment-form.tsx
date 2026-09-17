@@ -29,6 +29,7 @@ import { ScoreSummary } from "./sections/score-summary";
 import { NarrativeSection } from "./sections/narrative-section";
 import { ComplianceSignoff } from "./sections/compliance-signoff";
 import type { LookupOption } from "@/lib/types";
+import { useTranslation } from "@/components/language-provider";
 
 // previous.examRows only contains movements that actually had a score
 // (see actions.ts's filter before insert) -- merge those values into the
@@ -82,10 +83,11 @@ export function NewPhysioAssessmentForm({
   onSaved,
 }: Props) {
   const router = useRouter();
+  const t = useTranslation();
   const { setDirty, setRequestSave } = usePhysioDirty();
 
   const treatmentTypeOptions = useMemo(() => getTreatmentTypesForDept(careSetting), [careSetting]);
-  const patientLabel = careSetting === "OP" ? "Patient" : "Resident";
+  const patientLabel = careSetting === "OP" ? t("Patient") : t("Resident");
 
   const [entryTimestamp, setEntryTimestamp] = useState(defaultEntryTimestamp);
   const [treatmentType, setTreatmentType] = useState(previous?.treatment_type ?? "");
@@ -144,7 +146,7 @@ export function NewPhysioAssessmentForm({
     setError("");
 
     if (!documentedBy) {
-      setError("Please select who documented this assessment");
+      setError(t("Please select who documented this assessment"));
       return false;
     }
 
@@ -175,7 +177,7 @@ export function NewPhysioAssessmentForm({
     setIsSaving(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to save assessment");
+      setError(result.error || t("Failed to save assessment"));
       return false;
     }
 
@@ -280,7 +282,7 @@ export function NewPhysioAssessmentForm({
           disabled={isSaving}
           className="rounded-md bg-indigo-600 px-6 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : "Save Assessment"}
+          {isSaving ? t("Saving...") : t("Save Assessment")}
         </button>
       </div>
     </form>

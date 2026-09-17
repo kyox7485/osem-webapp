@@ -3,8 +3,10 @@ import { BackButton } from "@/components/back-button";
 import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createResident } from "../actions";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function NewResidentPage() {
+  const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
   const [nationalities, dietTypes, feedingTypes, branches, allStaff] = await Promise.all([
     getNationalities(),
@@ -17,7 +19,7 @@ export default async function NewResidentPage() {
   return (
     <div>
       <BackButton />
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">New resident</h1>
+      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("New resident")}</h1>
       <ResidentForm
         nationalities={nationalities}
         dietTypes={dietTypes}

@@ -3,10 +3,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { formatBranch } from "@/lib/lookups";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AccountsPage() {
   const currentUser = await getCurrentUser();
   if (!isAdmin(currentUser)) redirect("/residents");
+
+  const { t } = await getServerTranslator();
 
   const supabase = await createClient();
   const { data: accounts, error } = await supabase
@@ -18,14 +21,14 @@ export default async function AccountsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Accounts</h1>
-          <p className="text-sm text-gray-500">Who can log in, and what they can do -- separate from the staff roster.</p>
+          <h1 className="text-lg font-semibold text-gray-900">{t("Accounts")}</h1>
+          <p className="text-sm text-gray-500">{t("Who can log in, and what they can do -- separate from the staff roster.")}</p>
         </div>
         <Link
           href="/accounts/new"
           className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
-          New account
+          {t("New account")}
         </Link>
       </div>
 
@@ -35,11 +38,11 @@ export default async function AccountsPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>
-              <th className="px-4 py-2 font-medium">Username</th>
-              <th className="px-4 py-2 font-medium">Email</th>
-              <th className="px-4 py-2 font-medium">Branch</th>
-              <th className="px-4 py-2 font-medium">Rights</th>
-              <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2 font-medium">{t("Username")}</th>
+              <th className="px-4 py-2 font-medium">{t("Email")}</th>
+              <th className="px-4 py-2 font-medium">{t("Branch")}</th>
+              <th className="px-4 py-2 font-medium">{t("Rights")}</th>
+              <th className="px-4 py-2 font-medium">{t("Status")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">

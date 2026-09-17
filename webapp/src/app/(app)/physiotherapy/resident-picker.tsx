@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavPush } from "@/components/nav-loading";
 import { usePhysioDirty } from "./physio-dirty-context";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
+import { useTranslation } from "@/components/language-provider";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -21,8 +22,10 @@ type Props = {
 // silently discard them (the form remounts fresh for the new resident), so
 // this intercepts the change and asks the therapist first via the shared
 // dirty-tracking context. When the form isn't dirty, switching is instant.
-export function ResidentPicker({ residents, currentResident, careSetting, label = "Resident" }: Props) {
+export function ResidentPicker({ residents, currentResident, careSetting, label }: Props) {
   const push = useNavPush();
+  const t = useTranslation();
+  const resolvedLabel = label ?? t("Resident");
   const { isDirty, requestSave } = usePhysioDirty();
 
   const [displayValue, setDisplayValue] = useState(currentResident);
@@ -75,7 +78,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
     const ok = await requestSave();
     setSaving(false);
     if (!ok) {
-      setError("Couldn't save the current assessment. Fix the error above, or discard your changes to switch anyway.");
+      setError(t("Couldn't save the current assessment. Fix the error above, or discard your changes to switch anyway."));
       return;
     }
     const target = pendingResident!;
@@ -86,7 +89,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       <label htmlFor="resident-picker" className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
+        {resolvedLabel}
       </label>
       <select
         id="resident-picker"
@@ -94,7 +97,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
         onChange={(e) => handleChange(e.target.value)}
         className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       >
-        <option value="">Select {label.toLowerCase()}</option>
+        <option value="">{t("Select")} {resolvedLabel.toLowerCase()}</option>
         {residents.map((r) => (
           <option key={r.id} value={r.id}>
             {r.resident_name}
@@ -105,9 +108,9 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
       {pendingResident !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-sm font-bold text-gray-900">Unsaved changes</h3>
+            <h3 className="mb-2 text-sm font-bold text-gray-900">{t("Unsaved changes")}</h3>
             <p className="mb-4 text-sm text-gray-600">
-              This assessment has unsaved changes. Save it before switching {label.toLowerCase()}?
+              {t("This assessment has unsaved changes. Save it before switching")} {resolvedLabel.toLowerCase()}?
             </p>
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
             <div className="flex flex-wrap justify-end gap-2">
@@ -117,7 +120,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
                 disabled={saving}
                 className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -125,7 +128,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
                 disabled={saving}
                 className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
-                Discard changes
+                {t("Discard changes")}
               </button>
               <button
                 type="button"
@@ -133,7 +136,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
                 disabled={saving}
                 className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Save & switch"}
+                {saving ? t("Saving...") : t("Save & switch")}
               </button>
             </div>
           </div>

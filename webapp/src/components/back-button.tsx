@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/components/language-provider";
 
 export function BackButton() {
   const router = useRouter();
+  const t = useTranslation();
   return (
     <button
       type="button"
@@ -13,7 +15,7 @@ export function BackButton() {
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M10 12.5L5.5 8l4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      Back
+      {t("Back")}
     </button>
   );
 }

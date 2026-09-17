@@ -3,6 +3,7 @@
 import { COORDINATION_OPTIONS, type CoordinationScores } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
 import { CollapsibleCard } from "../collapsible-card";
+import { useTranslation } from "@/components/language-provider";
 
 type Props = {
   value: CoordinationScores;
@@ -10,22 +11,23 @@ type Props = {
 };
 
 export function CoordinationSection({ value, onChange }: Props) {
+  const t = useTranslation();
   const assessedCount = Object.values(value).filter((v) => v !== null).length;
 
   return (
-    <CollapsibleCard title="Coordination" badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
+    <CollapsibleCard title={t("Coordination")} badge={assessedCount > 0 ? `${assessedCount} ${t("assessed")}` : null}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upper Limb</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{t("Upper Limb")}</h3>
           <div className="grid grid-cols-2 gap-2">
             <ScoreSelect
-              label="Right"
+              label={t("Right")}
               value={value.upper_limb_right}
               onChange={(v) => onChange({ ...value, upper_limb_right: v })}
               options={COORDINATION_OPTIONS}
             />
             <ScoreSelect
-              label="Left"
+              label={t("Left")}
               value={value.upper_limb_left}
               onChange={(v) => onChange({ ...value, upper_limb_left: v })}
               options={COORDINATION_OPTIONS}
@@ -33,16 +35,16 @@ export function CoordinationSection({ value, onChange }: Props) {
           </div>
         </div>
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Lower Limb</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{t("Lower Limb")}</h3>
           <div className="grid grid-cols-2 gap-2">
             <ScoreSelect
-              label="Right"
+              label={t("Right")}
               value={value.lower_limb_right}
               onChange={(v) => onChange({ ...value, lower_limb_right: v })}
               options={COORDINATION_OPTIONS}
             />
             <ScoreSelect
-              label="Left"
+              label={t("Left")}
               value={value.lower_limb_left}
               onChange={(v) => onChange({ ...value, lower_limb_left: v })}
               options={COORDINATION_OPTIONS}

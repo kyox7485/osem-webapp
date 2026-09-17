@@ -2,6 +2,7 @@
 
 import { useNavPush } from "@/components/nav-loading";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
+import { useTranslation } from "@/components/language-provider";
 
 type Props = {
   current: PhysioCareSetting;
@@ -9,6 +10,7 @@ type Props = {
 
 export function CareSettingTabs({ current }: Props) {
   const push = useNavPush();
+  const t = useTranslation();
 
   function switchTo(setting: PhysioCareSetting) {
     push(`/physiotherapy?type=${setting.toLowerCase()}`);
@@ -17,10 +19,10 @@ export function CareSettingTabs({ current }: Props) {
   return (
     <div className="mb-4 flex gap-1 border-b border-gray-200">
       <TabButton active={current === "IP"} onClick={() => switchTo("IP")}>
-        Inpatient
+        {t("Inpatient")}
       </TabButton>
       <TabButton active={current === "OP"} onClick={() => switchTo("OP")}>
-        Outpatient
+        {t("Outpatient")}
       </TabButton>
     </div>
   );

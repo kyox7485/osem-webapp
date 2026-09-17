@@ -3,6 +3,7 @@
 import { BALANCE_OPTIONS, type BalanceScores } from "@/lib/physio-scoring";
 import { ScoreSelect } from "../score-select";
 import { CollapsibleCard } from "../collapsible-card";
+import { useTranslation } from "@/components/language-provider";
 
 type Props = {
   value: BalanceScores;
@@ -18,15 +19,16 @@ const ITEMS: [keyof BalanceScores, string][] = [
 ];
 
 export function BalanceSection({ value, onChange }: Props) {
+  const t = useTranslation();
   const assessedCount = Object.values(value).filter((v) => v !== null).length;
 
   return (
-    <CollapsibleCard title="Balance" badge={assessedCount > 0 ? `${assessedCount} assessed` : null}>
+    <CollapsibleCard title={t("Balance")} badge={assessedCount > 0 ? `${assessedCount} ${t("assessed")}` : null}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ITEMS.map(([key, label]) => (
           <ScoreSelect
             key={key}
-            label={label}
+            label={t(label)}
             value={value[key]}
             onChange={(v) => onChange({ ...value, [key]: v })}
             options={BALANCE_OPTIONS}

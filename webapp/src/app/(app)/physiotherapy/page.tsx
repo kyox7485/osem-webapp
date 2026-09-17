@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getServerTranslator } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { getAllStaffWithBranch, getPhysioIpBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
@@ -65,6 +66,8 @@ export default async function PhysiotherapyPage({
   const account = await getCurrentUser();
   if (!account) redirect("/login");
 
+  const { t } = await getServerTranslator();
+
   const { type, resident: residentIdParam } = await searchParams;
   const careSetting: PhysioCareSetting = type === "op" ? "OP" : "IP";
   const supabase = await createClient();
@@ -94,7 +97,7 @@ export default async function PhysiotherapyPage({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Physiotherapy</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("Physiotherapy")}</h1>
       </div>
 
       <CareSettingTabs current={careSetting} />
@@ -104,7 +107,7 @@ export default async function PhysiotherapyPage({
           residents={patients ?? []}
           currentResident={residentIdParam || ""}
           careSetting={careSetting}
-          label={careSetting === "OP" ? "Patient" : "Resident"}
+          label={careSetting === "OP" ? t("Patient") : t("Resident")}
         />
 
         {careSetting === "OP" && <NewOpPatientForm />}
@@ -238,6 +241,7 @@ async function PhysiotherapyContent({
   }
 
   const supabase = await createClient();
+  const { t } = await getServerTranslator();
 
   // OP patients don't have past_medical_condition -- their equivalent
   // free-text field is "remark" -- so pull the columns that exist on each
@@ -256,13 +260,17 @@ async function PhysiotherapyContent({
           .single();
 
   if (!resident) {
-    return <p className="text-sm text-red-600">{careSetting === "OP" ? "Patient" : "Resident"} not found.</p>;
+    return (
+      <p className="text-sm text-red-600">
+        {careSetting === "OP" ? t("Patient") : t("Resident")} {t("not found.")}
+      </p>
+    );
   }
 
   if (account.rights !== "ADMIN") {
     const allowedBranchIds = careSetting === "OP" ? [account.branch_id] : await getPhysioIpBranchIds(account);
     if (!allowedBranchIds.includes(resident.branch_id)) {
-      return <p className="text-sm text-red-600">Access denied.</p>;
+      return <p className="text-sm text-red-600">{t("Access denied.")}</p>;
     }
   }
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createProgressNote, getResidentDashboardData, type ResidentDashboardData } from "./progress-notes-actions";
 import { ResidentDashboard } from "./resident-dashboard";
 import type { LookupOption } from "@/lib/types";
+import { useTranslation } from "@/components/language-provider";
 
 type Resident = {
   id: number;
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onSaved }: Props) {
+  const t = useTranslation();
   const [residentId, setResidentId] = useState(presetResidentId || "");
   const [progressNote, setProgressNote] = useState("");
   const [physicalExamination, setPhysicalExamination] = useState("");
@@ -67,17 +69,17 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
     setError("");
 
     if (!residentId) {
-      setError("Please select a resident");
+      setError(t("Please select a resident"));
       return;
     }
 
     if (!progressNote) {
-      setError("Progress note is required");
+      setError(t("Progress note is required"));
       return;
     }
 
     if (!createdBy) {
-      setError("Please select who entered this note");
+      setError(t("Please select who entered this note"));
       return;
     }
 
@@ -99,7 +101,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
     setIsSaving(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to save progress note");
+      setError(result.error || t("Failed to save progress note"));
       return;
     }
 
@@ -111,7 +113,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
     <div className="space-y-4">
       <div>
         <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
-          Resident <span className="text-red-500">*</span>
+          {t("Resident")} <span className="text-red-500">*</span>
         </label>
         <select
           id="resident"
@@ -124,7 +126,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
           required
           className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
         >
-          <option value="">Select resident</option>
+          <option value="">{t("Select resident")}</option>
           {residents.map((r) => (
             <option key={r.id} value={r.id}>
               {r.resident_name}
@@ -134,7 +136,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       </div>
 
       {residentId && dashboardLoading && (
-        <p className="text-sm text-gray-400">Loading resident background...</p>
+        <p className="text-sm text-gray-400">{t("Loading resident background...")}</p>
       )}
 
       {residentId && dashboard && <ResidentDashboard {...dashboard} collapsible />}
@@ -144,7 +146,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
         <div>
           <label htmlFor="progress-note" className="mb-1 block text-sm font-medium text-gray-700">
-            Progress Note <span className="text-red-500">*</span>
+            {t("Progress Note")} <span className="text-red-500">*</span>
           </label>
           <textarea
             id="progress-note"
@@ -152,7 +154,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             onChange={(e) => setProgressNote(e.target.value)}
             required
             rows={4}
-            placeholder="Patient progress, observations, and clinical notes..."
+            placeholder={t("Patient progress, observations, and clinical notes...")}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
@@ -160,7 +162,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="physical-examination" className="mb-1 block text-sm font-medium text-gray-700">
-              Physical Examination
+              {t("Physical Examination")}
             </label>
             <textarea
               id="physical-examination"
@@ -173,7 +175,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="medical-plan" className="mb-1 block text-sm font-medium text-gray-700">
-              Medical / Treatment Plan
+              {t("Medical / Treatment Plan")}
             </label>
             <textarea
               id="medical-plan"
@@ -186,7 +188,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="nursing-plan" className="mb-1 block text-sm font-medium text-gray-700">
-              Nursing Plan
+              {t("Nursing Plan")}
             </label>
             <textarea
               id="nursing-plan"
@@ -199,7 +201,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="feeding-plan" className="mb-1 block text-sm font-medium text-gray-700">
-              Feeding / Diet Plan
+              {t("Feeding / Diet Plan")}
             </label>
             <textarea
               id="feeding-plan"
@@ -212,7 +214,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="monitoring-plan" className="mb-1 block text-sm font-medium text-gray-700">
-              Monitoring Plan
+              {t("Monitoring Plan")}
             </label>
             <textarea
               id="monitoring-plan"
@@ -225,7 +227,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="dressing-plan" className="mb-1 block text-sm font-medium text-gray-700">
-              Dressing Plan
+              {t("Dressing Plan")}
             </label>
             <textarea
               id="dressing-plan"
@@ -238,7 +240,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="physio-plan" className="mb-1 block text-sm font-medium text-gray-700">
-              Physio Plan
+              {t("Physio Plan")}
             </label>
             <textarea
               id="physio-plan"
@@ -251,7 +253,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
           <div>
             <label htmlFor="created-by" className="mb-1 block text-sm font-medium text-gray-700">
-              Entered By <span className="text-red-500">*</span>
+              {t("Entered By")} <span className="text-red-500">*</span>
             </label>
             <select
               id="created-by"
@@ -261,7 +263,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               disabled={!residentId}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
             >
-              <option value="">Select staff</option>
+              <option value="">{t("Select staff")}</option>
               {staffOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -278,14 +280,14 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             disabled={isSaving}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
           >
-            Clear
+            {t("Clear")}
           </button>
           <button
             type="submit"
             disabled={isSaving}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
           >
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("Saving...") : t("Save")}
           </button>
         </div>
       </form>

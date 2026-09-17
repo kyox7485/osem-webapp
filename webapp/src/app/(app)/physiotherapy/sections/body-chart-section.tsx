@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BodyDiagram, type BodyRegion } from "../body-diagram";
 import { CollapsibleCard } from "../collapsible-card";
+import { useTranslation } from "@/components/language-provider";
 
 export type BodyChartEntry = { region: string; side: "R" | "L" | null; comment: string };
 
@@ -16,6 +17,7 @@ type Props = {
 // add it to the list; existing findings show below and can be removed
 // before saving.
 export function BodyChartSection({ findings, setFindings }: Props) {
+  const t = useTranslation();
   const [pendingRegion, setPendingRegion] = useState<BodyRegion | null>(null);
   const [comment, setComment] = useState("");
 
@@ -39,8 +41,8 @@ export function BodyChartSection({ findings, setFindings }: Props) {
 
   return (
     <CollapsibleCard
-      title="Body Chart / Anatomical Findings"
-      badge={findings.length > 0 ? `${findings.length} finding${findings.length > 1 ? "s" : ""}` : null}
+      title={t("Body Chart / Anatomical Findings")}
+      badge={findings.length > 0 ? `${findings.length} ${findings.length > 1 ? t("findings") : t("finding")}` : null}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
@@ -49,16 +51,16 @@ export function BodyChartSection({ findings, setFindings }: Props) {
             markedRegionNames={markedRegionNames}
             pendingRegionName={pendingRegion?.name}
           />
-          <p className="mt-2 text-center text-xs text-gray-400">Tap a point on the diagram to add a finding</p>
+          <p className="mt-2 text-center text-xs text-gray-400">{t("Tap a point on the diagram to add a finding")}</p>
 
           {pendingRegion && (
             <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50 p-3">
-              <p className="mb-1 text-sm font-medium text-indigo-900">{pendingRegion.name}</p>
+              <p className="mb-1 text-sm font-medium text-indigo-900">{t(pendingRegion.name)}</p>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={2}
-                placeholder="Finding / comment..."
+                placeholder={t("Finding / comment...")}
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               <div className="mt-2 flex justify-end gap-2">
@@ -67,7 +69,7 @@ export function BodyChartSection({ findings, setFindings }: Props) {
                   onClick={() => setPendingRegion(null)}
                   className="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="button"
@@ -75,7 +77,7 @@ export function BodyChartSection({ findings, setFindings }: Props) {
                   disabled={!comment.trim()}
                   className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  Add finding
+                  {t("Add finding")}
                 </button>
               </div>
             </div>
@@ -83,15 +85,15 @@ export function BodyChartSection({ findings, setFindings }: Props) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Recorded findings</h3>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">{t("Recorded findings")}</h3>
           {findings.length === 0 ? (
-            <p className="text-sm text-gray-400">No findings recorded yet.</p>
+            <p className="text-sm text-gray-400">{t("No findings recorded yet.")}</p>
           ) : (
             <ul className="space-y-2">
               {findings.map((f, i) => (
                 <li key={i} className="flex items-start justify-between gap-2 rounded-md border border-gray-200 p-2 text-sm">
                   <div>
-                    <span className="font-medium text-gray-800">{f.region}</span>
+                    <span className="font-medium text-gray-800">{t(f.region)}</span>
                     <p className="text-gray-600">{f.comment}</p>
                   </div>
                   <button
@@ -99,7 +101,7 @@ export function BodyChartSection({ findings, setFindings }: Props) {
                     onClick={() => removeFinding(i)}
                     className="shrink-0 text-xs text-gray-400 hover:text-red-600"
                   >
-                    Remove
+                    {t("Remove")}
                   </button>
                 </li>
               ))}

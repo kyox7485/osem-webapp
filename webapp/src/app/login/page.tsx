@@ -6,9 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import packageJson from "../../../package.json";
+import { useTranslation } from "@/components/language-provider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +40,12 @@ export default function LoginPage() {
         <div className="flex justify-center">
           <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-48 w-auto" priority />
         </div>
-        <p className="mb-6 text-center text-sm text-gray-500">Sign in with your branch account</p>
+        <p className="mb-6 text-center text-sm text-gray-500">{t("Sign in with your branch account")}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
+              {t("Email")}
             </label>
             <input
               id="email"
@@ -56,7 +58,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
+              {t("Password")}
             </label>
             <input
               id="password"
@@ -75,14 +77,14 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? t("Signing in...") : t("Sign in")}
           </button>
 
           <Link
             href="/forgot-password"
             className="block text-center text-sm text-gray-500 hover:text-gray-900"
           >
-            Forgot password?
+            {t("Forgot password?")}
           </Link>
         </form>
 

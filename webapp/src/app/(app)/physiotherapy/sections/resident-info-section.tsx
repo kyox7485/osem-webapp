@@ -1,6 +1,7 @@
 "use client";
 
 import type { TreatmentTypeOption } from "@/lib/physio-scoring";
+import { useTranslation } from "@/components/language-provider";
 
 type Props = {
   residentName: string;
@@ -31,8 +32,10 @@ export function ResidentInfoSection({
   setTreatmentType,
   creditHours,
   setCreditHours,
-  label = "Resident",
+  label,
 }: Props) {
+  const t = useTranslation();
+  const resolvedLabel = label ?? t("Resident");
   function handleTreatmentTypeChange(value: string) {
     setTreatmentType(value);
     // Credit Hours auto-fills from the treatment type's standard value, per
@@ -44,23 +47,23 @@ export function ResidentInfoSection({
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">{label} / Assessment Information</h2>
+      <h2 className="mb-3 text-sm font-bold text-gray-900">{resolvedLabel} / {t("Assessment Information")}</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-xs text-gray-400">{label}</p>
+          <p className="text-xs text-gray-400">{resolvedLabel}</p>
           <p className="text-sm font-medium text-gray-900">{residentName}</p>
           <p className="text-xs text-gray-500">{icNumber ?? "--"}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Gender</p>
+          <p className="text-xs text-gray-400">{t("Gender")}</p>
           <p className="text-sm font-medium text-gray-900">{gender ?? "--"}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-400">Age</p>
+          <p className="text-xs text-gray-400">{t("Age")}</p>
           <p className="text-sm font-medium text-gray-900">{age ?? "--"}</p>
         </div>
         <label className="block text-sm text-gray-700">
-          Date
+          {t("Date")}
           <input
             type="datetime-local"
             value={entryTimestamp}
@@ -72,13 +75,13 @@ export function ResidentInfoSection({
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block text-sm text-gray-700">
-          Type of Treatment
+          {t("Type of Treatment")}
           <select
             value={treatmentType}
             onChange={(e) => handleTreatmentTypeChange(e.target.value)}
             className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
-            <option value="">Select treatment type</option>
+            <option value="">{t("Select treatment type")}</option>
             {treatmentTypeOptions.map((opt) => (
               <option key={opt.label} value={opt.label}>
                 {opt.label}
@@ -88,7 +91,7 @@ export function ResidentInfoSection({
         </label>
 
         <label className="block text-sm text-gray-700">
-          Credit Hours
+          {t("Credit Hours")}
           <input
             type="number"
             step="0.1"

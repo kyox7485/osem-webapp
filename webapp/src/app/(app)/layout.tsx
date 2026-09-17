@@ -4,9 +4,12 @@ import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLinks } from "@/components/nav-links";
 import { NavLoadingProvider } from "@/components/nav-loading";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const account = await getCurrentUser();
+  const { t } = await getServerTranslator();
 
   if (!account) {
     // Authenticated in Supabase Auth but no matching tbl_user_accounts row
@@ -18,10 +21,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="mb-2 text-lg font-semibold text-gray-900">Account not set up</h1>
+          <h1 className="mb-2 text-lg font-semibold text-gray-900">{t("Account not set up")}</h1>
           <p className="mb-6 text-sm text-gray-500">
-            You&apos;re signed in, but this login isn&apos;t linked to a user account yet.
-            Ask an admin to add you under Accounts, then sign out and back in.
+            {t(
+              "You're signed in, but this login isn't linked to a user account yet. Ask an admin to add you under Accounts, then sign out and back in."
+            )}
           </p>
           <SignOutButton />
         </div>
@@ -30,11 +34,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const navItems = [
-    { href: "/residents", label: "Residents" },
-    { href: "/clinical", label: "Clinical" },
-    { href: "/physiotherapy", label: "Physiotherapy" },
-    { href: "/staff", label: "Staff" },
-    ...(isAdmin(account) ? [{ href: "/accounts", label: "Accounts" }] : []),
+    { href: "/residents", label: t("Residents") },
+    { href: "/clinical", label: t("Clinical") },
+    { href: "/physiotherapy", label: t("Physiotherapy") },
+    { href: "/staff", label: t("Staff") },
+    ...(isAdmin(account) ? [{ href: "/accounts", label: t("Accounts") }] : []),
   ];
 
   return (
@@ -43,7 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
             <nav className="flex items-center gap-1">
-              <Link href="/" className="mr-3 flex shrink-0 items-center" aria-label="OSEM home">
+              <Link href="/" className="mr-3 flex shrink-0 items-center" aria-label={t("OSEM home")}>
                 <Image src="/logo.png" alt="OSEM" width={52} height={32} className="h-8 w-auto" priority />
               </Link>
               <NavLinks items={navItems} />
@@ -52,12 +56,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <span className="hidden sm:inline">
                 <span className="font-medium text-gray-700">{account.username}</span>
                 {" · "}
-                {account.branch_name || "All branches"}
+                {account.branch_name || t("All branches")}
                 {" · "}
               </span>
               <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
                 {account.rights}
               </span>
+              <LanguageSwitcher />
               <SignOutButton />
             </div>
           </div>

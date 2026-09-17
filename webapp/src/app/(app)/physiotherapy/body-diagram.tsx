@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/components/language-provider";
+
 // Anatomical body chart backed by a real front/side/back illustration
 // (public/body-chart.png), showing 4 views: front, right side, back, left
 // side. Hotspots are positioned as percentages over the image. The major
@@ -96,10 +98,11 @@ type Props = {
 };
 
 export function BodyDiagram({ onSelectRegion, markedRegionNames, pendingRegionName }: Props) {
+  const t = useTranslation();
   return (
     <div className="relative mx-auto w-full max-w-md">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/body-chart.png" alt="Body chart (front, side and back views)" className="block w-full select-none" draggable={false} />
+      <img src="/body-chart.png" alt={t("Body chart (front, side and back views)")} className="block w-full select-none" draggable={false} />
       {ALL_REGIONS.map((region) => {
         const marked = markedRegionNames.has(region.name);
         // Pending = tapped, comment box open, not yet added -- stays lit
@@ -116,8 +119,8 @@ export function BodyDiagram({ onSelectRegion, markedRegionNames, pendingRegionNa
             key={region.name}
             type="button"
             onClick={() => onSelectRegion(region)}
-            title={region.name}
-            aria-label={region.name}
+            title={t(region.name)}
+            aria-label={t(region.name)}
             className="group absolute flex items-center justify-center rounded-full"
             style={{
               left: `${region.x}%`,

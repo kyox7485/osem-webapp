@@ -6,6 +6,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { NewProgressNoteForm } from "./new-progress-note-form";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
+import { useTranslation } from "@/components/language-provider";
 
 type ProgressNote = {
   id: number;
@@ -63,6 +64,7 @@ export function ProgressNotesModule({
 }: Props) {
   const router = useRouter();
   const push = useNavPush();
+  const t = useTranslation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -79,10 +81,10 @@ export function ProgressNotesModule({
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-gray-200">
         <InnerTabButton active={innerTab === "review"} onClick={() => setInnerTab("review")}>
-          Review Notes
+          {t("Review Notes")}
         </InnerTabButton>
         <InnerTabButton active={innerTab === "new"} onClick={() => setInnerTab("new")}>
-          New Entry
+          {t("New Entry")}
         </InnerTabButton>
       </div>
 
@@ -93,7 +95,7 @@ export function ProgressNotesModule({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700">
-                  Resident
+                  {t("Resident")}
                 </label>
                 <select
                   id="resident-filter"
@@ -101,7 +103,7 @@ export function ProgressNotesModule({
                   onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">All residents</option>
+                  <option value="">{t("All residents")}</option>
                   {residents.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.resident_name}
@@ -112,7 +114,7 @@ export function ProgressNotesModule({
 
               <div>
                 <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700">
-                  Start date
+                  {t("Start date")}
                 </label>
                 <input
                   type="date"
@@ -125,7 +127,7 @@ export function ProgressNotesModule({
 
               <div>
                 <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700">
-                  End date
+                  {t("End date")}
                 </label>
                 <input
                   type="date"
@@ -145,7 +147,7 @@ export function ProgressNotesModule({
           <div className="space-y-3">
             {notes.length === 0 ? (
               <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-                No progress notes yet.
+                {t("No progress notes yet.")}
               </div>
             ) : (
               notes.map((note) => {
@@ -182,9 +184,11 @@ export function ProgressNotesModule({
                     {!isExpanded && (
                       <p className="text-sm text-gray-700">
                         {recordedCount > 0 ? (
-                          <span className="text-gray-400">{recordedCount} field{recordedCount > 1 ? "s" : ""} recorded -- click to view</span>
+                          <span className="text-gray-400">
+                            {recordedCount} {t(recordedCount > 1 ? "fields" : "field")} {t("recorded -- click to view")}
+                          </span>
                         ) : (
-                          <span className="text-gray-400">Click to view</span>
+                          <span className="text-gray-400">{t("Click to view")}</span>
                         )}
                       </p>
                     )}
@@ -193,22 +197,22 @@ export function ProgressNotesModule({
                       <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
                         {note.progress_note && (
                           <p className="whitespace-pre-wrap text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">Progress note: </span>
+                            <span className="font-medium text-gray-500">{t("Progress note")}: </span>
                             {note.progress_note}
                           </p>
                         )}
                         {details.map(([key, label]) => (
                           <p key={key} className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">{label}: </span>
+                            <span className="font-medium text-gray-500">{t(label)}: </span>
                             {note[key] as string}
                           </p>
                         ))}
-                        {recordedCount === 0 && <p className="text-sm text-gray-400">No fields recorded.</p>}
+                        {recordedCount === 0 && <p className="text-sm text-gray-400">{t("No fields recorded.")}</p>}
                       </div>
                     )}
 
                     <div className="mt-2 text-xs text-gray-400">
-                      Reviewed by: {note.reviewer?.staff_name || "--"}
+                      {t("Reviewed by")}: {note.reviewer?.staff_name || "--"}
                     </div>
                   </div>
                 );

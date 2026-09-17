@@ -5,6 +5,7 @@ import { ResidentDashboard } from "./resident-dashboard";
 import { NewNoteForm } from "./new-note-form";
 import { formatDateTime } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
+import { useTranslation } from "@/components/language-provider";
 
 type Note = {
   id: number;
@@ -53,16 +54,17 @@ type Props = {
 // expanded + note history) vs adding one (same dashboard, collapsed to
 // keep reference info out of the way while writing).
 export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError, dashboard }: Props) {
+  const t = useTranslation();
   const [tab, setTab] = useState<"review" | "new">("review");
 
   return (
     <div>
       <div className="mb-4 flex gap-1 border-b border-gray-200">
         <TabButton active={tab === "review"} onClick={() => setTab("review")}>
-          Review notes
+          {t("Review notes")}
         </TabButton>
         <TabButton active={tab === "new"} onClick={() => setTab("new")}>
-          New entry
+          {t("New entry")}
         </TabButton>
       </div>
 
@@ -82,13 +84,13 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
                 <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
                 {note.medical_plan && (
                   <p className="mt-2 text-sm text-gray-600">
-                    <span className="font-medium text-gray-500">Medical plan: </span>
+                    <span className="font-medium text-gray-500">{t("Medical plan")}: </span>
                     {note.medical_plan}
                   </p>
                 )}
                 {note.nursing_plan && (
                   <p className="mt-1 text-sm text-gray-600">
-                    <span className="font-medium text-gray-500">Nursing plan: </span>
+                    <span className="font-medium text-gray-500">{t("Nursing plan")}: </span>
                     {note.nursing_plan}
                   </p>
                 )}
@@ -96,7 +98,7 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
             ))}
             {notes.length === 0 && (
               <p className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-                No progress notes yet.
+                {t("No progress notes yet.")}
               </p>
             )}
           </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavPush } from "@/components/nav-loading";
 import { createOpPatient } from "./actions";
+import { useTranslation } from "@/components/language-provider";
 
 const fieldCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
@@ -13,6 +14,7 @@ const fieldCls =
 // module, which OP patients aren't part of) just to add a name.
 export function NewOpPatientForm() {
   const push = useNavPush();
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   const [patientName, setPatientName] = useState("");
   const [icNumber, setIcNumber] = useState("");
@@ -55,7 +57,7 @@ export function NewOpPatientForm() {
     setError("");
 
     if (!patientName.trim()) {
-      setError("Patient name is required");
+      setError(t("Patient name is required"));
       return;
     }
 
@@ -70,7 +72,7 @@ export function NewOpPatientForm() {
     setSaving(false);
 
     if (!result.success || !result.id) {
-      setError(result.error || "Failed to register patient");
+      setError(result.error || t("Failed to register patient"));
       return;
     }
 
@@ -85,7 +87,7 @@ export function NewOpPatientForm() {
         onClick={() => setOpen(true)}
         className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
       >
-        + New patient
+        + {t("New patient")}
       </button>
 
       {open && (
@@ -97,7 +99,7 @@ export function NewOpPatientForm() {
         >
           <div role="dialog" aria-modal="true" aria-labelledby="new-op-patient-title" className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
             <h3 id="new-op-patient-title" className="mb-4 text-sm font-bold text-gray-900">
-              Register new outpatient
+              {t("Register new outpatient")}
             </h3>
 
             <form onSubmit={handleSubmit}>
@@ -107,7 +109,7 @@ export function NewOpPatientForm() {
                   and consistent regardless of how long a label is. */}
               <div className="space-y-3">
                 <label className="block text-sm text-gray-700">
-                  Patient name
+                  {t("Patient name")}
                   <input
                     ref={nameInputRef}
                     type="text"
@@ -119,12 +121,12 @@ export function NewOpPatientForm() {
                 </label>
 
                 <label className="block text-sm text-gray-700">
-                  IC number
+                  {t("IC number")}
                   <input type="text" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={fieldCls} />
                 </label>
 
                 <label className="block text-sm text-gray-700">
-                  Age
+                  {t("Age")}
                   <input
                     type="number"
                     min={0}
@@ -135,7 +137,7 @@ export function NewOpPatientForm() {
                 </label>
 
                 <label className="block text-sm text-gray-700">
-                  Gender
+                  {t("Gender")}
                   <select value={gender} onChange={(e) => setGender(e.target.value as "" | "M" | "F")} className={fieldCls}>
                     <option value="">--</option>
                     <option value="M">M</option>
@@ -144,7 +146,7 @@ export function NewOpPatientForm() {
                 </label>
 
                 <label className="block text-sm text-gray-700">
-                  Contact
+                  {t("Contact")}
                   <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} className={fieldCls} />
                 </label>
               </div>
@@ -156,14 +158,14 @@ export function NewOpPatientForm() {
                   disabled={saving}
                   className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {saving ? "Registering..." : "Register patient"}
+                  {saving ? t("Registering...") : t("Register patient")}
                 </button>
               </div>
             </form>

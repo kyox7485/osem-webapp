@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffRoster } from "@/lib/lookups";
 import { ProgressNotesTabs } from "./progress-notes-tabs";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 const PLAN_FIELDS = [
   ["medical", "medical_plan"],
@@ -16,6 +17,7 @@ const PLAN_FIELDS = [
 export default async function ProgressNotesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  const { t } = await getServerTranslator();
 
   const { data: resident } = await supabase
     .from("tbl_residents")
@@ -61,7 +63,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       progress_note: note.progress_note,
       medical_plan: note.medical_plan,
       nursing_plan: note.nursing_plan,
-      authorName: author?.staff_name ?? "Unknown",
+      authorName: author?.staff_name ?? t("Unknown"),
     };
   });
 
@@ -71,7 +73,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
         <Link href={`/residents/${resident.id}`} className="text-sm text-gray-500 hover:underline">
           &larr; {resident.resident_name}
         </Link>
-        <h1 className="text-lg font-semibold text-gray-900">Medical Progress Notes</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{t("Medical Progress Notes")}</h1>
       </div>
 
       <ProgressNotesTabs

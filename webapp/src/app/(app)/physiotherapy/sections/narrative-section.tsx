@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/components/language-provider";
+
 const inputCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
@@ -24,21 +26,22 @@ export function NarrativeSection({
   evaluation,
   setEvaluation,
 }: Props) {
+  const t = useTranslation();
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900">Impression / Analysis</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-900">{t("Impression / Analysis")}</h2>
         <textarea
           value={impression}
           onChange={(e) => setImpression(e.target.value)}
           rows={3}
-          placeholder="Physiotherapist impression / analysis..."
+          placeholder={t("Physiotherapist impression / analysis...")}
           className={inputCls}
         />
       </div>
 
       <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900">Plan & Intervention</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-900">{t("Plan & Intervention")}</h2>
         <textarea
           value={planIntervention}
           onChange={(e) => setPlanIntervention(e.target.value)}
@@ -48,7 +51,7 @@ export function NarrativeSection({
       </div>
 
       <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900">Evaluation</h2>
+        <h2 className="mb-2 text-sm font-bold text-gray-900">{t("Evaluation")}</h2>
         <textarea
           value={evaluation}
           onChange={(e) => setEvaluation(e.target.value)}

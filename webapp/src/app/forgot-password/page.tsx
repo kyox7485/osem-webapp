@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/components/language-provider";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslation();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,25 +33,25 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-xl font-semibold text-gray-900">Reset your password</h1>
+        <h1 className="mb-1 text-xl font-semibold text-gray-900">{t("Reset your password")}</h1>
         <p className="mb-6 text-sm text-gray-500">
-          Enter your account email and we&apos;ll send you a reset link.
+          {t("Enter your account email and we'll send you a reset link.")}
         </p>
 
         {sent ? (
           <div className="space-y-4">
             <p className="text-sm text-green-700">
-              Check your email for a link to reset your password.
+              {t("Check your email for a link to reset your password.")}
             </p>
             <Link href="/login" className="block text-center text-sm text-gray-500 hover:text-gray-900">
-              Back to sign in
+              {t("Back to sign in")}
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                {t("Email")}
               </label>
               <input
                 id="email"
@@ -68,11 +70,11 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
             >
-              {loading ? "Sending..." : "Send reset link"}
+              {loading ? t("Sending...") : t("Send reset link")}
             </button>
 
             <Link href="/login" className="block text-center text-sm text-gray-500 hover:text-gray-900">
-              Back to sign in
+              {t("Back to sign in")}
             </Link>
           </form>
         )}

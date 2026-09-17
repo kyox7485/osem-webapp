@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "./language-provider";
 
 export function SignOutButton() {
   const router = useRouter();
+  const t = useTranslation();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -15,7 +17,7 @@ export function SignOutButton() {
 
   return (
     <button onClick={handleSignOut} className="text-gray-500 hover:text-gray-900">
-      Sign out
+      {t("Sign out")}
     </button>
   );
 }

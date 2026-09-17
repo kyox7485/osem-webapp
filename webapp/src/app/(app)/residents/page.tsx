@@ -6,6 +6,7 @@ import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
 import { FilterPendingProvider } from "@/components/filter-pending";
 import { NavButton } from "@/components/nav-button";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -14,6 +15,7 @@ export default async function ResidentsPage({
 }: {
   searchParams: Promise<{ q?: string; ic?: string; status?: string; branch_id?: string }>;
 }) {
+  const { t } = await getServerTranslator();
   const { q, ic, status, branch_id } = await searchParams;
   const currentUser = await getCurrentUser();
   const admin = isAdmin(currentUser);
@@ -60,12 +62,12 @@ export default async function ResidentsPage({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">Residents</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{t("Residents")}</h1>
         <NavButton
           href="/residents/new"
           className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
-          New resident
+          {t("New resident")}
         </NavButton>
       </div>
 
@@ -77,16 +79,16 @@ export default async function ResidentsPage({
             <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-2">
-                  <ColumnFilter type="text" label="Name" paramName="q" placeholder="Search by name..." />
+                  <ColumnFilter type="text" label={t("Name")} paramName="q" placeholder={t("Search by name...")} />
                 </th>
                 <th className="px-4 py-2">
-                  <ColumnFilter type="text" label="IC" paramName="ic" placeholder="Search by IC..." />
+                  <ColumnFilter type="text" label={t("IC")} paramName="ic" placeholder={t("Search by IC...")} />
                 </th>
                 {admin && (
                   <th className="px-4 py-2">
                     <ColumnFilter
                       type="select"
-                      label="Branch"
+                      label={t("Branch")}
                       paramName="branch_id"
                       options={branches.map((b) => ({ value: String(b.id), label: b.label }))}
                       defaultValues={branches.map((b) => String(b.id))}
@@ -96,7 +98,7 @@ export default async function ResidentsPage({
                 <th className="px-4 py-2">
                   <ColumnFilter
                     type="select"
-                    label="Status"
+                    label={t("Status")}
                     paramName="status"
                     options={RESIDENT_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
                     defaultValues={DEFAULT_STATUSES}
@@ -121,7 +123,7 @@ export default async function ResidentsPage({
               {residents.length === 0 && (
                 <tr>
                   <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
-                    No residents found.
+                    {t("No residents found.")}
                   </td>
                 </tr>
               )}

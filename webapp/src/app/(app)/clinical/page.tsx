@@ -4,6 +4,7 @@ import { getAllStaffWithBranch, getClinicalLookups } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import type { NursingChartEntry } from "./nursing-chart-module";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function ClinicalPage({
   searchParams,
@@ -17,6 +18,8 @@ export default async function ClinicalPage({
 }) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
+
+  const { t } = await getServerTranslator();
 
   const params = await searchParams;
   const currentTab = params.tab || "nursing-chart";
@@ -300,7 +303,7 @@ export default async function ClinicalPage({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Clinical</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("Clinical")}</h1>
       </div>
 
       <ClinicalContent

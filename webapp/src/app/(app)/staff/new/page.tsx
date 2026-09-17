@@ -3,9 +3,11 @@ import { StaffForm } from "@/components/staff-form";
 import { BackButton } from "@/components/back-button";
 import { getPositions, getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getServerTranslator } from "@/lib/i18n/server";
 import { createStaff } from "../actions";
 
 export default async function NewStaffPage() {
+  const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
   if (!isAdmin(currentUser)) redirect("/staff");
 
@@ -14,7 +16,7 @@ export default async function NewStaffPage() {
   return (
     <div>
       <BackButton />
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">New staff</h1>
+      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("New staff")}</h1>
       <StaffForm positions={positions} branches={branches} action={createStaff} />
     </div>
   );

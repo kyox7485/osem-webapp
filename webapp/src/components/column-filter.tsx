@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useFilterNavigation } from "@/components/filter-pending";
+import { useTranslation } from "@/components/language-provider";
 
 type Option = { value: string; label: string };
 
@@ -40,6 +41,7 @@ export function ColumnFilter(props: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const startNavigation = useFilterNavigation();
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const [mounted, setMounted] = useState(false);
@@ -145,7 +147,7 @@ export function ColumnFilter(props: Props) {
         onClick={() => (open ? setOpen(false) : openPopover())}
         aria-haspopup="true"
         aria-expanded={open}
-        aria-label={`Filter ${props.label}`}
+        aria-label={`${t("Filter")} ${props.label}`}
         className={`rounded p-0.5 transition-colors hover:bg-gray-200 ${isActive ? "text-indigo-600" : "text-gray-400"}`}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -192,14 +194,14 @@ export function ColumnFilter(props: Props) {
                 onClick={handleClear}
                 className="text-xs font-medium text-gray-500 hover:text-gray-800"
               >
-                Clear
+                {t("Clear")}
               </button>
               <button
                 type="button"
                 onClick={handleApply}
                 className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
               >
-                Apply
+                {t("Apply")}
               </button>
             </div>
           </div>,

@@ -1,4 +1,7 @@
+"use client";
+
 import { formatDateTime, formatDate } from "@/lib/format-date";
+import { useTranslation } from "@/components/language-provider";
 
 // Quick-glance panel for a doctor reviewing this resident: static clinical
 // background (history/medication/allergy/TCA, from tbl_residents) plus the
@@ -49,37 +52,38 @@ export function ResidentDashboard({
   plans,
   collapsible = false,
 }: Props) {
+  const t = useTranslation();
   return (
     <div className="mb-6 space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <DashCard title="Medical / surgical history" collapsible={collapsible}>
+        <DashCard title={t("Medical / surgical history")} collapsible={collapsible}>
           <ClampedText value={pastMedicalCondition} />
         </DashCard>
-        <DashCard title="Current medication list" collapsible={collapsible}>
+        <DashCard title={t("Current medication list")} collapsible={collapsible}>
           <ClampedText value={currentMedicationList} />
         </DashCard>
-        <DashCard title="Known allergy" collapsible={collapsible}>
+        <DashCard title={t("Known allergy")} collapsible={collapsible}>
           <ClampedText value={allergy} />
         </DashCard>
       </div>
 
-      <DashCard title="TCA notes" collapsible={collapsible}>
+      <DashCard title={t("TCA notes")} collapsible={collapsible}>
         <ClampedText value={tcaNotes} />
       </DashCard>
 
-      <DashCard title="Recent vitals">
+      <DashCard title={t("Recent vitals")}>
         {vitals.length === 0 ? (
-          <EmptyNote text="No vitals recorded yet." />
+          <EmptyNote text={t("No vitals recorded yet.")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs font-medium uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="py-1 pr-3">Date</th>
-                  <th className="py-1 pr-3">BP</th>
-                  <th className="py-1 pr-3">HR</th>
-                  <th className="py-1 pr-3">Temp</th>
-                  <th className="py-1 pr-3">SpO2</th>
+                  <th className="py-1 pr-3">{t("Date")}</th>
+                  <th className="py-1 pr-3">{t("BP")}</th>
+                  <th className="py-1 pr-3">{t("HR")}</th>
+                  <th className="py-1 pr-3">{t("Temp")}</th>
+                  <th className="py-1 pr-3">{t("SpO2")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -103,14 +107,14 @@ export function ResidentDashboard({
         )}
       </DashCard>
 
-      <DashCard title="Last ordered plans" collapsible={collapsible}>
+      <DashCard title={t("Last ordered plans")} collapsible={collapsible}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <PlanRow label="Medical / treatment plan" entry={plans.medical} />
-          <PlanRow label="Nursing plan" entry={plans.nursing} />
-          <PlanRow label="Diet plan" entry={plans.diet} />
-          <PlanRow label="Dressing plan" entry={plans.dressing} />
-          <PlanRow label="Monitoring plan" entry={plans.monitoring} />
-          <PlanRow label="Physio plan" entry={plans.physio} />
+          <PlanRow label={t("Medical / treatment plan")} entry={plans.medical} />
+          <PlanRow label={t("Nursing plan")} entry={plans.nursing} />
+          <PlanRow label={t("Diet plan")} entry={plans.diet} />
+          <PlanRow label={t("Dressing plan")} entry={plans.dressing} />
+          <PlanRow label={t("Monitoring plan")} entry={plans.monitoring} />
+          <PlanRow label={t("Physio plan")} entry={plans.physio} />
         </div>
       </DashCard>
     </div>
@@ -155,11 +159,13 @@ function DashCard({
 }
 
 function ClampedText({ value }: { value: string | null }) {
-  if (!value) return <EmptyNote text="None recorded." />;
+  const t = useTranslation();
+  if (!value) return <EmptyNote text={t("None recorded.")} />;
   return <p className="whitespace-pre-wrap text-sm text-gray-800">{value}</p>;
 }
 
 function PlanRow({ label, entry }: { label: string; entry: PlanEntry }) {
+  const t = useTranslation();
   return (
     <div>
       <dt className="text-xs font-medium text-gray-500">{label}</dt>
@@ -169,7 +175,7 @@ function PlanRow({ label, entry }: { label: string; entry: PlanEntry }) {
           <span className="block text-xs text-gray-400">{formatDate(entry.entry_timestamp)}</span>
         </dd>
       ) : (
-        <dd className="text-sm text-gray-400">No entry yet</dd>
+        <dd className="text-sm text-gray-400">{t("No entry yet")}</dd>
       )}
     </div>
   );

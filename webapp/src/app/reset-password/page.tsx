@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/components/language-provider";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const t = useTranslation();
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -34,7 +36,7 @@ export default function ResetPasswordPage() {
       if (tokenHash && type) {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
         if (error) {
-          setError("This invite/reset link is invalid or has expired. Request a new one.");
+          setError(t("This invite/reset link is invalid or has expired. Request a new one."));
           return;
         }
         setReady(true);
@@ -44,7 +46,7 @@ export default function ResetPasswordPage() {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setError("This invite/reset link is invalid or has expired. Request a new one.");
+          setError(t("This invite/reset link is invalid or has expired. Request a new one."));
           return;
         }
         setReady(true);
@@ -57,21 +59,25 @@ export default function ResetPasswordPage() {
       if (data.session) {
         setReady(true);
       } else {
-        setError("This reset link is invalid or has expired. Request a new one from the login page.");
+        setError(t("This reset link is invalid or has expired. Request a new one from the login page."));
       }
     }
 
     establishSession();
+    // Runs once on mount to consume the invite/recovery link -- must not
+    // re-run when the user switches language, which would attempt to
+    // re-verify an already-consumed token and show a false "expired" error.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("Password must be at least 6 characters."));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords don't match.");
+      setError(t("Passwords don't match."));
       return;
     }
     setLoading(true);
@@ -96,17 +102,17 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-xl font-semibold text-gray-900">Set a new password</h1>
+        <h1 className="mb-1 text-xl font-semibold text-gray-900">{t("Set a new password")}</h1>
 
         {done ? (
-          <p className="text-sm text-green-700">Password updated. Redirecting...</p>
+          <p className="text-sm text-green-700">{t("Password updated. Redirecting...")}</p>
         ) : !ready ? (
-          <p className="text-sm text-gray-500">{error ?? "Checking your reset link..."}</p>
+          <p className="text-sm text-gray-500">{error ?? t("Checking your reset link...")}</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                New password
+                {t("New password")}
               </label>
               <input
                 id="password"
@@ -120,7 +126,7 @@ export default function ResetPasswordPage() {
             </div>
             <div>
               <label htmlFor="confirm" className="block text-sm font-medium text-gray-700">
-                Confirm password
+                {t("Confirm password")}
               </label>
               <input
                 id="confirm"
@@ -140,7 +146,7 @@ export default function ResetPasswordPage() {
               disabled={loading}
               className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Set new password"}
+              {loading ? t("Saving...") : t("Set new password")}
             </button>
           </form>
         )}

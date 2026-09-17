@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createVital } from "./vitals-actions";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
+import { useTranslation } from "@/components/language-provider";
 
 type Resident = {
   id: number;
@@ -41,6 +42,7 @@ const SPO2_CONDITION_OPTIONS = [
 const DXT_REMARK_OPTIONS = ["Fasting", "Post-Meal 1hr", "Post-Meal 2hr", "Post-Meal >4hr"];
 
 export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }: Props) {
+  const t = useTranslation();
   const [residentId, setResidentId] = useState("");
   const [systolicBp, setSystolicBp] = useState("");
   const [diastolicBp, setDiastolicBp] = useState("");
@@ -68,24 +70,24 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
     setError("");
 
     if (!residentId) {
-      setError("Please select a resident");
+      setError(t("Please select a resident"));
       return;
     }
 
     if (!reviewedBy) {
-      setError("Please select who reviewed this reading");
+      setError(t("Please select who reviewed this reading"));
       return;
     }
 
     // Validate SpO2 condition when SpO2 is filled
     if (spo2 && !spo2Condition) {
-      setError("SpO2 condition is required when SpO2 is recorded");
+      setError(t("SpO2 condition is required when SpO2 is recorded"));
       return;
     }
 
     // Validate DXT remark when DXT is filled
     if (dxt && !dxtRemark) {
-      setError("DXT remark is required when DXT is recorded");
+      setError(t("DXT remark is required when DXT is recorded"));
       return;
     }
 
@@ -113,7 +115,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
     setIsSaving(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to save vital signs");
+      setError(result.error || t("Failed to save vital signs"));
       return;
     }
 
@@ -124,7 +126,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Record Vital Signs</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t("Record Vital Signs")}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -142,7 +144,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
-              Resident <span className="text-red-500">*</span>
+              {t("Resident")} <span className="text-red-500">*</span>
             </label>
             <select
               id="resident"
@@ -154,7 +156,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
               required
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              <option value="">Select resident</option>
+              <option value="">{t("Select resident")}</option>
               {residents.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.resident_name}
@@ -166,7 +168,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="systolic-bp" className="mb-1 block text-sm font-medium text-gray-700">
-                Systolic BP (mmHg)
+                {t("Systolic BP (mmHg)")}
               </label>
               <input
                 type="number"
@@ -174,14 +176,14 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={systolicBp}
                 onChange={(e) => setSystolicBp(e.target.value)}
                 step="0.1"
-                placeholder="e.g. 120"
+                placeholder={t("e.g. 120")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             <div>
               <label htmlFor="diastolic-bp" className="mb-1 block text-sm font-medium text-gray-700">
-                Diastolic BP (mmHg)
+                {t("Diastolic BP (mmHg)")}
               </label>
               <input
                 type="number"
@@ -189,14 +191,14 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={diastolicBp}
                 onChange={(e) => setDiastolicBp(e.target.value)}
                 step="0.1"
-                placeholder="e.g. 80"
+                placeholder={t("e.g. 80")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             <div>
               <label htmlFor="heart-rate" className="mb-1 block text-sm font-medium text-gray-700">
-                Heart Rate (bpm)
+                {t("Heart Rate (bpm)")}
               </label>
               <input
                 type="number"
@@ -204,14 +206,14 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={heartRate}
                 onChange={(e) => setHeartRate(e.target.value)}
                 step="0.1"
-                placeholder="e.g. 72"
+                placeholder={t("e.g. 72")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             <div>
               <label htmlFor="temperature" className="mb-1 block text-sm font-medium text-gray-700">
-                Temperature (°C)
+                {t("Temperature (°C)")}
               </label>
               <input
                 type="number"
@@ -219,14 +221,14 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value)}
                 step="0.1"
-                placeholder="e.g. 36.8"
+                placeholder={t("e.g. 36.8")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             <div>
               <label htmlFor="spo2" className="mb-1 block text-sm font-medium text-gray-700">
-                SpO2 (%)
+                {t("SpO2 (%)")}
               </label>
               <input
                 type="number"
@@ -234,7 +236,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={spo2}
                 onChange={(e) => setSpo2(e.target.value)}
                 step="0.1"
-                placeholder="e.g. 98"
+                placeholder={t("e.g. 98")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
@@ -242,7 +244,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             {spo2 && (
               <div>
                 <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-gray-700">
-                  SpO2 Condition <span className="text-red-500">*</span>
+                  {t("SpO2 Condition")} <span className="text-red-500">*</span>
                 </label>
                 <select
                   id="spo2-condition"
@@ -251,10 +253,10 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   required
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">Select condition</option>
+                  <option value="">{t("Select condition")}</option>
                   {SPO2_CONDITION_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt}
+                      {t(opt)}
                     </option>
                   ))}
                 </select>
@@ -263,7 +265,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
 
             <div>
               <label htmlFor="dxt" className="mb-1 block text-sm font-medium text-gray-700">
-                DXT (mmol/L)
+                {t("DXT (mmol/L)")}
               </label>
               <input
                 type="number"
@@ -271,7 +273,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={dxt}
                 onChange={(e) => setDxt(e.target.value)}
                 step="0.1"
-                placeholder="e.g. 5.5"
+                placeholder={t("e.g. 5.5")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
@@ -279,7 +281,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             {dxt && (
               <div>
                 <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-gray-700">
-                  DXT Remark <span className="text-red-500">*</span>
+                  {t("DXT Remark")} <span className="text-red-500">*</span>
                 </label>
                 <select
                   id="dxt-remark"
@@ -288,10 +290,10 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   required
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">Select remark</option>
+                  <option value="">{t("Select remark")}</option>
                   {DXT_REMARK_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt}
+                      {t(opt)}
                     </option>
                   ))}
                 </select>
@@ -302,25 +304,25 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
           {dxt && (
             <div>
               <label htmlFor="insulin-adjustment" className="mb-1 block text-sm font-medium text-gray-700">
-                Insulin Adjustment
+                {t("Insulin Adjustment")}
               </label>
               <textarea
                 id="insulin-adjustment"
                 value={insulinAdjustment}
                 onChange={(e) => setInsulinAdjustment(e.target.value)}
                 rows={2}
-                placeholder="Notes on insulin adjustment..."
+                placeholder={t("Notes on insulin adjustment...")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
           )}
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-800">Advanced Observation</h3>
+            <h3 className="mb-2 text-sm font-semibold text-gray-800">{t("Advanced Observation")}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="respiration-rate" className="mb-1 block text-sm font-medium text-gray-700">
-                  Respiration Rate (breaths/min)
+                  {t("Respiration Rate (breaths/min)")}
                 </label>
                 <input
                   type="number"
@@ -328,14 +330,14 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   value={respirationRate}
                   onChange={(e) => setRespirationRate(e.target.value)}
                   step="0.1"
-                  placeholder="e.g. 16"
+                  placeholder={t("e.g. 16")}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
                 <label htmlFor="avpu" className="mb-1 block text-sm font-medium text-gray-700">
-                  AVPU
+                  {t("AVPU")}
                 </label>
                 <select
                   id="avpu"
@@ -343,7 +345,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   onChange={(e) => setAvpuId(e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">Select AVPU</option>
+                  <option value="">{t("Select AVPU")}</option>
                   {lookups.avpuOptions.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
@@ -354,7 +356,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
 
               <div>
                 <label htmlFor="gcs-eye" className="mb-1 block text-sm font-medium text-gray-700">
-                  GCS Eye
+                  {t("GCS Eye")}
                 </label>
                 <select
                   id="gcs-eye"
@@ -362,7 +364,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   onChange={(e) => setGcsEyeId(e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">Select response</option>
+                  <option value="">{t("Select response")}</option>
                   {lookups.gcsEyeResponses.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
@@ -373,7 +375,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
 
               <div>
                 <label htmlFor="gcs-verbal" className="mb-1 block text-sm font-medium text-gray-700">
-                  GCS Verbal
+                  {t("GCS Verbal")}
                 </label>
                 <select
                   id="gcs-verbal"
@@ -381,7 +383,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   onChange={(e) => setGcsVerbalId(e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">Select response</option>
+                  <option value="">{t("Select response")}</option>
                   {lookups.gcsVerbalResponses.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
@@ -392,7 +394,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
 
               <div>
                 <label htmlFor="gcs-motor" className="mb-1 block text-sm font-medium text-gray-700">
-                  GCS Motor
+                  {t("GCS Motor")}
                 </label>
                 <select
                   id="gcs-motor"
@@ -400,7 +402,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                   onChange={(e) => setGcsMotorId(e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">Select response</option>
+                  <option value="">{t("Select response")}</option>
                   {lookups.gcsMotorResponses.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
@@ -413,7 +415,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
 
           <div>
             <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
-              Reviewed By <span className="text-red-500">*</span>
+              {t("Reviewed By")} <span className="text-red-500">*</span>
             </label>
             <select
               id="reviewed-by"
@@ -423,7 +425,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
               disabled={!residentId}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
             >
-              <option value="">Select staff</option>
+              <option value="">{t("Select staff")}</option>
               {staffOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -439,14 +441,14 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
               disabled={isSaving}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSaving}
               className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? t("Saving...") : t("Save")}
             </button>
           </div>
         </form>

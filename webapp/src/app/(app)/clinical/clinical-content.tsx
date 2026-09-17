@@ -8,6 +8,7 @@ import { NursingChartModule, type NursingChartEntry } from "./nursing-chart-modu
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
+import { useTranslation } from "@/components/language-provider";
 
 type Vital = {
   id: number;
@@ -83,6 +84,7 @@ export function ClinicalContent({
   error,
 }: Props) {
   const push = useNavPush();
+  const t = useTranslation();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabKey>((searchParams.get("tab") as TabKey) || "nursing-chart");
 
@@ -106,13 +108,13 @@ export function ClinicalContent({
     <div>
       <div className="mb-6 flex gap-1 border-b border-gray-200">
         <TabButton active={activeTab === "nursing-chart"} onClick={() => switchTab("nursing-chart")}>
-          Nursing Chart
+          {t("Nursing Chart")}
         </TabButton>
         <TabButton active={activeTab === "vitals"} onClick={() => switchTab("vitals")}>
-          Vital Signs
+          {t("Vital Signs")}
         </TabButton>
         <TabButton active={activeTab === "progress-notes"} onClick={() => switchTab("progress-notes")}>
-          Medical Progress Notes
+          {t("Medical Progress Notes")}
         </TabButton>
       </div>
 

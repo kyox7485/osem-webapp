@@ -5,6 +5,7 @@ import { NewPhysioAssessmentForm, type PreviousAssessment } from "./new-physio-a
 import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-review";
 import type { LookupOption } from "@/lib/types";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
+import { useTranslation } from "@/components/language-provider";
 
 // residentId/residentName/... are null when no patient is selected in the
 // picker above -- Review Notes still has something to show (every entry
@@ -38,6 +39,7 @@ export function PhysioAssessmentTabs({
   previous,
   reviewAssessments,
 }: Props) {
+  const t = useTranslation();
   // Starts on New Entry once a patient is picked -- that should go
   // straight to a clean entry form, not the review list. With no patient
   // picked yet, there's no entry form to show, so start on Review Notes.
@@ -47,10 +49,10 @@ export function PhysioAssessmentTabs({
     <div>
       <div className="mb-4 flex gap-1 border-b border-gray-200">
         <TabButton active={tab === "review"} onClick={() => setTab("review")}>
-          Review Notes
+          {t("Review Notes")}
         </TabButton>
         <TabButton active={tab === "new"} onClick={() => setTab("new")}>
-          New Entry
+          {t("New Entry")}
         </TabButton>
       </div>
 
@@ -72,7 +74,7 @@ export function PhysioAssessmentTabs({
         />
       ) : (
         <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          Select a {careSetting === "OP" ? "patient" : "resident"} above to add a new entry.
+          {t("Select a")} {careSetting === "OP" ? t("patient") : t("resident")} {t("above to add a new entry.")}
         </div>
       )}
     </div>

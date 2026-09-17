@@ -5,12 +5,14 @@ import { getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { UserAccount } from "@/lib/types";
+import { getServerTranslator } from "@/lib/i18n/server";
 import { updateAccount } from "../../actions";
 
 export default async function EditAccountPage({ params }: { params: Promise<{ id: string }> }) {
   const currentUser = await getCurrentUser();
   if (!isAdmin(currentUser)) redirect("/accounts");
 
+  const { t } = await getServerTranslator();
   const { id } = await params;
   const supabase = await createClient();
 
@@ -26,7 +28,7 @@ export default async function EditAccountPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="mb-4 text-lg font-semibold text-gray-900">Edit {account.username}</h1>
+        <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("Edit")} {account.username}</h1>
         <AccountForm account={account as UserAccount} branches={branches} action={boundAction} />
       </div>
       <SetPasswordForm accountId={account.id} />

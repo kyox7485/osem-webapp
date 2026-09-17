@@ -6,6 +6,7 @@ import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
 import { FilterPendingProvider } from "@/components/filter-pending";
 import { NavButton } from "@/components/nav-button";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -22,6 +23,7 @@ export default async function StaffPage({
   }>;
 }) {
   const { q, position_id, status, branch_id, role, department } = await searchParams;
+  const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
   const admin = isAdmin(currentUser);
 
@@ -84,13 +86,13 @@ export default async function StaffPage({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">Staff</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{t("Staff")}</h1>
         {admin && (
           <NavButton
             href="/staff/new"
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
-            New staff
+            {t("New staff")}
           </NavButton>
         )}
       </div>
@@ -103,12 +105,12 @@ export default async function StaffPage({
             <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-2">
-                  <ColumnFilter type="text" label="Name" paramName="q" placeholder="Search by name..." />
+                  <ColumnFilter type="text" label={t("Name")} paramName="q" placeholder={t("Search by name...")} />
                 </th>
                 <th className="px-4 py-2">
                   <ColumnFilter
                     type="select"
-                    label="Position"
+                    label={t("Position")}
                     paramName="position_id"
                     options={positions.map((p) => ({ value: String(p.id), label: p.label }))}
                     defaultValues={positions.map((p) => String(p.id))}
@@ -118,7 +120,7 @@ export default async function StaffPage({
                   <th className="px-4 py-2">
                     <ColumnFilter
                       type="select"
-                      label="Branch"
+                      label={t("Branch")}
                       paramName="branch_id"
                       options={branches.map((b) => ({ value: String(b.id), label: b.label }))}
                       defaultValues={branches.map((b) => String(b.id))}
@@ -128,7 +130,7 @@ export default async function StaffPage({
                 <th className="px-4 py-2">
                   <ColumnFilter
                     type="select"
-                    label="Role"
+                    label={t("Role")}
                     paramName="role"
                     options={STAFF_ROLE_OPTIONS.map((r) => ({ value: r, label: r }))}
                     defaultValues={[...STAFF_ROLE_OPTIONS]}
@@ -137,7 +139,7 @@ export default async function StaffPage({
                 <th className="px-4 py-2">
                   <ColumnFilter
                     type="select"
-                    label="Department"
+                    label={t("Department")}
                     paramName="department"
                     options={DEPARTMENT_OPTIONS.map((d) => ({ value: d, label: d }))}
                     defaultValues={[...DEPARTMENT_OPTIONS]}
@@ -146,7 +148,7 @@ export default async function StaffPage({
                 <th className="px-4 py-2">
                   <ColumnFilter
                     type="select"
-                    label="Status"
+                    label={t("Status")}
                     paramName="status"
                     options={STAFF_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
                     defaultValues={DEFAULT_STATUSES}
@@ -161,10 +163,10 @@ export default async function StaffPage({
                 return (
                   <ClickableRow key={s.id} href={`/staff/${s.id}`} className="hover:bg-gray-50">
                     <td className="px-4 py-2 font-medium text-gray-900">{s.staff_name}</td>
-                    <td className="px-4 py-2 text-gray-600">{position?.name ?? "--"}</td>
+                    <td className="px-4 py-2 text-gray-600">{position?.name ?? t("--")}</td>
                     {admin && <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>}
                     <td className="px-4 py-2 text-gray-600">{s.role}</td>
-                    <td className="px-4 py-2 text-gray-600">{s.department ?? "--"}</td>
+                    <td className="px-4 py-2 text-gray-600">{s.department ?? t("--")}</td>
                     <td className="px-4 py-2">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -180,7 +182,7 @@ export default async function StaffPage({
               {staff.length === 0 && (
                 <tr>
                   <td colSpan={admin ? 6 : 5} className="px-4 py-6 text-center text-gray-400">
-                    No staff found.
+                    {t("No staff found.")}
                   </td>
                 </tr>
               )}

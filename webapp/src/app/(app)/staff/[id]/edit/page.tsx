@@ -4,9 +4,11 @@ import { getPositions, getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Staff } from "@/lib/types";
+import { getServerTranslator } from "@/lib/i18n/server";
 import { updateStaff } from "../../actions";
 
 export default async function EditStaffPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
   if (!isAdmin(currentUser)) redirect("/staff");
 
@@ -25,7 +27,7 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">Edit {staff.staff_name}</h1>
+      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("Edit")} {staff.staff_name}</h1>
       <StaffForm staff={staff as Staff} positions={positions} branches={branches} action={boundAction} />
     </div>
   );

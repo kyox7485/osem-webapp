@@ -5,6 +5,7 @@ import { createNursingChartEntry, getLastFeedingVolume } from "./nursing-chart-a
 import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
+import { useTranslation } from "@/components/language-provider";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 type Meal = {
@@ -48,6 +49,7 @@ function isOthersOption(label: string): boolean {
 }
 
 export function NewNursingChartForm({ residents, allStaff, lookups, presetResidentId, onSaved }: Props) {
+  const t = useTranslation();
   const [residentId, setResidentId] = useState(presetResidentId || "");
   const [entryTimestamp, setEntryTimestamp] = useState(toDatetimeLocalValue(new Date().toISOString()));
   const [tubeFeeding, setTubeFeeding] = useState<"" | "Oral Feed" | "Tube Feeding">("");
@@ -136,11 +138,11 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
     setError("");
 
     if (!residentId) {
-      setError("Please select a resident");
+      setError(t("Please select a resident"));
       return;
     }
     if (!enteredBy) {
-      setError("Please select who entered this");
+      setError(t("Please select who entered this"));
       return;
     }
 
@@ -195,7 +197,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
     setIsSaving(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to save entry");
+      setError(result.error || t("Failed to save entry"));
       return;
     }
 
@@ -207,7 +209,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
     <div className="space-y-4">
       <div>
         <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
-          Resident <span className="text-red-500">*</span>
+          {t("Resident")} <span className="text-red-500">*</span>
         </label>
         <select
           id="resident"
@@ -220,7 +222,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           required
           className={`max-w-md disabled:bg-gray-100 ${selectCls}`}
         >
-          <option value="">Select resident</option>
+          <option value="">{t("Select resident")}</option>
           {residents.map((r) => (
             <option key={r.id} value={r.id}>
               {r.resident_name}
@@ -232,9 +234,9 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
-        <Section title="Entry">
+        <Section title={t("Entry")}>
           <label className="block text-sm text-gray-700">
-            Date &amp; time
+            {t("Date & time")}
             <input
               type="datetime-local"
               value={entryTimestamp}
@@ -245,22 +247,22 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           </label>
         </Section>
 
-        <Section title="Feeding">
+        <Section title={t("Feeding")}>
           <div>
-            <label className="mb-1 block text-sm text-gray-700">Type</label>
+            <label className="mb-1 block text-sm text-gray-700">{t("Type")}</label>
             <select
               value={tubeFeeding}
               onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)}
               className={`w-40 ${selectCls}`}
             >
               <option value="">--</option>
-              <option value="Oral Feed">Oral Feed</option>
-              <option value="Tube Feeding">Tube Feeding</option>
+              <option value="Oral Feed">{t("Oral Feed")}</option>
+              <option value="Tube Feeding">{t("Tube Feeding")}</option>
             </select>
           </div>
 
           <div className="mt-3 space-y-2">
-            <p className="text-sm font-medium text-gray-700">Meals</p>
+            <p className="text-sm font-medium text-gray-700">{t("Meals")}</p>
             {meals.map((meal, i) => (
               <div key={i} className="flex flex-wrap items-start gap-2">
                 {tubeFeeding === "Tube Feeding" ? (
@@ -270,7 +272,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                       onChange={(e) => updateMeal(i, { feedingTimeId: e.target.value })}
                       className={`w-28 ${selectCls}`}
                     >
-                      <option value="">Time</option>
+                      <option value="">{t("Time")}</option>
                       {lookups.feedingTimes.map((o) => (
                         <option key={o.id} value={o.id}>
                           {o.label}
@@ -281,7 +283,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                       type="text"
                       value={meal.feedingVolume}
                       onChange={(e) => updateMeal(i, { feedingVolume: e.target.value })}
-                      placeholder="Feeding volume / regime"
+                      placeholder={t("Feeding volume / regime")}
                       className={`min-w-[220px] flex-1 ${fieldCls}`}
                     />
                   </>
@@ -293,7 +295,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                         onChange={(e) => updateMeal(i, { mealTypeId: e.target.value })}
                         className={`w-40 ${selectCls}`}
                       >
-                        <option value="">Meal type</option>
+                        <option value="">{t("Meal type")}</option>
                         {lookups.mealTypes.map((o) => (
                           <option key={o.id} value={o.id}>
                             {o.label}
@@ -305,7 +307,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                           type="text"
                           value={meal.mealTypeOther}
                           onChange={(e) => updateMeal(i, { mealTypeOther: e.target.value })}
-                          placeholder="Specify meal type"
+                          placeholder={t("Specify meal type")}
                           className={`mt-1 w-40 ${fieldCls}`}
                         />
                       )}
@@ -316,7 +318,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                         onChange={(e) => updateMeal(i, { mealPortionId: e.target.value })}
                         className={`w-32 ${selectCls}`}
                       >
-                        <option value="">Portion</option>
+                        <option value="">{t("Portion")}</option>
                         {lookups.mealPortions.map((o) => (
                           <option key={o.id} value={o.id}>
                             {o.label}
@@ -328,7 +330,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                           type="text"
                           value={meal.mealPortionOther}
                           onChange={(e) => updateMeal(i, { mealPortionOther: e.target.value })}
-                          placeholder="Specify portion"
+                          placeholder={t("Specify portion")}
                           className={`mt-1 w-32 ${fieldCls}`}
                         />
                       )}
@@ -341,7 +343,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                     onClick={() => setMeals((prev) => prev.filter((_, idx) => idx !== i))}
                     className="mt-2 text-xs text-gray-400 hover:text-red-600"
                   >
-                    Remove
+                    {t("Remove")}
                   </button>
                 )}
               </div>
@@ -351,30 +353,30 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
               onClick={() => setMeals((prev) => [...prev, { ...emptyMeal, feedingVolume: defaultFeedingVolume ?? "" }])}
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
             >
-              + Add meal
+              + {t("Add meal")}
             </button>
           </div>
         </Section>
 
-        <Section title="Hygiene care">
+        <Section title={t("Hygiene care")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CollapsibleGroup title="By self">
+            <CollapsibleGroup title={t("By self")}>
               <CheckboxGroup options={lookups.hygieneCareActivities} value={bySelfIds} onChange={setBySelfIds} />
             </CollapsibleGroup>
-            <CollapsibleGroup title="With assistance">
+            <CollapsibleGroup title={t("With assistance")}>
               <CheckboxGroup options={lookups.hygieneCareActivities} value={withAssistIds} onChange={setWithAssistIds} />
             </CollapsibleGroup>
           </div>
         </Section>
 
         {showElimination && (
-          <Section title="Elimination">
+          <Section title={t("Elimination")}>
             <div className="space-y-3">
               {eliminationEpisodes.map((episode, i) => (
                 <div key={i} className="rounded-md border border-gray-200 p-3">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <CheckboxGroup
-                      label="Bowel output"
+                      label={t("Bowel output")}
                       options={lookups.bowelOutputTypes}
                       value={episode.bowelOutputIds}
                       onChange={(ids) => updateEliminationEpisode(i, { bowelOutputIds: ids })}
@@ -382,7 +384,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                       clearAllOptionId={noneBowelOutputId !== undefined ? Number(noneBowelOutputId) : undefined}
                     />
                     <label className="block text-sm text-gray-700">
-                      Pass urine
+                      {t("Pass urine")}
                       <select
                         value={episode.passUrineId}
                         onChange={(e) => updateEliminationEpisode(i, { passUrineId: e.target.value })}
@@ -403,7 +405,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                       onClick={() => setEliminationEpisodes((prev) => prev.filter((_, idx) => idx !== i))}
                       className="mt-2 text-xs text-gray-400 hover:text-red-600"
                     >
-                      Remove
+                      {t("Remove")}
                     </button>
                   )}
                 </div>
@@ -413,56 +415,56 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                 onClick={() => setEliminationEpisodes((prev) => [...prev, { ...emptyEliminationEpisode }])}
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
               >
-                + Add diaper check
+                + {t("Add diaper check")}
               </button>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <label className="block text-sm text-gray-700">
-                Fluid input (ml)
+                {t("Fluid input (ml)")}
                 <input type="number" step="1" value={fluidInput} onChange={(e) => setFluidInput(e.target.value)} className={`mt-1 ${fieldCls}`} />
               </label>
               <label className="block text-sm text-gray-700">
-                Fluid output (ml)
+                {t("Fluid output (ml)")}
                 <input type="number" step="1" value={fluidOutput} onChange={(e) => setFluidOutput(e.target.value)} className={`mt-1 ${fieldCls}`} />
               </label>
               <label className="block text-sm text-gray-700">
-                CBD drainage
+                {t("CBD drainage")}
                 <input type="text" value={cbdDrainage} onChange={(e) => setCbdDrainage(e.target.value)} className={`mt-1 ${fieldCls}`} />
               </label>
             </div>
           </Section>
         )}
 
-        <Section title="Active complaint" collapsible>
+        <Section title={t("Active complaint")} collapsible>
           <CheckboxGroup options={lookups.activeComplaints} value={activeComplaintIds} onChange={setActiveComplaintIds} />
           {othersComplaintId !== undefined && activeComplaintIds.includes(Number(othersComplaintId)) && (
             <input
               type="text"
               value={activeComplaintOther}
               onChange={(e) => setActiveComplaintOther(e.target.value)}
-              placeholder="Specify"
+              placeholder={t("Specify")}
               className={`mt-2 max-w-xs ${fieldCls}`}
             />
           )}
         </Section>
 
-        <Section title="Activity &amp; behaviour" collapsible>
+        <Section title={t("Activity & behaviour")} collapsible>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <CheckboxGroup label="Activity" boldLabel options={lookups.activities} value={activityIds} onChange={setActivityIds} />
+              <CheckboxGroup label={t("Activity")} boldLabel options={lookups.activities} value={activityIds} onChange={setActivityIds} />
               {othersActivityId !== undefined && activityIds.includes(Number(othersActivityId)) && (
                 <input
                   type="text"
                   value={activityOther}
                   onChange={(e) => setActivityOther(e.target.value)}
-                  placeholder="Specify"
+                  placeholder={t("Specify")}
                   className={`mt-2 max-w-xs ${fieldCls}`}
                 />
               )}
             </div>
             <div>
               <CheckboxGroup
-                label="Psycho-social behaviour"
+                label={t("Psycho-social behaviour")}
                 boldLabel
                 options={lookups.psychoSocialBehaviours}
                 value={psychoSocialIds}
@@ -473,13 +475,13 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                   type="text"
                   value={psychoSocialOther}
                   onChange={(e) => setPsychoSocialOther(e.target.value)}
-                  placeholder="Specify"
+                  placeholder={t("Specify")}
                   className={`mt-2 max-w-xs ${fieldCls}`}
                 />
               )}
             </div>
             <label className="block text-sm text-gray-700">
-              <span className="font-bold">Disturbance level</span>
+              <span className="font-bold">{t("Disturbance level")}</span>
               <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-2 max-w-xs ${selectCls}`}>
                 <option value="">--</option>
                 {lookups.disturbanceLevels.map((o) => (
@@ -492,22 +494,22 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           </div>
         </Section>
 
-        <Section title="Notes" collapsible>
+        <Section title={t("Notes")} collapsible>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm text-gray-700">
-              Intervention
+              {t("Intervention")}
               <textarea value={intervention} onChange={(e) => setIntervention(e.target.value)} rows={3} className={`mt-1 ${fieldCls}`} />
             </label>
             <label className="block text-sm text-gray-700">
-              Doctor&apos;s plan
+              {t("Doctor's plan")}
               <textarea value={doctorsPlan} onChange={(e) => setDoctorsPlan(e.target.value)} rows={3} className={`mt-1 ${fieldCls}`} />
             </label>
           </div>
         </Section>
 
-        <Section title="Attribution">
+        <Section title={t("Attribution")}>
           <label className="block max-w-md text-sm text-gray-700">
-            Entered by <span className="text-red-500">*</span>
+            {t("Entered by")} <span className="text-red-500">*</span>
             <select
               value={enteredBy}
               onChange={(e) => setEnteredBy(e.target.value)}
@@ -515,7 +517,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
               disabled={!residentId}
               className={`mt-1 disabled:bg-gray-100 ${selectCls}`}
             >
-              <option value="">Select staff</option>
+              <option value="">{t("Select staff")}</option>
               {staffOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -532,14 +534,14 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             disabled={isSaving}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            Clear
+            {t("Clear")}
           </button>
           <button
             type="submit"
             disabled={isSaving}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("Saving...") : t("Save")}
           </button>
         </div>
       </form>

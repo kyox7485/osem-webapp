@@ -3,11 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { formatBranch } from "@/lib/lookups";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AccountViewPage({ params }: { params: Promise<{ id: string }> }) {
   const currentUser = await getCurrentUser();
   if (!isAdmin(currentUser)) redirect("/residents");
 
+  const { t } = await getServerTranslator();
   const { id } = await params;
   const supabase = await createClient();
 
@@ -32,14 +34,14 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
           href={`/accounts/${account.id}/edit`}
           className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         >
-          Edit
+          {t("Edit")}
         </Link>
       </div>
 
       <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
-          <Row label="Rights" value={account.rights} />
-          <Row label="Status" value={account.status} />
+          <Row label={t("Rights")} value={account.rights ?? t("--")} />
+          <Row label={t("Status")} value={account.status ?? t("--")} />
         </dl>
       </div>
     </div>

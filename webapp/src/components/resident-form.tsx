@@ -16,6 +16,7 @@ import {
   HYGIENE_OPTIONS,
 } from "@/lib/types";
 import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
+import { useTranslation } from "@/components/language-provider";
 
 type StaffOption = LookupOption & { branch_id: number };
 
@@ -48,6 +49,7 @@ export function ResidentForm({
   isAdmin,
   action,
 }: Props) {
+  const t = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [branchId, setBranchId] = useState<string>(
@@ -86,11 +88,11 @@ export function ResidentForm({
     <form action={handleSubmit} className="space-y-6">
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-      <Section title="Basic details">
-        <Field label="Name" required>
+      <Section title={t("Basic details")}>
+        <Field label={t("Name")} required>
           <input name="resident_name" defaultValue={resident?.resident_name} required className={inputCls} />
         </Field>
-        <Field label="Branch" required>
+        <Field label={t("Branch")} required>
           {isAdmin ? (
             <select
               name="branch_id"
@@ -99,7 +101,7 @@ export function ResidentForm({
               required
               className={inputCls}
             >
-              <option value="" disabled>Select a branch</option>
+              <option value="" disabled>{t("Select a branch")}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>{b.label}</option>
               ))}
@@ -107,16 +109,16 @@ export function ResidentForm({
           ) : (
             <>
               <div className={`${inputCls} bg-gray-50 text-gray-500`}>
-                {branches.find((b) => String(b.id) === branchId)?.label ?? "--"}
+                {branches.find((b) => String(b.id) === branchId)?.label ?? t("--")}
               </div>
               <input type="hidden" name="branch_id" value={branchId} />
             </>
           )}
         </Field>
-        <Field label="IC number">
+        <Field label={t("IC number")}>
           <input name="ic_number" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={inputCls} />
         </Field>
-        <Field label="Age">
+        <Field label={t("Age")}>
           <input
             name="age"
             type="number"
@@ -125,25 +127,25 @@ export function ResidentForm({
             className={inputCls}
           />
         </Field>
-        <Field label="Gender">
+        <Field label={t("Gender")}>
           <select name="gender" defaultValue={resident?.gender ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {GENDER_OPTIONS.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
         </Field>
-        <Field label="Marital status">
+        <Field label={t("Marital status")}>
           <select name="marital_status" defaultValue={resident?.marital_status ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {MARITAL_STATUS_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Nationality">
+        <Field label={t("Nationality")}>
           <select name="nationality_id" value={nationalityId} onChange={(e) => setNationalityId(e.target.value)} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {nationalities.map((n) => (
               <option key={n.id} value={n.id}>{n.label}</option>
             ))}
@@ -151,85 +153,85 @@ export function ResidentForm({
         </Field>
       </Section>
 
-      <Section title="Admission">
-        <Field label="Status">
+      <Section title={t("Admission")}>
+        <Field label={t("Status")}>
           <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
             {RESIDENT_STATUS_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Care type">
+        <Field label={t("Care type")}>
           <select name="care_type" defaultValue={resident?.care_type ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {CARE_TYPE_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Admission date">
+        <Field label={t("Admission date")}>
           <input name="admission_date" type="date" defaultValue={resident?.admission_date ?? ""} className={inputCls} />
         </Field>
         {(status === "DISCHARGED" || status === "DECEASED") && (
-          <Field label="Discharge date">
+          <Field label={t("Discharge date")}>
             <input name="discharge_date" type="date" defaultValue={resident?.discharge_date ?? ""} className={inputCls} />
           </Field>
         )}
-        <Field label="Transfer from">
+        <Field label={t("Transfer from")}>
           <select name="transfer_from" defaultValue={resident?.transfer_from ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {TRANSFER_FROM_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Accompanied by">
+        <Field label={t("Accompanied by")}>
           <select name="accompanied_by" defaultValue={resident?.accompanied_by ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {ACCOMPANIED_BY_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Emergency contact" full>
+        <Field label={t("Emergency contact")} full>
           <textarea
             name="emergency_contact"
             defaultValue={resident?.emergency_contact ?? ""}
             rows={2}
-            placeholder="e.g. Jasmin (Daughter) - 012-4948717"
+            placeholder={t("e.g. Jasmin (Daughter) - 012-4948717")}
             className={inputCls}
           />
         </Field>
       </Section>
 
-      <Section title="Care">
-        <Field label="Mobility">
+      <Section title={t("Care")}>
+        <Field label={t("Mobility")}>
           <select name="mobility" defaultValue={resident?.mobility ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {MOBILITY_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Hygiene">
+        <Field label={t("Hygiene")}>
           <select name="hygiene" defaultValue={resident?.hygiene ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {HYGIENE_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </Field>
-        <Field label="Diet type">
+        <Field label={t("Diet type")}>
           <select name="diet_type_id" defaultValue={resident?.diet_type_id ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {dietTypes.map((d) => (
               <option key={d.id} value={d.id}>{d.label}</option>
             ))}
           </select>
         </Field>
-        <Field label="Feeding type">
+        <Field label={t("Feeding type")}>
           <select name="feeding_type_id" defaultValue={resident?.feeding_type_id ?? ""} className={inputCls}>
-            <option value="">--</option>
+            <option value="">{t("--")}</option>
             {feedingTypes.map((f) => (
               <option key={f.id} value={f.id}>{f.label}</option>
             ))}
@@ -237,34 +239,34 @@ export function ResidentForm({
         </Field>
       </Section>
 
-      <Section title="Clinical notes">
-        <Field label="Allergy" full>
+      <Section title={t("Clinical notes")}>
+        <Field label={t("Allergy")} full>
           <input name="allergy" defaultValue={resident?.allergy ?? ""} className={inputCls} />
         </Field>
-        <Field label="Past medical condition" full>
+        <Field label={t("Past medical condition")} full>
           <textarea name="past_medical_condition" defaultValue={resident?.past_medical_condition ?? ""} rows={3} className={inputCls} />
         </Field>
-        <Field label="Assessment and summary" full>
+        <Field label={t("Assessment and summary")} full>
           <textarea name="assessment_and_summary" defaultValue={resident?.assessment_and_summary ?? ""} rows={3} className={inputCls} />
         </Field>
-        <Field label="Current medication list" full>
+        <Field label={t("Current medication list")} full>
           <textarea name="current_medication_list" defaultValue={resident?.current_medication_list ?? ""} rows={3} className={inputCls} />
         </Field>
-        <Field label="TCA notes" full>
+        <Field label={t("TCA notes")} full>
           <textarea
             name="tca_notes"
             defaultValue={resident?.tca_notes ?? ""}
             rows={2}
-            placeholder="e.g. MOPD 1/12/2026, SOPD 21/11/2026"
+            placeholder={t("e.g. MOPD 1/12/2026, SOPD 21/11/2026")}
             className={inputCls}
           />
         </Field>
       </Section>
 
-      <Section title="Attribution">
-        <Field label="Reviewed by" required full>
+      <Section title={t("Attribution")}>
+        <Field label={t("Reviewed by")} required full>
           <select name="reviewed_by" defaultValue={resident?.reviewed_by ?? ""} required disabled={!branchId} className={inputCls}>
-            <option value="" disabled>{branchId ? "Select who's entering this" : "Select a branch first"}</option>
+            <option value="" disabled>{branchId ? t("Select who's entering this") : t("Select a branch first")}</option>
             {staffForBranch.map((s) => (
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
@@ -277,7 +279,7 @@ export function ResidentForm({
         disabled={submitting}
         className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
       >
-        {submitting ? "Saving..." : resident ? "Save changes" : "Create resident"}
+        {submitting ? t("Saving...") : resident ? t("Save changes") : t("Create resident")}
       </button>
     </form>
   );

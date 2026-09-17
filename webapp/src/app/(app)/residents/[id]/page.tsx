@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatBranch } from "@/lib/lookups";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function ResidentViewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = await getServerTranslator();
   const { id } = await params;
   const supabase = await createClient();
 
@@ -34,57 +36,57 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
             href={`/residents/${resident.id}/progress-notes`}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Medical Progress Notes
+            {t("Medical Progress Notes")}
           </Link>
           <Link
             href={`/physiotherapy?type=ip&resident=${resident.id}`}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Physiotherapy
+            {t("Physiotherapy")}
           </Link>
           <Link
             href={`/residents/${resident.id}/edit`}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
-            Edit
+            {t("Edit")}
           </Link>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <InfoCard title="Basic details">
-          <Row label="Resident ID" value={resident.ResidentID} />
-          <Row label="IC number" value={resident.ic_number} />
-          <Row label="Age" value={resident.age} />
-          <Row label="Gender" value={resident.gender} />
-          <Row label="Marital status" value={resident.marital_status} />
-          <Row label="Nationality" value={nationality?.country_name} />
+        <InfoCard title={t("Basic details")}>
+          <Row label={t("Resident ID")} value={resident.ResidentID} empty={t("--")} />
+          <Row label={t("IC number")} value={resident.ic_number} empty={t("--")} />
+          <Row label={t("Age")} value={resident.age} empty={t("--")} />
+          <Row label={t("Gender")} value={resident.gender} empty={t("--")} />
+          <Row label={t("Marital status")} value={resident.marital_status} empty={t("--")} />
+          <Row label={t("Nationality")} value={nationality?.country_name} empty={t("--")} />
         </InfoCard>
 
-        <InfoCard title="Admission">
-          <Row label="Care type" value={resident.care_type} />
-          <Row label="Admission date" value={resident.admission_date} />
-          <Row label="Discharge date" value={resident.discharge_date} />
-          <Row label="Transfer from" value={resident.transfer_from} />
-          <Row label="Accompanied by" value={resident.accompanied_by} />
-          <Row label="Emergency contact" value={resident.emergency_contact} multiline />
+        <InfoCard title={t("Admission")}>
+          <Row label={t("Care type")} value={resident.care_type} empty={t("--")} />
+          <Row label={t("Admission date")} value={resident.admission_date} empty={t("--")} />
+          <Row label={t("Discharge date")} value={resident.discharge_date} empty={t("--")} />
+          <Row label={t("Transfer from")} value={resident.transfer_from} empty={t("--")} />
+          <Row label={t("Accompanied by")} value={resident.accompanied_by} empty={t("--")} />
+          <Row label={t("Emergency contact")} value={resident.emergency_contact} multiline empty={t("--")} />
         </InfoCard>
 
-        <InfoCard title="Care">
-          <Row label="Mobility" value={resident.mobility} />
-          <Row label="Hygiene" value={resident.hygiene} />
-          <Row label="Diet type" value={dietType?.name} />
-          <Row label="Feeding type" value={feedingType?.name} />
+        <InfoCard title={t("Care")}>
+          <Row label={t("Mobility")} value={resident.mobility} empty={t("--")} />
+          <Row label={t("Hygiene")} value={resident.hygiene} empty={t("--")} />
+          <Row label={t("Diet type")} value={dietType?.name} empty={t("--")} />
+          <Row label={t("Feeding type")} value={feedingType?.name} empty={t("--")} />
         </InfoCard>
       </div>
 
       <div className="mt-4">
-        <InfoCard title="Clinical notes">
-          <Row label="Allergy" value={resident.allergy} />
-          <Row label="Past medical condition" value={resident.past_medical_condition} multiline />
-          <Row label="Assessment and summary" value={resident.assessment_and_summary} multiline />
-          <Row label="Current medication list" value={resident.current_medication_list} multiline />
-          <Row label="TCA notes" value={resident.tca_notes} multiline />
+        <InfoCard title={t("Clinical notes")}>
+          <Row label={t("Allergy")} value={resident.allergy} empty={t("--")} />
+          <Row label={t("Past medical condition")} value={resident.past_medical_condition} multiline empty={t("--")} />
+          <Row label={t("Assessment and summary")} value={resident.assessment_and_summary} multiline empty={t("--")} />
+          <Row label={t("Current medication list")} value={resident.current_medication_list} multiline empty={t("--")} />
+          <Row label={t("TCA notes")} value={resident.tca_notes} multiline empty={t("--")} />
         </InfoCard>
       </div>
     </div>
@@ -100,12 +102,22 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function Row({ label, value, multiline }: { label: string; value: string | number | null | undefined; multiline?: boolean }) {
+function Row({
+  label,
+  value,
+  multiline,
+  empty,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+  multiline?: boolean;
+  empty?: string;
+}) {
   return (
     <div>
       <dt className="text-xs text-gray-400">{label}</dt>
       <dd className={`text-sm text-gray-800 ${multiline ? "whitespace-pre-wrap" : ""}`}>
-        {value !== null && value !== undefined && value !== "" ? value : "--"}
+        {value !== null && value !== undefined && value !== "" ? value : (empty ?? "--")}
       </dd>
     </div>
   );

@@ -18,6 +18,7 @@ import {
 } from "@/lib/vital-thresholds";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
+import { useTranslation } from "@/components/language-provider";
 
 type Vital = {
   id: number;
@@ -60,6 +61,7 @@ type Props = {
 export function VitalsTable({ vitals, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error }: Props) {
   const router = useRouter();
   const push = useNavPush();
+  const t = useTranslation();
   const [showForm, setShowForm] = useState(false);
 
   function applyFilters(residentId: string, start: string, end: string) {
@@ -82,7 +84,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <div>
             <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700">
-              Resident
+              {t("Resident")}
             </label>
             <select
               id="resident-filter"
@@ -90,7 +92,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
               onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              <option value="">All residents</option>
+              <option value="">{t("All residents")}</option>
               {residents.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.resident_name}
@@ -101,7 +103,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
 
           <div>
             <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700">
-              Start date
+              {t("Start date")}
             </label>
             <input
               type="date"
@@ -114,7 +116,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
 
           <div>
             <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700">
-              End date
+              {t("End date")}
             </label>
             <input
               type="date"
@@ -131,14 +133,14 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
               onClick={() => setShowForm(true)}
               className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
-              Add Entry
+              {t("Add Entry")}
             </button>
             <button
               type="button"
               onClick={handlePrint}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
-              Print
+              {t("Print")}
             </button>
           </div>
         </div>
@@ -149,10 +151,10 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
 
       <div className="flex items-center gap-4 text-xs text-gray-500 print-hidden">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded-sm bg-red-100" /> Critical reading
+          <span className="inline-block h-3 w-3 rounded-sm bg-red-100" /> {t("Critical reading")}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded-sm bg-amber-100" /> Out of normal range
+          <span className="inline-block h-3 w-3 rounded-sm bg-amber-100" /> {t("Out of normal range")}
         </span>
       </div>
 
@@ -163,24 +165,24 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
                 <th className="px-4 py-3 font-medium text-gray-900"></th>
-                <th className="px-4 py-3 font-medium text-gray-900">Date/Time</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Resident</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Systolic BP</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Diastolic BP</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Heart Rate</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Temp (°C)</th>
-                <th className="px-4 py-3 font-medium text-gray-900">SpO2</th>
-                <th className="px-4 py-3 font-medium text-gray-900">DXT</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Insulin Adj.</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Advanced Obs.</th>
-                <th className="px-4 py-3 font-medium text-gray-900">Reviewed By</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Date/Time")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Resident")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Systolic BP")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Diastolic BP")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Heart Rate")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Temp (°C)")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("SpO2")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("DXT")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Insulin Adj.")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Advanced Obs.")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900">{t("Reviewed By")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {vitals.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
-                    No vital signs recorded yet.
+                    {t("No vital signs recorded yet.")}
                   </td>
                 </tr>
               ) : (
