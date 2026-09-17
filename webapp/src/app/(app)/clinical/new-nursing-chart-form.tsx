@@ -200,7 +200,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         <Section title="Feeding">
           <label className="block text-sm text-gray-700">
             Type
-            <select value={tubeFeeding} onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)} className={`mt-1 max-w-xs ${fieldCls}`}>
+            <select value={tubeFeeding} onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)} className={`mt-2 max-w-xs ${fieldCls}`}>
               <option value="">--</option>
               <option value="Oral Feed">Oral Feed</option>
               <option value="Tube Feeding">Tube Feeding</option>
@@ -316,11 +316,11 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           </Section>
         )}
 
-        <Section title="Active complaint">
+        <Section title="Active complaint" collapsible>
           <CheckboxGroup options={lookups.activeComplaints} value={activeComplaintIds} onChange={setActiveComplaintIds} />
         </Section>
 
-        <Section title="Activity &amp; behaviour">
+        <Section title="Activity &amp; behaviour" collapsible>
           <div className="grid grid-cols-1 gap-4">
             <CheckboxGroup label="Activity" boldLabel options={lookups.activities} value={activityIds} onChange={setActivityIds} />
             <CheckboxGroup
@@ -332,7 +332,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             />
             <label className="block text-sm text-gray-700">
               <span className="font-bold">Disturbance level</span>
-              <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-1 max-w-xs ${fieldCls}`}>
+              <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-2 max-w-xs ${fieldCls}`}>
                 <option value="">--</option>
                 {lookups.disturbanceLevels.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -344,7 +344,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           </div>
         </Section>
 
-        <Section title="Notes">
+        <Section title="Notes" collapsible>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm text-gray-700">
               Intervention
@@ -399,11 +399,33 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, collapsible, children }: { title: string; collapsible?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(!collapsible);
+
+  if (!collapsible) {
+    return (
+      <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-bold text-gray-900">{title}</h3>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-bold text-gray-900">{title}</h3>
-      {children}
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-1.5 text-left">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`}
+        >
+          <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+      </button>
+      {open && <div className="mt-3">{children}</div>}
     </div>
   );
 }
