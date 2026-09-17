@@ -151,6 +151,7 @@ export function ProgressNotesModule({
               notes.map((note) => {
                 const isExpanded = expandedId === note.id;
                 const details = PLAN_LABELS.filter(([key]) => note[key]);
+                const recordedCount = (note.progress_note ? 1 : 0) + details.length;
                 return (
                   <div
                     key={note.id}
@@ -178,26 +179,31 @@ export function ProgressNotesModule({
                         </svg>
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
-
-                    {!isExpanded && details.length > 0 && (
-                      <p className="mt-2 text-xs text-gray-400">
-                        {details.length} more field{details.length > 1 ? "s" : ""} recorded -- click to view
+                    {!isExpanded && (
+                      <p className="text-sm text-gray-700">
+                        {recordedCount > 0 ? (
+                          <span className="text-gray-400">{recordedCount} field{recordedCount > 1 ? "s" : ""} recorded -- click to view</span>
+                        ) : (
+                          <span className="text-gray-400">Click to view</span>
+                        )}
                       </p>
                     )}
 
                     {isExpanded && (
                       <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
-                        {details.length === 0 ? (
-                          <p className="text-sm text-gray-400">No additional plan fields recorded.</p>
-                        ) : (
-                          details.map(([key, label]) => (
-                            <p key={key} className="text-sm text-gray-600">
-                              <span className="font-medium text-gray-500">{label}: </span>
-                              {note[key] as string}
-                            </p>
-                          ))
+                        {note.progress_note && (
+                          <p className="whitespace-pre-wrap text-sm text-gray-600">
+                            <span className="font-medium text-gray-500">Progress note: </span>
+                            {note.progress_note}
+                          </p>
                         )}
+                        {details.map(([key, label]) => (
+                          <p key={key} className="text-sm text-gray-600">
+                            <span className="font-medium text-gray-500">{label}: </span>
+                            {note[key] as string}
+                          </p>
+                        ))}
+                        {recordedCount === 0 && <p className="text-sm text-gray-400">No fields recorded.</p>}
                       </div>
                     )}
 

@@ -164,7 +164,6 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
 
                     {!isExpanded && (
                       <p className="text-sm text-gray-700">
-                        {entry.tube_feeding && <span className="mr-2">{entry.tube_feeding}</span>}
                         {tagGroups.length > 0 ? (
                           <span className="text-gray-400">{tagGroups.length} area{tagGroups.length > 1 ? "s" : ""} recorded -- click to view</span>
                         ) : (

@@ -52,19 +52,14 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
               <span>{formatDateTime(a.entry_timestamp)}</span>
-              {a.patient_name && <span className="font-medium text-gray-600">{a.patient_name}</span>}
+              {a.patient_name && <span className="font-bold text-gray-900">{a.patient_name}</span>}
               <span>{a.treatment_type ?? "--"}</span>
               <span>Documented by: {a.documented_by_name}</span>
               <span className="font-semibold text-indigo-600">Score: {a.total_score ?? "--"}</span>
             </div>
 
-            {!isExpanded && a.chief_complaint && (
-              <p className="mt-2 line-clamp-2 text-sm text-gray-700">{a.chief_complaint}</p>
-            )}
-
             {isExpanded && (
               <div className="mt-3 space-y-3 border-t border-gray-100 pt-3 text-sm">
-                <ReadRow label="Chief Complaint" value={a.chief_complaint} />
                 <ReadRow label="Current History" value={a.current_history} />
                 <ReadRow label="Past Medical History" value={a.past_medical_history} />
                 <ReadRow label="Social History" value={a.social_history} />
