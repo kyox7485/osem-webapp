@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch } from "@/lib/lookups";
+import { getAllStaffWithBranch, getPhysioIpBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 import {
@@ -56,6 +56,7 @@ function pickCoordination(row: any): CoordinationScores {
   };
 }
 
+
 export default async function PhysiotherapyPage({
   searchParams,
 }: {
@@ -77,7 +78,11 @@ export default async function PhysiotherapyPage({
       : supabase.from("tbl_residents").select("id, resident_name, branch_id").eq("status", "ACTIVE").order("resident_name");
 
   if (account.rights !== "ADMIN") {
-    patientQuery = patientQuery.eq("branch_id", account.branch_id);
+    if (careSetting === "OP") {
+      patientQuery = patientQuery.eq("branch_id", account.branch_id);
+    } else {
+      patientQuery = patientQuery.in("branch_id", await getPhysioIpBranchIds(account));
+    }
   }
 
   const { data: patients } = await patientQuery;
@@ -104,37 +109,134 @@ export default async function PhysiotherapyPage({
 
         {careSetting === "OP" && <NewOpPatientForm />}
 
-        {!selectedPatient ? (
-          <div className="mt-4 rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-            Select a {careSetting === "OP" ? "patient" : "resident"} to view or add a physiotherapy assessment.
-          </div>
-        ) : (
-          <div className="mt-4">
-            {/* Keyed by patient so switching fully remounts the form (fresh
-                state, tab reset to New Entry) instead of reusing the
-                previous patient's component instance. */}
-            <PhysiotherapyResidentContent
-              key={`${careSetting}-${selectedPatient.id}`}
-              residentId={selectedPatient.id}
-              careSetting={careSetting}
-              account={account}
-            />
-          </div>
-        )}
+        <div className="mt-4">
+          {/* Keyed by patient (or "all") so switching fully remounts (fresh
+              state, tab reset) instead of reusing the previous instance. */}
+          <PhysiotherapyContent
+            key={`${careSetting}-${selectedPatient?.id ?? "all"}`}
+            residentId={selectedPatient?.id ?? null}
+            careSetting={careSetting}
+            account={account}
+          />
+        </div>
       </PhysioDirtyProvider>
     </div>
   );
 }
 
-async function PhysiotherapyResidentContent({
+// Same "unfiltered by default" convention as Clinical's Vital Signs and
+// Medical Progress Notes tabs: with no specific patient picked above,
+// Review Notes shows every entry for the branch(es)/care setting in
+// scope, each row labelled with whose it is. New Entry has nothing to
+// attach to without a patient, so it just prompts to pick one (handled by
+// PhysioAssessmentTabs itself when residentId is null).
+async function AllPatientsReview({
+  careSetting,
+  account,
+}: {
+  careSetting: PhysioCareSetting;
+  account: { rights: string; branch_id: number; branch_function: string | null };
+}) {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("physio_assessments")
+    .select(
+      careSetting === "OP"
+        ? "*, tbl_staff!documented_by(staff_name), tbl_physio_op_patients!op_patient_id(patient_name)"
+        : "*, tbl_staff!documented_by(staff_name), tbl_residents!resident_id(resident_name)"
+    )
+    .eq("care_setting", careSetting)
+    .order("entry_timestamp", { ascending: false });
+
+  if (account.rights !== "ADMIN") {
+    const allowedBranchIds = careSetting === "OP" ? [account.branch_id] : await getPhysioIpBranchIds(account);
+    query = query.in("branch_id", allowedBranchIds);
+  }
+
+  const { data: assessments, error } = await query;
+
+  type RawRow = {
+    id: number;
+    entry_timestamp: string;
+    treatment_type: string | null;
+    total_score: number | null;
+    chief_complaint: string | null;
+    current_history: string | null;
+    past_medical_history: string | null;
+    social_history: string | null;
+    impression: string | null;
+    plan_intervention: string | null;
+    evaluation: string | null;
+    treatment_compliance: string | null;
+    tbl_staff: { staff_name: string } | { staff_name: string }[] | null;
+    tbl_residents?: { resident_name: string } | { resident_name: string }[] | null;
+    tbl_physio_op_patients?: { patient_name: string } | { patient_name: string }[] | null;
+  };
+
+  const reviewAssessments: ReviewAssessment[] = ((assessments ?? []) as unknown as RawRow[]).map((a) => {
+    const author = Array.isArray(a.tbl_staff) ? a.tbl_staff[0] : a.tbl_staff;
+    const patientRaw = careSetting === "OP" ? a.tbl_physio_op_patients : a.tbl_residents;
+    const patient = Array.isArray(patientRaw) ? patientRaw[0] : patientRaw;
+    return {
+      id: a.id,
+      entry_timestamp: a.entry_timestamp,
+      treatment_type: a.treatment_type,
+      total_score: a.total_score,
+      documented_by_name: author?.staff_name ?? "--",
+      patient_name: patient ? ("patient_name" in patient ? patient.patient_name : patient.resident_name) : "--",
+      chief_complaint: a.chief_complaint,
+      current_history: a.current_history,
+      past_medical_history: a.past_medical_history,
+      social_history: a.social_history,
+      impression: a.impression,
+      plan_intervention: a.plan_intervention,
+      evaluation: a.evaluation,
+      treatment_compliance: a.treatment_compliance,
+      // Body chart / exam grid aren't fetched here -- pulling those for
+      // every assessment across every patient in scope would be a much
+      // heavier query for a list that's mostly used to spot an entry and
+      // then open that one patient. The narrative fields above (and the
+      // summary line) are enough to identify it; switching to that
+      // specific patient shows the full detail.
+      examRows: [],
+      bodyChart: [],
+    };
+  });
+
+  return (
+    <>
+      {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
+      <PhysioAssessmentTabs
+        residentId={null}
+        residentName={null}
+        icNumber={null}
+        gender={null}
+        age={null}
+        careSetting={careSetting}
+        defaultEntryTimestamp={toDatetimeLocalValue(new Date().toISOString())}
+        pastMedicalCondition={null}
+        staffOptions={[]}
+        previous={null}
+        reviewAssessments={reviewAssessments}
+      />
+    </>
+  );
+}
+
+async function PhysiotherapyContent({
   residentId,
   careSetting,
   account,
 }: {
-  residentId: number;
+  residentId: number | null;
   careSetting: PhysioCareSetting;
-  account: { rights: string; branch_id: number };
+  account: { rights: string; branch_id: number; branch_function: string | null };
 }) {
+  if (residentId === null) {
+    return <AllPatientsReview careSetting={careSetting} account={account} />;
+  }
+
   const supabase = await createClient();
 
   // OP patients don't have past_medical_condition -- their equivalent
@@ -157,8 +259,11 @@ async function PhysiotherapyResidentContent({
     return <p className="text-sm text-red-600">{careSetting === "OP" ? "Patient" : "Resident"} not found.</p>;
   }
 
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
-    return <p className="text-sm text-red-600">Access denied.</p>;
+  if (account.rights !== "ADMIN") {
+    const allowedBranchIds = careSetting === "OP" ? [account.branch_id] : await getPhysioIpBranchIds(account);
+    if (!allowedBranchIds.includes(resident.branch_id)) {
+      return <p className="text-sm text-red-600">Access denied.</p>;
+    }
   }
 
   const residentName = careSetting === "OP" ? (resident as { patient_name: string }).patient_name : (resident as { resident_name: string }).resident_name;

@@ -20,6 +20,11 @@ export type CurrentUser = {
   rights: Rights;
   branch_id: number;
   branch_name: string;
+  // tbl_branches.Function: "NUR" (a residential/nursing branch), "PHY" (a
+  // standalone physio hub, e.g. AMP), "HQ". Lets physiotherapy-module
+  // access rules key off "is this account based at the physio hub" without
+  // hardcoding a branch id -- see lib/physio-scoring's PHYSIO_HUB check.
+  branch_function: string | null;
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -31,7 +36,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data, error } = await supabase
     .from("tbl_user_accounts")
-    .select("id, username, email, rights, branch_id, tbl_branches(locale:BranchLocale, code:BranchCode)")
+    .select("id, username, email, rights, branch_id, tbl_branches(locale:BranchLocale, code:BranchCode, function:Function)")
     .eq("auth_user_id", user.id)
     .single();
 
@@ -46,6 +51,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     rights: data.rights,
     branch_id: data.branch_id,
     branch_name: branch ? formatBranch(branch) : "",
+    branch_function: branch?.function ?? null,
   };
 }
 

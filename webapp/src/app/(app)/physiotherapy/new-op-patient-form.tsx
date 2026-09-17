@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavPush } from "@/components/nav-loading";
 import { createOpPatient } from "./actions";
 
-// Quick-register form for a walk-in outpatient, shown inline on the
+const fieldCls =
+  "mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+
+// Quick-register modal for a walk-in outpatient, opened from the
 // Outpatient tab next to the patient picker -- a physiotherapist
 // shouldn't have to leave Physiotherapy (or go through the Residents
 // module, which OP patients aren't part of) just to add a name.
@@ -18,6 +21,7 @@ export function NewOpPatientForm() {
   const [contact, setContact] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   function reset() {
     setPatientName("");
@@ -27,6 +31,24 @@ export function NewOpPatientForm() {
     setContact("");
     setError("");
   }
+
+  function close() {
+    reset();
+    setOpen(false);
+  }
+
+  // Focus the first field as soon as the modal opens, and let Escape close
+  // it -- same expectations as any other dialog in the app.
+  useEffect(() => {
+    if (!open) return;
+    nameInputRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,13 +74,12 @@ export function NewOpPatientForm() {
       return;
     }
 
-    reset();
-    setOpen(false);
+    close();
     push(`/physiotherapy?type=op&resident=${result.id}`);
   }
 
-  if (!open) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -66,92 +87,89 @@ export function NewOpPatientForm() {
       >
         + New patient
       </button>
-    );
-  }
 
-  return (
-    <form onSubmit={handleSubmit} className="mt-3 rounded-md border border-indigo-200 bg-indigo-50 p-3">
-      <p className="mb-2 text-sm font-medium text-indigo-900">Register new outpatient</p>
-
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="block text-sm text-gray-700 sm:col-span-2 lg:col-span-2">
-          Patient name
-          <input
-            type="text"
-            required
-            value={patientName}
-            onChange={(e) => setPatientName(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </label>
-
-        <label className="block text-sm text-gray-700">
-          IC number
-          <input
-            type="text"
-            value={icNumber}
-            onChange={(e) => setIcNumber(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </label>
-
-        <label className="block text-sm text-gray-700">
-          Age
-          <input
-            type="number"
-            min={0}
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </label>
-
-        <label className="block text-sm text-gray-700">
-          Gender
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value as "" | "M" | "F")}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          >
-            <option value="">--</option>
-            <option value="M">M</option>
-            <option value="F">F</option>
-          </select>
-        </label>
-
-        <label className="block text-sm text-gray-700">
-          Contact
-          <input
-            type="text"
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </label>
-      </div>
-
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            reset();
-            setOpen(false);
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) close();
           }}
-          disabled={saving}
-          className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
         >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {saving ? "Registering..." : "Register patient"}
-        </button>
-      </div>
-    </form>
+          <div role="dialog" aria-modal="true" aria-labelledby="new-op-patient-title" className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h3 id="new-op-patient-title" className="mb-4 text-sm font-bold text-gray-900">
+              Register new outpatient
+            </h3>
+
+            <form onSubmit={handleSubmit}>
+              {error && <div className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-800">{error}</div>}
+
+              {/* Every field the same width, one per row -- easier to scan
+                  and consistent regardless of how long a label is. */}
+              <div className="space-y-3">
+                <label className="block text-sm text-gray-700">
+                  Patient name
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    required
+                    value={patientName}
+                    onChange={(e) => setPatientName(e.target.value)}
+                    className={fieldCls}
+                  />
+                </label>
+
+                <label className="block text-sm text-gray-700">
+                  IC number
+                  <input type="text" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={fieldCls} />
+                </label>
+
+                <label className="block text-sm text-gray-700">
+                  Age
+                  <input
+                    type="number"
+                    min={0}
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className={fieldCls}
+                  />
+                </label>
+
+                <label className="block text-sm text-gray-700">
+                  Gender
+                  <select value={gender} onChange={(e) => setGender(e.target.value as "" | "M" | "F")} className={fieldCls}>
+                    <option value="">--</option>
+                    <option value="M">M</option>
+                    <option value="F">F</option>
+                  </select>
+                </label>
+
+                <label className="block text-sm text-gray-700">
+                  Contact
+                  <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} className={fieldCls} />
+                </label>
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={close}
+                  disabled={saving}
+                  className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {saving ? "Registering..." : "Register patient"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

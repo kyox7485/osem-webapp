@@ -47,6 +47,18 @@ export async function getBranches(onlyFunction?: string): Promise<LookupOption[]
   return (data ?? []).map((r) => ({ id: r.id, label: formatBranch(r) }));
 }
 
+// A physio-hub branch (Function = "PHY", e.g. AMP) has no residents of its
+// own -- its physiotherapists cover the residential (Function = "NUR")
+// branches for inpatient work instead, and their own hub for outpatients.
+// Used by the physiotherapy module's branch-scoping checks. Driven by the
+// Function column rather than a hardcoded branch id, so a newly added
+// nursing branch (or a second physio hub) is in scope automatically.
+export async function getPhysioIpBranchIds(account: { branch_id: number; branch_function: string | null }): Promise<number[]> {
+  if (account.branch_function !== "PHY") return [account.branch_id];
+  const nurBranches = await getBranches("NUR");
+  return nurBranches.map((b) => Number(b.id));
+}
+
 // Used for "who actually did this" pickers on entry forms (progress notes,
 // resident admission, nursing chart entries, stock entries, etc.) -- branch
 // logins can be shared, so the app never assumes the signed-in account is

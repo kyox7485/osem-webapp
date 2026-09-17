@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
+import { getPhysioIpBranchIds } from "@/lib/lookups";
 import { revalidatePath } from "next/cache";
 import {
   computePhysioScore,
@@ -113,7 +114,14 @@ export async function createPhysioAssessment(
     return { success: false, error: input.careSetting === "OP" ? "Patient not found" : "Resident not found" };
   }
 
-  if (account.rights !== "ADMIN" && patient.branch_id !== account.branch_id) {
+  const allowedBranchIds =
+    account.rights === "ADMIN"
+      ? null
+      : input.careSetting === "OP"
+        ? [account.branch_id]
+        : await getPhysioIpBranchIds(account);
+
+  if (allowedBranchIds && !allowedBranchIds.includes(patient.branch_id)) {
     return { success: false, error: "Access denied" };
   }
 

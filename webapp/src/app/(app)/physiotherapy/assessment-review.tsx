@@ -10,6 +10,10 @@ export type ReviewAssessment = {
   treatment_type: string | null;
   total_score: number | null;
   documented_by_name: string;
+  // Only set in the "all patients" unfiltered view (no one patient picked
+  // above) -- each entry needs to say whose it is once the list spans more
+  // than one person.
+  patient_name?: string;
   chief_complaint: string | null;
   current_history: string | null;
   past_medical_history: string | null;
@@ -48,6 +52,7 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
               <span>{formatDateTime(a.entry_timestamp)}</span>
+              {a.patient_name && <span className="font-medium text-gray-600">{a.patient_name}</span>}
               <span>{a.treatment_type ?? "--"}</span>
               <span>Documented by: {a.documented_by_name}</span>
               <span className="font-semibold text-indigo-600">Score: {a.total_score ?? "--"}</span>

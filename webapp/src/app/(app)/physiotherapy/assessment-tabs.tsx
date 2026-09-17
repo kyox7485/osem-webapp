@@ -6,9 +6,14 @@ import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-revi
 import type { LookupOption } from "@/lib/types";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
 
+// residentId/residentName/... are null when no patient is selected in the
+// picker above -- Review Notes still has something to show (every entry
+// for the branch/care setting, same "unfiltered by default" convention as
+// Clinical's Vital Signs and Medical Progress Notes tabs), it's only New
+// Entry that genuinely needs one specific patient chosen first.
 type Props = {
-  residentId: number;
-  residentName: string;
+  residentId: number | null;
+  residentName: string | null;
   icNumber: string | null;
   gender: string | null;
   age: number | null;
@@ -33,9 +38,10 @@ export function PhysioAssessmentTabs({
   previous,
   reviewAssessments,
 }: Props) {
-  // Always starts on New Entry -- picking a resident (or landing here fresh)
-  // should go straight to a clean entry form, not the review list.
-  const [tab, setTab] = useState<"review" | "new">("new");
+  // Starts on New Entry once a patient is picked -- that should go
+  // straight to a clean entry form, not the review list. With no patient
+  // picked yet, there's no entry form to show, so start on Review Notes.
+  const [tab, setTab] = useState<"review" | "new">(residentId ? "new" : "review");
 
   return (
     <div>
@@ -50,7 +56,7 @@ export function PhysioAssessmentTabs({
 
       {tab === "review" ? (
         <PhysioAssessmentReview assessments={reviewAssessments} />
-      ) : (
+      ) : residentId && residentName ? (
         <NewPhysioAssessmentForm
           residentId={residentId}
           residentName={residentName}
@@ -64,6 +70,10 @@ export function PhysioAssessmentTabs({
           previous={previous}
           onSaved={() => setTab("review")}
         />
+      ) : (
+        <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+          Select a {careSetting === "OP" ? "patient" : "resident"} above to add a new entry.
+        </div>
       )}
     </div>
   );
