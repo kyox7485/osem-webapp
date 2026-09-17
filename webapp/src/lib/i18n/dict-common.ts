@@ -3,7 +3,7 @@
 // English text is the key -- see translate.ts.
 export const dictCommon: Record<string, string> = {
   // Nav
-  Residents: "Penduduk",
+  Residents: "Penghuni",
   Clinical: "Klinikal",
   Physiotherapy: "Fisioterapi",
   Staff: "Kakitangan",
@@ -41,16 +41,15 @@ export const dictCommon: Record<string, string> = {
   Yes: "Ya",
   No: "Tidak",
   "--": "--",
-  "All residents": "Semua penduduk",
-  "Select resident": "Pilih penduduk",
+  "All residents": "Semua penghuni",
+  "Select resident": "Pilih penghuni",
   "Select staff": "Pilih kakitangan",
-  Resident: "Penduduk",
+  Resident: "Penghuni",
   "Start date": "Tarikh mula",
   "End date": "Tarikh tamat",
   "Click to view": "Klik untuk lihat",
 
-  // Language switcher itself
+  // Language switcher itself -- option text is language names, shown as-is
+  // regardless of current language, so not run through t().
   Language: "Bahasa",
-  "Malaysia English": "Malaysia English",
-  "Bahasa Malaysia": "Bahasa Malaysia",
 };

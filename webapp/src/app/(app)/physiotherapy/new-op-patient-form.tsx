@@ -121,7 +121,7 @@ export function NewOpPatientForm() {
                 </label>
 
                 <label className="block text-sm text-gray-700">
-                  {t("IC number")}
+                  {t("IC No. / Passport No.")}
                   <input type="text" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={fieldCls} />
                 </label>
 

@@ -43,6 +43,7 @@ const DXT_REMARK_OPTIONS = ["Fasting", "Post-Meal 1hr", "Post-Meal 2hr", "Post-M
 
 export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }: Props) {
   const t = useTranslation();
+  const [advancedObsOpen, setAdvancedObsOpen] = useState(false);
   const [residentId, setResidentId] = useState("");
   const [systolicBp, setSystolicBp] = useState("");
   const [diastolicBp, setDiastolicBp] = useState("");
@@ -318,99 +319,116 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
           )}
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-800">{t("Advanced Observation")}</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="respiration-rate" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("Respiration Rate (breaths/min)")}
-                </label>
-                <input
-                  type="number"
-                  id="respiration-rate"
-                  value={respirationRate}
-                  onChange={(e) => setRespirationRate(e.target.value)}
-                  step="0.1"
-                  placeholder={t("e.g. 16")}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
+            <button
+              type="button"
+              onClick={() => setAdvancedObsOpen((o) => !o)}
+              className="flex w-full items-center gap-1.5 text-left"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                className={`text-gray-400 transition-transform ${advancedObsOpen ? "rotate-90" : ""}`}
+              >
+                <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <h3 className="text-sm font-semibold text-gray-800">{t("Advanced Observation")}</h3>
+            </button>
+            {advancedObsOpen && (
+              <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="respiration-rate" className="mb-1 block text-sm font-medium text-gray-700">
+                    {t("Respiration Rate (breaths/min)")}
+                  </label>
+                  <input
+                    type="number"
+                    id="respiration-rate"
+                    value={respirationRate}
+                    onChange={(e) => setRespirationRate(e.target.value)}
+                    step="0.1"
+                    placeholder={t("e.g. 16")}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="avpu" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("AVPU")}
-                </label>
-                <select
-                  id="avpu"
-                  value={avpuId}
-                  onChange={(e) => setAvpuId(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">{t("Select AVPU")}</option>
-                  {lookups.avpuOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label htmlFor="avpu" className="mb-1 block text-sm font-medium text-gray-700">
+                    {t("AVPU")}
+                  </label>
+                  <select
+                    id="avpu"
+                    value={avpuId}
+                    onChange={(e) => setAvpuId(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">{t("Select AVPU")}</option>
+                    {lookups.avpuOptions.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label htmlFor="gcs-eye" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("GCS Eye")}
-                </label>
-                <select
-                  id="gcs-eye"
-                  value={gcsEyeId}
-                  onChange={(e) => setGcsEyeId(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">{t("Select response")}</option>
-                  {lookups.gcsEyeResponses.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label htmlFor="gcs-eye" className="mb-1 block text-sm font-medium text-gray-700">
+                    {t("GCS Eye")}
+                  </label>
+                  <select
+                    id="gcs-eye"
+                    value={gcsEyeId}
+                    onChange={(e) => setGcsEyeId(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">{t("Select response")}</option>
+                    {lookups.gcsEyeResponses.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label htmlFor="gcs-verbal" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("GCS Verbal")}
-                </label>
-                <select
-                  id="gcs-verbal"
-                  value={gcsVerbalId}
-                  onChange={(e) => setGcsVerbalId(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">{t("Select response")}</option>
-                  {lookups.gcsVerbalResponses.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label htmlFor="gcs-verbal" className="mb-1 block text-sm font-medium text-gray-700">
+                    {t("GCS Verbal")}
+                  </label>
+                  <select
+                    id="gcs-verbal"
+                    value={gcsVerbalId}
+                    onChange={(e) => setGcsVerbalId(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">{t("Select response")}</option>
+                    {lookups.gcsVerbalResponses.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label htmlFor="gcs-motor" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("GCS Motor")}
-                </label>
-                <select
-                  id="gcs-motor"
-                  value={gcsMotorId}
-                  onChange={(e) => setGcsMotorId(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">{t("Select response")}</option>
-                  {lookups.gcsMotorResponses.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label htmlFor="gcs-motor" className="mb-1 block text-sm font-medium text-gray-700">
+                    {t("GCS Motor")}
+                  </label>
+                  <select
+                    id="gcs-motor"
+                    value={gcsMotorId}
+                    onChange={(e) => setGcsMotorId(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">{t("Select response")}</option>
+                    {lookups.gcsMotorResponses.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div>

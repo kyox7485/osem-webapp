@@ -1,10 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LookupOption } from "@/lib/types";
 
+// Malaysia is pinned first -- the overwhelming majority of residents/patients
+// are Malaysian, so it should be the fastest option to reach and the default
+// selection, with the rest alphabetical after it.
 export async function getNationalities(): Promise<LookupOption[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("tbl_nationalities").select("id, country_name").order("country_name");
-  return (data ?? []).map((r) => ({ id: r.id, label: r.country_name }));
+  const options = (data ?? []).map((r) => ({ id: r.id, label: r.country_name }));
+  const malaysiaIndex = options.findIndex((o) => o.label === "Malaysia");
+  if (malaysiaIndex > 0) {
+    const [malaysia] = options.splice(malaysiaIndex, 1);
+    options.unshift(malaysia);
+  }
+  return options;
 }
 
 export async function getDietTypes(): Promise<LookupOption[]> {

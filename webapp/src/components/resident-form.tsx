@@ -57,13 +57,16 @@ export function ResidentForm({
   );
   const [status, setStatus] = useState<string>(resident?.status ?? "ACTIVE");
   const [icNumber, setIcNumber] = useState(resident?.ic_number ?? "");
+  const malaysiaId = nationalities.find((n) => n.label === "Malaysia")?.id;
+  // New residents default to Malaysia (the overwhelming majority); editing
+  // an existing resident keeps whatever's already on file.
   const [nationalityId, setNationalityId] = useState<string>(
-    resident?.nationality_id != null ? String(resident.nationality_id) : ""
+    resident?.nationality_id != null ? String(resident.nationality_id) : malaysiaId != null ? String(malaysiaId) : ""
   );
   const [age, setAge] = useState(resident?.age != null ? String(resident.age) : "");
 
   const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
-  const malaysiaId = nationalities.find((n) => n.label === "Malaysia")?.id;
+  const isMalaysian = malaysiaId != null && String(malaysiaId) === nationalityId;
 
   // Malaysian IC numbers encode date of birth in the first 6 digits --
   // derive age from it automatically rather than have it re-entered by
@@ -115,7 +118,15 @@ export function ResidentForm({
             </>
           )}
         </Field>
-        <Field label={t("IC number")}>
+        <Field label={t("Nationality")}>
+          <select name="nationality_id" value={nationalityId} onChange={(e) => setNationalityId(e.target.value)} className={inputCls}>
+            <option value="">{t("--")}</option>
+            {nationalities.map((n) => (
+              <option key={n.id} value={n.id}>{n.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label={isMalaysian ? t("IC number") : t("Passport No.")}>
           <input name="ic_number" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={inputCls} />
         </Field>
         <Field label={t("Age")}>
@@ -140,14 +151,6 @@ export function ResidentForm({
             <option value="">{t("--")}</option>
             {MARITAL_STATUS_OPTIONS.map((o) => (
               <option key={o} value={o}>{o}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Nationality")}>
-          <select name="nationality_id" value={nationalityId} onChange={(e) => setNationalityId(e.target.value)} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {nationalities.map((n) => (
-              <option key={n.id} value={n.id}>{n.label}</option>
             ))}
           </select>
         </Field>

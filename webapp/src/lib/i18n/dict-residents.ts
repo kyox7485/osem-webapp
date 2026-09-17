@@ -3,8 +3,8 @@
 // translate.ts. Strings already covered by dict-common.ts (e.g. "Residents",
 // "Edit", "Back", "Filter", "Clear", "Status", "--") are not repeated here.
 export const dictResidents: Record<string, string> = {
-  "New resident": "Penduduk baharu",
-  "No residents found.": "Tiada penduduk dijumpai.",
+  "New resident": "Penghuni baharu",
+  "No residents found.": "Tiada penghuni dijumpai.",
   Name: "Nama",
   IC: "No. KP",
   "Search by name...": "Cari mengikut nama...",
@@ -13,8 +13,9 @@ export const dictResidents: Record<string, string> = {
   "Medical Progress Notes": "Nota Kemajuan Perubatan",
 
   "Basic details": "Butiran asas",
-  "Resident ID": "ID Penduduk",
+  "Resident ID": "ID Penghuni",
   "IC number": "Nombor KP",
+  "Passport No.": "No. Pasport",
   Age: "Umur",
   Gender: "Jantina",
   "Marital status": "Status perkahwinan",
@@ -51,6 +52,6 @@ export const dictResidents: Record<string, string> = {
   "Select a branch first": "Pilih cawangan dahulu",
 
   "Save changes": "Simpan perubahan",
-  "Create resident": "Cipta penduduk",
+  "Create resident": "Cipta penghuni",
   Apply: "Guna pakai",
 };

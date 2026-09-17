@@ -32,7 +32,7 @@ export const dictPhysio: Record<string, string> = {
   "New Entry": "Entri Baharu",
   "Select a": "Pilih",
   patient: "pesakit",
-  resident: "penduduk",
+  resident: "penghuni",
   "above to add a new entry.": "di atas untuk menambah entri baharu.",
 
   // body-diagram.tsx -- anatomical hotspot labels
@@ -98,10 +98,10 @@ export const dictPhysio: Record<string, string> = {
   "New patient": "Pesakit baharu",
   "Register new outpatient": "Daftar pesakit luar baharu",
   "Patient name": "Nama pesakit",
-  "IC number": "Nombor IC",
+  "IC No. / Passport No.": "No. KP / No. Pasport",
   Age: "Umur",
   Gender: "Jantina",
-  Contact: "Hubungan",
+  Contact: "Nombor Hubungan",
   "Registering...": "Mendaftar...",
   "Register patient": "Daftar pesakit",
 
@@ -184,5 +184,5 @@ export const dictPhysio: Record<string, string> = {
   // sections/subjective-section.tsx
   "Subjective Assessment": "Penilaian Subjektif",
   "Chief Complaint": "Aduan Utama",
-  "from resident record": "daripada rekod penduduk",
+  "from resident record": "daripada rekod penghuni",
 };
