@@ -1,10 +1,8 @@
-import Image from "next/image";
-import Link from "next/link";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
-import { NavLinks } from "@/components/nav-links";
 import { NavLoadingProvider } from "@/components/nav-loading";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { Sidebar, type SidebarItem } from "@/components/sidebar";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -33,41 +31,42 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const navItems = [
-    { href: "/residents", label: t("Residents") },
-    { href: "/clinical", label: t("Clinical") },
-    { href: "/physiotherapy", label: t("Physiotherapy") },
-    { href: "/staff", label: t("Staff") },
-    ...(isAdmin(account) ? [{ href: "/accounts", label: t("Accounts") }] : []),
+  // One soft accent per module -- makes the rail scannable at a glance
+  // instead of a stack of same-colour rows.
+  const navItems: SidebarItem[] = [
+    { href: "/residents", label: t("Residents"), icon: "Users", tint: "bg-blue-50 text-blue-600" },
+    { href: "/clinical", label: t("Clinical"), icon: "Stethoscope", tint: "bg-rose-50 text-rose-600" },
+    { href: "/physiotherapy", label: t("Physiotherapy"), icon: "Activity", tint: "bg-emerald-50 text-emerald-600" },
+    { href: "/staff", label: t("Staff"), icon: "IdCard", tint: "bg-amber-50 text-amber-600" },
+    ...(isAdmin(account) ? ([{ href: "/accounts", label: t("Accounts"), icon: "ShieldCheck", tint: "bg-violet-50 text-violet-600" }] as SidebarItem[]) : []),
   ];
+
+  const initial = account.username?.trim()?.[0]?.toUpperCase() ?? "?";
 
   return (
     <NavLoadingProvider>
-      <div className="min-h-screen bg-gray-50">
-        <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-            <nav className="flex items-center gap-1">
-              <Link href="/" className="mr-3 flex shrink-0 items-center" aria-label={t("OSEM home")}>
-                <Image src="/logo.png" alt="OSEM" width={52} height={32} className="h-8 w-auto" priority />
-              </Link>
-              <NavLinks items={navItems} />
-            </nav>
-            <div className="flex items-center gap-3 text-sm text-gray-500">
-              <span className="hidden sm:inline">
-                <span className="font-medium text-gray-700">{account.username}</span>
-                {" · "}
-                {account.branch_name || t("All branches")}
-                {" · "}
-              </span>
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar items={navItems} homeLabel={t("OSEM home")} />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
+            <div className="flex flex-wrap items-center justify-end gap-3 px-6 py-3">
+              <span className="hidden text-sm text-gray-500 sm:inline">{account.branch_name || t("All branches")}</span>
               <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
                 {account.rights}
               </span>
               <LanguageSwitcher />
-              <SignOutButton />
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+                  {initial}
+                </span>
+                <span className="hidden text-sm font-medium text-gray-700 md:inline">{account.username}</span>
+                <SignOutButton />
+              </div>
             </div>
-          </div>
-        </header>
-        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+          </header>
+          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+        </div>
       </div>
     </NavLoadingProvider>
   );
