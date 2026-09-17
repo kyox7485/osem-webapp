@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import packageJson from "../../../package.json";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,8 +35,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <Image src="/logo.png" alt="OSEM" width={78} height={48} className="mb-1 h-12 w-auto" priority />
-        <p className="mb-6 text-sm text-gray-500">Sign in with your branch account</p>
+        <div className="flex justify-center">
+          <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-48 w-auto" priority />
+        </div>
+        <p className="mb-6 text-center text-sm text-gray-500">Sign in with your branch account</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -82,6 +85,8 @@ export default function LoginPage() {
             Forgot password?
           </Link>
         </form>
+
+        <p className="mt-6 text-center text-xs text-gray-400">v{packageJson.version}</p>
       </div>
     </div>
   );
