@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
 type HygieneEpisodeInput = { assistanceLevel: "By Self" | "With Assistance"; activityIds: number[] };
+type EliminationEpisodeInput = { bowelOutputIds: number[]; passUrineId: number | null };
 type MealInput = {
   mealTypeId: number | null;
   mealTypeOther: string | null;
@@ -18,8 +19,7 @@ type CreateNursingChartEntryInput = {
   residentId: number;
   entryTimestamp: string;
   tubeFeeding: "Oral Feed" | "Tube Feeding" | null;
-  bowelOutputIds: number[];
-  passUrineIds: number[];
+  eliminationEpisodes: EliminationEpisodeInput[];
   fluidInput: number | null;
   fluidOutput: number | null;
   cbdDrainage: string | null;
@@ -69,8 +69,6 @@ export async function createNursingChartEntry(
       resident_id: input.residentId,
       entry_timestamp: input.entryTimestamp,
       tube_feeding: input.tubeFeeding,
-      bowel_output_ids: input.bowelOutputIds.length > 0 ? input.bowelOutputIds : null,
-      pass_urine_ids: input.passUrineIds.length > 0 ? input.passUrineIds : null,
       fluid_input: input.fluidInput,
       fluid_output: input.fluidOutput,
       cbd_drainage: input.cbdDrainage,
@@ -108,6 +106,18 @@ export async function createNursingChartEntry(
     }));
   if (hygieneRows.length > 0) {
     childInserts.push(supabase.from("tbl_nursing_chart_hygiene_episodes").insert(hygieneRows));
+  }
+
+  const eliminationRows = input.eliminationEpisodes
+    .filter((ep) => ep.bowelOutputIds.length > 0 || ep.passUrineId !== null)
+    .map((ep) => ({
+      branch_id: resident.branch_id,
+      chart_entry_id: entryId,
+      bowel_output_ids: ep.bowelOutputIds.length > 0 ? ep.bowelOutputIds : null,
+      pass_urine_id: ep.passUrineId,
+    }));
+  if (eliminationRows.length > 0) {
+    childInserts.push(supabase.from("tbl_nursing_chart_elimination_episodes").insert(eliminationRows));
   }
 
   const mealRows = input.meals

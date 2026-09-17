@@ -15,6 +15,7 @@ type Meal = {
   feedingTimeId: string;
   feedingVolume: string;
 };
+type EliminationEpisode = { bowelOutputIds: number[]; passUrineId: string };
 
 type Props = {
   residents: Resident[];
@@ -32,6 +33,7 @@ const fieldCls =
 const selectCls =
   "w-full rounded-md border border-gray-300 pl-4 pr-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 const emptyMeal: Meal = { mealTypeId: "", mealTypeOther: "", mealPortionId: "", mealPortionOther: "", feedingTimeId: "", feedingVolume: "" };
+const emptyEliminationEpisode: EliminationEpisode = { bowelOutputIds: [], passUrineId: "" };
 // tbl_hygiene_care_activities ids -- when any is checked (under either
 // hygiene group), something was recorded that Elimination is the place to
 // detail (what came out, how much, etc.), so that section only appears then.
@@ -52,8 +54,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const [meals, setMeals] = useState<Meal[]>([{ ...emptyMeal }]);
   const [bySelfIds, setBySelfIds] = useState<number[]>([]);
   const [withAssistIds, setWithAssistIds] = useState<number[]>([]);
-  const [bowelOutputIds, setBowelOutputIds] = useState<number[]>([]);
-  const [passUrineIds, setPassUrineIds] = useState<number[]>([]);
+  const [eliminationEpisodes, setEliminationEpisodes] = useState<EliminationEpisode[]>([{ ...emptyEliminationEpisode }]);
   const [fluidInput, setFluidInput] = useState("");
   const [fluidOutput, setFluidOutput] = useState("");
   const [cbdDrainage, setCbdDrainage] = useState("");
@@ -81,6 +82,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const emptyCbdId = lookups.hygieneCareActivities.find((o) => o.label === "Empty CBD")?.id;
   const eliminationTriggerIds = [CHANGE_DIAPERS_ID, IN_OUT_CATHETER_ID, ...(emptyCbdId !== undefined ? [Number(emptyCbdId)] : [])];
   const showElimination = eliminationTriggerIds.some((id) => bySelfIds.includes(id) || withAssistIds.includes(id));
+  const noneBowelOutputId = lookups.bowelOutputTypes.find((o) => o.label === "None")?.id;
 
   // Carries the tube feeding regime comment forward from the resident's last
   // recorded entry, so staff amend it instead of retyping it every shift.
@@ -104,8 +106,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
     setMeals([{ ...emptyMeal, feedingVolume: defaultFeedingVolume ?? "" }]);
     setBySelfIds([]);
     setWithAssistIds([]);
-    setBowelOutputIds([]);
-    setPassUrineIds([]);
+    setEliminationEpisodes([{ ...emptyEliminationEpisode }]);
     setFluidInput("");
     setFluidOutput("");
     setCbdDrainage("");
@@ -124,6 +125,10 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
   function updateMeal(index: number, patch: Partial<Meal>) {
     setMeals((prev) => prev.map((m, i) => (i === index ? { ...m, ...patch } : m)));
+  }
+
+  function updateEliminationEpisode(index: number, patch: Partial<EliminationEpisode>) {
+    setEliminationEpisodes((prev) => prev.map((ep, i) => (i === index ? { ...ep, ...patch } : ep)));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,8 +150,11 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
       residentId: parseInt(residentId, 10),
       entryTimestamp: fromDatetimeLocalValue(entryTimestamp),
       tubeFeeding: tubeFeeding || null,
-      bowelOutputIds: showElimination ? bowelOutputIds : [],
-      passUrineIds: showElimination ? passUrineIds : [],
+      eliminationEpisodes: showElimination
+        ? eliminationEpisodes
+            .filter((ep) => ep.bowelOutputIds.length > 0 || ep.passUrineId)
+            .map((ep) => ({ bowelOutputIds: ep.bowelOutputIds, passUrineId: ep.passUrineId ? parseInt(ep.passUrineId, 10) : null }))
+        : [],
       fluidInput: showElimination && fluidInput ? parseFloat(fluidInput) : null,
       fluidOutput: showElimination && fluidOutput ? parseFloat(fluidOutput) : null,
       cbdDrainage: showElimination ? cbdDrainage.trim() || null : null,
@@ -361,15 +369,52 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         {showElimination && (
           <Section title="Elimination">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <CheckboxGroup
-                label="Bowel output"
-                options={lookups.bowelOutputTypes}
-                value={bowelOutputIds}
-                onChange={setBowelOutputIds}
-                exclusiveByGroup
-              />
-              <CheckboxGroup label="Pass urine" options={lookups.passUrineTypes} value={passUrineIds} onChange={setPassUrineIds} />
+            <div className="space-y-3">
+              {eliminationEpisodes.map((episode, i) => (
+                <div key={i} className="rounded-md border border-gray-200 p-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <CheckboxGroup
+                      label="Bowel output"
+                      options={lookups.bowelOutputTypes}
+                      value={episode.bowelOutputIds}
+                      onChange={(ids) => updateEliminationEpisode(i, { bowelOutputIds: ids })}
+                      exclusiveByGroup
+                      clearAllOptionId={noneBowelOutputId !== undefined ? Number(noneBowelOutputId) : undefined}
+                    />
+                    <label className="block text-sm text-gray-700">
+                      Pass urine
+                      <select
+                        value={episode.passUrineId}
+                        onChange={(e) => updateEliminationEpisode(i, { passUrineId: e.target.value })}
+                        className={`mt-1 max-w-xs ${selectCls}`}
+                      >
+                        <option value="">--</option>
+                        {lookups.passUrineTypes.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  {eliminationEpisodes.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setEliminationEpisodes((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="mt-2 text-xs text-gray-400 hover:text-red-600"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setEliminationEpisodes((prev) => [...prev, { ...emptyEliminationEpisode }])}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+              >
+                + Add diaper check
+              </button>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <label className="block text-sm text-gray-700">
@@ -565,6 +610,7 @@ function CheckboxGroup({
   value,
   onChange,
   exclusiveByGroup,
+  clearAllOptionId,
 }: {
   label?: string;
   boldLabel?: boolean;
@@ -576,21 +622,30 @@ function CheckboxGroup({
   // picked from that same group, while other groups are left alone --
   // radio-like within a group, free multi-select across groups.
   exclusiveByGroup?: boolean;
+  // An option (e.g. bowel output's "None") that overrides every group: picking
+  // it clears every other selection, and picking anything else clears it --
+  // it can never coexist with a group selection (can't describe a texture
+  // for output that didn't happen).
+  clearAllOptionId?: number;
 }) {
   function toggle(id: number) {
     if (value.includes(id)) {
       onChange(value.filter((v) => v !== id));
       return;
     }
+    if (clearAllOptionId !== undefined && id === clearAllOptionId) {
+      onChange([id]);
+      return;
+    }
+    let next = clearAllOptionId !== undefined ? value.filter((v) => v !== clearAllOptionId) : value;
     if (exclusiveByGroup) {
       const group = options.find((o) => Number(o.id) === id)?.group;
       if (group) {
         const groupIds = new Set(options.filter((o) => o.group === group).map((o) => Number(o.id)));
-        onChange([...value.filter((v) => !groupIds.has(v)), id]);
-        return;
+        next = next.filter((v) => !groupIds.has(v));
       }
     }
-    onChange([...value, id]);
+    onChange([...next, id]);
   }
 
   return (

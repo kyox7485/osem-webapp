@@ -18,8 +18,7 @@ export type NursingChartEntry = {
   cbd_drainage: string | null;
   intervention: string | null;
   doctors_plan: string | null;
-  bowel_output_labels: string[];
-  pass_urine_labels: string[];
+  elimination_labels: string[];
   activity_labels: string[];
   disturbance_level_labels: string[];
   psycho_social_labels: string[];
@@ -44,8 +43,7 @@ type Props = {
 };
 
 const TAG_GROUPS: [keyof NursingChartEntry, string][] = [
-  ["bowel_output_labels", "Bowel output"],
-  ["pass_urine_labels", "Pass urine"],
+  ["elimination_labels", "Diaper checks"],
   ["activity_labels", "Activity"],
   ["disturbance_level_labels", "Disturbance level"],
   ["psycho_social_labels", "Psycho-social behaviour"],
@@ -186,7 +184,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                         {tagGroups.map(([key, label]) => (
                           <p key={key} className="text-sm text-gray-600">
                             <span className="font-medium text-gray-500">{label}: </span>
-                            {(entry[key] as string[]).join(", ")}
+                            {(entry[key] as string[]).join(key === "elimination_labels" ? " | " : ", ")}
                           </p>
                         ))}
                         {(entry.fluid_input !== null || entry.fluid_output !== null) && (

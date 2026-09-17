@@ -164,8 +164,6 @@ export default async function ClinicalPage({
         resident_id,
         entry_timestamp,
         tube_feeding,
-        bowel_output_ids,
-        pass_urine_ids,
         fluid_input,
         fluid_output,
         cbd_drainage,
@@ -197,7 +195,7 @@ export default async function ClinicalPage({
     error = chartError?.message || null;
 
     const entryIds = (rawEntries ?? []).map((e: any) => e.id);
-    const [{ data: mealsRaw }, { data: hygieneRaw }] =
+    const [{ data: mealsRaw }, { data: hygieneRaw }, { data: eliminationRaw }] =
       entryIds.length > 0
         ? await Promise.all([
             supabase
@@ -208,8 +206,12 @@ export default async function ClinicalPage({
               .from("tbl_nursing_chart_hygiene_episodes")
               .select("chart_entry_id, assistance_level, activity_ids")
               .in("chart_entry_id", entryIds),
+            supabase
+              .from("tbl_nursing_chart_elimination_episodes")
+              .select("chart_entry_id, bowel_output_ids, pass_urine_id")
+              .in("chart_entry_id", entryIds),
           ])
-        : [{ data: [] }, { data: [] }];
+        : [{ data: [] }, { data: [] }, { data: [] }];
 
     const byId = (list: { id: number | string; label: string }[]) => new Map(list.map((o) => [Number(o.id), o.label]));
     const bowelById = byId(nursingChartLookups.bowelOutputTypes);
@@ -245,6 +247,15 @@ export default async function ClinicalPage({
       hygieneByEntry.set(h.chart_entry_id, list);
     });
 
+    const eliminationByEntry = new Map<number, string[]>();
+    (eliminationRaw ?? []).forEach((ep: any) => {
+      const parts = [...(ep.bowel_output_ids ?? []).map((id: number) => bowelById.get(id)), urineById.get(ep.pass_urine_id)].filter(Boolean);
+      if (parts.length === 0) return;
+      const list = eliminationByEntry.get(ep.chart_entry_id) ?? [];
+      list.push(parts.join(", "));
+      eliminationByEntry.set(ep.chart_entry_id, list);
+    });
+
     const mapIds = (ids: number[] | null, table: Map<number, string>) => (ids ?? []).map((id) => table.get(id)).filter((v): v is string => !!v);
     // Drops the generic "Others"/"Others:" label so it can be replaced with
     // the specific free text the user typed for it.
@@ -264,8 +275,7 @@ export default async function ClinicalPage({
         cbd_drainage: e.cbd_drainage,
         intervention: e.intervention,
         doctors_plan: e.doctors_plan,
-        bowel_output_labels: mapIds(e.bowel_output_ids, bowelById),
-        pass_urine_labels: mapIds(e.pass_urine_ids, urineById),
+        elimination_labels: eliminationByEntry.get(e.id) ?? [],
         activity_labels: [
           ...withoutOthers(mapIds(e.activity_ids, activityById)),
           ...(e.activity_other ? [`Others: ${e.activity_other}`] : []),
