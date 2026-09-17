@@ -103,7 +103,9 @@ export async function getAllStaffWithBranch(
 }
 
 export type ClinicalLookups = {
-  bowelOutputTypes: LookupOption[];
+  // group_type ("Amount" | "Texture") lets the form enforce one selection
+  // per set while letting the two sets mix freely.
+  bowelOutputTypes: (LookupOption & { group: string | null })[];
   passUrineTypes: LookupOption[];
   activities: LookupOption[];
   disturbanceLevels: LookupOption[];
@@ -144,7 +146,7 @@ export async function getClinicalLookups(): Promise<ClinicalLookups> {
     mealPortions,
     feedingTimes,
   ] = await Promise.all([
-    supabase.from("tbl_bowel_output_types").select("id, name").order("id"),
+    supabase.from("tbl_bowel_output_types").select("id, name, group_type").order("id"),
     supabase.from("tbl_pass_urine_types").select("id, name").order("id"),
     supabase.from("tbl_activities").select("id, name").order("id"),
     supabase.from("tbl_disturbance_levels").select("id, description").order("level"),
@@ -161,7 +163,7 @@ export async function getClinicalLookups(): Promise<ClinicalLookups> {
   ]);
 
   return {
-    bowelOutputTypes: (bowel.data ?? []).map((r) => ({ id: r.id, label: r.name })),
+    bowelOutputTypes: (bowel.data ?? []).map((r) => ({ id: r.id, label: r.name, group: r.group_type })),
     passUrineTypes: (urine.data ?? []).map((r) => ({ id: r.id, label: r.name })),
     activities: (activities.data ?? []).map((r) => ({ id: r.id, label: r.name })),
     disturbanceLevels: (disturbance.data ?? []).map((r) => ({ id: r.id, label: r.description })),

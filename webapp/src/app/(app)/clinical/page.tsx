@@ -173,6 +173,9 @@ export default async function ClinicalPage({
         disturbance_level_ids,
         psycho_social_behaviour_ids,
         active_complaint_ids,
+        active_complaint_other,
+        activity_other,
+        psycho_social_other,
         intervention,
         doctors_plan,
         created_by,
@@ -199,7 +202,7 @@ export default async function ClinicalPage({
         ? await Promise.all([
             supabase
               .from("tbl_nursing_chart_meals")
-              .select("chart_entry_id, meal_type_id, meal_portion_id, feeding_time_id, feeding_volume")
+              .select("chart_entry_id, meal_type_id, meal_type_other, meal_portion_id, meal_portion_other, feeding_time_id, feeding_volume")
               .in("chart_entry_id", entryIds),
             supabase
               .from("tbl_nursing_chart_hygiene_episodes")
@@ -223,8 +226,8 @@ export default async function ClinicalPage({
     const mealsByEntry = new Map<number, string[]>();
     (mealsRaw ?? []).forEach((m: any) => {
       const parts = [
-        mealTypeById.get(m.meal_type_id),
-        mealPortionById.get(m.meal_portion_id),
+        m.meal_type_other || mealTypeById.get(m.meal_type_id),
+        m.meal_portion_other || mealPortionById.get(m.meal_portion_id),
         feedingTimeById.get(m.feeding_time_id),
         m.feeding_volume,
       ].filter(Boolean);
@@ -243,6 +246,9 @@ export default async function ClinicalPage({
     });
 
     const mapIds = (ids: number[] | null, table: Map<number, string>) => (ids ?? []).map((id) => table.get(id)).filter((v): v is string => !!v);
+    // Drops the generic "Others"/"Others:" label so it can be replaced with
+    // the specific free text the user typed for it.
+    const withoutOthers = (labels: string[]) => labels.filter((l) => !l.trim().toLowerCase().startsWith("others"));
 
     nursingChartEntries = (rawEntries ?? []).map((e: any) => {
       const resident = Array.isArray(e.tbl_residents) ? e.tbl_residents[0] : e.tbl_residents;
@@ -260,10 +266,19 @@ export default async function ClinicalPage({
         doctors_plan: e.doctors_plan,
         bowel_output_labels: mapIds(e.bowel_output_ids, bowelById),
         pass_urine_labels: mapIds(e.pass_urine_ids, urineById),
-        activity_labels: mapIds(e.activity_ids, activityById),
+        activity_labels: [
+          ...withoutOthers(mapIds(e.activity_ids, activityById)),
+          ...(e.activity_other ? [`Others: ${e.activity_other}`] : []),
+        ],
         disturbance_level_labels: mapIds(e.disturbance_level_ids, disturbanceById),
-        psycho_social_labels: mapIds(e.psycho_social_behaviour_ids, psychoById),
-        active_complaint_labels: mapIds(e.active_complaint_ids, complaintById),
+        psycho_social_labels: [
+          ...withoutOthers(mapIds(e.psycho_social_behaviour_ids, psychoById)),
+          ...(e.psycho_social_other ? [`Others: ${e.psycho_social_other}`] : []),
+        ],
+        active_complaint_labels: [
+          ...withoutOthers(mapIds(e.active_complaint_ids, complaintById)),
+          ...(e.active_complaint_other ? [`Others: ${e.active_complaint_other}`] : []),
+        ],
         meal_labels: mealsByEntry.get(e.id) ?? [],
         hygiene_labels: hygieneByEntry.get(e.id) ?? [],
         resident_name: resident?.resident_name ?? "--",

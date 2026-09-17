@@ -7,7 +7,14 @@ import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
-type Meal = { mealTypeId: string; mealPortionId: string; feedingTimeId: string; feedingVolume: string };
+type Meal = {
+  mealTypeId: string;
+  mealTypeOther: string;
+  mealPortionId: string;
+  mealPortionOther: string;
+  feedingTimeId: string;
+  feedingVolume: string;
+};
 
 type Props = {
   residents: Resident[];
@@ -19,12 +26,24 @@ type Props = {
 
 const fieldCls =
   "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
-const emptyMeal: Meal = { mealTypeId: "", mealPortionId: "", feedingTimeId: "", feedingVolume: "" };
-// tbl_hygiene_care_activities ids -- when either is checked (under either
+// Selects get a bit more left padding than plain text inputs -- the native
+// dropdown arrow eats into the right side visually, so the option text
+// needs its own breathing room from the left border to read cleanly.
+const selectCls =
+  "w-full rounded-md border border-gray-300 pl-4 pr-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+const emptyMeal: Meal = { mealTypeId: "", mealTypeOther: "", mealPortionId: "", mealPortionOther: "", feedingTimeId: "", feedingVolume: "" };
+// tbl_hygiene_care_activities ids -- when any is checked (under either
 // hygiene group), something was recorded that Elimination is the place to
 // detail (what came out, how much, etc.), so that section only appears then.
 const CHANGE_DIAPERS_ID = 8;
 const IN_OUT_CATHETER_ID = 9;
+
+// Options are seeded as "Others" / "Others:" across several lookup tables --
+// matched by label rather than a hardcoded id so it keeps working if a
+// table's ids ever get renumbered.
+function isOthersOption(label: string): boolean {
+  return label.trim().toLowerCase().startsWith("others");
+}
 
 export function NewNursingChartForm({ residents, allStaff, lookups, presetResidentId, onSaved }: Props) {
   const [residentId, setResidentId] = useState(presetResidentId || "");
@@ -39,9 +58,12 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const [fluidOutput, setFluidOutput] = useState("");
   const [cbdDrainage, setCbdDrainage] = useState("");
   const [activeComplaintIds, setActiveComplaintIds] = useState<number[]>([]);
+  const [activeComplaintOther, setActiveComplaintOther] = useState("");
   const [activityIds, setActivityIds] = useState<number[]>([]);
+  const [activityOther, setActivityOther] = useState("");
   const [disturbanceLevelId, setDisturbanceLevelId] = useState("");
   const [psychoSocialIds, setPsychoSocialIds] = useState<number[]>([]);
+  const [psychoSocialOther, setPsychoSocialOther] = useState("");
   const [intervention, setIntervention] = useState("");
   const [doctorsPlan, setDoctorsPlan] = useState("");
   const [enteredBy, setEnteredBy] = useState("");
@@ -51,11 +73,14 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
-  const showElimination =
-    bySelfIds.includes(CHANGE_DIAPERS_ID) ||
-    bySelfIds.includes(IN_OUT_CATHETER_ID) ||
-    withAssistIds.includes(CHANGE_DIAPERS_ID) ||
-    withAssistIds.includes(IN_OUT_CATHETER_ID);
+  const othersActivityId = lookups.activities.find((o) => isOthersOption(o.label))?.id;
+  const othersPsychoSocialId = lookups.psychoSocialBehaviours.find((o) => isOthersOption(o.label))?.id;
+  const othersComplaintId = lookups.activeComplaints.find((o) => isOthersOption(o.label))?.id;
+  const othersMealTypeId = lookups.mealTypes.find((o) => isOthersOption(o.label))?.id;
+  const othersMealPortionId = lookups.mealPortions.find((o) => isOthersOption(o.label))?.id;
+  const emptyCbdId = lookups.hygieneCareActivities.find((o) => o.label === "Empty CBD")?.id;
+  const eliminationTriggerIds = [CHANGE_DIAPERS_ID, IN_OUT_CATHETER_ID, ...(emptyCbdId !== undefined ? [Number(emptyCbdId)] : [])];
+  const showElimination = eliminationTriggerIds.some((id) => bySelfIds.includes(id) || withAssistIds.includes(id));
 
   // Carries the tube feeding regime comment forward from the resident's last
   // recorded entry, so staff amend it instead of retyping it every shift.
@@ -85,9 +110,12 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
     setFluidOutput("");
     setCbdDrainage("");
     setActiveComplaintIds([]);
+    setActiveComplaintOther("");
     setActivityIds([]);
+    setActivityOther("");
     setDisturbanceLevelId("");
     setPsychoSocialIds([]);
+    setPsychoSocialOther("");
     setIntervention("");
     setDoctorsPlan("");
     setEnteredBy("");
@@ -123,9 +151,14 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
       fluidOutput: showElimination && fluidOutput ? parseFloat(fluidOutput) : null,
       cbdDrainage: showElimination ? cbdDrainage.trim() || null : null,
       activityIds,
+      activityOther: othersActivityId !== undefined && activityIds.includes(Number(othersActivityId)) ? activityOther.trim() || null : null,
       disturbanceLevelIds: disturbanceLevelId ? [parseInt(disturbanceLevelId, 10)] : [],
       psychoSocialBehaviourIds: psychoSocialIds,
+      psychoSocialOther:
+        othersPsychoSocialId !== undefined && psychoSocialIds.includes(Number(othersPsychoSocialId)) ? psychoSocialOther.trim() || null : null,
       activeComplaintIds,
+      activeComplaintOther:
+        othersComplaintId !== undefined && activeComplaintIds.includes(Number(othersComplaintId)) ? activeComplaintOther.trim() || null : null,
       // Entered by / reviewed by are the same person on this form -- one
       // picker, written to both columns (same pattern as progress notes).
       createdBy: enteredBy,
@@ -134,12 +167,19 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         { assistanceLevel: "By Self", activityIds: bySelfIds },
         { assistanceLevel: "With Assistance", activityIds: withAssistIds },
       ],
-      meals: meals.map((m) => ({
-        mealTypeId: tubeFeeding === "Tube Feeding" ? null : m.mealTypeId ? parseInt(m.mealTypeId, 10) : null,
-        mealPortionId: tubeFeeding === "Tube Feeding" ? null : m.mealPortionId ? parseInt(m.mealPortionId, 10) : null,
-        feedingTimeId: tubeFeeding === "Tube Feeding" ? (m.feedingTimeId ? parseInt(m.feedingTimeId, 10) : null) : null,
-        feedingVolume: tubeFeeding === "Tube Feeding" ? m.feedingVolume.trim() || null : null,
-      })),
+      meals: meals.map((m) => {
+        const mealTypeId = tubeFeeding === "Tube Feeding" ? null : m.mealTypeId ? parseInt(m.mealTypeId, 10) : null;
+        const mealPortionId = tubeFeeding === "Tube Feeding" ? null : m.mealPortionId ? parseInt(m.mealPortionId, 10) : null;
+        return {
+          mealTypeId,
+          mealTypeOther: othersMealTypeId !== undefined && mealTypeId === Number(othersMealTypeId) ? m.mealTypeOther.trim() || null : null,
+          mealPortionId,
+          mealPortionOther:
+            othersMealPortionId !== undefined && mealPortionId === Number(othersMealPortionId) ? m.mealPortionOther.trim() || null : null,
+          feedingTimeId: tubeFeeding === "Tube Feeding" ? (m.feedingTimeId ? parseInt(m.feedingTimeId, 10) : null) : null,
+          feedingVolume: tubeFeeding === "Tube Feeding" ? m.feedingVolume.trim() || null : null,
+        };
+      }),
       intervention: intervention.trim() || null,
       doctorsPlan: doctorsPlan.trim() || null,
     });
@@ -170,7 +210,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           }}
           disabled={!!presetResidentId}
           required
-          className={`max-w-md disabled:bg-gray-100 ${fieldCls}`}
+          className={`max-w-md disabled:bg-gray-100 ${selectCls}`}
         >
           <option value="">Select resident</option>
           {residents.map((r) => (
@@ -198,25 +238,29 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         </Section>
 
         <Section title="Feeding">
-          <label className="block text-sm text-gray-700">
-            Type
-            <select value={tubeFeeding} onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)} className={`mt-2 max-w-xs ${fieldCls}`}>
+          <div>
+            <label className="mb-1 block text-sm text-gray-700">Type</label>
+            <select
+              value={tubeFeeding}
+              onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)}
+              className={`w-40 ${selectCls}`}
+            >
               <option value="">--</option>
               <option value="Oral Feed">Oral Feed</option>
               <option value="Tube Feeding">Tube Feeding</option>
             </select>
-          </label>
+          </div>
 
           <div className="mt-3 space-y-2">
             <p className="text-sm font-medium text-gray-700">Meals</p>
             {meals.map((meal, i) => (
-              <div key={i} className="flex flex-wrap items-end gap-2">
+              <div key={i} className="flex flex-wrap items-start gap-2">
                 {tubeFeeding === "Tube Feeding" ? (
                   <>
                     <select
                       value={meal.feedingTimeId}
                       onChange={(e) => updateMeal(i, { feedingTimeId: e.target.value })}
-                      className={`w-28 ${fieldCls}`}
+                      className={`w-28 ${selectCls}`}
                     >
                       <option value="">Time</option>
                       {lookups.feedingTimes.map((o) => (
@@ -235,37 +279,59 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                   </>
                 ) : (
                   <>
-                    <select
-                      value={meal.mealTypeId}
-                      onChange={(e) => updateMeal(i, { mealTypeId: e.target.value })}
-                      className={`w-40 ${fieldCls}`}
-                    >
-                      <option value="">Meal type</option>
-                      {lookups.mealTypes.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={meal.mealPortionId}
-                      onChange={(e) => updateMeal(i, { mealPortionId: e.target.value })}
-                      className={`w-32 ${fieldCls}`}
-                    >
-                      <option value="">Portion</option>
-                      {lookups.mealPortions.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <select
+                        value={meal.mealTypeId}
+                        onChange={(e) => updateMeal(i, { mealTypeId: e.target.value })}
+                        className={`w-40 ${selectCls}`}
+                      >
+                        <option value="">Meal type</option>
+                        {lookups.mealTypes.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {othersMealTypeId !== undefined && meal.mealTypeId === String(othersMealTypeId) && (
+                        <input
+                          type="text"
+                          value={meal.mealTypeOther}
+                          onChange={(e) => updateMeal(i, { mealTypeOther: e.target.value })}
+                          placeholder="Specify meal type"
+                          className={`mt-1 w-40 ${fieldCls}`}
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <select
+                        value={meal.mealPortionId}
+                        onChange={(e) => updateMeal(i, { mealPortionId: e.target.value })}
+                        className={`w-32 ${selectCls}`}
+                      >
+                        <option value="">Portion</option>
+                        {lookups.mealPortions.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {othersMealPortionId !== undefined && meal.mealPortionId === String(othersMealPortionId) && (
+                        <input
+                          type="text"
+                          value={meal.mealPortionOther}
+                          onChange={(e) => updateMeal(i, { mealPortionOther: e.target.value })}
+                          placeholder="Specify portion"
+                          className={`mt-1 w-32 ${fieldCls}`}
+                        />
+                      )}
+                    </div>
                   </>
                 )}
                 {meals.length > 1 && (
                   <button
                     type="button"
                     onClick={() => setMeals((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="text-xs text-gray-400 hover:text-red-600"
+                    className="mt-2 text-xs text-gray-400 hover:text-red-600"
                   >
                     Remove
                   </button>
@@ -296,7 +362,13 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         {showElimination && (
           <Section title="Elimination">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <CheckboxGroup label="Bowel output" options={lookups.bowelOutputTypes} value={bowelOutputIds} onChange={setBowelOutputIds} />
+              <CheckboxGroup
+                label="Bowel output"
+                options={lookups.bowelOutputTypes}
+                value={bowelOutputIds}
+                onChange={setBowelOutputIds}
+                exclusiveByGroup
+              />
               <CheckboxGroup label="Pass urine" options={lookups.passUrineTypes} value={passUrineIds} onChange={setPassUrineIds} />
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -318,21 +390,52 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         <Section title="Active complaint" collapsible>
           <CheckboxGroup options={lookups.activeComplaints} value={activeComplaintIds} onChange={setActiveComplaintIds} />
+          {othersComplaintId !== undefined && activeComplaintIds.includes(Number(othersComplaintId)) && (
+            <input
+              type="text"
+              value={activeComplaintOther}
+              onChange={(e) => setActiveComplaintOther(e.target.value)}
+              placeholder="Specify"
+              className={`mt-2 max-w-xs ${fieldCls}`}
+            />
+          )}
         </Section>
 
         <Section title="Activity &amp; behaviour" collapsible>
           <div className="grid grid-cols-1 gap-4">
-            <CheckboxGroup label="Activity" boldLabel options={lookups.activities} value={activityIds} onChange={setActivityIds} />
-            <CheckboxGroup
-              label="Psycho-social behaviour"
-              boldLabel
-              options={lookups.psychoSocialBehaviours}
-              value={psychoSocialIds}
-              onChange={setPsychoSocialIds}
-            />
+            <div>
+              <CheckboxGroup label="Activity" boldLabel options={lookups.activities} value={activityIds} onChange={setActivityIds} />
+              {othersActivityId !== undefined && activityIds.includes(Number(othersActivityId)) && (
+                <input
+                  type="text"
+                  value={activityOther}
+                  onChange={(e) => setActivityOther(e.target.value)}
+                  placeholder="Specify"
+                  className={`mt-2 max-w-xs ${fieldCls}`}
+                />
+              )}
+            </div>
+            <div>
+              <CheckboxGroup
+                label="Psycho-social behaviour"
+                boldLabel
+                options={lookups.psychoSocialBehaviours}
+                value={psychoSocialIds}
+                onChange={setPsychoSocialIds}
+              />
+              {othersPsychoSocialId !== undefined && psychoSocialIds.includes(Number(othersPsychoSocialId)) && (
+                <input
+                  type="text"
+                  value={psychoSocialOther}
+                  onChange={(e) => setPsychoSocialOther(e.target.value)}
+                  placeholder="Specify"
+                  className={`mt-2 max-w-xs ${fieldCls}`}
+                />
+              )}
+            </div>
             <label className="block text-sm text-gray-700">
               <span className="font-bold">Disturbance level</span>
-              <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-2 max-w-xs ${fieldCls}`}>
+              <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-2 max-w-xs ${selectCls}`}>
                 <option value="">--</option>
                 {lookups.disturbanceLevels.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -365,7 +468,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
               onChange={(e) => setEnteredBy(e.target.value)}
               required
               disabled={!residentId}
-              className={`mt-1 disabled:bg-gray-100 ${fieldCls}`}
+              className={`mt-1 disabled:bg-gray-100 ${selectCls}`}
             >
               <option value="">Select staff</option>
               {staffOptions.map((s) => (
@@ -461,15 +564,33 @@ function CheckboxGroup({
   options,
   value,
   onChange,
+  exclusiveByGroup,
 }: {
   label?: string;
   boldLabel?: boolean;
-  options: LookupOption[];
+  options: (LookupOption & { group?: string | null })[];
   value: number[];
   onChange: (ids: number[]) => void;
+  // When set, options carry a `group` (e.g. bowel output's "Amount" vs.
+  // "Texture"): picking a new option deselects any other option already
+  // picked from that same group, while other groups are left alone --
+  // radio-like within a group, free multi-select across groups.
+  exclusiveByGroup?: boolean;
 }) {
   function toggle(id: number) {
-    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+    if (value.includes(id)) {
+      onChange(value.filter((v) => v !== id));
+      return;
+    }
+    if (exclusiveByGroup) {
+      const group = options.find((o) => Number(o.id) === id)?.group;
+      if (group) {
+        const groupIds = new Set(options.filter((o) => o.group === group).map((o) => Number(o.id)));
+        onChange([...value.filter((v) => !groupIds.has(v)), id]);
+        return;
+      }
+    }
+    onChange([...value, id]);
   }
 
   return (

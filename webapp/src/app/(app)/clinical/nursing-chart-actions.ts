@@ -7,7 +7,9 @@ import { revalidatePath } from "next/cache";
 type HygieneEpisodeInput = { assistanceLevel: "By Self" | "With Assistance"; activityIds: number[] };
 type MealInput = {
   mealTypeId: number | null;
+  mealTypeOther: string | null;
   mealPortionId: number | null;
+  mealPortionOther: string | null;
   feedingTimeId: number | null;
   feedingVolume: string | null;
 };
@@ -22,9 +24,12 @@ type CreateNursingChartEntryInput = {
   fluidOutput: number | null;
   cbdDrainage: string | null;
   activityIds: number[];
+  activityOther: string | null;
   disturbanceLevelIds: number[];
   psychoSocialBehaviourIds: number[];
+  psychoSocialOther: string | null;
   activeComplaintIds: number[];
+  activeComplaintOther: string | null;
   intervention: string | null;
   doctorsPlan: string | null;
   createdBy: string;
@@ -70,9 +75,12 @@ export async function createNursingChartEntry(
       fluid_output: input.fluidOutput,
       cbd_drainage: input.cbdDrainage,
       activity_ids: input.activityIds.length > 0 ? input.activityIds : null,
+      activity_other: input.activityOther,
       disturbance_level_ids: input.disturbanceLevelIds.length > 0 ? input.disturbanceLevelIds : null,
       psycho_social_behaviour_ids: input.psychoSocialBehaviourIds.length > 0 ? input.psychoSocialBehaviourIds : null,
+      psycho_social_other: input.psychoSocialOther,
       active_complaint_ids: input.activeComplaintIds.length > 0 ? input.activeComplaintIds : null,
+      active_complaint_other: input.activeComplaintOther,
       intervention: input.intervention,
       doctors_plan: input.doctorsPlan,
       created_by: input.createdBy,
@@ -108,7 +116,9 @@ export async function createNursingChartEntry(
       branch_id: resident.branch_id,
       chart_entry_id: entryId,
       meal_type_id: m.mealTypeId,
+      meal_type_other: m.mealTypeOther,
       meal_portion_id: m.mealPortionId,
+      meal_portion_other: m.mealPortionOther,
       feeding_time_id: m.feedingTimeId,
       feeding_volume: m.feedingVolume,
     }));
