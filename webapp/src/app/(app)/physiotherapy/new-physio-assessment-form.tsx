@@ -96,7 +96,14 @@ export function NewPhysioAssessmentForm({
 
   const [entryTimestamp, setEntryTimestamp] = useState(defaultEntryTimestamp);
   const [treatmentType, setTreatmentType] = useState(previous?.treatment_type ?? "");
-  const [creditHours, setCreditHours] = useState(previous?.credit_hours != null ? String(previous.credit_hours) : "");
+  const [creditHours, setCreditHours] = useState(() => {
+    // Fresh lookup against tbl_physio_treatment_types, not the value saved on
+    // the resident's previous entry -- the standard credit hours for a
+    // treatment type may have changed since that entry was recorded.
+    const match = treatmentTypeOptions.find((o) => o.label === previous?.treatment_type);
+    if (match) return String(match.creditHours);
+    return previous?.credit_hours != null ? String(previous.credit_hours) : "";
+  });
   const [chiefComplaint, setChiefComplaint] = useState(previous?.chief_complaint ?? "");
   const [currentHistory, setCurrentHistory] = useState(previous?.current_history ?? "");
   const [socialHistory, setSocialHistory] = useState(previous?.social_history ?? "");
