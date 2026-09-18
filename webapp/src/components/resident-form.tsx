@@ -157,13 +157,17 @@ export function ResidentForm({
       </Section>
 
       <Section title={t("Admission")}>
-        <Field label={t("Status")}>
-          <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            {RESIDENT_STATUS_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
+        {resident ? (
+          <Field label={t("Status")}>
+            <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+              {RESIDENT_STATUS_OPTIONS.map((o) => (
+                <option key={o} value={o}>{t(o)}</option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <input type="hidden" name="status" value="ACTIVE" />
+        )}
         <Field label={t("Care type")}>
           <select name="care_type" defaultValue={resident?.care_type ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
@@ -173,7 +177,7 @@ export function ResidentForm({
           </select>
         </Field>
         <Field label={t("Admission date")}>
-          <input name="admission_date" type="date" defaultValue={resident?.admission_date ?? ""} className={inputCls} />
+          <input name="admission_date" type="date" defaultValue={resident?.admission_date ?? new Date().toISOString().split("T")[0]} className={inputCls} />
         </Field>
         {(status === "DISCHARGED" || status === "DECEASED") && (
           <Field label={t("Discharge date")}>

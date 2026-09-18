@@ -49,7 +49,7 @@ function ExamGroup({
       className="group/exam rounded-md border border-gray-200"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 hover:bg-gray-50">
-        <span className={labelClassName}>{label}</span>
+        <span className={labelClassName}>{t(label)}</span>
         <span className="flex items-center gap-2">
           {assessedCount > 0 && (
             <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
@@ -133,7 +133,7 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
               >
                 {movements.map((movement) => (
                   <div key={movement} className="rounded-md border border-gray-100 p-2">
-                    <p className="mb-1.5 text-sm font-medium text-gray-700">{movement}</p>
+                    <p className="mb-1.5 text-sm font-medium text-gray-700">{t(movement)}</p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {(["R", "L"] as const).map((side) => {
                         const cell = findCell(limb, region, movement, side);

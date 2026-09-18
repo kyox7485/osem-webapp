@@ -196,6 +196,37 @@ export const dictPhysio: Record<string, string> = {
   'Power, Tone, ROM and Reflexes -- leave any field "Not assessed" where not applicable. Tap a body part to record it.':
     "Kekuatan, Tonus, Julat Gerakan dan Refleks -- biarkan mana-mana medan \"Belum dinilai\" jika tidak berkenaan. Ketik bahagian badan untuk merekodkannya.",
 
+  // EXAM_STRUCTURE regions (body parts shown as collapsible group headers)
+  Hip: "Pinggul",
+  Knee: "Lutut",
+  Ankle: "Buku Lali",
+  Foot: "Kaki",
+  Trunk: "Batang Tubuh",
+  Shoulder: "Bahu",
+  Elbow: "Siku",
+  Forearm: "Lengan Bawah",
+  Wrist: "Pergelangan Tangan",
+  Fingers: "Jari",
+
+  // EXAM_STRUCTURE movements (shown inside each region card)
+  Flexors: "Fleksor",
+  Extensors: "Ekstensor",
+  Abductors: "Abduktur",
+  Adductors: "Adduktur",
+  "Lateral Rotation": "Putaran Lateral",
+  "Medial Rotation": "Putaran Medial",
+  "Dorsi Flexors": "Dorsifleksor",
+  "Plantar Flexors": "Plantarfleksor",
+  Inversors: "Invertor",
+  Eversors: "Evertor",
+  Elevators: "Elevator",
+  Depressors: "Depresor",
+  Antepulsors: "Antepulsor",
+  Retropulsors: "Retropulsor",
+  Supinators: "Supinator",
+  Pronators: "Pronator",
+  Opposition: "Tentangan",
+
   // sections/functional-section.tsx
   "Functional Assessment": "Penilaian Fungsian",
   "Supine → Side lying": "Melentang → Mengiring",

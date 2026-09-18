@@ -29,7 +29,7 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
   return (
     <div>
       <PageTitle title={`${t("Edit")} ${staff.staff_name}`} />
-      <StaffForm staff={staff as Staff} positions={positions} branches={branches} action={boundAction} />
+      <StaffForm staff={staff as Staff} positions={positions} branches={branches} isAdmin={isAdmin(currentUser)} action={boundAction} />
     </div>
   );
 }

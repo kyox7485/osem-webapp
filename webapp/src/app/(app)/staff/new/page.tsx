@@ -19,7 +19,7 @@ export default async function NewStaffPage() {
       <PageTitle title={t("New staff")} />
       <BackButton />
       <div className="mt-4">
-        <StaffForm positions={positions} branches={branches} action={createStaff} />
+        <StaffForm positions={positions} branches={branches} isAdmin={isAdmin(currentUser)} action={createStaff} />
       </div>
     </div>
   );

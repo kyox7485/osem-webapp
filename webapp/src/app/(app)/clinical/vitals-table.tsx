@@ -129,11 +129,11 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
             />
           </div>
 
-          <div className="flex flex-wrap items-end gap-2 sm:col-span-1">
+          <div className="flex flex-col gap-2 sm:col-span-1">
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
               {t("Add Entry")}
             </button>
@@ -142,14 +142,14 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                 href={`/api/reports/vital-signs?${pdfParams.toString()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
               >
                 {t("Download PDF")}
               </a>
             ) : (
               <span
                 title={t("Select a resident to download the PDF report")}
-                className="inline-flex cursor-not-allowed items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400"
+                className="flex w-full cursor-not-allowed items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400"
               >
                 {t("Download PDF")}
               </span>

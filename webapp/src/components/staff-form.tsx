@@ -9,13 +9,14 @@ type Props = {
   staff?: Staff;
   positions: LookupOption[];
   branches: LookupOption[];
+  isAdmin?: boolean;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
 };
 
 const inputCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
-export function StaffForm({ staff, positions, branches, action }: Props) {
+export function StaffForm({ staff, positions, branches, isAdmin, action }: Props) {
   const t = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -59,15 +60,19 @@ export function StaffForm({ staff, positions, branches, action }: Props) {
         </select>
       </label>
 
-      <label className="block text-sm text-gray-700">
-        {t("Role")} <span className="text-red-500">*</span>
-        <select name="role" defaultValue={staff?.role ?? ""} required className={inputCls}>
-          <option value="" disabled>{t("Select a role")}</option>
-          {STAFF_ROLE_OPTIONS.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-      </label>
+      {isAdmin ? (
+        <label className="block text-sm text-gray-700">
+          {t("Role")} <span className="text-red-500">*</span>
+          <select name="role" defaultValue={staff?.role ?? ""} required className={inputCls}>
+            <option value="" disabled>{t("Select a role")}</option>
+            {STAFF_ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <input type="hidden" name="role" value="STAFF" />
+      )}
 
       <label className="block text-sm text-gray-700">
         {t("Department")} <span className="text-red-500">*</span>
