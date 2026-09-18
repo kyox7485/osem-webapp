@@ -111,6 +111,22 @@ export async function getAllStaffWithBranch(
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
 }
 
+// The Physiotherapy module (assessment "Documented by" picker, and the
+// Analytics dashboard's therapist filter/breakdowns) is used exclusively by
+// physiotherapists -- unlike getAllStaffWithBranch's department filter, this
+// does NOT fall back to including ADMIN staff, since an admin login is never
+// the person who actually performed a physio session.
+export async function getPhysiotherapyStaff(): Promise<LookupOption[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_staff")
+    .select("id:StaffID, staff_name")
+    .eq("status", "ACTIVE")
+    .eq("department", "Physiotherapy")
+    .order("staff_name");
+  return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name }));
+}
+
 export type ClinicalLookups = {
   // group_type ("Amount" | "Texture") lets the form enforce one selection
   // per set while letting the two sets mix freely.

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch, getPhysioIpBranchIds } from "@/lib/lookups";
+import { getPhysiotherapyStaff, getPhysioIpBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import {
   type PhysioCareSetting,
 } from "@/lib/physio-scoring";
 import { CareSettingTabs } from "./care-setting-tabs";
+import { PhysioModuleTabs } from "./module-tabs";
 import { PhysioAssessmentTabs } from "./assessment-tabs";
 import { PhysioDirtyProvider } from "./physio-dirty-context";
 import { ResidentPicker } from "./resident-picker";
@@ -98,6 +99,8 @@ export default async function PhysiotherapyPage({
   return (
     <div>
       <PageTitle title={t("Physiotherapy")} />
+
+      <PhysioModuleTabs />
 
       <CareSettingTabs current={careSetting} />
 
@@ -285,7 +288,7 @@ async function PhysiotherapyContent({
       .eq(patientColumn, residentId)
       .eq("care_setting", careSetting)
       .order("entry_timestamp", { ascending: false }),
-    getAllStaffWithBranch(undefined, "Physiotherapy"),
+    getPhysiotherapyStaff(),
   ]);
 
   const assessmentIds = (assessments ?? []).map((a) => a.id);
