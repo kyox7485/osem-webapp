@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { createVital } from "./vitals-actions";
-import { SPO2_CONDITION_OPTIONS, DXT_REMARK_OPTIONS, type LookupOption } from "@/lib/types";
+import { useState, useEffect } from "react";
+import {
+  createHospitalReferral,
+  getResidentReferralData,
+  type ResidentReferralData,
+} from "./hospital-referral-actions";
+import { formatDate } from "@/lib/format-date";
+import { MOBILITY_OPTIONS, HYGIENE_OPTIONS, SPO2_CONDITION_OPTIONS, DXT_REMARK_OPTIONS, type LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 
@@ -14,21 +19,19 @@ type Resident = {
 
 type Props = {
   residents: Resident[];
-  // Every active staff member across all branches, with branch_id --
-  // filtered client-side by the selected resident's branch, same pattern
-  // as ResidentForm's "Reviewed by" picker. No per-selection network
-  // round-trip (that was the old approach here, and the visible lag/flicker
-  // from it was the "doesn't work like other tabs" symptom).
   allStaff: (LookupOption & { branch_id: number })[];
   lookups: ClinicalLookups;
-  onClose: () => void;
-  onSaved: () => void;
+  feedingTypes: LookupOption[];
+  presetResidentId?: string;
+  // Passed the new referral's id so the caller can immediately open its
+  // printable PDF, same "save then print" flow as the legacy Access form.
+  onSaved: (id: number) => void;
 };
 
-export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }: Props) {
+export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingTypes, presetResidentId, onSaved }: Props) {
   const t = useTranslation();
-  const [advancedObsOpen, setAdvancedObsOpen] = useState(false);
-  const [residentId, setResidentId] = useState("");
+  const [residentId, setResidentId] = useState(presetResidentId || "");
+  const [chiefComplaints, setChiefComplaints] = useState("");
   const [systolicBp, setSystolicBp] = useState("");
   const [diastolicBp, setDiastolicBp] = useState("");
   const [heartRate, setHeartRate] = useState("");
@@ -37,18 +40,64 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
   const [spo2Condition, setSpo2Condition] = useState("");
   const [dxt, setDxt] = useState("");
   const [dxtRemark, setDxtRemark] = useState("");
-  const [insulinAdjustment, setInsulinAdjustment] = useState("");
+  const [advancedObsOpen, setAdvancedObsOpen] = useState(false);
   const [respirationRate, setRespirationRate] = useState("");
   const [gcsEyeId, setGcsEyeId] = useState("");
   const [gcsVerbalId, setGcsVerbalId] = useState("");
   const [gcsMotorId, setGcsMotorId] = useState("");
   const [avpuId, setAvpuId] = useState("");
+  const [mobility, setMobility] = useState("");
+  const [feeding, setFeeding] = useState("");
+  const [hygiene, setHygiene] = useState("");
   const [reviewedBy, setReviewedBy] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [particulars, setParticulars] = useState<ResidentReferralData | null>(null);
+  const [particularsLoading, setParticularsLoading] = useState(false);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
+
+  useEffect(() => {
+    if (!residentId) {
+      setParticulars(null);
+      setMobility("");
+      setFeeding("");
+      setHygiene("");
+      return;
+    }
+    setParticularsLoading(true);
+    getResidentReferralData(parseInt(residentId))
+      .then((data) => {
+        setParticulars(data);
+        // Always carries the resident's current profile value in as the
+        // starting selection -- still an editable dropdown, since the
+        // ADL status at the moment of referral can differ from the
+        // resident's usual baseline.
+        setMobility(data?.mobility ?? "");
+        setFeeding(data?.feeding ?? "");
+        setHygiene(data?.hygiene ?? "");
+      })
+      .finally(() => setParticularsLoading(false));
+  }, [residentId]);
+
+  function resetForm() {
+    setChiefComplaints("");
+    setSystolicBp("");
+    setDiastolicBp("");
+    setHeartRate("");
+    setTemperature("");
+    setSpo2("");
+    setSpo2Condition("");
+    setDxt("");
+    setDxtRemark("");
+    setRespirationRate("");
+    setGcsEyeId("");
+    setGcsVerbalId("");
+    setGcsMotorId("");
+    setAvpuId("");
+    setReviewedBy("");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,101 +108,145 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
       return;
     }
 
-    if (!reviewedBy) {
-      setError(t("Please select who reviewed this reading"));
+    if (!chiefComplaints) {
+      setError(t("Chief complaints is required"));
       return;
     }
 
-    // Validate SpO2 condition when SpO2 is filled
     if (spo2 && !spo2Condition) {
       setError(t("SpO2 condition is required when SpO2 is recorded"));
       return;
     }
 
-    // Validate DXT remark when DXT is filled
     if (dxt && !dxtRemark) {
       setError(t("DXT remark is required when DXT is recorded"));
       return;
     }
 
+    if (!reviewedBy) {
+      setError(t("Please select who is reporting this referral"));
+      return;
+    }
+
+    const vitalSignsLines = [
+      `BP: ${systolicBp || "--"}/${diastolicBp || "--"}`,
+      `HR: ${heartRate || "--"}`,
+      `T: ${temperature || "--"}`,
+      `SpO2: ${spo2 || "--"}${spo2Condition ? ` (${spo2Condition})` : ""}`,
+      `DXT: ${dxt || "--"}${dxtRemark ? ` (${dxtRemark})` : ""}`,
+    ];
+
+    if (respirationRate) vitalSignsLines.push(`Respiration Rate: ${respirationRate}`);
+    if (avpuId) vitalSignsLines.push(`AVPU: ${lookups.avpuOptions.find((o) => String(o.id) === avpuId)?.label ?? "--"}`);
+    if (gcsEyeId) vitalSignsLines.push(`GCS Eye: ${lookups.gcsEyeResponses.find((o) => String(o.id) === gcsEyeId)?.label ?? "--"}`);
+    if (gcsVerbalId) vitalSignsLines.push(`GCS Verbal: ${lookups.gcsVerbalResponses.find((o) => String(o.id) === gcsVerbalId)?.label ?? "--"}`);
+    if (gcsMotorId) vitalSignsLines.push(`GCS Motor: ${lookups.gcsMotorResponses.find((o) => String(o.id) === gcsMotorId)?.label ?? "--"}`);
+
     setIsSaving(true);
 
-    const result = await createVital({
+    const result = await createHospitalReferral({
       residentId: parseInt(residentId),
-      systolicBp: systolicBp ? parseFloat(systolicBp) : null,
-      diastolicBp: diastolicBp ? parseFloat(diastolicBp) : null,
-      heartRate: heartRate ? parseFloat(heartRate) : null,
-      temperature: temperature ? parseFloat(temperature) : null,
-      spo2: spo2 ? parseFloat(spo2) : null,
-      spo2Condition: spo2Condition || null,
-      dxt: dxt ? parseFloat(dxt) : null,
-      dxtRemark: dxtRemark || null,
-      insulinAdjustment: insulinAdjustment || null,
-      respirationRate: respirationRate ? parseFloat(respirationRate) : null,
-      gcsEyeId: gcsEyeId ? parseInt(gcsEyeId, 10) : null,
-      gcsVerbalId: gcsVerbalId ? parseInt(gcsVerbalId, 10) : null,
-      gcsMotorId: gcsMotorId ? parseInt(gcsMotorId, 10) : null,
-      avpuId: avpuId ? parseInt(avpuId, 10) : null,
+      chiefComplaints,
+      vitalSigns: vitalSignsLines.join("\n"),
+      mobility: mobility || null,
+      feeding: feeding || null,
+      hygiene: hygiene || null,
       reviewedBy,
     });
 
     setIsSaving(false);
 
-    if (!result.success) {
-      setError(result.error || t("Failed to save vital signs"));
+    if (!result.success || !result.id) {
+      setError(result.error || t("Failed to save hospital referral"));
       return;
     }
 
-    onSaved();
+    resetForm();
+    onSaved(result.id);
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">{t("Record Vital Signs")}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-            disabled={isSaving}
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    <div className="space-y-4">
+      <div>
+        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
+          {t("Resident")} <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="resident"
+          value={residentId}
+          onChange={(e) => {
+            setResidentId(e.target.value);
+            setReviewedBy("");
+          }}
+          disabled={!!presetResidentId}
+          required
+          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+        >
+          <option value="">{t("Select resident")}</option>
+          {residents.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.resident_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {residentId && particularsLoading && (
+        <p className="text-sm text-gray-400">{t("Loading resident particulars...")}</p>
+      )}
+
+      {residentId && particulars && (
+        <details className="group rounded-md border border-gray-200 bg-white p-4 shadow-sm" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-gray-900">
+            {t("Resident's Particulars")}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="text-gray-400 transition-transform group-open:rotate-90"
+            >
+              <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </summary>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ParticularField label={t("IC No. / Passport No")} value={particulars.ic_number} />
+            <ParticularField
+              label={t("Date of Nursing Home Admission")}
+              value={particulars.admission_date ? formatDate(particulars.admission_date) : null}
+            />
+            <ParticularField label={t("Emergency Contact")} value={particulars.emergency_contact} multiline />
+            <ParticularField label={t("Allergy History")} value={particulars.allergy} multiline />
+            <ParticularField label={t("Past Medical / Surgical History")} value={particulars.past_medical_condition} multiline />
+            <ParticularField label={t("Current Medication List")} value={particulars.current_medication_list} multiline />
+          </div>
+        </details>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+
+        <div>
+          <label htmlFor="chief-complaints" className="mb-1 block text-sm font-medium text-gray-700">
+            {t("Chief Complaints")} <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="chief-complaints"
+            value={chiefComplaints}
+            onChange={(e) => setChiefComplaints(e.target.value)}
+            required
+            rows={4}
+            placeholder={t("Sudden onset chest pain, SpO2 drop, impression...")}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
         </div>
 
-        {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
-              {t("Resident")} <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="resident"
-              value={residentId}
-              onChange={(e) => {
-                setResidentId(e.target.value);
-                setReviewedBy("");
-              }}
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">{t("Select resident")}</option>
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.resident_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-800">{t("Vital Signs")}</h3>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <div>
               <label htmlFor="systolic-bp" className="mb-1 block text-sm font-medium text-gray-700">
-                {t("Systolic BP (mmHg)")}
+                {t("BP Systolic")}
               </label>
               <input
                 type="number"
@@ -161,14 +254,13 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={systolicBp}
                 onChange={(e) => setSystolicBp(e.target.value)}
                 step="0.1"
-                placeholder={t("e.g. 120")}
+                placeholder={t("e.g. 146")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-
             <div>
               <label htmlFor="diastolic-bp" className="mb-1 block text-sm font-medium text-gray-700">
-                {t("Diastolic BP (mmHg)")}
+                {t("BP Diastolic")}
               </label>
               <input
                 type="number"
@@ -176,14 +268,13 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={diastolicBp}
                 onChange={(e) => setDiastolicBp(e.target.value)}
                 step="0.1"
-                placeholder={t("e.g. 80")}
+                placeholder={t("e.g. 71")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-
             <div>
               <label htmlFor="heart-rate" className="mb-1 block text-sm font-medium text-gray-700">
-                {t("Heart Rate (bpm)")}
+                {t("HR")}
               </label>
               <input
                 type="number"
@@ -191,14 +282,13 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={heartRate}
                 onChange={(e) => setHeartRate(e.target.value)}
                 step="0.1"
-                placeholder={t("e.g. 72")}
+                placeholder={t("e.g. 102")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-
             <div>
               <label htmlFor="temperature" className="mb-1 block text-sm font-medium text-gray-700">
-                {t("Temperature (°C)")}
+                {t("Temp (°C)")}
               </label>
               <input
                 type="number"
@@ -206,11 +296,10 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value)}
                 step="0.1"
-                placeholder={t("e.g. 36.8")}
+                placeholder={t("e.g. 36.2")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-
             <div>
               <label htmlFor="spo2" className="mb-1 block text-sm font-medium text-gray-700">
                 {t("SpO2 (%)")}
@@ -221,11 +310,10 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={spo2}
                 onChange={(e) => setSpo2(e.target.value)}
                 step="0.1"
-                placeholder={t("e.g. 98")}
+                placeholder={t("e.g. 92")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-
             {spo2 && (
               <div>
                 <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-gray-700">
@@ -247,7 +335,6 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 </select>
               </div>
             )}
-
             <div>
               <label htmlFor="dxt" className="mb-1 block text-sm font-medium text-gray-700">
                 {t("DXT (mmol/L)")}
@@ -258,11 +345,10 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
                 value={dxt}
                 onChange={(e) => setDxt(e.target.value)}
                 step="0.1"
-                placeholder={t("e.g. 5.5")}
+                placeholder={t("e.g. 11.1")}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
-
             {dxt && (
               <div>
                 <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-gray-700">
@@ -286,23 +372,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             )}
           </div>
 
-          {dxt && (
-            <div>
-              <label htmlFor="insulin-adjustment" className="mb-1 block text-sm font-medium text-gray-700">
-                {t("Insulin Adjustment")}
-              </label>
-              <textarea
-                id="insulin-adjustment"
-                value={insulinAdjustment}
-                onChange={(e) => setInsulinAdjustment(e.target.value)}
-                rows={2}
-                placeholder={t("Notes on insulin adjustment...")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-          )}
-
-          <div>
+          <div className="mt-3">
             <button
               type="button"
               onClick={() => setAdvancedObsOpen((o) => !o)}
@@ -414,47 +484,117 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
               </div>
             )}
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
-              {t("Reviewed By")} <span className="text-red-500">*</span>
+            <label htmlFor="mobility" className="mb-1 block text-sm font-medium text-gray-700">
+              {t("Mobility")}
             </label>
             <select
-              id="reviewed-by"
-              value={reviewedBy}
-              onChange={(e) => setReviewedBy(e.target.value)}
-              required
+              id="mobility"
+              value={mobility}
+              onChange={(e) => setMobility(e.target.value)}
               disabled={!residentId}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
             >
-              <option value="">{t("Select staff")}</option>
-              {staffOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
+              <option value="">{t("Select mobility")}</option>
+              {MOBILITY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {t(opt)}
                 </option>
               ))}
             </select>
           </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+          <div>
+            <label htmlFor="feeding" className="mb-1 block text-sm font-medium text-gray-700">
+              {t("Feeding")}
+            </label>
+            <select
+              id="feeding"
+              value={feeding}
+              onChange={(e) => setFeeding(e.target.value)}
+              disabled={!residentId}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
             >
-              {t("Cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-            >
-              {isSaving ? t("Saving...") : t("Save")}
-            </button>
+              <option value="">{t("Select feeding")}</option>
+              {feedingTypes.map((ft) => (
+                <option key={ft.id} value={ft.label}>
+                  {ft.label}
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
-      </div>
+          <div>
+            <label htmlFor="hygiene" className="mb-1 block text-sm font-medium text-gray-700">
+              {t("Hygiene")}
+            </label>
+            <select
+              id="hygiene"
+              value={hygiene}
+              onChange={(e) => setHygiene(e.target.value)}
+              disabled={!residentId}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+            >
+              <option value="">{t("Select hygiene")}</option>
+              {HYGIENE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {t(opt)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
+            {t("Reported By")} <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="reviewed-by"
+            value={reviewedBy}
+            onChange={(e) => setReviewedBy(e.target.value)}
+            required
+            disabled={!residentId}
+            className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+          >
+            <option value="">{t("Select staff")}</option>
+            {staffOptions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={resetForm}
+            disabled={isSaving}
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            {t("Clear")}
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            {isSaving ? t("Saving...") : t("Save & Generate PDF")}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ParticularField({ label, value, multiline }: { label: string; value: string | null; multiline?: boolean }) {
+  const t = useTranslation();
+  return (
+    <div>
+      <dt className="text-xs font-medium text-gray-500">{label}</dt>
+      <dd className={`text-sm text-gray-800 ${multiline ? "whitespace-pre-wrap" : ""}`}>{value || t("None recorded.")}</dd>
     </div>
   );
 }

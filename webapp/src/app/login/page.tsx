@@ -21,8 +21,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    // The demo/product-showcase login ("test") is a bare word, not a real
+    // email -- Supabase Auth still needs an email-shaped identifier under
+    // the hood, so it's registered as test@osemdemo.local and this maps the
+    // memorable login id back to that address. Every other login already
+    // types a real email, so this never touches them.
+    const loginEmail = email.trim().toLowerCase() === "test" ? "test@osemdemo.local" : email;
+
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
     if (error) {
       setError(error.message);
@@ -49,8 +56,9 @@ export default function LoginPage() {
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
               required
+              autoCapitalize="none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"

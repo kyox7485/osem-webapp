@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch, getClinicalLookups } from "@/lib/lookups";
+import { getAllStaffWithBranch, getClinicalLookups, getFeedingTypes } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import type { NursingChartEntry } from "./nursing-chart-module";
@@ -41,16 +41,18 @@ export default async function ClinicalPage({
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
   }
 
-  const [{ data: residents }, allStaff, nursingChartLookups] = await Promise.all([
+  const [{ data: residents }, allStaff, nursingChartLookups, feedingTypes] = await Promise.all([
     residentQuery,
     getAllStaffWithBranch(),
     getClinicalLookups(),
+    getFeedingTypes(),
   ]);
 
   // Fetch data based on active tab
   let vitals = [];
   let notes = [];
   let nursingChartEntries: NursingChartEntry[] = [];
+  let referrals = [];
   let error = null;
 
   if (currentTab === "vitals") {
@@ -299,6 +301,43 @@ export default async function ClinicalPage({
         entered_by_name: author?.staff_name ?? "--",
       };
     });
+  } else if (currentTab === "hospital-referral") {
+    let referralsQuery = supabase
+      .from("tbl_hospital_referrals")
+      .select(
+        `
+        id,
+        resident_id,
+        referral_datetime,
+        chief_complaints,
+        vital_signs,
+        mobility,
+        feeding,
+        hygiene,
+        reviewed_by,
+        tbl_residents!resident_id(id, resident_name, branch_id),
+        reviewer:tbl_staff!reviewed_by(StaffID, staff_name)
+      `
+      )
+      .order("referral_datetime", { ascending: false });
+
+    if (account.rights !== "ADMIN") {
+      referralsQuery = referralsQuery.eq("branch_id", account.branch_id);
+    }
+
+    if (residentFilter) referralsQuery = referralsQuery.eq("resident_id", parseInt(residentFilter));
+    if (startDate) referralsQuery = referralsQuery.gte("referral_datetime", `${startDate}T00:00:00`);
+    if (endDate) referralsQuery = referralsQuery.lte("referral_datetime", `${endDate}T23:59:59`);
+
+    const { data: rawReferrals, error: referralsError } = await referralsQuery;
+
+    referrals = (rawReferrals || []).map((r: any) => ({
+      ...r,
+      tbl_residents: Array.isArray(r.tbl_residents) ? r.tbl_residents[0] : r.tbl_residents,
+      reviewer: Array.isArray(r.reviewer) ? r.reviewer[0] : r.reviewer,
+    }));
+
+    error = referralsError?.message || null;
   }
 
   return (
@@ -312,6 +351,8 @@ export default async function ClinicalPage({
         notes={notes}
         nursingChartEntries={nursingChartEntries}
         nursingChartLookups={nursingChartLookups}
+        feedingTypes={feedingTypes}
+        referrals={referrals}
         currentResident={residentFilter}
         currentStart={startDate}
         currentEnd={endDate}

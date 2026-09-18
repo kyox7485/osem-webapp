@@ -150,6 +150,24 @@ export const ACCOMPANIED_BY_OPTIONS = ["Self", "Family", "Friends", "Social Work
 export const MOBILITY_OPTIONS = ["Walking Independent", "Walking Aid", "Wheelchair", "Bedbound"] as const;
 export const HYGIENE_OPTIONS = ["Self Toileting", "Urinal", "Bedpan", "Commode Chair", "Pampers"] as const;
 export const CARE_GOAL_OPTIONS = ["Nursing/ADL care", "Rehabilitation", "Wound Care", "Paliative Care", "Others"] as const;
+// tbl_vital.spo2_condition / .dxt_remark check constraints -- shared between
+// the Vitals "Record Vital Signs" form and the Hospital Referral form, both
+// of which require the matching condition/remark whenever the reading itself
+// is entered.
+export const SPO2_CONDITION_OPTIONS = [
+  "under RA",
+  "under 1LPM O2",
+  "under 2LPM O2",
+  "under 3LPM O2",
+  "under 4LPM O2",
+  "under 5LPM O2",
+  "under 6LPM O2",
+  "under 7LPM O2",
+  "under 8LPM O2",
+  "under 9LPM O2",
+  "under 10LPM O2",
+] as const;
+export const DXT_REMARK_OPTIONS = ["Fasting", "Post-Meal 1hr", "Post-Meal 2hr", "Post-Meal >4hr"] as const;
 // tbl_staff.role -- coarse category used to scope role-restricted
 // staff-picker dropdowns (see getStaffRoster/getAllStaffWithBranch in
 // lib/lookups.ts). Separate enum from id_rights even though the labels

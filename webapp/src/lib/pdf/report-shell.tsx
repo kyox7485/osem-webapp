@@ -270,9 +270,24 @@ const sectionStyles = StyleSheet.create({
 // One labelled free-text block (Progress Note, Physical Examination, Medical
 // Plan, ...). Renders a placeholder dash rather than collapsing to nothing,
 // so a report with an unfilled field still reads as complete, not broken.
-export function ReportSection({ label, value, minLines = 3 }: { label: string; value: string | null | undefined; minLines?: number }) {
+//
+// allowPageBreak lets a section that can run very long (e.g. an extensive
+// past medical history) split across pages instead of staying an atomic
+// block -- the default (false) keeps shorter sections from being awkwardly
+// orphaned at a page boundary.
+export function ReportSection({
+  label,
+  value,
+  minLines = 3,
+  allowPageBreak = false,
+}: {
+  label: string;
+  value: string | null | undefined;
+  minLines?: number;
+  allowPageBreak?: boolean;
+}) {
   return (
-    <View style={sectionStyles.wrap} wrap={false}>
+    <View style={sectionStyles.wrap} wrap={allowPageBreak}>
       <Text style={sectionStyles.label}>{label}</Text>
       <View style={[sectionStyles.box, { minHeight: minLines * 12 + 16 }]}>
         {value ? <Text style={sectionStyles.text}>{value}</Text> : <Text style={sectionStyles.empty}>Not recorded</Text>}

@@ -5,12 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { VitalsTable } from "./vitals-table";
 import { ProgressNotesModule } from "./progress-notes-module";
 import { NursingChartModule, type NursingChartEntry } from "./nursing-chart-module";
+import { HospitalReferralModule } from "./hospital-referral-module";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
-import { ClipboardList, Activity, FileText } from "lucide-react";
+import { ClipboardList, Activity, FileText, Ambulance } from "lucide-react";
 
 type Vital = {
   id: number;
@@ -52,6 +53,20 @@ type ProgressNote = {
   author: { StaffID: string; staff_name: string } | null;
 };
 
+type HospitalReferral = {
+  id: number;
+  resident_id: number;
+  referral_datetime: string;
+  chief_complaints: string | null;
+  vital_signs: string | null;
+  mobility: string | null;
+  feeding: string | null;
+  hygiene: string | null;
+  reviewed_by: string | null;
+  tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
+  reviewer: { StaffID: string; staff_name: string } | null;
+};
+
 type Resident = {
   id: number;
   resident_name: string;
@@ -65,13 +80,15 @@ type Props = {
   notes: ProgressNote[];
   nursingChartEntries: NursingChartEntry[];
   nursingChartLookups: ClinicalLookups;
+  feedingTypes: LookupOption[];
+  referrals: HospitalReferral[];
   currentResident: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
 };
 
-type TabKey = "vitals" | "progress-notes" | "nursing-chart";
+type TabKey = "vitals" | "progress-notes" | "nursing-chart" | "hospital-referral";
 
 export function ClinicalContent({
   residents,
@@ -80,6 +97,8 @@ export function ClinicalContent({
   notes,
   nursingChartEntries,
   nursingChartLookups,
+  feedingTypes,
+  referrals,
   currentResident,
   currentStart,
   currentEnd,
@@ -92,7 +111,7 @@ export function ClinicalContent({
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "vitals" || tab === "progress-notes") {
+    if (tab === "vitals" || tab === "progress-notes" || tab === "hospital-referral") {
       setActiveTab(tab);
     } else {
       setActiveTab("nursing-chart");
@@ -117,6 +136,9 @@ export function ClinicalContent({
         </TabButton>
         <TabButton icon={FileText} active={activeTab === "progress-notes"} onClick={() => switchTab("progress-notes")}>
           {t("Medical Progress Notes")}
+        </TabButton>
+        <TabButton icon={Ambulance} active={activeTab === "hospital-referral"} onClick={() => switchTab("hospital-referral")}>
+          {t("Hospital Referral")}
         </TabButton>
       </TabRow>
 
@@ -150,6 +172,19 @@ export function ClinicalContent({
             notes={notes}
             residents={residents}
             allStaff={allStaff}
+            currentResident={currentResident}
+            currentStart={currentStart}
+            currentEnd={currentEnd}
+            error={error}
+          />
+        )}
+        {activeTab === "hospital-referral" && (
+          <HospitalReferralModule
+            referrals={referrals}
+            residents={residents}
+            allStaff={allStaff}
+            lookups={nursingChartLookups}
+            feedingTypes={feedingTypes}
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}
