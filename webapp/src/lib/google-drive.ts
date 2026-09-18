@@ -28,7 +28,15 @@ function isConfigured(): boolean {
   return Boolean(process.env.GOOGLE_APPS_SCRIPT_URL && process.env.GOOGLE_APPS_SCRIPT_SECRET);
 }
 
-async function callAppsScript(payload: Record<string, unknown>): Promise<any> {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Apps Script Web Apps under a personal (non-Workspace) account intermittently
+// return a bare HTTP 404/5xx for an otherwise-valid request -- observed in
+// testing to flip between failing and succeeding on the exact same URL
+// seconds apart, consistent with the lower per-account quotas/instability
+// a consumer account gets versus Workspace. A short retry absorbs these
+// transient blips instead of surfacing them to the user as a failed upload.
+async function callAppsScript(payload: Record<string, unknown>, attempt = 1): Promise<any> {
   if (!isConfigured()) throw new DriveNotConfiguredError();
 
   const res = await fetch(process.env.GOOGLE_APPS_SCRIPT_URL!, {
@@ -38,7 +46,13 @@ async function callAppsScript(payload: Record<string, unknown>): Promise<any> {
     redirect: "follow", // Apps Script Web App URLs 302 once to the actual execution URL
   });
 
-  if (!res.ok) throw new Error(`Apps Script HTTP ${res.status}`);
+  if (!res.ok) {
+    if (attempt < 3) {
+      await sleep(500 * attempt);
+      return callAppsScript(payload, attempt + 1);
+    }
+    throw new Error(`Apps Script HTTP ${res.status}`);
+  }
 
   const json = await res.json();
   // Apps Script's ContentService always returns HTTP 200 for a completed
