@@ -50,28 +50,35 @@ async function callAppsScript(payload: Record<string, unknown>): Promise<any> {
 
 export type UploadedWoundPhoto = { driveFileId: string; driveFolderId: string };
 
-// OSEM Clinical Photos / {BranchCode} - {BranchName} / {ResidentID} - {Name} / {Year} / {YYYY-MM-DD}
+// OSEM Clinical Photos / {ResidentID} - {ResidentName} ({BranchCode}) / {YYYY-MM-DD}
 // ResidentID leads the resident folder name so it stays unambiguous even
 // if two residents share a name; folder creation happens entirely inside
-// the Apps Script call (find-or-create each level), so this is a single
-// round trip for the whole upload.
+// the Apps Script call (find-or-create each level).
+//
+// Resolving that chain is 2 sequential Drive API calls (originally 4, with
+// a separate branch level and a year level -- flattened since each level
+// is real, measurable latency: a single upload was clocked taking several
+// seconds even when every folder already existed). Every photo after the
+// first one in a session lands in the exact same day folder, so
+// `knownFolderId` lets the caller skip resolution entirely: pass the
+// folder id a previous upload in this session already returned, and Apps
+// Script uses it directly.
 export async function uploadWoundPhotoToDrive(params: {
   branchCode: string;
-  branchName: string;
   residentId: number;
   residentName: string;
   date: Date;
   fileName: string;
   mimeType: string;
   buffer: Buffer;
+  knownFolderId?: string;
 }): Promise<UploadedWoundPhoto> {
   const json = await callAppsScript({
     action: "upload",
+    folderId: params.knownFolderId,
     branchCode: params.branchCode,
-    branchName: params.branchName,
     residentId: params.residentId,
     residentName: params.residentName,
-    year: params.date.getFullYear(),
     isoDate: params.date.toISOString().slice(0, 10),
     fileName: params.fileName,
     mimeType: params.mimeType,

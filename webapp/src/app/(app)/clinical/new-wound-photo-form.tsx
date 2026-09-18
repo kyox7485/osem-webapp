@@ -50,6 +50,13 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   const [residentId, setResidentId] = useState(presetResidentId || "");
   const [uploadedBy, setUploadedBy] = useState("");
   const [sessionId, setSessionId] = useState<number | null>(null);
+  // Caches the Drive day-folder resolved by the first successful upload so
+  // every later photo in this session can skip straight to it instead of
+  // re-walking Branch/Resident/Year/Date each time -- see the knownFolderId
+  // param on uploadWoundPhotoToDrive. Keyed by the date it was resolved for,
+  // so a session that happens to cross midnight re-resolves rather than
+  // filing a photo under the wrong day.
+  const sessionFolderRef = useRef<{ folderId: string; isoDate: string } | null>(null);
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [view, setView] = useState<"diagram" | "part">("diagram");
   const [activePart, setActivePart] = useState<WoundBodyPart | null>(null);
@@ -150,6 +157,10 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
       if (payload.mimeType) form.set("mimeType", payload.mimeType);
     } else if (payload.blob) {
       form.set("file", payload.blob, "photo.jpg");
+      const todayIso = new Date().toISOString().slice(0, 10);
+      if (sessionFolderRef.current && sessionFolderRef.current.isoDate === todayIso) {
+        form.set("knownFolderId", sessionFolderRef.current.folderId);
+      }
     }
 
     try {
@@ -166,6 +177,9 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         return;
       }
       setSessionId((current) => current ?? result.sessionId);
+      if (result.driveFolderId && !sessionFolderRef.current) {
+        sessionFolderRef.current = { folderId: result.driveFolderId, isoDate: new Date().toISOString().slice(0, 10) };
+      }
       setPhotos((prev) => prev.map((p) => (p.clientId === clientId ? { ...p, status: "saved", photoId: result.photoId } : p)));
     } catch {
       setPhotos((prev) => prev.map((p) => (p.clientId === clientId ? { ...p, status: "failed", error: t("Network error") } : p)));

@@ -59,19 +59,29 @@ function findOrCreateFolder(name, parentFolder) {
   return parentFolder.createFolder(name);
 }
 
-// OSEM Clinical Photos / {BranchCode} - {BranchName} / {ResidentID} - {Name} / {Year} / {YYYY-MM-DD}
+// OSEM Clinical Photos / {ResidentID} - {ResidentName} ({BranchCode}) / {YYYY-MM-DD}
+//
+// Originally a 4-level Branch/Resident/Year/Date chain; flattened to 2
+// levels (branch folded into the resident folder's name, year dropped)
+// since each level is a sequential DriveApp lookup -- a real API call
+// each -- and was measured taking several seconds total even when every
+// folder already existed. If the caller already knows the target folder
+// (every photo after the first one in a session shares the same day
+// folder), it passes `folderId` and this skips resolution entirely.
 function handleUpload(body) {
-  const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
-  const branchFolder = findOrCreateFolder(body.branchCode + " - " + body.branchName, root);
-  const residentFolder = findOrCreateFolder(body.residentId + " - " + body.residentName, branchFolder);
-  const yearFolder = findOrCreateFolder(String(body.year), residentFolder);
-  const dateFolder = findOrCreateFolder(body.isoDate, yearFolder);
+  const targetFolder = body.folderId ? DriveApp.getFolderById(body.folderId) : resolveDateFolder(body);
 
   const bytes = Utilities.base64Decode(body.fileBase64);
   const blob = Utilities.newBlob(bytes, body.mimeType || "image/jpeg", body.fileName || "photo.jpg");
-  const file = dateFolder.createFile(blob);
+  const file = targetFolder.createFile(blob);
 
-  return jsonResponse({ success: true, fileId: file.getId(), folderId: dateFolder.getId() });
+  return jsonResponse({ success: true, fileId: file.getId(), folderId: targetFolder.getId() });
+}
+
+function resolveDateFolder(body) {
+  const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  const residentFolder = findOrCreateFolder(body.residentId + " - " + body.residentName + " (" + body.branchCode + ")", root);
+  return findOrCreateFolder(body.isoDate, residentFolder);
 }
 
 function handleRead(body) {

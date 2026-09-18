@@ -36,6 +36,12 @@ export async function POST(req: NextRequest) {
   const existingSessionId = form.get("sessionId") ? Number(form.get("sessionId")) : null;
   const existingDriveFileId = form.get("driveFileId") ? String(form.get("driveFileId")) : null;
   const existingDriveFolderId = form.get("driveFolderId") ? String(form.get("driveFolderId")) : null;
+  // Distinct from existingDriveFolderId above: that one means "a file was
+  // already uploaded, skip Drive entirely." This one means "no file
+  // uploaded yet, but a previous photo in this session already resolved
+  // this folder -- skip the 4-level folder walk and upload straight into
+  // it" (see uploadWoundPhotoToDrive's knownFolderId param).
+  const knownFolderId = form.get("knownFolderId") ? String(form.get("knownFolderId")) : null;
   const existingFileName = form.get("fileName") ? String(form.get("fileName")) : null;
   const existingMimeType = form.get("mimeType") ? String(form.get("mimeType")) : null;
   const file = form.get("file") as File | null;
@@ -47,7 +53,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: resident } = await supabase
     .from("tbl_residents")
-    .select("id, resident_name, branch_id, tbl_branches!branch_id(BranchName, BranchCode)")
+    .select("id, resident_name, branch_id, tbl_branches!branch_id(BranchCode)")
     .eq("id", residentId)
     .single();
 
@@ -76,13 +82,13 @@ export async function POST(req: NextRequest) {
 
       const uploaded = await uploadWoundPhotoToDrive({
         branchCode: branch?.BranchCode || "UNKNOWN",
-        branchName: branch?.BranchName || "Unknown Branch",
         residentId: resident.id,
         residentName: resident.resident_name,
         date: new Date(),
         fileName,
         mimeType,
         buffer,
+        knownFolderId: knownFolderId || undefined,
       });
       driveFileId = uploaded.driveFileId;
       driveFolderId = uploaded.driveFolderId;
@@ -123,7 +129,7 @@ export async function POST(req: NextRequest) {
       .single();
     if (photoError || !photo) throw photoError || new Error("Failed to save photo record");
 
-    return NextResponse.json({ success: true, sessionId, photoId: photo.id });
+    return NextResponse.json({ success: true, sessionId, photoId: photo.id, driveFolderId });
   } catch (err) {
     // Drive already has the file at this point -- surface the Drive ids so
     // the client's retry skips re-uploading and only retries this insert.
