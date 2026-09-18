@@ -9,6 +9,7 @@ import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { ListChecks, Plus } from "lucide-react";
+import { PdfDownloadLink } from "@/components/pdf-download-link";
 
 type ProgressNote = {
   id: number;
@@ -166,6 +167,7 @@ export function ProgressNotesModule({
                       <span className="font-bold text-gray-900">{note.tbl_residents?.resident_name}</span>
                       <span className="flex items-center gap-2 text-xs text-gray-400">
                         {formatDateTime(note.entry_timestamp)}
+                        <PdfDownloadLink href={`/api/reports/progress-note?id=${note.id}`} />
                         <svg
                           width="14"
                           height="14"

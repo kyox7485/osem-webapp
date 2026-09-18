@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatDateTime } from "@/lib/format-date";
 import { EXAM_STRUCTURE, type ExamLimb, type ExamRow } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
+import { PdfDownloadLink } from "@/components/pdf-download-link";
 
 export type ReviewAssessment = {
   id: number;
@@ -58,6 +59,7 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
               <span>{a.treatment_type ?? "--"}</span>
               <span>{t("Documented by")}: {a.documented_by_name}</span>
               <span className="font-semibold text-indigo-600">{t("Score")}: {a.total_score ?? "--"}</span>
+              <PdfDownloadLink href={`/api/reports/physio-assessment?id=${a.id}`} />
             </div>
 
             {isExpanded && (

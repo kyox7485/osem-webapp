@@ -19,6 +19,7 @@ import {
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
+import { PdfDownloadLink } from "@/components/pdf-download-link";
 
 type Vital = {
   id: number;
@@ -77,6 +78,11 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
     window.print();
   }
 
+  const pdfParams = new URLSearchParams();
+  if (currentResident) pdfParams.set("resident", currentResident);
+  if (currentStart) pdfParams.set("start", currentStart);
+  if (currentEnd) pdfParams.set("end", currentEnd);
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -127,7 +133,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
             />
           </div>
 
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2 sm:col-span-1">
             <button
               type="button"
               onClick={() => setShowForm(true)}
@@ -142,6 +148,23 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
             >
               {t("Print")}
             </button>
+            {currentResident ? (
+              <a
+                href={`/api/reports/vital-signs?${pdfParams.toString()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                {t("Download PDF")}
+              </a>
+            ) : (
+              <span
+                title={t("Select a resident to download the PDF report")}
+                className="inline-flex cursor-not-allowed items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400"
+              >
+                {t("Download PDF")}
+              </span>
+            )}
           </div>
         </div>
       </div>

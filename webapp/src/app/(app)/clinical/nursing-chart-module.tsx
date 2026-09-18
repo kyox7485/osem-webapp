@@ -10,6 +10,7 @@ import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { ListChecks, Plus } from "lucide-react";
+import { PdfDownloadLink } from "@/components/pdf-download-link";
 
 export type NursingChartEntry = {
   id: number;
@@ -154,6 +155,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                       <span className="font-bold text-gray-900">{entry.resident_name}</span>
                       <span className="flex items-center gap-2 text-xs text-gray-400">
                         {formatDateTime(entry.entry_timestamp)}
+                        <PdfDownloadLink href={`/api/reports/nursing-chart?id=${entry.id}`} />
                         <svg
                           width="14"
                           height="14"
