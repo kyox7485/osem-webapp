@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { compressImage } from "@/lib/compress-image";
 import { finishWoundSession } from "./wound-photo-actions";
 import { WoundBodyDiagram, WOUND_REGION_POSITIONS, type WoundBodyPart } from "./wound-body-diagram";
@@ -65,7 +65,25 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   const [description, setDescription] = useState("");
   const [finishing, setFinishing] = useState(false);
   const [waitingForUploads, setWaitingForUploads] = useState(false);
+  const [sessionFinished, setSessionFinished] = useState(false);
   const [error, setError] = useState("");
+
+  // Dirty once a session exists (at least one photo has started uploading)
+  // and hasn't been finished yet -- drives the leave/refresh confirmation
+  // below. Only guards a real tab close/refresh/URL-bar navigation
+  // (window's native beforeunload); it can't intercept an in-app sidebar
+  // link click, which Next.js App Router has no generic hook for.
+  const isDirty = sessionId !== null && !sessionFinished;
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
@@ -254,10 +272,33 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
       setError(result.error || t("Failed to finish session"));
       return;
     }
+    setSessionFinished(true);
     onSaved();
   }
 
   const finishBusy = finishing || waitingForUploads;
+  // Resident and Uploaded By are stacked in the same left-aligned column at
+  // a matched width, rather than one full-width and one auto-width, so the
+  // two dropdowns visually line up as one field group.
+  const fieldClass = "w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 sm:max-w-xs";
+  // Both bottom-of-page CTAs share this size/weight so they read as an
+  // equally prominent pair (≥44px tall touch target either way) -- "Finish
+  // Session" is filled/primary since it's the action that actually closes
+  // out the session, "Upload More Body Parts..." is a bold outline so it
+  // doesn't look secondary or skippable next to it.
+  const finishButtonClass =
+    "flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50";
+  const uploadMoreButtonClass =
+    "flex items-center justify-center gap-2 rounded-lg border-2 border-indigo-600 bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50";
+
+  function goToDiagram() {
+    if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
+    setRawPreviewUrl(null);
+    pendingFileRef.current = null;
+    setStage("idle");
+    setView("diagram");
+    setActivePart(null);
+  }
 
   return (
     <div className="space-y-4">
@@ -265,16 +306,25 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         <label className="mb-1 block text-sm font-medium text-gray-700">
           {t("Resident")} <span className="text-red-500">*</span>
         </label>
-        <select
-          value={residentId}
-          disabled={residentLocked}
-          onChange={(e) => setResidentId(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 sm:max-w-xs"
-        >
+        <select value={residentId} disabled={residentLocked} onChange={(e) => setResidentId(e.target.value)} className={fieldClass}>
           <option value="">{t("Select resident")}</option>
           {residents.map((r) => (
             <option key={r.id} value={r.id}>
               {r.resident_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          {t("Uploaded by")} <span className="text-red-500">*</span>
+        </label>
+        <select value={uploadedBy} disabled={!residentId} onChange={(e) => setUploadedBy(e.target.value)} className={fieldClass}>
+          <option value="">{t("Select staff")}...</option>
+          {staffOptions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
             </option>
           ))}
         </select>
@@ -318,26 +368,9 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
           )}
 
           {photos.length > 0 && (
-            <div className="flex flex-col items-end gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
-              <select
-                value={uploadedBy}
-                onChange={(e) => setUploadedBy(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm sm:w-auto"
-              >
-                <option value="">{t("Uploaded by")}...</option>
-                {staffOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleFinish}
-                disabled={finishBusy}
-                className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {waitingForUploads && <Loader2 size={16} className="animate-spin" />}
+            <div className="flex justify-center border-t border-gray-100 pt-4">
+              <button type="button" onClick={handleFinish} disabled={finishBusy} className={finishButtonClass}>
+                {waitingForUploads && <Loader2 size={20} className="animate-spin" />}
                 {waitingForUploads ? t("Waiting for uploads to finish...") : finishing ? t("Finishing...") : t("Finish Session")}
               </button>
             </div>
@@ -345,21 +378,6 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         </div>
       ) : (
         <div className="space-y-4">
-          <button
-            type="button"
-            onClick={() => {
-              if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
-              setRawPreviewUrl(null);
-              pendingFileRef.current = null;
-              setStage("idle");
-              setView("diagram");
-              setActivePart(null);
-            }}
-            className="flex items-center gap-1 text-sm font-medium text-indigo-600"
-          >
-            <ChevronLeft size={16} /> {t("Back to diagram")}
-          </button>
-
           <h3 className="text-lg font-bold text-gray-900">{t(activePart!.label)}</h3>
 
           <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
@@ -444,6 +462,16 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
               ))}
             </div>
           )}
+
+          <div className="flex flex-col items-center justify-center gap-3 border-t border-gray-100 pt-6 sm:flex-row">
+            <button type="button" onClick={goToDiagram} className={uploadMoreButtonClass}>
+              <ChevronLeft size={20} /> {t("Upload More Body Parts...")}
+            </button>
+            <button type="button" onClick={handleFinish} disabled={finishBusy || photos.length === 0} className={finishButtonClass}>
+              {waitingForUploads && <Loader2 size={20} className="animate-spin" />}
+              {waitingForUploads ? t("Waiting for uploads to finish...") : finishing ? t("Finishing...") : t("Finish Session")}
+            </button>
+          </div>
         </div>
       )}
     </div>
