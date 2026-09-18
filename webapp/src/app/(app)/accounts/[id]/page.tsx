@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { formatBranch } from "@/lib/lookups";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AccountViewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,11 +26,8 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">{account.username}</h1>
-          <p className="text-sm text-gray-500">{account.email} · {formatBranch(branch)}</p>
-        </div>
+      <PageTitle title={account.username} description={`${account.email} · ${formatBranch(branch)}`} />
+      <div className="mb-4 flex items-center justify-end">
         <Link
           href={`/accounts/${account.id}/edit`}
           className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"

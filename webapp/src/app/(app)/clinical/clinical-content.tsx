@@ -9,6 +9,8 @@ import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
+import { TabRow, TabButton } from "@/components/tabs";
+import { ClipboardList, Activity, FileText } from "lucide-react";
 
 type Vital = {
   id: number;
@@ -106,17 +108,17 @@ export function ClinicalContent({
 
   return (
     <div>
-      <div className="mb-6 flex gap-1 border-b border-gray-200">
-        <TabButton active={activeTab === "nursing-chart"} onClick={() => switchTab("nursing-chart")}>
+      <TabRow className="mb-6">
+        <TabButton icon={ClipboardList} active={activeTab === "nursing-chart"} onClick={() => switchTab("nursing-chart")}>
           {t("Nursing Chart")}
         </TabButton>
-        <TabButton active={activeTab === "vitals"} onClick={() => switchTab("vitals")}>
+        <TabButton icon={Activity} active={activeTab === "vitals"} onClick={() => switchTab("vitals")}>
           {t("Vital Signs")}
         </TabButton>
-        <TabButton active={activeTab === "progress-notes"} onClick={() => switchTab("progress-notes")}>
+        <TabButton icon={FileText} active={activeTab === "progress-notes"} onClick={() => switchTab("progress-notes")}>
           {t("Medical Progress Notes")}
         </TabButton>
-      </div>
+      </TabRow>
 
       <div className="mt-6">
         {activeTab === "nursing-chart" && (
@@ -156,19 +158,5 @@ export function ClinicalContent({
         )}
       </div>
     </div>
-  );
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-        active ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:text-gray-800"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

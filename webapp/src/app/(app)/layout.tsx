@@ -2,7 +2,8 @@ import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLoadingProvider } from "@/components/nav-loading";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { Sidebar, type SidebarItem } from "@/components/sidebar";
+import { Sidebar, type SidebarItem, type SidebarFooterInfo } from "@/components/sidebar";
+import { PageHeaderProvider, PageHeaderSlot } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -43,31 +44,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const initial = account.username?.trim()?.[0]?.toUpperCase() ?? "?";
 
+  const footer: SidebarFooterInfo = {
+    branchName: account.branch_name || t("All branches"),
+    rights: account.rights,
+    username: account.username,
+    initial,
+    signOutSlot: <SignOutButton />,
+  };
+
   return (
     <NavLoadingProvider>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar items={navItems} homeLabel={t("OSEM home")} />
+      <PageHeaderProvider>
+        <div className="flex min-h-screen bg-gray-50">
+          <Sidebar items={navItems} homeLabel={t("OSEM home")} footer={footer} />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
-            <div className="flex flex-wrap items-center justify-end gap-3 px-6 py-3">
-              <span className="hidden text-sm text-gray-500 sm:inline">{account.branch_name || t("All branches")}</span>
-              <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                {account.rights}
-              </span>
-              <LanguageSwitcher />
-              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
-                  {initial}
-                </span>
-                <span className="hidden text-sm font-medium text-gray-700 md:inline">{account.username}</span>
-                <SignOutButton />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
+              <div className="flex items-center gap-3 px-6 py-3.5">
+                <PageHeaderSlot />
+                <LanguageSwitcher />
               </div>
-            </div>
-          </header>
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+              <div className="h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-rose-400" />
+            </header>
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+          </div>
         </div>
-      </div>
+      </PageHeaderProvider>
     </NavLoadingProvider>
   );
 }

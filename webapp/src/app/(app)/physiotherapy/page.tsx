@@ -21,6 +21,7 @@ import { ResidentPicker } from "./resident-picker";
 import { NewOpPatientForm } from "./new-op-patient-form";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
 import type { ReviewAssessment } from "./assessment-review";
+import { PageTitle } from "@/components/page-header";
 
 // These rows come from `select("*")`, which also carries id/branch_id/
 // assessment_id -- pick only the named score fields so those extra numeric
@@ -96,9 +97,7 @@ export default async function PhysiotherapyPage({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t("Physiotherapy")}</h1>
-      </div>
+      <PageTitle title={t("Physiotherapy")} />
 
       <CareSettingTabs current={careSetting} />
 

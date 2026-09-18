@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { formatBranch } from "@/lib/lookups";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function AccountsPage() {
@@ -19,14 +20,14 @@ export default async function AccountsPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">{t("Accounts")}</h1>
-          <p className="text-sm text-gray-500">{t("Who can log in, and what they can do -- separate from the staff roster.")}</p>
-        </div>
+      <PageTitle
+        title={t("Accounts")}
+        description={t("Who can log in, and what they can do -- separate from the staff roster.")}
+      />
+      <div className="mb-6 flex items-center justify-end">
         <Link
           href="/accounts/new"
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:shadow"
         >
           {t("New account")}
         </Link>

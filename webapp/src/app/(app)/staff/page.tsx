@@ -6,6 +6,7 @@ import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
 import { FilterPendingProvider } from "@/components/filter-pending";
 import { NavButton } from "@/components/nav-button";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
@@ -85,17 +86,17 @@ export default async function StaffPage({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">{t("Staff")}</h1>
-        {admin && (
+      <PageTitle title={t("Staff")} />
+      {admin && (
+        <div className="mb-6 flex items-center justify-end">
           <NavButton
             href="/staff/new"
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:shadow"
           >
             {t("New staff")}
           </NavButton>
-        )}
-      </div>
+        </div>
+      )}
 
       {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
 

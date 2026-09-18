@@ -4,6 +4,7 @@ import { getAllStaffWithBranch, getClinicalLookups } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import type { NursingChartEntry } from "./nursing-chart-module";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function ClinicalPage({
@@ -302,9 +303,7 @@ export default async function ClinicalPage({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t("Clinical")}</h1>
-      </div>
+      <PageTitle title={t("Clinical")} />
 
       <ClinicalContent
         residents={residents || []}

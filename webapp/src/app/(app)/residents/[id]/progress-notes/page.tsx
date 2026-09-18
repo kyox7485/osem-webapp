@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getStaffRoster } from "@/lib/lookups";
 import { ProgressNotesTabs } from "./progress-notes-tabs";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 const PLAN_FIELDS = [
@@ -69,11 +70,11 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
 
   return (
     <div>
+      <PageTitle title={t("Medical Progress Notes")} description={resident.resident_name} />
       <div className="mb-4">
         <Link href={`/residents/${resident.id}`} className="text-sm text-gray-500 hover:underline">
           &larr; {resident.resident_name}
         </Link>
-        <h1 className="text-lg font-semibold text-gray-900">{t("Medical Progress Notes")}</h1>
       </div>
 
       <ProgressNotesTabs

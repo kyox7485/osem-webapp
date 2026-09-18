@@ -3,6 +3,7 @@ import { StaffForm } from "@/components/staff-form";
 import { BackButton } from "@/components/back-button";
 import { getPositions, getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { createStaff } from "../actions";
 
@@ -15,9 +16,11 @@ export default async function NewStaffPage() {
 
   return (
     <div>
+      <PageTitle title={t("New staff")} />
       <BackButton />
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("New staff")}</h1>
-      <StaffForm positions={positions} branches={branches} action={createStaff} />
+      <div className="mt-4">
+        <StaffForm positions={positions} branches={branches} action={createStaff} />
+      </div>
     </div>
   );
 }

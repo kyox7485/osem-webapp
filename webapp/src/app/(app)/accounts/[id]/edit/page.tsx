@@ -5,6 +5,7 @@ import { getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { UserAccount } from "@/lib/types";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { updateAccount } from "../../actions";
 
@@ -27,8 +28,8 @@ export default async function EditAccountPage({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-6">
+      <PageTitle title={`${t("Edit")} ${account.username}`} />
       <div>
-        <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("Edit")} {account.username}</h1>
         <AccountForm account={account as UserAccount} branches={branches} action={boundAction} />
       </div>
       <SetPasswordForm accountId={account.id} />

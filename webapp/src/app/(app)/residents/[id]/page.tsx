@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatBranch } from "@/lib/lookups";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function ResidentViewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,11 +27,8 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">{resident.resident_name}</h1>
-          <p className="text-sm text-gray-500">{formatBranch(branch)} · {resident.status}</p>
-        </div>
+      <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${resident.status}`} />
+      <div className="mb-4 flex items-center justify-end">
         <div className="flex gap-2">
           <Link
             href={`/residents/${resident.id}/progress-notes`}

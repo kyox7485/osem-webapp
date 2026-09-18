@@ -6,6 +6,7 @@ import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
 import { FilterPendingProvider } from "@/components/filter-pending";
 import { NavButton } from "@/components/nav-button";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
@@ -61,11 +62,11 @@ export default async function ResidentsPage({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">{t("Residents")}</h1>
+      <PageTitle title={t("Residents")} />
+      <div className="mb-6 flex items-center justify-end">
         <NavButton
           href="/residents/new"
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:shadow"
         >
           {t("New resident")}
         </NavButton>

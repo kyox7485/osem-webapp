@@ -5,6 +5,7 @@ import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Resident } from "@/lib/types";
 import { updateResident } from "../../actions";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function EditResidentPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("Edit")} {resident.resident_name}</h1>
+      <PageTitle title={`${t("Edit")} ${resident.resident_name}`} />
       <ResidentForm
         resident={resident as Resident}
         nationalities={nationalities}

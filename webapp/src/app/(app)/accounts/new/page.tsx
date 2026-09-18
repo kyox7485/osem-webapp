@@ -3,6 +3,7 @@ import { AccountForm } from "@/components/account-form";
 import { BackButton } from "@/components/back-button";
 import { getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { createAccount } from "../actions";
 
@@ -15,9 +16,11 @@ export default async function NewAccountPage() {
 
   return (
     <div>
+      <PageTitle title={t("New account")} />
       <BackButton />
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("New account")}</h1>
-      <AccountForm branches={branches} action={createAccount} />
+      <div className="mt-4">
+        <AccountForm branches={branches} action={createAccount} />
+      </div>
     </div>
   );
 }

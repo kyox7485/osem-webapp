@@ -7,6 +7,8 @@ import { NewProgressNoteForm } from "./new-progress-note-form";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
+import { TabRow, TabButton } from "@/components/tabs";
+import { ListChecks, Plus } from "lucide-react";
 
 type ProgressNote = {
   id: number;
@@ -79,14 +81,14 @@ export function ProgressNotesModule({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 border-b border-gray-200">
-        <InnerTabButton active={innerTab === "review"} onClick={() => setInnerTab("review")}>
+      <TabRow>
+        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => setInnerTab("review")}>
           {t("Review Notes")}
-        </InnerTabButton>
-        <InnerTabButton active={innerTab === "new"} onClick={() => setInnerTab("new")}>
+        </TabButton>
+        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>
           {t("New Entry")}
-        </InnerTabButton>
-      </div>
+        </TabButton>
+      </TabRow>
 
       {innerTab === "review" ? (
         <>
@@ -232,19 +234,5 @@ export function ProgressNotesModule({
         />
       )}
     </div>
-  );
-}
-
-function InnerTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:text-gray-800"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

@@ -6,6 +6,8 @@ import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-revi
 import type { LookupOption } from "@/lib/types";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
+import { TabRow, TabButton } from "@/components/tabs";
+import { ListChecks, Plus } from "lucide-react";
 
 // residentId/residentName/... are null when no patient is selected in the
 // picker above -- Review Notes still has something to show (every entry
@@ -47,14 +49,14 @@ export function PhysioAssessmentTabs({
 
   return (
     <div>
-      <div className="mb-4 flex gap-1 border-b border-gray-200">
-        <TabButton active={tab === "review"} onClick={() => setTab("review")}>
+      <TabRow className="mb-4">
+        <TabButton icon={ListChecks} active={tab === "review"} onClick={() => setTab("review")}>
           {t("Review Notes")}
         </TabButton>
-        <TabButton active={tab === "new"} onClick={() => setTab("new")}>
+        <TabButton icon={Plus} active={tab === "new"} onClick={() => setTab("new")}>
           {t("New Entry")}
         </TabButton>
-      </div>
+      </TabRow>
 
       {tab === "review" ? (
         <PhysioAssessmentReview assessments={reviewAssessments} />
@@ -78,19 +80,5 @@ export function PhysioAssessmentTabs({
         </div>
       )}
     </div>
-  );
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-500 hover:text-gray-800"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

@@ -4,6 +4,7 @@ import { getPositions, getBranches } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Staff } from "@/lib/types";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { updateStaff } from "../../actions";
 
@@ -27,7 +28,7 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("Edit")} {staff.staff_name}</h1>
+      <PageTitle title={`${t("Edit")} ${staff.staff_name}`} />
       <StaffForm staff={staff as Staff} positions={positions} branches={branches} action={boundAction} />
     </div>
   );

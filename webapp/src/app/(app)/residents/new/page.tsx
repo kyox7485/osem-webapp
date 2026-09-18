@@ -3,6 +3,7 @@ import { BackButton } from "@/components/back-button";
 import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createResident } from "../actions";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function NewResidentPage() {
@@ -18,8 +19,8 @@ export default async function NewResidentPage() {
 
   return (
     <div>
+      <PageTitle title={t("New resident")} />
       <BackButton />
-      <h1 className="mb-4 text-lg font-semibold text-gray-900">{t("New resident")}</h1>
       <ResidentForm
         nationalities={nationalities}
         dietTypes={dietTypes}

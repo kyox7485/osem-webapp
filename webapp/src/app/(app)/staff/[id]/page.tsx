@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { formatBranch } from "@/lib/lookups";
+import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 export default async function StaffViewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,20 +25,17 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">{staff.staff_name}</h1>
-          <p className="text-sm text-gray-500">{position?.name} · {formatBranch(branch)}</p>
-        </div>
-        {isAdmin(currentUser) && (
+      <PageTitle title={staff.staff_name} description={`${position?.name ?? ""} · ${formatBranch(branch)}`} />
+      {isAdmin(currentUser) && (
+        <div className="mb-4 flex items-center justify-end">
           <Link
             href={`/staff/${staff.StaffID}/edit`}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
             {t("Edit")}
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
