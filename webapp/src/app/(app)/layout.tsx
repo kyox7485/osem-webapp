@@ -49,7 +49,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     rights: account.rights,
     username: account.username,
     initial,
-    signOutSlot: <SignOutButton />,
   };
 
   return (

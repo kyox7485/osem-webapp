@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="flex justify-center">
           <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-auto w-full max-w-[312px]" priority />
         </div>
-        <p className="mb-6 text-center text-sm text-gray-500">{t("Sign in with your branch account")}</p>
+        <p className="mb-6" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

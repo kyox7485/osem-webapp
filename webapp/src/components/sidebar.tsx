@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   type LucideIcon,
 } from "lucide-react";
+import { SignOutButton } from "@/components/sign-out-button";
 
 const ICONS = { Users, Stethoscope, Activity, IdCard, ShieldCheck } satisfies Record<string, LucideIcon>;
 
@@ -32,7 +33,6 @@ export type SidebarFooterInfo = {
   rights: string;
   username: string;
   initial: string;
-  signOutSlot: React.ReactNode;
 };
 
 const STORAGE_KEY = "osem_sidebar_collapsed";
@@ -122,24 +122,36 @@ export function Sidebar({
       </nav>
 
       {footer && (
-        <div className="border-t border-gray-200 px-3 py-3" title={collapsed ? `${footer.username} · ${t(footer.rights)} · ${footer.branchName}` : undefined}>
-          {!collapsed && <div className="truncate text-xs text-gray-500">{footer.branchName}</div>}
-          <div className={`flex items-center gap-2 ${collapsed ? "flex-col justify-center" : "justify-between pt-2"}`}>
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+        <div
+          className="border-t border-gray-200 px-3 py-3"
+          title={collapsed ? `${footer.username} · ${t(footer.rights)} · ${footer.branchName}` : undefined}
+        >
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
                 {footer.initial}
               </span>
-              {!collapsed && <span className="truncate text-sm font-medium text-gray-700">{footer.username}</span>}
+              <SignOutButton collapsed />
             </div>
-            {!collapsed && (
-              <span className="inline-flex shrink-0 items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                {t(footer.rights)}
-              </span>
-            )}
-          </div>
-          <div className={collapsed ? "mt-2 flex justify-center text-xs text-gray-500 [&_button]:text-xs" : "mt-1 text-sm text-gray-500"}>
-            {footer.signOutSlot}
-          </div>
+          ) : (
+            <>
+              <div className="truncate text-xs text-gray-500">{footer.branchName}</div>
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+                    {footer.initial}
+                  </span>
+                  <span className="truncate text-sm font-medium text-gray-700">{footer.username}</span>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                  {t(footer.rights)}
+                </span>
+              </div>
+              <div className="mt-2">
+                <SignOutButton />
+              </div>
+            </>
+          )}
         </div>
       )}
     </aside>
