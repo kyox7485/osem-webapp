@@ -73,40 +73,12 @@ export type TreatmentTypeOption = {
   dept: PhysioCareSetting;
 };
 
-// Exact list + credit-hour mapping from the client's TreatmentType reference
-// table. "SilverFit (Individual)"/"SilverFit (Group)" appear once per dept
-// with the same credit hours in both -- kept as separate entries so the
-// dropdown only ever offers the current module's dept.
-export const PHYSIO_TREATMENT_TYPES: TreatmentTypeOption[] = [
-  { label: "Assessment", creditHours: 0, dept: "IP" },
-  { label: "Basic Physio", creditHours: 0.25, dept: "IP" },
-  { label: "Full Physio (1hr)", creditHours: 1, dept: "IP" },
-  { label: "Full Physio (30m)", creditHours: 0.5, dept: "IP" },
-  { label: "SilverFit (Group)", creditHours: 0.25, dept: "IP" },
-  { label: "SilverFit (Individual)", creditHours: 1, dept: "IP" },
-  { label: "Patient Refused", creditHours: 0, dept: "IP" },
-  { label: "Patient Not Available", creditHours: 0, dept: "IP" },
-  { label: "Neuro Rehabilitation", creditHours: 1, dept: "OP" },
-  { label: "Sport Rehabilitation", creditHours: 1, dept: "OP" },
-  { label: "Shoulder Rehabilitation", creditHours: 1, dept: "OP" },
-  { label: "Back Pain", creditHours: 1, dept: "OP" },
-  { label: "Pain Management", creditHours: 1, dept: "OP" },
-  { label: "Chest Physio", creditHours: 1, dept: "OP" },
-  { label: "SilverFit (Individual)", creditHours: 1, dept: "OP" },
-  { label: "SilverFit (Group)", creditHours: 0.25, dept: "OP" },
-  { label: "Housecall", creditHours: 1, dept: "OP" },
-  { label: "Other Physio (1hr)", creditHours: 1, dept: "OP" },
-  { label: "Other Physio (30m)", creditHours: 0.5, dept: "OP" },
-];
-
-export function getTreatmentTypesForDept(dept: PhysioCareSetting): TreatmentTypeOption[] {
-  return PHYSIO_TREATMENT_TYPES.filter((t) => t.dept === dept);
-}
-
-export function getTreatmentTypeCreditHours(dept: PhysioCareSetting, label: string): number | null {
-  const match = PHYSIO_TREATMENT_TYPES.find((t) => t.dept === dept && t.label === label);
-  return match ? match.creditHours : null;
-}
+// The treatment type list + credit-hour mapping used to live here as a
+// hardcoded PHYSIO_TREATMENT_TYPES array. It's now stored in Supabase
+// (tbl_physio_treatment_types, see lib/lookups.ts's getPhysioTreatmentTypes)
+// so credit-hour bindings can be edited directly in the database -- e.g.
+// changing "Full Physio (1hr)" from 1 credit hour to 2 -- without a code
+// change or redeploy. This file keeps only the shared type.
 
 // Limb -> region -> movement list, exactly as laid out in the Excel's
 // Examination section (rows 48-78). Trunk sits under the Lower Limb half of

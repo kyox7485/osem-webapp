@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LookupOption } from "@/lib/types";
+import type { TreatmentTypeOption } from "@/lib/physio-scoring";
 
 // Malaysia is pinned first -- the overwhelming majority of residents/patients
 // are Malaysian, so it should be the fastest option to reach and the default
@@ -142,6 +143,21 @@ export async function getNursingStaff(): Promise<(LookupOption & { branch_id: nu
     .in("department", ["Nursing", "Medical"])
     .order("staff_name");
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
+}
+
+// Treatment types + their credit-hour value, e.g. "Full Physio (1hr)" -> 1.
+// Lives in tbl_physio_treatment_types (not hardcoded) specifically so credit
+// hours can be changed directly in Supabase -- e.g. turning a 1-hour session
+// into 2 credit hours -- without editing code. Powers both the assessment
+// form's treatment-type dropdown/auto-fill and the analytics dashboard.
+export async function getPhysioTreatmentTypes(): Promise<TreatmentTypeOption[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_physio_treatment_types")
+    .select("dept, treatment_type, credit_hours")
+    .order("dept")
+    .order("sort_order");
+  return (data ?? []).map((r) => ({ label: r.treatment_type, creditHours: Number(r.credit_hours), dept: r.dept }));
 }
 
 export type ClinicalLookups = {

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getPhysiotherapyStaff, getPhysioIpBranchIds } from "@/lib/lookups";
+import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 import {
@@ -223,6 +223,7 @@ async function AllPatientsReview({
         defaultEntryTimestamp={toDatetimeLocalValue(new Date().toISOString())}
         pastMedicalCondition={null}
         staffOptions={[]}
+        treatmentTypeOptions={[]}
         previous={null}
         reviewAssessments={reviewAssessments}
       />
@@ -282,7 +283,7 @@ async function PhysiotherapyContent({
     careSetting === "OP" ? (resident as { remark: string | null }).remark : (resident as { past_medical_condition: string | null }).past_medical_condition;
 
   const patientColumn = careSetting === "OP" ? "op_patient_id" : "resident_id";
-  const [{ data: assessments, error: assessmentsError }, staffOptions] = await Promise.all([
+  const [{ data: assessments, error: assessmentsError }, staffOptions, treatmentTypeOptions] = await Promise.all([
     supabase
       .from("physio_assessments")
       .select("*, tbl_staff!documented_by(staff_name)")
@@ -290,6 +291,7 @@ async function PhysiotherapyContent({
       .eq("care_setting", careSetting)
       .order("entry_timestamp", { ascending: false }),
     getPhysiotherapyStaff(),
+    getPhysioTreatmentTypes(),
   ]);
 
   const assessmentIds = (assessments ?? []).map((a) => a.id);
@@ -374,6 +376,7 @@ async function PhysiotherapyContent({
         defaultEntryTimestamp={toDatetimeLocalValue(new Date().toISOString())}
         pastMedicalCondition={pastMedicalCondition}
         staffOptions={staffOptions}
+        treatmentTypeOptions={treatmentTypeOptions}
         previous={previous}
         reviewAssessments={reviewAssessments}
       />

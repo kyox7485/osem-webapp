@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   buildEmptyExamRows,
   computePhysioScore,
-  getTreatmentTypesForDept,
   EMPTY_BALANCE,
   EMPTY_COORDINATION,
   EMPTY_FUNCTIONAL,
@@ -14,6 +13,7 @@ import {
   type ExamRow,
   type FunctionalScores,
   type PhysioCareSetting,
+  type TreatmentTypeOption,
 } from "@/lib/physio-scoring";
 import { fromDatetimeLocalValue } from "@/lib/format-date";
 import { createPhysioAssessment } from "./actions";
@@ -65,6 +65,7 @@ type Props = {
   defaultEntryTimestamp: string;
   pastMedicalCondition: string | null;
   staffOptions: LookupOption[];
+  treatmentTypeOptions: TreatmentTypeOption[];
   previous: PreviousAssessment | null;
   onSaved: () => void;
 };
@@ -79,6 +80,7 @@ export function NewPhysioAssessmentForm({
   defaultEntryTimestamp,
   pastMedicalCondition,
   staffOptions,
+  treatmentTypeOptions: allTreatmentTypeOptions,
   previous,
   onSaved,
 }: Props) {
@@ -86,7 +88,10 @@ export function NewPhysioAssessmentForm({
   const t = useTranslation();
   const { setDirty, setRequestSave } = usePhysioDirty();
 
-  const treatmentTypeOptions = useMemo(() => getTreatmentTypesForDept(careSetting), [careSetting]);
+  const treatmentTypeOptions = useMemo(
+    () => allTreatmentTypeOptions.filter((o) => o.dept === careSetting),
+    [allTreatmentTypeOptions, careSetting]
+  );
   const patientLabel = careSetting === "OP" ? t("Patient") : t("Resident");
 
   const [entryTimestamp, setEntryTimestamp] = useState(defaultEntryTimestamp);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { NewPhysioAssessmentForm, type PreviousAssessment } from "./new-physio-assessment-form";
 import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-review";
 import type { LookupOption } from "@/lib/types";
-import type { PhysioCareSetting } from "@/lib/physio-scoring";
+import type { PhysioCareSetting, TreatmentTypeOption } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { ListChecks, Plus } from "lucide-react";
@@ -24,6 +24,7 @@ type Props = {
   defaultEntryTimestamp: string;
   pastMedicalCondition: string | null;
   staffOptions: LookupOption[];
+  treatmentTypeOptions: TreatmentTypeOption[];
   previous: PreviousAssessment | null;
   reviewAssessments: ReviewAssessment[];
 };
@@ -38,6 +39,7 @@ export function PhysioAssessmentTabs({
   defaultEntryTimestamp,
   pastMedicalCondition,
   staffOptions,
+  treatmentTypeOptions,
   previous,
   reviewAssessments,
 }: Props) {
@@ -71,6 +73,7 @@ export function PhysioAssessmentTabs({
           defaultEntryTimestamp={defaultEntryTimestamp}
           pastMedicalCondition={pastMedicalCondition}
           staffOptions={staffOptions}
+          treatmentTypeOptions={treatmentTypeOptions}
           previous={previous}
           onSaved={() => setTab("review")}
         />
