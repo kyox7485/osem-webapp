@@ -40,9 +40,9 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
       <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
           <Row label={t("Staff ID")} value={staff.StaffID} fallback={t("--")} />
-          <Row label={t("Role")} value={staff.role} fallback={t("--")} />
-          <Row label={t("Department")} value={staff.department} fallback={t("--")} />
-          <Row label={t("Status")} value={staff.status} fallback={t("--")} />
+          <Row label={t("Role")} value={staff.role ? t(staff.role) : staff.role} fallback={t("--")} />
+          <Row label={t("Department")} value={staff.department ? t(staff.department) : staff.department} fallback={t("--")} />
+          <Row label={t("Status")} value={staff.status ? t(staff.status) : staff.status} fallback={t("--")} />
         </dl>
       </div>
     </div>

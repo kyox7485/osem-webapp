@@ -48,6 +48,7 @@ export const dictCommon: Record<string, string> = {
   "Start date": "Tarikh mula",
   "End date": "Tarikh tamat",
   "Click to view": "Klik untuk lihat",
+  PDF: "PDF",
 
   // Language switcher itself -- option text is language names, shown as-is
   // regardless of current language, so not run through t().

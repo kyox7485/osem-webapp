@@ -193,7 +193,7 @@ export function HospitalReferralModule({
                         {referral.mobility && (
                           <p className="text-sm text-gray-600">
                             <span className="font-medium text-gray-500">{t("Mobility")}: </span>
-                            {referral.mobility}
+                            {t(referral.mobility)}
                           </p>
                         )}
                         {referral.feeding && (
@@ -205,7 +205,7 @@ export function HospitalReferralModule({
                         {referral.hygiene && (
                           <p className="text-sm text-gray-600">
                             <span className="font-medium text-gray-500">{t("Hygiene")}: </span>
-                            {referral.hygiene}
+                            {t(referral.hygiene)}
                           </p>
                         )}
                       </div>

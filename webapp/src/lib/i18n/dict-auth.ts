@@ -1,8 +1,10 @@
 // Bahasa Malaysia translations for the login / forgot-password /
-// reset-password flow, and the resident-scoped Medical Progress Notes
-// module under residents/[id]/progress-notes. English text is the key --
-// see translate.ts. Strings already covered by dict-common.ts are not
-// repeated here.
+// reset-password flow. The resident-scoped Medical Progress Notes module
+// (residents/[id]/progress-notes) reuses the same clinical vocabulary as
+// the main Clinical module, so those strings live in dict-clinical.ts --
+// keeping a second copy here previously let this file's wording drift out
+// of sync with it. English text is the key -- see translate.ts. Strings
+// already covered by dict-common.ts are not repeated here.
 export const dictAuth: Record<string, string> = {
   // Login page
   "Sign in with your branch account": "Log masuk dengan akaun cawangan anda",
@@ -35,41 +37,4 @@ export const dictAuth: Record<string, string> = {
   "New password": "Kata laluan baharu",
   "Confirm password": "Sahkan kata laluan",
   "Set new password": "Tetapkan kata laluan baharu",
-
-  // Progress Notes (resident-scoped) page
-  Unknown: "Tidak diketahui",
-  "Medical Progress Notes": "Nota Perkembangan Perubatan",
-  "Review notes": "Semak nota",
-  "New entry": "Entri baharu",
-  "Medical plan": "Pelan perubatan",
-  "Nursing plan": "Pelan kejururawatan",
-  "No progress notes yet.": "Belum ada nota perkembangan.",
-
-  // Resident dashboard panel
-  "Medical / surgical history": "Sejarah perubatan / pembedahan",
-  "Current medication list": "Senarai ubat semasa",
-  "Known allergy": "Alahan diketahui",
-  "TCA notes": "Nota TCA",
-  "Recent vitals": "Vital terkini",
-  "No vitals recorded yet.": "Belum ada vital direkodkan.",
-  Date: "Tarikh",
-  BP: "BP",
-  HR: "HR",
-  Temp: "Suhu",
-  SpO2: "SpO2",
-  "Last ordered plans": "Pelan terakhir ditetapkan",
-  "Medical / treatment plan": "Pelan perubatan / rawatan",
-  "Diet plan": "Pelan diet",
-  "Dressing plan": "Pelan pembalutan",
-  "Monitoring plan": "Pelan pemantauan",
-  "Physio plan": "Pelan fisioterapi",
-  "None recorded.": "Tiada direkodkan.",
-  "No entry yet": "Belum ada entri",
-
-  // New note form
-  "Progress note": "Nota perkembangan",
-  "Physical examination": "Pemeriksaan fizikal",
-  "Feeding plan": "Pelan pemakanan",
-  "Entered by": "Dimasukkan oleh",
-  "Select who's entering this": "Pilih siapa yang memasukkan ini",
 };

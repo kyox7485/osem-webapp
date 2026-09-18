@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "@/components/language-provider";
 import {
   Users,
   Stethoscope,
@@ -46,6 +47,7 @@ export function Sidebar({
   footer?: SidebarFooterInfo;
 }) {
   const pathname = usePathname();
+  const t = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -120,7 +122,7 @@ export function Sidebar({
       </nav>
 
       {footer && (
-        <div className="border-t border-gray-200 px-3 py-3" title={collapsed ? `${footer.username} · ${footer.rights} · ${footer.branchName}` : undefined}>
+        <div className="border-t border-gray-200 px-3 py-3" title={collapsed ? `${footer.username} · ${t(footer.rights)} · ${footer.branchName}` : undefined}>
           {!collapsed && <div className="truncate text-xs text-gray-500">{footer.branchName}</div>}
           <div className={`flex items-center gap-2 ${collapsed ? "flex-col justify-center" : "justify-between pt-2"}`}>
             <div className="flex min-w-0 items-center gap-2">
@@ -131,7 +133,7 @@ export function Sidebar({
             </div>
             {!collapsed && (
               <span className="inline-flex shrink-0 items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                {footer.rights}
+                {t(footer.rights)}
               </span>
             )}
           </div>

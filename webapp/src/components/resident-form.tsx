@@ -142,7 +142,7 @@ export function ResidentForm({
           <select name="gender" defaultValue={resident?.gender ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {GENDER_OPTIONS.map((g) => (
-              <option key={g} value={g}>{g}</option>
+              <option key={g} value={g}>{t(g)}</option>
             ))}
           </select>
         </Field>
@@ -150,7 +150,7 @@ export function ResidentForm({
           <select name="marital_status" defaultValue={resident?.marital_status ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {MARITAL_STATUS_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>
@@ -160,7 +160,7 @@ export function ResidentForm({
         <Field label={t("Status")}>
           <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
             {RESIDENT_STATUS_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>
@@ -168,7 +168,7 @@ export function ResidentForm({
           <select name="care_type" defaultValue={resident?.care_type ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {CARE_TYPE_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>
@@ -184,7 +184,7 @@ export function ResidentForm({
           <select name="transfer_from" defaultValue={resident?.transfer_from ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {TRANSFER_FROM_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>
@@ -192,7 +192,7 @@ export function ResidentForm({
           <select name="accompanied_by" defaultValue={resident?.accompanied_by ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {ACCOMPANIED_BY_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>
@@ -212,7 +212,7 @@ export function ResidentForm({
           <select name="mobility" defaultValue={resident?.mobility ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {MOBILITY_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>
@@ -220,7 +220,7 @@ export function ResidentForm({
           <select name="hygiene" defaultValue={resident?.hygiene ?? ""} className={inputCls}>
             <option value="">{t("--")}</option>
             {HYGIENE_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o}</option>
+              <option key={o} value={o}>{t(o)}</option>
             ))}
           </select>
         </Field>

@@ -27,7 +27,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
 
   return (
     <div>
-      <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${resident.status}`} />
+      <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${t(resident.status)}`} />
       <div className="mb-4 flex items-center justify-end">
         <div className="flex gap-2">
           <Link
@@ -56,23 +56,23 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
           <Row label={t("Resident ID")} value={resident.ResidentID} empty={t("--")} />
           <Row label={t("IC number")} value={resident.ic_number} empty={t("--")} />
           <Row label={t("Age")} value={resident.age} empty={t("--")} />
-          <Row label={t("Gender")} value={resident.gender} empty={t("--")} />
-          <Row label={t("Marital status")} value={resident.marital_status} empty={t("--")} />
+          <Row label={t("Gender")} value={resident.gender ? t(resident.gender) : resident.gender} empty={t("--")} />
+          <Row label={t("Marital status")} value={resident.marital_status ? t(resident.marital_status) : resident.marital_status} empty={t("--")} />
           <Row label={t("Nationality")} value={nationality?.country_name} empty={t("--")} />
         </InfoCard>
 
         <InfoCard title={t("Admission")}>
-          <Row label={t("Care type")} value={resident.care_type} empty={t("--")} />
+          <Row label={t("Care type")} value={resident.care_type ? t(resident.care_type) : resident.care_type} empty={t("--")} />
           <Row label={t("Admission date")} value={resident.admission_date} empty={t("--")} />
           <Row label={t("Discharge date")} value={resident.discharge_date} empty={t("--")} />
-          <Row label={t("Transfer from")} value={resident.transfer_from} empty={t("--")} />
-          <Row label={t("Accompanied by")} value={resident.accompanied_by} empty={t("--")} />
+          <Row label={t("Transfer from")} value={resident.transfer_from ? t(resident.transfer_from) : resident.transfer_from} empty={t("--")} />
+          <Row label={t("Accompanied by")} value={resident.accompanied_by ? t(resident.accompanied_by) : resident.accompanied_by} empty={t("--")} />
           <Row label={t("Emergency contact")} value={resident.emergency_contact} multiline empty={t("--")} />
         </InfoCard>
 
         <InfoCard title={t("Care")}>
-          <Row label={t("Mobility")} value={resident.mobility} empty={t("--")} />
-          <Row label={t("Hygiene")} value={resident.hygiene} empty={t("--")} />
+          <Row label={t("Mobility")} value={resident.mobility ? t(resident.mobility) : resident.mobility} empty={t("--")} />
+          <Row label={t("Hygiene")} value={resident.hygiene ? t(resident.hygiene) : resident.hygiene} empty={t("--")} />
           <Row label={t("Diet type")} value={dietType?.name} empty={t("--")} />
           <Row label={t("Feeding type")} value={feedingType?.name} empty={t("--")} />
         </InfoCard>

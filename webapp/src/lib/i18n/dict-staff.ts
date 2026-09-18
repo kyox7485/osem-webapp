@@ -13,6 +13,10 @@ export const dictStaff: Record<string, string> = {
   "Staff ID": "ID Kakitangan",
   Role: "Peranan",
   Department: "Jabatan",
+  // DEPARTMENT_OPTIONS -- "Physiotherapy" already covered by dict-common.ts's
+  // shared nav key.
+  Nursing: "Kejururawatan",
+  Medical: "Perubatan",
 
   "Select a position": "Pilih jawatan",
   "Select a branch": "Pilih cawangan",

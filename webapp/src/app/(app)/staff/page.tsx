@@ -133,7 +133,7 @@ export default async function StaffPage({
                     type="select"
                     label={t("Role")}
                     paramName="role"
-                    options={STAFF_ROLE_OPTIONS.map((r) => ({ value: r, label: r }))}
+                    options={STAFF_ROLE_OPTIONS.map((r) => ({ value: r, label: t(r) }))}
                     defaultValues={[...STAFF_ROLE_OPTIONS]}
                   />
                 </th>
@@ -142,7 +142,7 @@ export default async function StaffPage({
                     type="select"
                     label={t("Department")}
                     paramName="department"
-                    options={DEPARTMENT_OPTIONS.map((d) => ({ value: d, label: d }))}
+                    options={DEPARTMENT_OPTIONS.map((d) => ({ value: d, label: t(d) }))}
                     defaultValues={[...DEPARTMENT_OPTIONS]}
                   />
                 </th>
@@ -151,7 +151,7 @@ export default async function StaffPage({
                     type="select"
                     label={t("Status")}
                     paramName="status"
-                    options={STAFF_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                    options={STAFF_STATUS_OPTIONS.map((s) => ({ value: s, label: t(s) }))}
                     defaultValues={DEFAULT_STATUSES}
                   />
                 </th>
@@ -166,15 +166,15 @@ export default async function StaffPage({
                     <td className="px-4 py-2 font-medium text-gray-900">{s.staff_name}</td>
                     <td className="px-4 py-2 text-gray-600">{position?.name ?? t("--")}</td>
                     {admin && <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>}
-                    <td className="px-4 py-2 text-gray-600">{s.role}</td>
-                    <td className="px-4 py-2 text-gray-600">{s.department ?? t("--")}</td>
+                    <td className="px-4 py-2 text-gray-600">{t(s.role)}</td>
+                    <td className="px-4 py-2 text-gray-600">{s.department ? t(s.department) : t("--")}</td>
                     <td className="px-4 py-2">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           s.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {s.status}
+                        {t(s.status)}
                       </span>
                     </td>
                   </ClickableRow>

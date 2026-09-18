@@ -58,14 +58,14 @@ export default async function AccountsPage() {
                   </td>
                   <td className="px-4 py-2 text-gray-600">{a.email}</td>
                   <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>
-                  <td className="px-4 py-2 text-gray-600">{a.rights}</td>
+                  <td className="px-4 py-2 text-gray-600">{t(a.rights)}</td>
                   <td className="px-4 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         a.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
                       }`}
                     >
-                      {a.status}
+                      {t(a.status)}
                     </span>
                   </td>
                 </tr>

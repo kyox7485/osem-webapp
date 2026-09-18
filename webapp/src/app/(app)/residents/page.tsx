@@ -101,7 +101,7 @@ export default async function ResidentsPage({
                     type="select"
                     label={t("Status")}
                     paramName="status"
-                    options={RESIDENT_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                    options={RESIDENT_STATUS_OPTIONS.map((s) => ({ value: s, label: t(s) }))}
                     defaultValues={DEFAULT_STATUSES}
                   />
                 </th>
@@ -116,7 +116,7 @@ export default async function ResidentsPage({
                     <td className="px-4 py-2 text-gray-600">{r.ic_number ?? "--"}</td>
                     {admin && <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>}
                     <td className="px-4 py-2">
-                      <StatusBadge status={r.status} />
+                      <StatusBadge status={r.status} label={t(r.status)} />
                     </td>
                   </ClickableRow>
                 );
@@ -136,7 +136,7 @@ export default async function ResidentsPage({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, label }: { status: string; label: string }) {
   const colors: Record<string, string> = {
     ACTIVE: "bg-green-100 text-green-800",
     DISCHARGED: "bg-gray-100 text-gray-700",
@@ -145,7 +145,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}>
-      {status}
+      {label}
     </span>
   );
 }
