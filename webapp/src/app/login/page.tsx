@@ -45,7 +45,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
         <div className="flex justify-center">
-          <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-48 w-auto" priority />
+          <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-auto w-full max-w-[312px]" priority />
         </div>
         <p className="mb-6 text-center text-sm text-gray-500">{t("Sign in with your branch account")}</p>
 
