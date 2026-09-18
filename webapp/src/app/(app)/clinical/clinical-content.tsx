@@ -6,12 +6,15 @@ import { VitalsTable } from "./vitals-table";
 import { ProgressNotesModule } from "./progress-notes-module";
 import { NursingChartModule, type NursingChartEntry } from "./nursing-chart-module";
 import { HospitalReferralModule } from "./hospital-referral-module";
+import { WoundPhotoModule } from "./wound-photo-module";
+import type { WoundSession } from "./wound-photo-actions";
+import type { WoundBodyPart } from "./wound-body-diagram";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
-import { ClipboardList, Activity, FileText, Ambulance } from "lucide-react";
+import { ClipboardList, Activity, FileText, Ambulance, Camera } from "lucide-react";
 
 type Vital = {
   id: number;
@@ -85,13 +88,15 @@ type Props = {
   nursingChartLookups: ClinicalLookups;
   feedingTypes: LookupOption[];
   referrals: HospitalReferral[];
+  woundSessions: WoundSession[];
+  woundBodyParts: WoundBodyPart[];
   currentResident: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
 };
 
-type TabKey = "vitals" | "progress-notes" | "nursing-chart" | "hospital-referral";
+type TabKey = "vitals" | "wound-photo" | "progress-notes" | "nursing-chart" | "hospital-referral";
 
 export function ClinicalContent({
   residents,
@@ -103,6 +108,8 @@ export function ClinicalContent({
   nursingChartLookups,
   feedingTypes,
   referrals,
+  woundSessions,
+  woundBodyParts,
   currentResident,
   currentStart,
   currentEnd,
@@ -115,7 +122,7 @@ export function ClinicalContent({
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "vitals" || tab === "progress-notes" || tab === "hospital-referral") {
+    if (tab === "vitals" || tab === "wound-photo" || tab === "progress-notes" || tab === "hospital-referral") {
       setActiveTab(tab);
     } else {
       setActiveTab("nursing-chart");
@@ -137,6 +144,9 @@ export function ClinicalContent({
         </TabButton>
         <TabButton icon={Activity} active={activeTab === "vitals"} onClick={() => switchTab("vitals")}>
           {t("Vital Signs")}
+        </TabButton>
+        <TabButton icon={Camera} active={activeTab === "wound-photo"} onClick={() => switchTab("wound-photo")}>
+          {t("Wound Photo")}
         </TabButton>
         <TabButton icon={FileText} active={activeTab === "progress-notes"} onClick={() => switchTab("progress-notes")}>
           {t("Medical Progress Notes")}
@@ -165,6 +175,18 @@ export function ClinicalContent({
             residents={residents}
             allStaff={allStaff}
             lookups={nursingChartLookups}
+            currentResident={currentResident}
+            currentStart={currentStart}
+            currentEnd={currentEnd}
+            error={error}
+          />
+        )}
+        {activeTab === "wound-photo" && (
+          <WoundPhotoModule
+            sessions={woundSessions}
+            residents={residents}
+            allStaff={allStaff}
+            bodyParts={woundBodyParts}
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}

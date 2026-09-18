@@ -150,6 +150,20 @@ export async function getNursingStaff(): Promise<(LookupOption & { branch_id: nu
 // hours can be changed directly in Supabase -- e.g. turning a 1-hour session
 // into 2 credit hours -- without editing code. Powers both the assessment
 // form's treatment-type dropdown/auto-fill and the analytics dashboard.
+// Configurable pressure-injury / wound documentation sites shown as tap
+// targets on the Wound Photo body diagram, plus an "Other" free-text
+// fallback. Same "lives in Supabase, not hardcoded" reasoning as
+// tbl_physio_treatment_types -- new sites can be added without a code change.
+export async function getWoundBodyParts(): Promise<LookupOption[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_wound_body_parts")
+    .select("id, label")
+    .eq("active", true)
+    .order("sort_order");
+  return (data ?? []).map((r) => ({ id: r.id, label: r.label }));
+}
+
 export async function getPhysioTreatmentTypes(): Promise<TreatmentTypeOption[]> {
   const supabase = await createClient();
   const { data } = await supabase

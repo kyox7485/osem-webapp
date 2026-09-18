@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes } from "@/lib/lookups";
+import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
+import { getWoundSessionHistory } from "./wound-photo-actions";
 import type { NursingChartEntry } from "./nursing-chart-module";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -41,12 +42,13 @@ export default async function ClinicalPage({
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
   }
 
-  const [{ data: residents }, allStaff, nursingStaff, nursingChartLookups, feedingTypes] = await Promise.all([
+  const [{ data: residents }, allStaff, nursingStaff, nursingChartLookups, feedingTypes, woundBodyParts] = await Promise.all([
     residentQuery,
     getAllStaffWithBranch(),
     getNursingStaff(),
     getClinicalLookups(),
     getFeedingTypes(),
+    getWoundBodyParts(),
   ]);
 
   // Fetch data based on active tab
@@ -54,6 +56,7 @@ export default async function ClinicalPage({
   let notes = [];
   let nursingChartEntries: NursingChartEntry[] = [];
   let referrals = [];
+  let woundSessions: Awaited<ReturnType<typeof getWoundSessionHistory>>["sessions"] = [];
   let error = null;
 
   if (currentTab === "vitals") {
@@ -339,6 +342,10 @@ export default async function ClinicalPage({
     }));
 
     error = referralsError?.message || null;
+  } else if (currentTab === "wound-photo") {
+    const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate });
+    woundSessions = result.sessions;
+    error = result.error;
   }
 
   return (
@@ -355,6 +362,8 @@ export default async function ClinicalPage({
         nursingChartLookups={nursingChartLookups}
         feedingTypes={feedingTypes}
         referrals={referrals}
+        woundSessions={woundSessions}
+        woundBodyParts={woundBodyParts}
         currentResident={residentFilter}
         currentStart={startDate}
         currentEnd={endDate}
