@@ -114,4 +114,12 @@ export async function readWoundPhotoFromDrive(fileId: string): Promise<{ buffer:
   return { buffer: Buffer.from(json.fileBase64, "base64"), mimeType: json.mimeType };
 }
 
+// Trashes (not permanently deletes) the Drive file -- see handleDelete in
+// wound-photo-drive.gs. Used when a staff member removes a photo from a
+// session before hitting "Finish Session"; the caller is responsible for
+// also removing the tbl_wound_photos row.
+export async function deleteWoundPhotoFromDrive(fileId: string): Promise<void> {
+  await callAppsScript({ action: "delete", fileId });
+}
+
 export { isConfigured as isDriveConfigured };

@@ -7,37 +7,30 @@ conn = psycopg2.connect(os.environ["PG_DSN"], connect_timeout=10)
 conn.autocommit = False
 cur = conn.cursor()
 
-# Pressure-injury / wound documentation sites (Braden/Norton-scale bony
-# prominences plus general catch-alls). Sort order roughly follows a
+# General wound documentation sites. Sort order roughly follows a
 # head-to-toe exam pass. "Other" is last and always has id available for the
 # free-text fallback path when a wound is somewhere not on the diagram.
+#
+# NB: this list was originally a much more specific set of Braden/Norton-scale
+# bony prominences (Right Ear, Coccyx, Ischial Tuberosity, Buttock, Shoulder
+# Blade, etc.) -- see migration/scripts/rework_wound_body_parts.py, which
+# deactivated those rows on the live DB and seeded this general list instead,
+# to match webapp/src/app/(app)/clinical/wound-body-diagram.tsx's per-view
+# hotspot placement. Keep this list in sync with that script and diagram if
+# either changes again.
 SEED_BODY_PARTS = [
-    ("Back of Head", 0),
-    ("Right Ear", 1),
-    ("Left Ear", 2),
-    ("Right Shoulder Blade", 3),
-    ("Left Shoulder Blade", 4),
-    ("Spine / Upper Back", 5),
-    ("Right Elbow", 6),
-    ("Left Elbow", 7),
-    ("Sacrum", 8),
-    ("Coccyx", 9),
-    ("Right Hip", 10),
-    ("Left Hip", 11),
-    ("Right Ischial Tuberosity", 12),
-    ("Left Ischial Tuberosity", 13),
-    ("Right Buttock", 14),
-    ("Left Buttock", 15),
-    ("Right Knee", 16),
-    ("Left Knee", 17),
-    ("Right Ankle", 18),
-    ("Left Ankle", 19),
-    ("Right Heel", 20),
-    ("Left Heel", 21),
-    ("Abdomen", 22),
-    ("Chest", 23),
-    ("Groin", 24),
-    ("Other", 25),
+    ("Head", 0),
+    ("Neck", 1),
+    ("Shoulder", 2),
+    ("Chest", 3),
+    ("Abdomen", 4),
+    ("Back", 5),
+    ("Sacrum", 6),
+    ("Left Hand", 7),
+    ("Right Hand", 8),
+    ("Left Leg", 9),
+    ("Right Leg", 10),
+    ("Other", 11),
 ]
 
 try:

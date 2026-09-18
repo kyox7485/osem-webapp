@@ -45,6 +45,7 @@ function doPost(e) {
   try {
     if (body.action === "upload") return handleUpload(body);
     if (body.action === "read") return handleRead(body);
+    if (body.action === "delete") return handleDelete(body);
     return jsonResponse({ success: false, error: "Unknown action: " + body.action });
   } catch (err) {
     return jsonResponse({ success: false, error: String(err) });
@@ -82,6 +83,15 @@ function resolveDateFolder(body) {
   const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
   const residentFolder = findOrCreateFolder(body.residentId + " - " + body.residentName + " (" + body.branchCode + ")", root);
   return findOrCreateFolder(body.isoDate, residentFolder);
+}
+
+// Trashes rather than permanently deletes -- lets a staff mistake (or a bug
+// on the Next.js side) be recovered from Drive's trash instead of being
+// unrecoverable, same safety margin Drive gives for any manual delete.
+function handleDelete(body) {
+  const file = DriveApp.getFileById(body.fileId);
+  file.setTrashed(true);
+  return jsonResponse({ success: true });
 }
 
 function handleRead(body) {

@@ -6,7 +6,7 @@ import { finishWoundSession } from "./wound-photo-actions";
 import { WoundBodyDiagram, WOUND_REGION_POSITIONS, type WoundBodyPart } from "./wound-body-diagram";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
-import { Camera, ChevronLeft, RotateCcw, Check, Plus, X } from "lucide-react";
+import { Camera, ChevronLeft, RotateCcw, Check, X, Loader2 } from "lucide-react";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -16,7 +16,7 @@ type LocalPhoto = {
   bodyPartLabel: string;
   description: string;
   previewUrl: string;
-  status: "uploading" | "saved" | "failed";
+  status: "uploading" | "saved" | "failed" | "removing";
   error?: string;
   photoId?: number;
   // Retained so a failed-after-Drive-succeeded retry never re-uploads the
@@ -27,11 +27,6 @@ type LocalPhoto = {
   mimeType?: string;
   blob?: Blob;
 };
-
-// A photo taken but not yet saved -- one body part visit can queue up
-// several of these (e.g. two angles of the same wound) before "Save
-// Photo(s)" fires, since one description covers the whole batch.
-type QueuedPhoto = { clientId: string; blob: Blob; previewUrl: string };
 
 type CaptureStage = "idle" | "previewing" | "compressing";
 
@@ -58,14 +53,18 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   // filing a photo under the wrong day.
   const sessionFolderRef = useRef<{ folderId: string; isoDate: string } | null>(null);
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
+  // Every in-flight upload (including retries) registers its settlement
+  // promise here so "Finish Session" can wait for all of them instead of
+  // racing ahead of a photo that's still mid-upload -- see handleFinish.
+  const pendingUploadsRef = useRef<Map<string, Promise<void>>>(new Map());
   const [view, setView] = useState<"diagram" | "part">("diagram");
   const [activePart, setActivePart] = useState<WoundBodyPart | null>(null);
   const [stage, setStage] = useState<CaptureStage>("idle");
   const [rawPreviewUrl, setRawPreviewUrl] = useState<string | null>(null);
   const pendingFileRef = useRef<File | null>(null);
-  const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const [description, setDescription] = useState("");
   const [finishing, setFinishing] = useState(false);
+  const [waitingForUploads, setWaitingForUploads] = useState(false);
   const [error, setError] = useState("");
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
@@ -76,7 +75,10 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
 
   const photoCountByLabel = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const p of photos) counts[p.bodyPartLabel] = (counts[p.bodyPartLabel] ?? 0) + 1;
+    for (const p of photos) {
+      if (p.status === "removing") continue;
+      counts[p.bodyPartLabel] = (counts[p.bodyPartLabel] ?? 0) + 1;
+    }
     return counts;
   }, [photos]);
 
@@ -103,42 +105,44 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     openCamera();
   }
 
-  // "Use Photo" adds the shot to this body part's queue rather than saving
-  // immediately -- a "+" to take another appears right away, since several
-  // photos of the same wound share one description and don't need to be
-  // saved one at a time.
+  // Fires the upload the instant a photo is accepted -- staff don't wait
+  // until leaving the body part to find out an upload failed, and a photo
+  // that's already reached Drive survives an accidental tab close instead
+  // of living only in memory until some later "Save" click.
   async function handleUsePhoto() {
-    if (!pendingFileRef.current) return;
+    if (!pendingFileRef.current || !residentId) {
+      if (!residentId) setError(t("Please select a resident before saving a photo"));
+      return;
+    }
+    setError("");
     setStage("compressing");
     try {
       const compressed = await compressImage(pendingFileRef.current);
       if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
       setRawPreviewUrl(null);
       pendingFileRef.current = null;
-      setQueue((prev) => [...prev, { clientId: crypto.randomUUID(), blob: compressed, previewUrl: URL.createObjectURL(compressed) }]);
+
+      const clientId = crypto.randomUUID();
+      const photo: LocalPhoto = {
+        clientId,
+        bodyPartId: activePart!.id,
+        bodyPartLabel: activePart!.label,
+        description,
+        previewUrl: URL.createObjectURL(compressed),
+        status: "uploading",
+        blob: compressed,
+      };
+      setPhotos((prev) => [...prev, photo]);
       setStage("idle");
+
+      const promise = uploadPhoto(clientId, photo).finally(() => {
+        pendingUploadsRef.current.delete(clientId);
+      });
+      pendingUploadsRef.current.set(clientId, promise);
     } catch {
       setError(t("Failed to process photo -- please retake"));
       setStage("idle");
     }
-  }
-
-  function handleRemoveQueued(clientId: string) {
-    setQueue((prev) => {
-      const target = prev.find((q) => q.clientId === clientId);
-      if (target) URL.revokeObjectURL(target.previewUrl);
-      return prev.filter((q) => q.clientId !== clientId);
-    });
-  }
-
-  function resetQueueAndCapture() {
-    if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
-    queue.forEach((q) => URL.revokeObjectURL(q.previewUrl));
-    setRawPreviewUrl(null);
-    pendingFileRef.current = null;
-    setQueue([]);
-    setDescription("");
-    setStage("idle");
   }
 
   async function uploadPhoto(clientId: string, payload: Partial<LocalPhoto> & { blob?: Blob }) {
@@ -186,38 +190,36 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     }
   }
 
-  // Saves the whole queue for this body part at once, sharing the single
-  // description, then returns to the diagram -- staff decide there whether
-  // to document another body part or finish.
-  function handleSaveBatch() {
-    if (!activePart || queue.length === 0) return;
-    if (!residentId) {
-      setError(t("Please select a resident before saving a photo"));
-      return;
-    }
-    setError("");
-
-    const newPhotos: LocalPhoto[] = queue.map((q) => ({
-      clientId: q.clientId,
-      bodyPartId: activePart.id,
-      bodyPartLabel: activePart.label,
-      description,
-      previewUrl: q.previewUrl,
-      status: "uploading",
-      blob: q.blob,
-    }));
-    setPhotos((prev) => [...prev, ...newPhotos]);
-    setQueue([]);
-    setDescription("");
-    newPhotos.forEach((p) => void uploadPhoto(p.clientId, p));
-
-    setView("diagram");
-    setActivePart(null);
-  }
-
   function handleRetry(photo: LocalPhoto) {
     setPhotos((prev) => prev.map((p) => (p.clientId === photo.clientId ? { ...p, status: "uploading", error: undefined } : p)));
-    void uploadPhoto(photo.clientId, photo);
+    const promise = uploadPhoto(photo.clientId, photo).finally(() => {
+      pendingUploadsRef.current.delete(photo.clientId);
+    });
+    pendingUploadsRef.current.set(photo.clientId, promise);
+  }
+
+  // Only a photo that made it all the way to "saved" has a server-side
+  // record (Drive file + tbl_wound_photos row) to remove -- a still-uploading
+  // photo can't be interrupted mid-request, and a failed one never left a
+  // record behind, so those just come off the local list via Retry's own
+  // replacement or by leaving them failed.
+  async function handleRemovePhoto(photo: LocalPhoto) {
+    if (photo.status !== "saved" || !photo.photoId) return;
+    setPhotos((prev) => prev.map((p) => (p.clientId === photo.clientId ? { ...p, status: "removing" } : p)));
+    try {
+      const res = await fetch(`/api/wound-photos/${photo.photoId}`, { method: "DELETE" });
+      const result = await res.json();
+      if (!result.success) {
+        setError(result.error || t("Failed to remove photo"));
+        setPhotos((prev) => prev.map((p) => (p.clientId === photo.clientId ? { ...p, status: "saved" } : p)));
+        return;
+      }
+      if (rawPreviewUrl !== photo.previewUrl) URL.revokeObjectURL(photo.previewUrl);
+      setPhotos((prev) => prev.filter((p) => p.clientId !== photo.clientId));
+    } catch {
+      setError(t("Network error -- failed to remove photo"));
+      setPhotos((prev) => prev.map((p) => (p.clientId === photo.clientId ? { ...p, status: "saved" } : p)));
+    }
   }
 
   async function handleFinish() {
@@ -225,11 +227,26 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
       setError(t("Please select who uploaded these photos"));
       return;
     }
+    setError("");
+
+    // Let any photo still mid-upload (including a just-tapped Retry) finish
+    // before finishing the session, instead of racing ahead and leaving it
+    // orphaned outside the session's record.
+    if (pendingUploadsRef.current.size > 0) {
+      setWaitingForUploads(true);
+      await Promise.all(Array.from(pendingUploadsRef.current.values()));
+      setWaitingForUploads(false);
+    }
+
+    if (photos.some((p) => p.status === "failed")) {
+      setError(t("Some photos failed to upload -- retry or remove them before finishing"));
+      return;
+    }
     if (!sessionId) {
       setError(t("Please wait for the photo upload to finish before finishing the session"));
       return;
     }
-    setError("");
+
     setFinishing(true);
     const result = await finishWoundSession(sessionId, uploadedBy);
     setFinishing(false);
@@ -239,6 +256,8 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     }
     onSaved();
   }
+
+  const finishBusy = finishing || waitingForUploads;
 
   return (
     <div className="space-y-4">
@@ -274,6 +293,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
             photoCountByLabel={photoCountByLabel}
             onSelectPart={(part) => {
               setActivePart(part);
+              setDescription("");
               setView("part");
             }}
           />
@@ -285,6 +305,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
                   type="button"
                   onClick={() => {
                     setActivePart(part);
+                    setDescription("");
                     setView("part");
                   }}
                   className="rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:border-indigo-400"
@@ -313,10 +334,11 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
               <button
                 type="button"
                 onClick={handleFinish}
-                disabled={finishing}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                disabled={finishBusy}
+                className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
               >
-                {finishing ? t("Finishing...") : t("Finish Session")}
+                {waitingForUploads && <Loader2 size={16} className="animate-spin" />}
+                {waitingForUploads ? t("Waiting for uploads to finish...") : finishing ? t("Finishing...") : t("Finish Session")}
               </button>
             </div>
           )}
@@ -326,7 +348,10 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
           <button
             type="button"
             onClick={() => {
-              resetQueueAndCapture();
+              if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
+              setRawPreviewUrl(null);
+              pendingFileRef.current = null;
+              setStage("idle");
               setView("diagram");
               setActivePart(null);
             }}
@@ -339,13 +364,13 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
 
           <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
 
-          {stage === "idle" && queue.length === 0 && (
+          {stage === "idle" && (
             <button
               type="button"
               onClick={openCamera}
               className="flex w-full items-center justify-center gap-2 rounded-md border-2 border-dashed border-indigo-300 bg-indigo-50 py-8 text-indigo-700 hover:bg-indigo-100"
             >
-              <Camera size={20} /> {t("Take Photo")}
+              <Camera size={20} /> {photosForActivePart.length > 0 ? t("Add another photo") : t("Take Photo")}
             </button>
           )}
 
@@ -366,55 +391,19 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
 
           {stage === "compressing" && <p className="text-center text-sm text-gray-400">{t("Processing photo...")}</p>}
 
-          {stage === "idle" && queue.length > 0 && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {queue.map((q) => (
-                  <div key={q.clientId} className="relative overflow-hidden rounded-md border border-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={q.previewUrl} alt={t("Queued photo")} className="h-24 w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveQueued(q.clientId)}
-                      className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white"
-                      aria-label={t("Remove")}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={openCamera}
-                  className="flex h-24 w-full items-center justify-center rounded-md border-2 border-dashed border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                  aria-label={t("Add another photo")}
-                >
-                  <Plus size={24} />
-                </button>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("Description")} <span className="text-gray-400">({t("optional")})</span>
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  placeholder={t("e.g. 3 x 2 cm, mild redness")}
-                />
-              </div>
-              <div className="flex justify-center gap-3">
-                <button type="button" onClick={resetQueueAndCapture} className="rounded-md border border-gray-300 px-4 py-2 text-sm">
-                  {t("Cancel")}
-                </button>
-                <button type="button" onClick={handleSaveBatch} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white">
-                  {queue.length > 1 ? t("Save Photos") : t("Save Photo")}
-                </button>
-              </div>
-            </div>
-          )}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {t("Description")} <span className="text-gray-400">({t("optional")})</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              placeholder={t("e.g. 3 x 2 cm, mild redness")}
+            />
+            <p className="mt-1 text-xs text-gray-400">{t("Applies to the next photo you take here.")}</p>
+          </div>
 
           {photosForActivePart.length > 0 && (
             <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
@@ -422,8 +411,28 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
                 <div key={p.clientId} className="relative overflow-hidden rounded-md border border-gray-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.previewUrl} alt={p.bodyPartLabel} className="h-32 w-full object-cover" />
+                  {p.status === "saved" && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(p)}
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-red-600"
+                      aria-label={t("Remove")}
+                      title={t("Remove")}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                   <div className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-center text-xs text-white">
-                    {p.status === "uploading" && t("Uploading...")}
+                    {p.status === "uploading" && (
+                      <span className="flex items-center justify-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> {t("Uploading...")}
+                      </span>
+                    )}
+                    {p.status === "removing" && (
+                      <span className="flex items-center justify-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> {t("Removing...")}
+                      </span>
+                    )}
                     {p.status === "saved" && `${t("Saved")} ✓`}
                     {p.status === "failed" && (
                       <button type="button" onClick={() => handleRetry(p)} className="underline">
