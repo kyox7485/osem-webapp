@@ -8,9 +8,10 @@ import type { WoundSession } from "./wound-photo-actions";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { WoundBodyPart } from "./wound-body-diagram";
+import { WoundProgressionDashboard } from "./wound-progression-dashboard";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
-import { ListChecks, Plus } from "lucide-react";
+import { ListChecks, Plus, TrendingUp } from "lucide-react";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -29,7 +30,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
-  const [innerTab, setInnerTab] = useState<"review" | "new">("review");
+  const [innerTab, setInnerTab] = useState<"review" | "progression" | "new">("review");
 
   function applyFilters(residentId: string, start: string, end: string) {
     const params = new URLSearchParams();
@@ -46,12 +47,17 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
         <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => setInnerTab("review")}>
           {t("Wound Photo History")}
         </TabButton>
+        <TabButton icon={TrendingUp} size="sm" active={innerTab === "progression"} onClick={() => setInnerTab("progression")}>
+          {t("Wound Progression")}
+        </TabButton>
         <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>
           {t("New Entry")}
         </TabButton>
       </TabRow>
 
-      {innerTab === "review" ? (
+      {innerTab === "progression" ? (
+        <WoundProgressionDashboard residents={residents} bodyParts={bodyParts} presetResidentId={currentResident || undefined} />
+      ) : innerTab === "review" ? (
         <>
           <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
