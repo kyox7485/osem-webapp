@@ -17,7 +17,7 @@ export function PhysioModuleTabs() {
   const onDashboard = pathname?.startsWith("/physiotherapy/dashboard") ?? false;
 
   return (
-    <TabRow className="mb-4">
+    <TabRow>
       <TabButton icon={ClipboardList} active={!onDashboard} onClick={() => push("/physiotherapy")}>
         {t("Assessments")}
       </TabButton>

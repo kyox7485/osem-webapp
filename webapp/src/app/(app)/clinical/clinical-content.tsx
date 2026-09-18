@@ -76,6 +76,9 @@ type Resident = {
 type Props = {
   residents: Resident[];
   allStaff: (LookupOption & { branch_id: number })[];
+  // Nursing Chart's "entered by" picker only -- restricted to Nursing/
+  // Medical department staff, unlike the other tabs which use allStaff.
+  nursingStaff: (LookupOption & { branch_id: number })[];
   vitals: Vital[];
   notes: ProgressNote[];
   nursingChartEntries: NursingChartEntry[];
@@ -93,6 +96,7 @@ type TabKey = "vitals" | "progress-notes" | "nursing-chart" | "hospital-referral
 export function ClinicalContent({
   residents,
   allStaff,
+  nursingStaff,
   vitals,
   notes,
   nursingChartEntries,
@@ -147,7 +151,7 @@ export function ClinicalContent({
           <NursingChartModule
             entries={nursingChartEntries}
             residents={residents}
-            allStaff={allStaff}
+            allStaff={nursingStaff}
             lookups={nursingChartLookups}
             currentResident={currentResident}
             currentStart={currentStart}

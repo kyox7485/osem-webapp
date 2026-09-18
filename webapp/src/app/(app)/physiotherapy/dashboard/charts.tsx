@@ -3,10 +3,14 @@ import { totalHours } from "./data";
 
 // Fixed per-category colors used consistently across every chart on this
 // dashboard (KPI tiles, stacked bars, donut, mix bars) so a color always
-// means the same patient type everywhere on the page.
+// means the same patient type everywhere on the page. Reuses the exact
+// tint colors the app's own sidebar already assigns to its modules
+// (Physiotherapy = emerald, Residents = blue, Staff = amber) so the
+// dashboard's data colors read as part of the same system, not a palette
+// invented just for charts.
 export const TYPE_COLOR: Record<PatientTypeKey, { bar: string; dot: string; text: string; bg: string }> = {
-  inpatient: { bar: "#4f46e5", dot: "bg-indigo-600", text: "text-indigo-700", bg: "bg-indigo-50" },
-  outpatient: { bar: "#059669", dot: "bg-emerald-600", text: "text-emerald-700", bg: "bg-emerald-50" },
+  inpatient: { bar: "#059669", dot: "bg-emerald-600", text: "text-emerald-700", bg: "bg-emerald-50" },
+  outpatient: { bar: "#2563eb", dot: "bg-blue-600", text: "text-blue-700", bg: "bg-blue-50" },
   housecall: { bar: "#d97706", dot: "bg-amber-600", text: "text-amber-700", bg: "bg-amber-50" },
 };
 
@@ -31,22 +35,76 @@ export function TypeLegend({ labels }: { labels: Record<PatientTypeKey, string> 
   );
 }
 
+// Full IP/OP/Housecall breakdown shown on hover/focus of a bar or column --
+// CSS-only (group-hover/group-focus), so no client JS is needed to make
+// these charts interactive.
+function BreakdownTooltip({
+  totals,
+  labels,
+  position = "top",
+}: {
+  totals: TypeTotals;
+  labels: Record<PatientTypeKey, string>;
+  position?: "top" | "top-left" | "bottom";
+}) {
+  const total = totalHours(totals);
+  const placement =
+    position === "bottom"
+      ? "top-full translate-y-1"
+      : position === "top-left"
+        ? "bottom-full -translate-y-1 left-0"
+        : "bottom-full -translate-y-1 left-1/2 -translate-x-1/2";
+  return (
+    <div
+      role="tooltip"
+      className={`pointer-events-none absolute z-10 w-44 rounded-md border border-gray-200 bg-white p-2.5 text-left opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 ${placement}`}
+    >
+      <p className="mb-1.5 flex items-baseline justify-between text-xs font-bold text-gray-900">
+        <span>{formatHours(total)}</span>
+      </p>
+      <div className="space-y-1">
+        {TYPE_ORDER.map((k) => {
+          const v = totals[k];
+          const pct = total > 0 ? (v / total) * 100 : 0;
+          return (
+            <div key={k} className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="flex min-w-0 items-center gap-1.5 text-gray-600">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${TYPE_COLOR[k].dot}`} />
+                <span className="truncate">{labels[k]}</span>
+              </span>
+              <span className="shrink-0 font-medium text-gray-800">
+                {formatHours(v)} <span className="text-gray-400">({pct.toFixed(0)}%)</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Horizontal 100%-stacked bar showing a single entity's IP/OP/Housecall
 // credit-hour split -- used both for the per-branch comparison and the
-// per-therapist "strength" mix. Native <title> elements give every segment
-// a hover tooltip with no client JS required.
+// per-therapist "strength" mix. Hovering or focusing the bar reveals the
+// full breakdown via BreakdownTooltip.
 export function StackedBar({
   label,
   totals,
   sublabel,
+  labels,
+  tooltipPosition = "top",
 }: {
   label: React.ReactNode;
   totals: TypeTotals;
   sublabel?: React.ReactNode;
+  labels: Record<PatientTypeKey, string>;
+  // "bottom" is for a bar with nothing above it to clip into (e.g. the
+  // first row of a scrollable table) -- see therapist-table.tsx.
+  tooltipPosition?: "top" | "top-left" | "bottom";
 }) {
   const total = totalHours(totals);
   return (
-    <div>
+    <div className="group relative" tabIndex={total > 0 ? 0 : undefined}>
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className="truncate text-sm font-medium text-gray-800">{label}</span>
         <span className="shrink-0 text-xs text-gray-500">
@@ -55,34 +113,36 @@ export function StackedBar({
         </span>
       </div>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-gray-100">
-        {total === 0 ? null : (
-          TYPE_ORDER.map((k) => {
-            const v = totals[k];
-            if (v <= 0) return null;
-            const pct = (v / total) * 100;
-            return (
-              <div
-                key={k}
-                style={{ width: `${pct}%`, backgroundColor: TYPE_COLOR[k].bar }}
-                className="h-full first:rounded-l-full last:rounded-r-full"
-              >
-                <title>{`${k}: ${formatHours(v)} (${pct.toFixed(0)}%)`}</title>
-              </div>
-            );
-          })
-        )}
+        {total === 0
+          ? null
+          : TYPE_ORDER.map((k) => {
+              const v = totals[k];
+              if (v <= 0) return null;
+              const pct = (v / total) * 100;
+              return (
+                <div
+                  key={k}
+                  style={{ width: `${pct}%`, backgroundColor: TYPE_COLOR[k].bar }}
+                  className="h-full first:rounded-l-full last:rounded-r-full"
+                />
+              );
+            })}
       </div>
+      {total > 0 && <BreakdownTooltip totals={totals} labels={labels} position={tooltipPosition} />}
     </div>
   );
 }
 
 // Vertical grouped/stacked column chart for the weekly trend -- each column
 // is itself a mini 100%-of-max stacked bar so both the total shape and the
-// type mix are visible at a glance.
+// type mix are visible at a glance. Hovering or focusing a column reveals
+// its full breakdown via BreakdownTooltip.
 export function TrendChart({
   buckets,
+  labels,
 }: {
   buckets: { label: string; totals: TypeTotals }[];
+  labels: Record<PatientTypeKey, string>;
 }) {
   const max = Math.max(...buckets.map((b) => totalHours(b.totals)), 1);
   return (
@@ -90,23 +150,27 @@ export function TrendChart({
       {buckets.map((b, i) => {
         const total = totalHours(b.totals);
         const heightPct = Math.max((total / max) * 100, total > 0 ? 3 : 0);
+        // First/last couple of columns would push the centered tooltip
+        // past the card edge -- left-align it there instead.
+        const edgePosition = i < 1 ? "top-left" : undefined;
         return (
-          <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+          <div
+            key={i}
+            className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
+            tabIndex={total > 0 ? 0 : undefined}
+          >
             <div className="flex h-32 w-full items-end overflow-hidden rounded-t-sm bg-gray-50">
               <div className="flex w-full flex-col justify-end" style={{ height: `${heightPct}%` }}>
                 {[...TYPE_ORDER].reverse().map((k) => {
                   const v = b.totals[k];
                   if (v <= 0) return null;
                   const segPct = (v / total) * 100;
-                  return (
-                    <div key={k} style={{ height: `${segPct}%`, backgroundColor: TYPE_COLOR[k].bar }} className="w-full">
-                      <title>{`${b.label} — ${k}: ${formatHours(v)}`}</title>
-                    </div>
-                  );
+                  return <div key={k} style={{ height: `${segPct}%`, backgroundColor: TYPE_COLOR[k].bar }} className="w-full" />;
                 })}
               </div>
             </div>
             <span className="truncate text-[10px] text-gray-500">{b.label}</span>
+            {total > 0 && <BreakdownTooltip totals={b.totals} labels={labels} position={edgePosition} />}
           </div>
         );
       })}
@@ -203,7 +267,7 @@ export function WorkloadBar({
     <div className="w-full">
       <div className="relative h-2.5 w-full rounded-full bg-gray-100">
         <div
-          className={`h-2.5 rounded-full ${delta >= 0 ? "bg-indigo-600" : "bg-indigo-400"}`}
+          className={`h-2.5 rounded-full ${delta >= 0 ? "bg-emerald-600" : "bg-emerald-400"}`}
           style={{ width: `${barPct}%` }}
         >
           <title>{`${avgWeeklyHours.toFixed(1)}h / week (baseline ${baseline}h)`}</title>
@@ -218,7 +282,7 @@ export function WorkloadBar({
         {t("{h}h/wk avg").replace("{h}", avgWeeklyHours.toFixed(1))}
         {" · "}
         {delta >= 0 ? (
-          <span className="font-medium text-indigo-700">{t("+{h}h overtime").replace("{h}", delta.toFixed(1))}</span>
+          <span className="font-medium text-emerald-700">{t("+{h}h overtime").replace("{h}", delta.toFixed(1))}</span>
         ) : (
           <span className="text-gray-500">{t("{h}h below baseline").replace("{h}", Math.abs(delta).toFixed(1))}</span>
         )}

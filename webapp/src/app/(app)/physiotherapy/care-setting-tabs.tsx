@@ -19,7 +19,7 @@ export function CareSettingTabs({ current }: Props) {
   }
 
   return (
-    <TabRow className="mb-4">
+    <TabRow>
       <TabButton icon={BedDouble} active={current === "IP"} onClick={() => switchTo("IP")}>
         {t("Inpatient")}
       </TabButton>

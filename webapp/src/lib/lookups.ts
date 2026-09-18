@@ -127,6 +127,23 @@ export async function getPhysiotherapyStaff(): Promise<LookupOption[]> {
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name }));
 }
 
+// The Nursing Chart tab's "entered by" picker is used exclusively by
+// nursing and medical staff -- same "no ADMIN fallback" convention as
+// getPhysiotherapyStaff, since an admin login is never the person who
+// actually took a nursing chart entry. Carries branch_id (like
+// getAllStaffWithBranch) because the form filters client-side once a
+// resident/branch is picked.
+export async function getNursingStaff(): Promise<(LookupOption & { branch_id: number })[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_staff")
+    .select("id:StaffID, staff_name, branch_id")
+    .eq("status", "ACTIVE")
+    .in("department", ["Nursing", "Medical"])
+    .order("staff_name");
+  return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
+}
+
 export type ClinicalLookups = {
   // group_type ("Amount" | "Texture") lets the form enforce one selection
   // per set while letting the two sets mix freely.

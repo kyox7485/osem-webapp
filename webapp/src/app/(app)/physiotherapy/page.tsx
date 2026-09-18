@@ -100,9 +100,10 @@ export default async function PhysiotherapyPage({
     <div>
       <PageTitle title={t("Physiotherapy")} />
 
-      <PhysioModuleTabs />
-
-      <CareSettingTabs current={careSetting} />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <PhysioModuleTabs />
+        <CareSettingTabs current={careSetting} />
+      </div>
 
       <PhysioDirtyProvider>
         <ResidentPicker

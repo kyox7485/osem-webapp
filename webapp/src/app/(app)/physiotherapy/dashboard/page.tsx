@@ -113,7 +113,9 @@ export default async function PhysioDashboardPage({
         description={`${t("Workload analytics")} · ${dateFmt(range.start)} – ${dateFmt(range.end)}`}
       />
 
-      <PhysioModuleTabs />
+      <div className="mb-4">
+        <PhysioModuleTabs />
+      </div>
 
       <DashboardFilters
         period={period}
@@ -145,7 +147,7 @@ export default async function PhysioDashboardPage({
           share={share(totals.inpatient)}
           deltaPct={percentChange(totals.inpatient, prevTotals.inpatient)}
           icon={BedDouble}
-          tint="bg-indigo-50 text-indigo-600"
+          tint="bg-emerald-50 text-emerald-600"
           t={t}
         />
         <StatTile
@@ -154,7 +156,7 @@ export default async function PhysioDashboardPage({
           share={share(totals.outpatient)}
           deltaPct={percentChange(totals.outpatient, prevTotals.outpatient)}
           icon={DoorOpen}
-          tint="bg-emerald-50 text-emerald-600"
+          tint="bg-blue-50 text-blue-600"
           t={t}
         />
         <StatTile
@@ -176,7 +178,7 @@ export default async function PhysioDashboardPage({
             <TypeLegend labels={typeLabels} />
           </div>
           {grandTotal > 0 ? (
-            <TrendChart buckets={trendBuckets} />
+            <TrendChart buckets={trendBuckets} labels={typeLabels} />
           ) : (
             <p className="py-10 text-center text-sm text-gray-500">{t("No assessments in this period.")}</p>
           )}
@@ -200,7 +202,7 @@ export default async function PhysioDashboardPage({
         ) : (
           <div className="space-y-3">
             {branchAgg.map((b) => (
-              <StackedBar key={b.id} label={b.name} totals={b.totals} />
+              <StackedBar key={b.id} label={b.name} totals={b.totals} labels={typeLabels} />
             ))}
           </div>
         )}
@@ -208,13 +210,10 @@ export default async function PhysioDashboardPage({
 
       {/* Team vs individual workload */}
       <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-3">
           <h3 className="text-sm font-bold text-gray-900">
             {view === "team" ? t("Team workload by branch") : t("Therapist workload & strength")}
           </h3>
-          <p className="text-xs text-gray-500">
-            {t("Baseline")}: 45h/{t("week")} · {t("overtime is expected, not flagged")}
-          </p>
         </div>
 
         {view === "team" ? (
@@ -230,6 +229,7 @@ export default async function PhysioDashboardPage({
               total: t("Total hours"),
             }}
             t={t}
+            labels={typeLabels}
           />
         ) : (
           <TherapistTable
@@ -244,6 +244,7 @@ export default async function PhysioDashboardPage({
               total: t("Total hours"),
             }}
             t={t}
+            labels={typeLabels}
           />
         )}
       </div>

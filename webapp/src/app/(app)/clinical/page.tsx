@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch, getClinicalLookups, getFeedingTypes } from "@/lib/lookups";
+import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes } from "@/lib/lookups";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import type { NursingChartEntry } from "./nursing-chart-module";
@@ -41,9 +41,10 @@ export default async function ClinicalPage({
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
   }
 
-  const [{ data: residents }, allStaff, nursingChartLookups, feedingTypes] = await Promise.all([
+  const [{ data: residents }, allStaff, nursingStaff, nursingChartLookups, feedingTypes] = await Promise.all([
     residentQuery,
     getAllStaffWithBranch(),
+    getNursingStaff(),
     getClinicalLookups(),
     getFeedingTypes(),
   ]);
@@ -347,6 +348,7 @@ export default async function ClinicalPage({
       <ClinicalContent
         residents={residents || []}
         allStaff={allStaff}
+        nursingStaff={nursingStaff}
         vitals={vitals}
         notes={notes}
         nursingChartEntries={nursingChartEntries}
