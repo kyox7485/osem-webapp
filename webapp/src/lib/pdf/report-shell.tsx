@@ -29,7 +29,10 @@ export type ReportBranchInfo = {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 0,
+    // paddingTop must cover the full height of the fixed header elements
+    // (accentBar 5px + headerBand ~66px + 16px breathing room = ~87px) so
+    // that content on page 2+ resumes below the repeated fixed header.
+    paddingTop: 88,
     paddingBottom: 56,
     paddingHorizontal: 0,
     fontFamily: FONT,
@@ -100,7 +103,9 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: pdfSpacing.page,
-    paddingTop: 16,
+    // paddingTop removed -- page.paddingTop already reserves the header gap
+    // on every page, so this was only adding extra space on page 1.
+    paddingTop: 0,
   },
   footer: {
     position: "absolute",
