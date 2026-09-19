@@ -29,15 +29,24 @@ export type ReportBranchInfo = {
 
 const styles = StyleSheet.create({
   page: {
-    // paddingTop must cover the full height of the fixed header elements
-    // (accentBar 5px + headerBand ~66px + 16px breathing room = ~87px) so
-    // that content on page 2+ resumes below the repeated fixed header.
+    // paddingTop reserves space for the header block (accentBar 5px +
+    // headerBand ~66px + 16px breathing room = ~87px) so the flowing body
+    // content starts below it on every page. The header itself is
+    // position:absolute (see headerFixed below), so it is NOT pushed down
+    // by this padding -- it stays pinned to the true top edge of each page,
+    // same technique already used for the footer's position:absolute+bottom:0.
     paddingTop: 88,
     paddingBottom: 56,
     paddingHorizontal: 0,
     fontFamily: FONT,
     fontSize: 9.5,
     color: pdfColors.ink700,
+  },
+  headerFixed: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
   },
   accentBar: {
     height: 5,
@@ -150,19 +159,21 @@ export function ReportPage({
 
   return (
     <Page size="A4" style={styles.page} wrap>
-      <View style={styles.accentBar} fixed />
-      <View style={styles.headerBand} fixed>
-        <View style={styles.headerLeft}>
-          <Image src={logoSrc} style={styles.logo} />
-          <View style={styles.titleBlock}>
-            <Text style={styles.reportTitle}>{title}</Text>
-            <Text style={styles.reportSubtitle}>{subtitle}</Text>
+      <View style={styles.headerFixed} fixed>
+        <View style={styles.accentBar} />
+        <View style={styles.headerBand}>
+          <View style={styles.headerLeft}>
+            <Image src={logoSrc} style={styles.logo} />
+            <View style={styles.titleBlock}>
+              <Text style={styles.reportTitle}>{title}</Text>
+              <Text style={styles.reportSubtitle}>{subtitle}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.headerRight}>
-          <Text style={styles.branchName}>{branch.branchName}</Text>
-          {branch.branchAddress && <Text style={styles.branchLine}>{branch.branchAddress}</Text>}
-          {branch.branchContact && <Text style={styles.branchLine}>Tel: {branch.branchContact}</Text>}
+          <View style={styles.headerRight}>
+            <Text style={styles.branchName}>{branch.branchName}</Text>
+            {branch.branchAddress && <Text style={styles.branchLine}>{branch.branchAddress}</Text>}
+            {branch.branchContact && <Text style={styles.branchLine}>Tel: {branch.branchContact}</Text>}
+          </View>
         </View>
       </View>
 
