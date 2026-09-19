@@ -7,14 +7,16 @@ import { ProgressNotesModule } from "./progress-notes-module";
 import { NursingChartModule, type NursingChartEntry } from "./nursing-chart-module";
 import { HospitalReferralModule } from "./hospital-referral-module";
 import { WoundPhotoModule } from "./wound-photo-module";
+import { ObservationChartModule } from "./observation-chart-module";
 import type { WoundSession } from "./wound-photo-actions";
 import type { WoundBodyPart } from "./wound-body-diagram";
+import type { ObservationEntry } from "./observation-chart-actions";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
-import { ClipboardList, Activity, FileText, Ambulance, Camera } from "lucide-react";
+import { ClipboardList, Activity, FileText, Ambulance, Camera, Eye } from "lucide-react";
 
 type Vital = {
   id: number;
@@ -94,13 +96,14 @@ type Props = {
   referrals: HospitalReferral[];
   woundSessions: WoundSession[];
   woundBodyParts: WoundBodyPart[];
+  observationEntries: ObservationEntry[];
   currentResident: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
 };
 
-type TabKey = "vitals" | "wound-photo" | "progress-notes" | "nursing-chart" | "hospital-referral";
+type TabKey = "vitals" | "wound-photo" | "progress-notes" | "nursing-chart" | "hospital-referral" | "observation-chart";
 
 export function ClinicalContent({
   residents,
@@ -114,6 +117,7 @@ export function ClinicalContent({
   referrals,
   woundSessions,
   woundBodyParts,
+  observationEntries,
   currentResident,
   currentStart,
   currentEnd,
@@ -126,7 +130,7 @@ export function ClinicalContent({
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "vitals" || tab === "wound-photo" || tab === "progress-notes" || tab === "hospital-referral") {
+    if (tab === "vitals" || tab === "wound-photo" || tab === "progress-notes" || tab === "hospital-referral" || tab === "observation-chart") {
       setActiveTab(tab);
     } else {
       setActiveTab("nursing-chart");
@@ -145,6 +149,9 @@ export function ClinicalContent({
       <TabRow className="mb-6">
         <TabButton icon={ClipboardList} active={activeTab === "nursing-chart"} onClick={() => switchTab("nursing-chart")}>
           {t("Nursing Chart")}
+        </TabButton>
+        <TabButton icon={Eye} active={activeTab === "observation-chart"} onClick={() => switchTab("observation-chart")}>
+          {t("Observation Chart")}
         </TabButton>
         <TabButton icon={Activity} active={activeTab === "vitals"} onClick={() => switchTab("vitals")}>
           {t("Vital Signs")}
@@ -167,6 +174,17 @@ export function ClinicalContent({
             residents={residents}
             allStaff={nursingStaff}
             lookups={nursingChartLookups}
+            currentResident={currentResident}
+            currentStart={currentStart}
+            currentEnd={currentEnd}
+            error={error}
+          />
+        )}
+        {activeTab === "observation-chart" && (
+          <ObservationChartModule
+            entries={observationEntries}
+            residents={residents}
+            allStaff={nursingStaff}
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}

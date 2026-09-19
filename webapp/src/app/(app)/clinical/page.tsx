@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts } from "@/lib/lookups";
+import { getObservationCharts } from "./observation-chart-actions";
+import type { ObservationEntry } from "./observation-chart-actions";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import { getWoundSessionHistory } from "./wound-photo-actions";
@@ -57,6 +59,7 @@ export default async function ClinicalPage({
   let nursingChartEntries: NursingChartEntry[] = [];
   let referrals = [];
   let woundSessions: Awaited<ReturnType<typeof getWoundSessionHistory>>["sessions"] = [];
+  let observationEntries: ObservationEntry[] = [];
   let error = null;
 
   if (currentTab === "vitals") {
@@ -351,6 +354,10 @@ export default async function ClinicalPage({
     const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate });
     woundSessions = result.sessions;
     error = result.error;
+  } else if (currentTab === "observation-chart") {
+    const result = await getObservationCharts({ residentId: residentFilter, start: startDate, end: endDate });
+    observationEntries = result.entries;
+    error = result.error;
   }
 
   return (
@@ -369,6 +376,7 @@ export default async function ClinicalPage({
         referrals={referrals}
         woundSessions={woundSessions}
         woundBodyParts={woundBodyParts}
+        observationEntries={observationEntries}
         currentResident={residentFilter}
         currentStart={startDate}
         currentEnd={endDate}
