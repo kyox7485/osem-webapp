@@ -8,9 +8,10 @@ import { BedDouble, DoorOpen } from "lucide-react";
 
 type Props = {
   current: PhysioCareSetting;
+  showOp?: boolean;
 };
 
-export function CareSettingTabs({ current }: Props) {
+export function CareSettingTabs({ current, showOp = true }: Props) {
   const push = useNavPush();
   const t = useTranslation();
 
@@ -23,9 +24,11 @@ export function CareSettingTabs({ current }: Props) {
       <TabButton icon={BedDouble} active={current === "IP"} onClick={() => switchTo("IP")}>
         {t("Inpatient")}
       </TabButton>
-      <TabButton icon={DoorOpen} active={current === "OP"} onClick={() => switchTo("OP")}>
-        {t("Outpatient")}
-      </TabButton>
+      {showOp && (
+        <TabButton icon={DoorOpen} active={current === "OP"} onClick={() => switchTo("OP")}>
+          {t("Outpatient")}
+        </TabButton>
+      )}
     </TabRow>
   );
 }

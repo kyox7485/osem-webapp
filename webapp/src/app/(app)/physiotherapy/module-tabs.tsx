@@ -10,7 +10,7 @@ import { ClipboardList, BarChart3 } from "lucide-react";
 // Outpatient tabs + entry forms) and the workload analytics dashboard. Kept
 // separate from CareSettingTabs (IP/OP) since it's a different axis -- which
 // screen, not which patient population.
-export function PhysioModuleTabs() {
+export function PhysioModuleTabs({ showAnalytics = true }: { showAnalytics?: boolean }) {
   const push = useNavPush();
   const pathname = usePathname();
   const t = useTranslation();
@@ -21,9 +21,11 @@ export function PhysioModuleTabs() {
       <TabButton icon={ClipboardList} active={!onDashboard} onClick={() => push("/physiotherapy")}>
         {t("Assessments")}
       </TabButton>
-      <TabButton icon={BarChart3} active={onDashboard} onClick={() => push("/physiotherapy/dashboard")}>
-        {t("Analytics")}
-      </TabButton>
+      {showAnalytics && (
+        <TabButton icon={BarChart3} active={onDashboard} onClick={() => push("/physiotherapy/dashboard")}>
+          {t("Analytics")}
+        </TabButton>
+      )}
     </TabRow>
   );
 }

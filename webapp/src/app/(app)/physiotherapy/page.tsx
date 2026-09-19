@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessPhysioOp } from "@/lib/current-user";
 import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
@@ -69,9 +69,11 @@ export default async function PhysiotherapyPage({
   if (!account) redirect("/login");
 
   const { t } = await getServerTranslator();
+  const opAllowed = canAccessPhysioOp(account);
 
   const { type, resident: residentIdParam } = await searchParams;
-  const careSetting: PhysioCareSetting = type === "op" ? "OP" : "IP";
+  // Non-physio accounts are silently redirected to IP if they somehow land on OP.
+  const careSetting: PhysioCareSetting = type === "op" && opAllowed ? "OP" : "IP";
   const supabase = await createClient();
 
   // IP patients are active tbl_residents; OP patients are the separate
@@ -101,8 +103,8 @@ export default async function PhysiotherapyPage({
       <PageTitle title={t("Physiotherapy")} />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PhysioModuleTabs />
-        <CareSettingTabs current={careSetting} />
+        <PhysioModuleTabs showAnalytics={opAllowed} />
+        <CareSettingTabs current={careSetting} showOp={opAllowed} />
       </div>
 
       <PhysioDirtyProvider>

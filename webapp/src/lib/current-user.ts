@@ -58,3 +58,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 export function isAdmin(account: CurrentUser | null): boolean {
   return account?.rights === "ADMIN";
 }
+
+// True for accounts that may access OP physiotherapy and the Analytics dashboard.
+// Physio-hub accounts (PHY-function branch) and ADMINs only.
+export function canAccessPhysioOp(account: CurrentUser | null): boolean {
+  if (!account) return false;
+  return account.rights === "ADMIN" || account.branch_function === "PHY";
+}

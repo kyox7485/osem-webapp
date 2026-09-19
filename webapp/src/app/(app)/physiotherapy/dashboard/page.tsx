@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessPhysioOp } from "@/lib/current-user";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PageTitle } from "@/components/page-header";
 import { BedDouble, DoorOpen, Home, Clock } from "lucide-react";
@@ -42,6 +42,7 @@ export default async function PhysioDashboardPage({
 }) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
+  if (!canAccessPhysioOp(account)) redirect("/physiotherapy");
 
   const { t } = await getServerTranslator();
   const sp = await searchParams;
