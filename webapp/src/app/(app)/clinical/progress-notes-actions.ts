@@ -127,9 +127,10 @@ export async function createProgressNote(input: CreateProgressNoteInput): Promis
     monitoring_plan: input.monitoringPlan,
     dressing_plan: input.dressingPlan,
     physio_plan: input.physioPlan,
-    reviewed_by: input.createdBy || null,
-    created_by: input.createdBy || null,
-    created_by_other: input.createdByOther || null,
+    reviewed_by: input.createdBy === "__others__" ? null : (input.createdBy || null),
+    reviewed_by_other: input.createdBy === "__others__" ? (input.createdByOther || null) : null,
+    created_by: input.createdBy === "__others__" ? null : (input.createdBy || null),
+    created_by_other: input.createdBy === "__others__" ? (input.createdByOther || null) : null,
   });
 
   if (error) {
