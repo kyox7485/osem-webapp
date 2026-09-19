@@ -108,7 +108,16 @@ rather than assuming the change is live.
 
 ## Core domain model (Postgres/Supabase)
 
-- `tbl_branches` — one row per physical branch. `Function` is `'NUR'`
+- `tbl_branches` — one row per physical branch. **Primary key is `BranchID`
+  (PascalCase), not `id`.** Always use `.eq("BranchID", ...)` when querying
+  this table — `.eq("id", ...)` silently returns nothing and will cause
+  hard-to-diagnose bugs (learned this when Telegram notifications were
+  silently dropped because the branch lookup always came back empty).
+  `telegram_chat_id` (text, nullable) stores the Telegram group chat ID for
+  that branch; `TELEGRAM_BOT_TOKEN` stays a Vercel env var (one bot for all
+  branches). To enable notifications for a new branch, just fill in its
+  `telegram_chat_id` row — no code change needed.
+  `Function` is `'NUR'`
   (residential/nursing branch), `'PHY'` (standalone physio hub, e.g. AMP),
   or `'HQ'`. A lot of access rules key off this rather than a hardcoded
   branch id.
