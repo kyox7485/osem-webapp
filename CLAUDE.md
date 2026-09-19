@@ -52,6 +52,12 @@ osem-webapp/
   (progress notes, resident admission, wound photo "uploaded by", etc.)
   carries its own explicit staff-picker field — never assume
   `current_user.id` is the author.
+  **`getCurrentUser()` takes zero arguments** — it creates its own
+  Supabase client internally. Never call it as `getCurrentUser(supabase)`;
+  TypeScript will reject it and break the Vercel build. The correct
+  pattern in a Server Action is: `const account = await getCurrentUser();`
+  first (cheap auth check before hitting the DB), then
+  `const supabase = await createClient();` for subsequent queries.
 - `src/lib/i18n/` — English/Bahasa Malaysia switcher. `t("English text")`
   looks the English string up in `translations.ts`'s `msDictionary`; a
   missing key just falls back to English, it's not a build error. New UI
