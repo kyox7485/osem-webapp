@@ -64,7 +64,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       progress_note: note.progress_note,
       medical_plan: note.medical_plan,
       nursing_plan: note.nursing_plan,
-      authorName: author?.staff_name ?? t("Unknown"),
+      authorName: author?.staff_name ?? (note as any).created_by_other ?? t("Unknown"),
     };
   });
 

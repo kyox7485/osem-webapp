@@ -112,7 +112,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
                     <span className="text-xs text-gray-400">{formatDateTime(session.session_started_at)}</span>
                   </div>
                   <div className="mb-3 text-xs text-gray-400">
-                    {t("Uploaded by")}: {session.uploader?.staff_name || "--"}
+                    {t("Uploaded by")}: {session.uploader?.staff_name || session.uploaded_by_other || "--"}
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {session.photos.map((photo) => (

@@ -33,6 +33,7 @@ type Vital = {
   gcs_label: string | null;
   avpu_label: string | null;
   reviewed_by: string | null;
+  reviewed_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   tbl_staff: { StaffID: string; staff_name: string } | null;
 };
@@ -50,7 +51,9 @@ type ProgressNote = {
   dressing_plan: string | null;
   physio_plan: string | null;
   reviewed_by: string | null;
+  reviewed_by_other: string | null;
   created_by: string | null;
+  created_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   reviewer: { StaffID: string; staff_name: string } | null;
   author: { StaffID: string; staff_name: string } | null;
@@ -66,6 +69,7 @@ type HospitalReferral = {
   feeding: string | null;
   hygiene: string | null;
   reviewed_by: string | null;
+  reviewed_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   reviewer: { StaffID: string; staff_name: string } | null;
 };

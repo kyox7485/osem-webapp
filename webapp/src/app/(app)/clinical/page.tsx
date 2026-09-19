@@ -83,6 +83,7 @@ export default async function ClinicalPage({
         gcs_motor_id,
         avpu_id,
         reviewed_by,
+        reviewed_by_other,
         tbl_residents!resident_id(id, resident_name, branch_id),
         tbl_staff!reviewed_by(StaffID, staff_name)
       `
@@ -139,7 +140,9 @@ export default async function ClinicalPage({
         dressing_plan,
         physio_plan,
         reviewed_by,
+        reviewed_by_other,
         created_by,
+        created_by_other,
         tbl_residents!resident_id(id, resident_name, branch_id),
         reviewer:tbl_staff!reviewed_by(StaffID, staff_name),
         author:tbl_staff!created_by(StaffID, staff_name)
@@ -187,6 +190,7 @@ export default async function ClinicalPage({
         intervention,
         doctors_plan,
         created_by,
+        created_by_other,
         tbl_residents!resident_id(id, resident_name, branch_id),
         author:tbl_staff!created_by(StaffID, staff_name)
       `
@@ -302,7 +306,7 @@ export default async function ClinicalPage({
         meal_labels: mealsByEntry.get(e.id) ?? [],
         hygiene_labels: hygieneByEntry.get(e.id) ?? [],
         resident_name: resident?.resident_name ?? "--",
-        entered_by_name: author?.staff_name ?? "--",
+        entered_by_name: author?.staff_name ?? e.created_by_other ?? "--",
       };
     });
   } else if (currentTab === "hospital-referral") {
@@ -319,6 +323,7 @@ export default async function ClinicalPage({
         feeding,
         hygiene,
         reviewed_by,
+        reviewed_by_other,
         tbl_residents!resident_id(id, resident_name, branch_id),
         reviewer:tbl_staff!reviewed_by(StaffID, staff_name)
       `

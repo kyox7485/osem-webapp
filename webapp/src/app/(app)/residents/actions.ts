@@ -43,7 +43,16 @@ function buildResidentPayload(formData: FormData) {
     // Explicitly picked on the form -- never inferred from the logged-in
     // account, since branch logins can be shared by multiple people.
     // tbl_staff's PK is a text code (e.g. "AMN-1"), not a bigint.
-    reviewed_by: optional(formData.get("reviewed_by")),
+    // When "Others" is selected the sentinel "__others__" is translated to
+    // null here and the free-text name goes in reviewed_by_other instead.
+    reviewed_by: (() => {
+      const v = optional(formData.get("reviewed_by"));
+      return v === "__others__" ? null : v;
+    })(),
+    reviewed_by_other: (() => {
+      const v = optional(formData.get("reviewed_by"));
+      return v === "__others__" ? optional(formData.get("reviewed_by_other")) : null;
+    })(),
   };
 }
 
@@ -60,7 +69,7 @@ export async function createResident(formData: FormData) {
   if (!payload.branch_id) {
     return { error: "Branch is required" };
   }
-  if (!payload.reviewed_by) {
+  if (!payload.reviewed_by && !payload.reviewed_by_other) {
     return { error: "Select who's entering this" };
   }
 
@@ -87,7 +96,7 @@ export async function updateResident(residentId: number, formData: FormData) {
   if (!payload.branch_id) {
     return { error: "Branch is required" };
   }
-  if (!payload.reviewed_by) {
+  if (!payload.reviewed_by && !payload.reviewed_by_other) {
     return { error: "Select who's entering this" };
   }
 

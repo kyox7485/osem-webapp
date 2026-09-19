@@ -30,6 +30,7 @@ import { NarrativeSection } from "./sections/narrative-section";
 import { ComplianceSignoff } from "./sections/compliance-signoff";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
+import { OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 
 // previous.examRows only contains movements that actually had a score
 // (see actions.ts's filter before insert) -- merge those values into the
@@ -117,6 +118,7 @@ export function NewPhysioAssessmentForm({
   const [evaluation, setEvaluation] = useState("");
   const [treatmentCompliance, setTreatmentCompliance] = useState("");
   const [documentedBy, setDocumentedBy] = useState("");
+  const [documentedByOtherName, setDocumentedByOtherName] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -157,7 +159,7 @@ export function NewPhysioAssessmentForm({
   async function doSave(): Promise<boolean> {
     setError("");
 
-    if (!documentedBy) {
+    if (!documentedBy || (documentedBy === OTHERS_SENTINEL && !documentedByOtherName.trim())) {
       setError(t("Please select who documented this assessment"));
       return false;
     }
@@ -178,7 +180,8 @@ export function NewPhysioAssessmentForm({
       planIntervention: planIntervention || null,
       evaluation: evaluation || null,
       treatmentCompliance: treatmentCompliance || null,
-      documentedBy,
+      documentedBy: documentedBy === OTHERS_SENTINEL ? "" : documentedBy,
+      documentedByOther: documentedBy === OTHERS_SENTINEL ? documentedByOtherName.trim() : "",
       examRows,
       bodyChart,
       functional,
@@ -285,6 +288,8 @@ export function NewPhysioAssessmentForm({
         setTreatmentCompliance={setTreatmentCompliance}
         documentedBy={documentedBy}
         setDocumentedBy={setDocumentedBy}
+        documentedByOther={documentedByOtherName}
+        setDocumentedByOther={setDocumentedByOtherName}
         staffOptions={staffOptions}
       />
 

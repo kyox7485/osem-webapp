@@ -59,6 +59,7 @@ type CreateHospitalReferralInput = {
   feeding: string | null;
   hygiene: string | null;
   reviewedBy: string;
+  reviewedByOther?: string | null;
 };
 
 export async function createHospitalReferral(input: CreateHospitalReferralInput): Promise<{ success: boolean; error?: string; id?: number }> {
@@ -93,7 +94,8 @@ export async function createHospitalReferral(input: CreateHospitalReferralInput)
       mobility: input.mobility,
       feeding: input.feeding,
       hygiene: input.hygiene,
-      reviewed_by: input.reviewedBy,
+      reviewed_by: input.reviewedBy || null,
+      reviewed_by_other: input.reviewedByOther || null,
     })
     .select("id")
     .single();

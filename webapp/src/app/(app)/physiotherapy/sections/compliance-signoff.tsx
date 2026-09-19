@@ -3,12 +3,15 @@
 import { PHYSIO_COMPLIANCE_OPTIONS } from "@/lib/types";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
+import { StaffPickerWithOther } from "@/components/staff-picker-with-other";
 
 type Props = {
   treatmentCompliance: string;
   setTreatmentCompliance: (v: string) => void;
   documentedBy: string;
   setDocumentedBy: (v: string) => void;
+  documentedByOther: string;
+  setDocumentedByOther: (v: string) => void;
   staffOptions: LookupOption[];
 };
 
@@ -17,6 +20,8 @@ export function ComplianceSignoff({
   setTreatmentCompliance,
   documentedBy,
   setDocumentedBy,
+  documentedByOther,
+  setDocumentedByOther,
   staffOptions,
 }: Props) {
   const t = useTranslation();
@@ -40,22 +45,19 @@ export function ComplianceSignoff({
           </select>
         </label>
 
-        <label className="block text-sm text-gray-700">
+        <div className="block text-sm text-gray-700">
           {t("Documented By")} <span className="text-red-500">*</span>
-          <select
-            value={documentedBy}
-            onChange={(e) => setDocumentedBy(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          >
-            <option value="">{t("Select staff")}</option>
-            {staffOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="mt-1">
+            <StaffPickerWithOther
+              value={documentedBy}
+              otherName={documentedByOther}
+              onValueChange={setDocumentedBy}
+              onOtherNameChange={setDocumentedByOther}
+              staffOptions={staffOptions}
+              required
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

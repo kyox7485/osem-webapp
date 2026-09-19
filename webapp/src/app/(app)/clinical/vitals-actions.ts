@@ -21,6 +21,7 @@ type CreateVitalInput = {
   gcsMotorId: number | null;
   avpuId: number | null;
   reviewedBy: string;
+  reviewedByOther?: string | null;
 };
 
 export async function createVital(input: CreateVitalInput): Promise<{ success: boolean; error?: string }> {
@@ -29,7 +30,7 @@ export async function createVital(input: CreateVitalInput): Promise<{ success: b
     return { success: false, error: "Not authenticated" };
   }
 
-  if (!input.reviewedBy) {
+  if (!input.reviewedBy && !input.reviewedByOther) {
     return { success: false, error: "Reviewed by is required" };
   }
 
@@ -68,7 +69,8 @@ export async function createVital(input: CreateVitalInput): Promise<{ success: b
     gcs_verbal_id: input.gcsVerbalId,
     gcs_motor_id: input.gcsMotorId,
     avpu_id: input.avpuId,
-    reviewed_by: input.reviewedBy,
+    reviewed_by: input.reviewedBy || null,
+    reviewed_by_other: input.reviewedByOther || null,
   });
 
   if (error) {

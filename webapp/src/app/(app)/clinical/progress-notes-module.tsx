@@ -24,7 +24,9 @@ type ProgressNote = {
   dressing_plan: string | null;
   physio_plan: string | null;
   reviewed_by: string | null;
+  reviewed_by_other: string | null;
   created_by: string | null;
+  created_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   reviewer: { StaffID: string; staff_name: string } | null;
   author: { StaffID: string; staff_name: string } | null;
@@ -216,7 +218,7 @@ export function ProgressNotesModule({
                     )}
 
                     <div className="mt-2 text-xs text-gray-400">
-                      {t("Reviewed by")}: {note.reviewer?.staff_name || "--"}
+                      {t("Reviewed by")}: {note.reviewer?.staff_name || note.reviewed_by_other || note.author?.staff_name || note.created_by_other || "--"}
                     </div>
                   </div>
                 );

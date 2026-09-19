@@ -175,6 +175,7 @@ async function AllPatientsReview({
     plan_intervention: string | null;
     evaluation: string | null;
     treatment_compliance: string | null;
+    documented_by_other: string | null;
     tbl_staff: { staff_name: string } | { staff_name: string }[] | null;
     tbl_residents?: { resident_name: string } | { resident_name: string }[] | null;
     tbl_physio_op_patients?: { patient_name: string } | { patient_name: string }[] | null;
@@ -189,7 +190,7 @@ async function AllPatientsReview({
       entry_timestamp: a.entry_timestamp,
       treatment_type: a.treatment_type,
       total_score: a.total_score,
-      documented_by_name: author?.staff_name ?? "--",
+      documented_by_name: author?.staff_name ?? a.documented_by_other ?? "--",
       patient_name: patient ? ("patient_name" in patient ? patient.patient_name : patient.resident_name) : "--",
       chief_complaint: a.chief_complaint,
       current_history: a.current_history,
@@ -332,7 +333,7 @@ async function PhysiotherapyContent({
       entry_timestamp: a.entry_timestamp,
       treatment_type: a.treatment_type,
       total_score: a.total_score,
-      documented_by_name: author?.staff_name ?? "--",
+      documented_by_name: author?.staff_name ?? a.documented_by_other ?? "--",
       chief_complaint: a.chief_complaint,
       current_history: a.current_history,
       past_medical_history: a.past_medical_history,

@@ -78,6 +78,7 @@ type CreatePhysioAssessmentInput = {
   evaluation: string | null;
   treatmentCompliance: string | null;
   documentedBy: string;
+  documentedByOther?: string | null;
   examRows: ExamRow[];
   bodyChart: BodyChartInput[];
   functional: FunctionalScores;
@@ -93,7 +94,7 @@ export async function createPhysioAssessment(
     return { success: false, error: "Not authenticated" };
   }
 
-  if (!input.documentedBy) {
+  if (!input.documentedBy && !input.documentedByOther) {
     return { success: false, error: "Documented by is required" };
   }
 
@@ -146,7 +147,8 @@ export async function createPhysioAssessment(
       evaluation: input.evaluation,
       treatment_compliance: input.treatmentCompliance,
       total_score: totalScore,
-      documented_by: input.documentedBy,
+      documented_by: input.documentedBy || null,
+      documented_by_other: input.documentedByOther || null,
     })
     .select("id")
     .single();

@@ -20,8 +20,10 @@ export async function createProgressNote(residentId: number, formData: FormData)
   }
 
   // tbl_staff's PK is a text code (e.g. "AMN-1"), not a bigint.
-  const staffId = optional(formData.get("staff_id"));
-  if (!staffId) {
+  const staffIdRaw = optional(formData.get("staff_id"));
+  const staffIdOther = staffIdRaw === "__others__" ? optional(formData.get("staff_id_other")) : null;
+  const staffId = staffIdRaw === "__others__" ? null : staffIdRaw;
+  if (!staffId && !staffIdOther) {
     return { error: "Select who's entering this note" };
   }
 
@@ -52,6 +54,7 @@ export async function createProgressNote(residentId: number, formData: FormData)
     // created_by references tbl_staff -- the explicitly-picked person, not
     // the (possibly shared) login account.
     created_by: staffId,
+    created_by_other: staffIdOther,
   });
 
   if (error) {

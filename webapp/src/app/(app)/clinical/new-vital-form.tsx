@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createVital } from "./vitals-actions";
 import { SPO2_CONDITION_OPTIONS, DXT_REMARK_OPTIONS, type LookupOption } from "@/lib/types";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 
@@ -44,6 +45,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
   const [gcsMotorId, setGcsMotorId] = useState("");
   const [avpuId, setAvpuId] = useState("");
   const [reviewedBy, setReviewedBy] = useState("");
+  const [reviewedByOtherName, setReviewedByOtherName] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,7 +61,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
       return;
     }
 
-    if (!reviewedBy) {
+    if (!reviewedBy || (reviewedBy === OTHERS_SENTINEL && !reviewedByOtherName.trim())) {
       setError(t("Please select who reviewed this reading"));
       return;
     }
@@ -94,7 +96,8 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
       gcsVerbalId: gcsVerbalId ? parseInt(gcsVerbalId, 10) : null,
       gcsMotorId: gcsMotorId ? parseInt(gcsMotorId, 10) : null,
       avpuId: avpuId ? parseInt(avpuId, 10) : null,
-      reviewedBy,
+      reviewedBy: reviewedBy === OTHERS_SENTINEL ? "" : reviewedBy,
+      reviewedByOther: reviewedBy === OTHERS_SENTINEL ? reviewedByOtherName.trim() : "",
     });
 
     setIsSaving(false);
@@ -137,6 +140,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
               onChange={(e) => {
                 setResidentId(e.target.value);
                 setReviewedBy("");
+                setReviewedByOtherName("");
               }}
               required
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -419,21 +423,16 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
               {t("Reviewed By")} <span className="text-red-500">*</span>
             </label>
-            <select
+            <StaffPickerWithOther
               id="reviewed-by"
               value={reviewedBy}
-              onChange={(e) => setReviewedBy(e.target.value)}
-              required
+              otherName={reviewedByOtherName}
+              onValueChange={setReviewedBy}
+              onOtherNameChange={setReviewedByOtherName}
+              staffOptions={staffOptions}
               disabled={!residentId}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
-            >
-              <option value="">{t("Select staff")}</option>
-              {staffOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+              required
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

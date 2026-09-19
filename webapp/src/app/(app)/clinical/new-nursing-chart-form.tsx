@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createNursingChartEntry, getLastFeedingVolume } from "./nursing-chart-actions";
 import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 
@@ -70,6 +71,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const [intervention, setIntervention] = useState("");
   const [doctorsPlan, setDoctorsPlan] = useState("");
   const [enteredBy, setEnteredBy] = useState("");
+  const [enteredByOtherName, setEnteredByOtherName] = useState("");
   const [defaultFeedingVolume, setDefaultFeedingVolume] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -122,6 +124,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
     setIntervention("");
     setDoctorsPlan("");
     setEnteredBy("");
+    setEnteredByOtherName("");
     setError("");
   }
 
@@ -141,7 +144,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
       setError(t("Please select a resident"));
       return;
     }
-    if (!enteredBy) {
+    if (!enteredBy || (enteredBy === OTHERS_SENTINEL && !enteredByOtherName.trim())) {
       setError(t("Please select who entered this"));
       return;
     }
@@ -171,8 +174,9 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         othersComplaintId !== undefined && activeComplaintIds.includes(Number(othersComplaintId)) ? activeComplaintOther.trim() || null : null,
       // Entered by / reviewed by are the same person on this form -- one
       // picker, written to both columns (same pattern as progress notes).
-      createdBy: enteredBy,
-      reviewedBy: enteredBy,
+      createdBy: enteredBy === OTHERS_SENTINEL ? "" : enteredBy,
+      createdByOther: enteredBy === OTHERS_SENTINEL ? enteredByOtherName.trim() : "",
+      reviewedBy: enteredBy === OTHERS_SENTINEL ? null : enteredBy,
       hygieneEpisodes: [
         { assistanceLevel: "By Self", activityIds: bySelfIds },
         { assistanceLevel: "With Assistance", activityIds: withAssistIds },
@@ -217,6 +221,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           onChange={(e) => {
             setResidentId(e.target.value);
             setEnteredBy("");
+            setEnteredByOtherName("");
           }}
           disabled={!!presetResidentId}
           required
@@ -508,23 +513,20 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         </Section>
 
         <Section title={t("Attribution")}>
-          <label className="block max-w-md text-sm text-gray-700">
-            {t("Entered by")} <span className="text-red-500">*</span>
-            <select
+          <div className="max-w-md">
+            <label className="mb-1 block text-sm text-gray-700">
+              {t("Entered by")} <span className="text-red-500">*</span>
+            </label>
+            <StaffPickerWithOther
               value={enteredBy}
-              onChange={(e) => setEnteredBy(e.target.value)}
-              required
+              otherName={enteredByOtherName}
+              onValueChange={setEnteredBy}
+              onOtherNameChange={setEnteredByOtherName}
+              staffOptions={staffOptions}
               disabled={!residentId}
-              className={`mt-1 disabled:bg-gray-100 ${selectCls}`}
-            >
-              <option value="">{t("Select staff")}</option>
-              {staffOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              required
+            />
+          </div>
         </Section>
 
         <div className="flex justify-end gap-2 pt-2">
