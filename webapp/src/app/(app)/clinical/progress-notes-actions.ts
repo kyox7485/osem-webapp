@@ -89,6 +89,7 @@ type CreateProgressNoteInput = {
   dressingPlan: string | null;
   physioPlan: string | null;
   createdBy: string;
+  createdByOther?: string | null;
 };
 
 export async function createProgressNote(input: CreateProgressNoteInput): Promise<{ success: boolean; error?: string }> {
@@ -126,8 +127,9 @@ export async function createProgressNote(input: CreateProgressNoteInput): Promis
     monitoring_plan: input.monitoringPlan,
     dressing_plan: input.dressingPlan,
     physio_plan: input.physioPlan,
-    reviewed_by: input.createdBy,
-    created_by: input.createdBy,
+    reviewed_by: input.createdBy || null,
+    created_by: input.createdBy || null,
+    created_by_other: input.createdByOther || null,
   });
 
   if (error) {

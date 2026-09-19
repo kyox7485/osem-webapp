@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createProgressNote } from "./actions";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 
 const inputCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -22,6 +23,8 @@ export function NewNoteForm({
   const t = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [staffId, setStaffId] = useState("");
+  const [staffIdOther, setStaffIdOther] = useState("");
   const formAction = createProgressNote.bind(null, residentId);
 
   async function handleSubmit(formData: FormData) {
@@ -32,6 +35,8 @@ export function NewNoteForm({
       setError(result.error);
     } else {
       (document.getElementById("new-note-form") as HTMLFormElement)?.reset();
+      setStaffId("");
+      setStaffIdOther("");
       onSaved?.();
     }
     setSubmitting(false);
@@ -65,15 +70,22 @@ export function NewNoteForm({
         {t("Monitoring plan")}
         <textarea name="monitoring_plan" rows={2} className={inputCls} />
       </label>
-      <label className="block text-sm text-gray-700">
+
+      <div className="block text-sm text-gray-700">
         {t("Entered by")} <span className="text-red-500">*</span>
-        <select name="staff_id" required defaultValue="" className={inputCls}>
-          <option value="" disabled>{t("Select who's entering this")}</option>
-          {staffOptions.map((s) => (
-            <option key={s.id} value={s.id}>{s.label}</option>
-          ))}
-        </select>
-      </label>
+        <input type="hidden" name="staff_id" value={staffId} />
+        <input type="hidden" name="staff_id_other" value={staffIdOther} />
+        <div className="mt-1">
+          <StaffPickerWithOther
+            value={staffId}
+            otherName={staffIdOther}
+            onValueChange={(v) => { setStaffId(v); if (v !== OTHERS_SENTINEL) setStaffIdOther(""); }}
+            onOtherNameChange={setStaffIdOther}
+            staffOptions={staffOptions}
+            required
+          />
+        </div>
+      </div>
 
       <button
         type="submit"

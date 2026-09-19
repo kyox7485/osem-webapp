@@ -33,6 +33,7 @@ type CreateNursingChartEntryInput = {
   intervention: string | null;
   doctorsPlan: string | null;
   createdBy: string;
+  createdByOther?: string | null;
   reviewedBy: string | null;
   hygieneEpisodes: HygieneEpisodeInput[];
   meals: MealInput[];
@@ -46,7 +47,7 @@ export async function createNursingChartEntry(
     return { success: false, error: "Not authenticated" };
   }
 
-  if (!input.createdBy) {
+  if (!input.createdBy && !input.createdByOther) {
     return { success: false, error: "Please select who entered this" };
   }
 
@@ -81,8 +82,9 @@ export async function createNursingChartEntry(
       active_complaint_other: input.activeComplaintOther,
       intervention: input.intervention,
       doctors_plan: input.doctorsPlan,
-      created_by: input.createdBy,
-      reviewed_by: input.reviewedBy,
+      created_by: input.createdBy || null,
+      created_by_other: input.createdByOther || null,
+      reviewed_by: input.reviewedBy || null,
     })
     .select("id")
     .single();

@@ -38,6 +38,7 @@ type Vital = {
   gcs_label: string | null;
   avpu_label: string | null;
   reviewed_by: string | null;
+  reviewed_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   tbl_staff: { StaffID: string; staff_name: string } | null;
 };
@@ -237,7 +238,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                         {v.avpu_label && <span>{v.avpu_label}</span>}
                         {v.respiration_rate === null && !v.gcs_label && !v.avpu_label && "--"}
                       </td>
-                      <td className="px-4 py-3 text-gray-800">{v.tbl_staff?.staff_name || "--"}</td>
+                      <td className="px-4 py-3 text-gray-800">{v.tbl_staff?.staff_name || v.reviewed_by_other || "--"}</td>
                     </tr>
                   );
                 })

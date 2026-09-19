@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createProgressNote, getResidentDashboardData, type ResidentDashboardData } from "./progress-notes-actions";
 import { ResidentDashboard } from "./resident-dashboard";
 import type { LookupOption } from "@/lib/types";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useTranslation } from "@/components/language-provider";
 
 type Resident = {
@@ -33,6 +34,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
   const [dressingPlan, setDressingPlan] = useState("");
   const [physioPlan, setPhysioPlan] = useState("");
   const [createdBy, setCreatedBy] = useState("");
+  const [createdByOtherName, setCreatedByOtherName] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [dashboard, setDashboard] = useState<ResidentDashboardData | null>(null);
@@ -62,6 +64,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
     setDressingPlan("");
     setPhysioPlan("");
     setCreatedBy("");
+    setCreatedByOtherName("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -78,7 +81,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       return;
     }
 
-    if (!createdBy) {
+    if (!createdBy || (createdBy === OTHERS_SENTINEL && !createdByOtherName.trim())) {
       setError(t("Please select who entered this note"));
       return;
     }
@@ -95,7 +98,8 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       monitoringPlan: monitoringPlan || null,
       dressingPlan: dressingPlan || null,
       physioPlan: physioPlan || null,
-      createdBy,
+      createdBy: createdBy === OTHERS_SENTINEL ? "" : createdBy,
+      createdByOther: createdBy === OTHERS_SENTINEL ? createdByOtherName.trim() : "",
     });
 
     setIsSaving(false);
@@ -121,6 +125,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
           onChange={(e) => {
             setResidentId(e.target.value);
             setCreatedBy("");
+            setCreatedByOtherName("");
           }}
           disabled={!!presetResidentId}
           required
@@ -255,21 +260,16 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             <label htmlFor="created-by" className="mb-1 block text-sm font-medium text-gray-700">
               {t("Entered By")} <span className="text-red-500">*</span>
             </label>
-            <select
+            <StaffPickerWithOther
               id="created-by"
               value={createdBy}
-              onChange={(e) => setCreatedBy(e.target.value)}
-              required
+              otherName={createdByOtherName}
+              onValueChange={setCreatedBy}
+              onOtherNameChange={setCreatedByOtherName}
+              staffOptions={staffOptions}
               disabled={!residentId}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
-            >
-              <option value="">{t("Select staff")}</option>
-              {staffOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+              required
+            />
           </div>
         </div>
 

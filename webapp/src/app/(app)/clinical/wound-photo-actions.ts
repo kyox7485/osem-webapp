@@ -16,6 +16,7 @@ export type WoundSession = {
   resident_id: number;
   session_started_at: string;
   completed_at: string | null;
+  uploaded_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   uploader: { StaffID: string; staff_name: string } | null;
   photos: WoundPhoto[];
@@ -38,6 +39,7 @@ export async function getWoundSessionHistory(filters: {
       resident_id,
       session_started_at,
       completed_at,
+      uploaded_by_other,
       tbl_residents!resident_id(id, resident_name, branch_id),
       uploader:tbl_staff!uploaded_by(StaffID, staff_name),
       photos:tbl_wound_photos(id, body_part_label, description, uploaded_at)
@@ -74,19 +76,26 @@ export async function getWoundSessionHistory(filters: {
 // photos to a session in the same browser visit regardless of this flag;
 // it just records when they tapped "Finish" so the history view can show
 // a session's end time, not a hard lock on further inserts.
-export async function finishWoundSession(sessionId: number, uploadedBy: string): Promise<{ success: boolean; error?: string }> {
+export async function finishWoundSession(
+  sessionId: number,
+  uploadedBy: string,
+  uploadedByOther?: string | null
+): Promise<{ success: boolean; error?: string }> {
   const account = await getCurrentUser();
   if (!account) return { success: false, error: "Not authenticated" };
-  if (!uploadedBy) return { success: false, error: "Please select who uploaded these photos" };
+  if (!uploadedBy && !uploadedByOther) return { success: false, error: "Please select who uploaded these photos" };
 
   const supabase = await createClient();
   const { error: sessionError } = await supabase
     .from("tbl_wound_sessions")
-    .update({ uploaded_by: uploadedBy, completed_at: new Date().toISOString() })
+    .update({ uploaded_by: uploadedBy || null, uploaded_by_other: uploadedByOther || null, completed_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (sessionError) return { success: false, error: sessionError.message };
 
-  const { error: photosError } = await supabase.from("tbl_wound_photos").update({ uploaded_by: uploadedBy }).eq("session_id", sessionId);
+  const { error: photosError } = await supabase
+    .from("tbl_wound_photos")
+    .update({ uploaded_by: uploadedBy || null, uploaded_by_other: uploadedByOther || null })
+    .eq("session_id", sessionId);
   if (photosError) return { success: false, error: photosError.message };
 
   revalidatePath("/clinical");

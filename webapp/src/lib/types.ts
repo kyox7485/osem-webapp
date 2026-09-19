@@ -27,6 +27,7 @@ export type Resident = {
   tca_notes: string | null;
   assessment_and_summary: string | null;
   reviewed_by: string | null;  // tbl_staff.StaffID, e.g. "AMN-1"
+  reviewed_by_other: string | null;
 };
 
 export type Staff = {

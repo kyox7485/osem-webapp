@@ -22,6 +22,7 @@ type HospitalReferral = {
   feeding: string | null;
   hygiene: string | null;
   reviewed_by: string | null;
+  reviewed_by_other: string | null;
   tbl_residents: { id: number; resident_name: string; branch_id: number } | null;
   reviewer: { StaffID: string; staff_name: string } | null;
 };
@@ -212,7 +213,7 @@ export function HospitalReferralModule({
                     )}
 
                     <div className="mt-2 text-xs text-gray-400">
-                      {t("Reported by")}: {referral.reviewer?.staff_name || "--"}
+                      {t("Reported by")}: {referral.reviewer?.staff_name || referral.reviewed_by_other || "--"}
                     </div>
                   </div>
                 );

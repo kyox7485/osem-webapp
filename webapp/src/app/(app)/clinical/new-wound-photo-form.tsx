@@ -5,6 +5,7 @@ import { compressImage } from "@/lib/compress-image";
 import { finishWoundSession } from "./wound-photo-actions";
 import { WoundBodyDiagram, WOUND_REGION_POSITIONS, type WoundBodyPart } from "./wound-body-diagram";
 import type { LookupOption } from "@/lib/types";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useTranslation } from "@/components/language-provider";
 import { Camera, ChevronLeft, RotateCcw, Check, X, Loader2 } from "lucide-react";
 
@@ -44,6 +45,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
 
   const [residentId, setResidentId] = useState(presetResidentId || "");
   const [uploadedBy, setUploadedBy] = useState("");
+  const [uploadedByOtherName, setUploadedByOtherName] = useState("");
   const [sessionId, setSessionId] = useState<number | null>(null);
   // Caches the Drive day-folder resolved by the first successful upload so
   // every later photo in this session can skip straight to it instead of
@@ -88,6 +90,13 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
   const residentLocked = sessionId !== null || photos.length > 0;
+
+  useEffect(() => {
+    if (!residentLocked) {
+      setUploadedBy("");
+      setUploadedByOtherName("");
+    }
+  }, [residentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const unmappedBodyParts = useMemo(() => bodyParts.filter((p) => !WOUND_REGION_POSITIONS[p.label]), [bodyParts]);
 
@@ -166,7 +175,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   async function uploadPhoto(clientId: string, payload: Partial<LocalPhoto> & { blob?: Blob }) {
     const form = new FormData();
     form.set("residentId", residentId);
-    if (uploadedBy) form.set("uploadedBy", uploadedBy);
+    if (uploadedBy && uploadedBy !== OTHERS_SENTINEL) form.set("uploadedBy", uploadedBy);
     form.set("bodyPartLabel", payload.bodyPartLabel!);
     if (payload.bodyPartId != null) form.set("bodyPartId", String(payload.bodyPartId));
     if (payload.description) form.set("description", payload.description);
@@ -241,7 +250,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   }
 
   async function handleFinish() {
-    if (!uploadedBy) {
+    if (!uploadedBy || (uploadedBy === OTHERS_SENTINEL && !uploadedByOtherName.trim())) {
       setError(t("Please select who uploaded these photos"));
       return;
     }
@@ -266,7 +275,11 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     }
 
     setFinishing(true);
-    const result = await finishWoundSession(sessionId, uploadedBy);
+    const result = await finishWoundSession(
+      sessionId,
+      uploadedBy === OTHERS_SENTINEL ? "" : uploadedBy,
+      uploadedBy === OTHERS_SENTINEL ? uploadedByOtherName.trim() : null
+    );
     setFinishing(false);
     if (!result.success) {
       setError(result.error || t("Failed to finish session"));
@@ -320,14 +333,17 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         <label className="mb-1 block text-sm font-medium text-gray-700">
           {t("Uploaded by")} <span className="text-red-500">*</span>
         </label>
-        <select value={uploadedBy} disabled={!residentId} onChange={(e) => setUploadedBy(e.target.value)} className={fieldClass}>
-          <option value="">{t("Select staff")}...</option>
-          {staffOptions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        <div className="sm:max-w-xs">
+          <StaffPickerWithOther
+            value={uploadedBy}
+            otherName={uploadedByOtherName}
+            onValueChange={setUploadedBy}
+            onOtherNameChange={setUploadedByOtherName}
+            staffOptions={staffOptions}
+            disabled={!residentId}
+            required
+          />
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

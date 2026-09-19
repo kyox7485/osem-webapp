@@ -17,6 +17,7 @@ import {
 } from "@/lib/types";
 import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
 import { useTranslation } from "@/components/language-provider";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 
 type StaffOption = LookupOption & { branch_id: number };
 
@@ -67,6 +68,8 @@ export function ResidentForm({
 
   const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
   const isMalaysian = malaysiaId != null && String(malaysiaId) === nationalityId;
+  const [reviewedBy, setReviewedBy] = useState(resident?.reviewed_by ?? "");
+  const [reviewedByOther, setReviewedByOther] = useState(resident?.reviewed_by_other ?? "");
 
   // Malaysian IC numbers encode date of birth in the first 6 digits --
   // derive age from it automatically rather than have it re-entered by
@@ -272,12 +275,17 @@ export function ResidentForm({
 
       <Section title={t("Attribution")}>
         <Field label={t("Reviewed by")} required full>
-          <select name="reviewed_by" defaultValue={resident?.reviewed_by ?? ""} required disabled={!branchId} className={inputCls}>
-            <option value="" disabled>{branchId ? t("Select who's entering this") : t("Select a branch first")}</option>
-            {staffForBranch.map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
-            ))}
-          </select>
+          <input type="hidden" name="reviewed_by" value={reviewedBy} />
+          <input type="hidden" name="reviewed_by_other" value={reviewedByOther} />
+          <StaffPickerWithOther
+            value={reviewedBy}
+            otherName={reviewedByOther}
+            onValueChange={(v) => { setReviewedBy(v); if (v !== OTHERS_SENTINEL) setReviewedByOther(""); }}
+            onOtherNameChange={setReviewedByOther}
+            staffOptions={staffForBranch}
+            disabled={!branchId}
+            required
+          />
         </Field>
       </Section>
 
