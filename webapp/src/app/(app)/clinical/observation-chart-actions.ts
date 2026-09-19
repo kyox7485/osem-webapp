@@ -120,7 +120,7 @@ export async function createObservationChart(
   const branchMeta = await supabase
     .from("tbl_branches")
     .select("telegram_chat_id")
-    .eq("id", resident.data.branch_id)
+    .eq("BranchID", resident.data.branch_id)
     .single();
   const branchChatId = branchMeta.data?.telegram_chat_id ?? null;
 
