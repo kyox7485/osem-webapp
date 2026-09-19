@@ -1,13 +1,10 @@
 "use server";
 
-// Scaffold: set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in your .env.local
-// to activate notifications. See README for setup instructions.
-export async function sendTelegramMessage(text: string): Promise<void> {
+// Set TELEGRAM_BOT_TOKEN in env. Chat IDs are stored per-branch in tbl_branches.telegram_chat_id.
+export async function sendTelegramMessage(text: string, chatId: string | null | undefined): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    // Silently skip -- bot not configured yet
     return;
   }
 

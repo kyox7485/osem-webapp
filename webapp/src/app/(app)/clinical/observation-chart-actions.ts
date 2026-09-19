@@ -117,6 +117,13 @@ export async function createObservationChart(
 
   if (!resident.data) return { success: false, error: "Resident not found" };
 
+  const branchMeta = await supabase
+    .from("tbl_branches")
+    .select("telegram_chat_id")
+    .eq("id", resident.data.branch_id)
+    .single();
+  const branchChatId = branchMeta.data?.telegram_chat_id ?? null;
+
   const { error } = await supabase.from("tbl_observation_charts").insert({
     branch_id: resident.data.branch_id,
     resident_id: input.residentId,
@@ -185,7 +192,7 @@ export async function createObservationChart(
     .filter((l) => l !== null)
     .join("\n");
 
-  await sendTelegramMessage(lines);
+  await sendTelegramMessage(lines, branchChatId);
 
   return { success: true };
 }
