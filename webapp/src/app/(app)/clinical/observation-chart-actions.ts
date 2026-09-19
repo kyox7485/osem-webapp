@@ -97,6 +97,7 @@ type CreateObservationChartInput = {
   dxt: number | null;
   avpu: string | null;
   createdBy: string;
+  createdByName: string | null;
   createdByOther: string | null;
 };
 
@@ -146,7 +147,7 @@ export async function createObservationChart(
   if (error) return { success: false, error: error.message };
 
   // Send Telegram notification (silently no-ops if bot not configured)
-  const staffLabel = input.createdByOther || input.createdBy || "Unknown";
+  const staffLabel = input.createdByOther || input.createdByName || input.createdBy || "Unknown";
   const yesNo = (v: boolean | null) => (v === true ? "Yes" : v === false ? "No" : "--");
   const val = (v: string | number | null | undefined) => (v != null && v !== "" ? String(v) : "--");
   const behaviorLine = [

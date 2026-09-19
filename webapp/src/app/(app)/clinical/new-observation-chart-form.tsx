@@ -193,6 +193,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
       dxt: dxt ? parseFloat(dxt) : null,
       avpu: avpu || null,
       createdBy: createdBy === OTHERS_SENTINEL ? "" : createdBy,
+      createdByName: createdBy === OTHERS_SENTINEL ? null : (staffOptions.find((s) => s.id === createdBy)?.label ?? null),
       createdByOther: createdBy === OTHERS_SENTINEL ? createdByOtherName.trim() : null,
     });
 
