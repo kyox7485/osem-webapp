@@ -27,17 +27,44 @@ export type ReportBranchInfo = {
   branchContact: string | null;
 };
 
+// A4 page width in points (@react-pdf/renderer's "A4" size constant), used
+// below to give the header's title column a *definite* width instead of
+// leaving it to flexGrow/flexShrink -- react-pdf/Yoga only reliably wraps
+// Text within an ancestor that has a definite width (this is why the
+// branch address on the right, under headerRight's fixed width:230,
+// already wraps correctly; the title column previously had no such anchor
+// and would overflow into the branch column for longer report titles).
+const PAGE_WIDTH = 595.28;
+const HEADER_RIGHT_WIDTH = 230;
+// headerBand's own content width = page width minus its own horizontal
+// padding (pdfSpacing.page on both sides); whatever's left after the fixed
+// right column belongs to the title column.
+const HEADER_LEFT_WIDTH = PAGE_WIDTH - pdfSpacing.page * 2 - HEADER_RIGHT_WIDTH;
+
 const styles = StyleSheet.create({
   page: {
-    // paddingTop must cover the full height of the fixed header elements
-    // (accentBar 5px + headerBand ~66px + 16px breathing room = ~87px) so
-    // that content on page 2+ resumes below the repeated fixed header.
-    paddingTop: 88,
+    // paddingTop reserves space for the header block so the flowing body
+    // content starts below it on every page. Sized for the worst case: a
+    // long report title wrapping to 2 lines within its column (~53pt) is
+    // taller than the branch block's 4-line worst case (name + 2-line
+    // address + tel, ~49pt), so: accentBar(5) + headerBand(paddingTop 16 +
+    // ~53 + paddingBottom 14 = 83) = 88, plus ~16pt breathing room = 104.
+    // The header itself is position:absolute (see headerFixed below), so
+    // it is NOT pushed down by this padding -- it stays pinned to the true
+    // top edge of each page, same technique already used for the footer's
+    // position:absolute+bottom:0.
+    paddingTop: 104,
     paddingBottom: 56,
     paddingHorizontal: 0,
     fontFamily: FONT,
     fontSize: 9.5,
     color: pdfColors.ink700,
+  },
+  headerFixed: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
   },
   accentBar: {
     height: 5,
@@ -58,8 +85,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    flexGrow: 1,
-    flexShrink: 1,
+    // Definite width (not flexGrow) -- see HEADER_LEFT_WIDTH comment above.
+    width: HEADER_LEFT_WIDTH,
     paddingRight: 14,
   },
   logo: {
@@ -70,6 +97,10 @@ const styles = StyleSheet.create({
   titleBlock: {
     flexDirection: "column",
     flexShrink: 1,
+    // Hard ceiling so the title always wraps within its own column instead
+    // of overflowing into the branch info on the right (logo 46 + gap 10 +
+    // paddingRight 14 subtracted from headerLeft's width).
+    maxWidth: HEADER_LEFT_WIDTH - 46 - 10 - 14,
   },
   reportTitle: {
     fontFamily: FONT_BOLD,
@@ -85,7 +116,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: "column",
     alignItems: "flex-end",
-    width: 230,
+    width: HEADER_RIGHT_WIDTH,
     flexShrink: 0,
   },
   branchName: {
@@ -150,19 +181,21 @@ export function ReportPage({
 
   return (
     <Page size="A4" style={styles.page} wrap>
-      <View style={styles.accentBar} fixed />
-      <View style={styles.headerBand} fixed>
-        <View style={styles.headerLeft}>
-          <Image src={logoSrc} style={styles.logo} />
-          <View style={styles.titleBlock}>
-            <Text style={styles.reportTitle}>{title}</Text>
-            <Text style={styles.reportSubtitle}>{subtitle}</Text>
+      <View style={styles.headerFixed} fixed>
+        <View style={styles.accentBar} />
+        <View style={styles.headerBand}>
+          <View style={styles.headerLeft}>
+            <Image src={logoSrc} style={styles.logo} />
+            <View style={styles.titleBlock}>
+              <Text style={styles.reportTitle}>{title}</Text>
+              <Text style={styles.reportSubtitle}>{subtitle}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.headerRight}>
-          <Text style={styles.branchName}>{branch.branchName}</Text>
-          {branch.branchAddress && <Text style={styles.branchLine}>{branch.branchAddress}</Text>}
-          {branch.branchContact && <Text style={styles.branchLine}>Tel: {branch.branchContact}</Text>}
+          <View style={styles.headerRight}>
+            <Text style={styles.branchName}>{branch.branchName}</Text>
+            {branch.branchAddress && <Text style={styles.branchLine}>{branch.branchAddress}</Text>}
+            {branch.branchContact && <Text style={styles.branchLine}>Tel: {branch.branchContact}</Text>}
+          </View>
         </View>
       </View>
 
