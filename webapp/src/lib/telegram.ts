@@ -11,15 +11,25 @@ export async function sendTelegramMessage(text: string): Promise<void> {
     return;
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+
   try {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+      signal: controller.signal,
     });
-  } catch {
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error(`[Telegram] API error ${res.status}: ${body}`);
+    }
+  } catch (err) {
     // Never let a notification failure break the main save flow
-    console.error("[Telegram] Failed to send notification");
+    console.error("[Telegram] Failed to send notification:", err);
+  } finally {
+    clearTimeout(timer);
   }
 }
