@@ -103,9 +103,10 @@ type CreateObservationChartInput = {
 export async function createObservationChart(
   input: CreateObservationChartInput
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
-  const account = await getCurrentUser(supabase);
+  const account = await getCurrentUser();
   if (!account) return { success: false, error: "Not authenticated" };
+
+  const supabase = await createClient();
 
   const resident = await supabase
     .from("tbl_residents")
@@ -193,9 +194,10 @@ export async function getObservationCharts(filters: {
   start?: string;
   end?: string;
 }): Promise<{ entries: ObservationEntry[]; error: string | null }> {
-  const supabase = await createClient();
-  const account = await getCurrentUser(supabase);
+  const account = await getCurrentUser();
   if (!account) return { entries: [], error: "Not authenticated" };
+
+  const supabase = await createClient();
 
   let query = supabase
     .from("tbl_observation_charts")
