@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/clinical", label: t("Clinical"), icon: "Stethoscope", tint: "bg-rose-50 text-rose-600" },
     { href: "/physiotherapy", label: t("Physiotherapy"), icon: "Activity", tint: "bg-emerald-50 text-emerald-600" },
     { href: "/staff", label: t("Staff"), icon: "IdCard", tint: "bg-amber-50 text-amber-600" },
+    { href: "/external-links", label: t("External Links"), icon: "Link2", tint: "bg-sky-50 text-sky-600" },
     ...(isAdmin(account) ? ([{ href: "/accounts", label: t("Accounts"), icon: "ShieldCheck", tint: "bg-violet-50 text-violet-600" }] as SidebarItem[]) : []),
   ];
 
