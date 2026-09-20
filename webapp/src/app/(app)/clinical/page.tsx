@@ -35,7 +35,9 @@ export default async function ClinicalPage({
 
   const supabase = await createClient();
 
-  const demoBranchIds = account.rights === "ADMIN" ? await getDemoBranchIds() : [];
+  const demoBranchIds = await getDemoBranchIds();
+  const isDemoUser = demoBranchIds.includes(account.branch_id);
+  const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
 
   // Fetch residents for both tabs
   let residentQuery = supabase
@@ -46,8 +48,8 @@ export default async function ClinicalPage({
 
   if (account.rights !== "ADMIN") {
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
-  } else if (demoBranchIds.length > 0) {
-    residentQuery = residentQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
+  } else if (excludedBranchIds.length > 0) {
+    residentQuery = residentQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
   }
 
   const [{ data: residents }, allStaff, nursingStaff, nursingChartLookups, feedingTypes, woundBodyParts] = await Promise.all([
@@ -102,8 +104,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       vitalsQuery = vitalsQuery.eq("branch_id", account.branch_id);
-    } else if (demoBranchIds.length > 0) {
-      vitalsQuery = vitalsQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
+    } else if (excludedBranchIds.length > 0) {
+      vitalsQuery = vitalsQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
     if (residentFilter) vitalsQuery = vitalsQuery.eq("resident_id", parseInt(residentFilter));
@@ -164,8 +166,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       notesQuery = notesQuery.eq("branch_id", account.branch_id);
-    } else if (demoBranchIds.length > 0) {
-      notesQuery = notesQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
+    } else if (excludedBranchIds.length > 0) {
+      notesQuery = notesQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
     if (residentFilter) notesQuery = notesQuery.eq("resident_id", parseInt(residentFilter));
@@ -213,8 +215,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       chartQuery = chartQuery.eq("branch_id", account.branch_id);
-    } else if (demoBranchIds.length > 0) {
-      chartQuery = chartQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
+    } else if (excludedBranchIds.length > 0) {
+      chartQuery = chartQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
     if (residentFilter) chartQuery = chartQuery.eq("resident_id", parseInt(residentFilter));
@@ -348,8 +350,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       referralsQuery = referralsQuery.eq("branch_id", account.branch_id);
-    } else if (demoBranchIds.length > 0) {
-      referralsQuery = referralsQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
+    } else if (excludedBranchIds.length > 0) {
+      referralsQuery = referralsQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
     if (residentFilter) referralsQuery = referralsQuery.eq("resident_id", parseInt(residentFilter));
@@ -366,15 +368,15 @@ export default async function ClinicalPage({
 
     error = referralsError?.message || null;
   } else if (currentTab === "wound-photo") {
-    const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds: demoBranchIds });
+    const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds });
     woundSessions = result.sessions;
     error = result.error;
   } else if (currentTab === "observation-chart") {
-    const result = await getObservationCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds: demoBranchIds });
+    const result = await getObservationCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds });
     observationEntries = result.entries;
     error = result.error;
   } else if (currentTab === "behaviour-chart") {
-    const result = await getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds: demoBranchIds });
+    const result = await getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds });
     behaviourEntries = result.entries;
     error = result.error;
   }
