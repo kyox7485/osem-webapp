@@ -122,6 +122,16 @@ export const dictResidents: Record<string, string> = {
   "Reviewed by": "Disemak oleh",
   "Select a branch first": "Pilih cawangan dahulu",
 
+  Discharge: "Discaj",
+  Readmit: "Kemasukan semula",
+  "Discharge resident": "Discajkan penghuni",
+  "Complete the details below to record the discharge.": "Lengkapkan butiran di bawah untuk merekod discaj.",
+  "Confirm discharge": "Sahkan discaj",
+  "Recorded by": "Direkod oleh",
+  "Select staff": "Pilih kakitangan",
+  "Enter name": "Masukkan nama",
+  "Readmit resident": "Kemasukan semula penghuni",
+
   "Save changes": "Simpan perubahan",
   "Create resident": "Cipta penghuni",
   // "Guna pakai" is a formal/legalistic phrase (as in "guna pakai polisi") --

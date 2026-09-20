@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatBranch } from "@/lib/lookups";
+import { getStaffRoster } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
+import { DischargeButton } from "./discharge-button";
 
 export default async function ResidentViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = await getServerTranslator();
@@ -26,12 +28,28 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
   const dietType = Array.isArray(resident.tbl_diet_types) ? resident.tbl_diet_types[0] : resident.tbl_diet_types;
   const feedingType = Array.isArray(resident.tbl_feeding_types) ? resident.tbl_feeding_types[0] : resident.tbl_feeding_types;
 
+  const branchStaff = resident.branch_id ? await getStaffRoster(resident.branch_id) : [];
+
+  const isActive = resident.status === "ACTIVE";
+  const isReadmittable = resident.status === "DISCHARGED" || resident.status === "TRANSFERRED OUT";
+
   return (
     <div>
       <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${t(resident.status)}`} />
       <div className="mb-4 flex items-center justify-end">
         <div className="flex gap-2">
           <PdfDownloadLink href={`/api/reports/resident?id=${resident.id}`} label={t("Print PDF")} />
+          {isActive && (
+            <DischargeButton residentId={resident.id} allStaff={branchStaff} />
+          )}
+          {isReadmittable && (
+            <Link
+              href={`/residents/new?readmit_from=${resident.id}`}
+              className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700"
+            >
+              {t("Readmit")}
+            </Link>
+          )}
           <Link
             href={`/residents/${resident.id}/edit`}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"

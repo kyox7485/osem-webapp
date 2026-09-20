@@ -26,6 +26,7 @@ type StaffOption = LookupOption & { branch_id: number };
 
 type Props = {
   resident?: Resident;
+  prefill?: Partial<Resident>;
   nationalities: LookupOption[];
   dietTypes: LookupOption[];
   feedingTypes: LookupOption[];
@@ -91,6 +92,15 @@ function sortDietTypes(types: Array<{ id: number | string; label: string }>) {
   return [...types].sort((a, b) => {
     const pa = PRIORITY[a.label] ?? 2;
     const pb = PRIORITY[b.label] ?? 2;
+    return pa !== pb ? pa - pb : Number(a.id) - Number(b.id);
+  });
+}
+
+function sortFeedingTypes(types: Array<{ id: number | string; label: string }>) {
+  const PRIORITY: Record<string, number> = { "Self Feeding": 0 };
+  return [...types].sort((a, b) => {
+    const pa = PRIORITY[a.label] ?? 1;
+    const pb = PRIORITY[b.label] ?? 1;
     return pa !== pb ? pa - pb : Number(a.id) - Number(b.id);
   });
 }
@@ -212,6 +222,7 @@ function parseAssessmentText(text: string): AssessmentAnswers | null {
 
 export function ResidentForm({
   resident,
+  prefill,
   nationalities,
   dietTypes,
   feedingTypes,
@@ -245,19 +256,22 @@ export function ResidentForm({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty, isPending]);
 
+  const p = resident ?? prefill;
   const [branchId, setBranchId] = useState<string>(
-    resident ? String(resident.branch_id) : defaultBranchId ? String(defaultBranchId) : "",
+    resident ? String(resident.branch_id)
+      : prefill?.branch_id ? String(prefill.branch_id)
+      : defaultBranchId ? String(defaultBranchId) : "",
   );
   const [status, setStatus] = useState<string>(resident?.status ?? "ACTIVE");
-  const [icNumber, setIcNumber] = useState(resident?.ic_number ?? "");
+  const [icNumber, setIcNumber] = useState(p?.ic_number ?? "");
   const malaysiaId = nationalities.find((n) => n.label === "Malaysia")?.id;
   const [nationalityId, setNationalityId] = useState<string>(
-    resident?.nationality_id != null
-      ? String(resident.nationality_id)
+    p?.nationality_id != null
+      ? String(p.nationality_id)
       : malaysiaId != null ? String(malaysiaId) : "",
   );
-  const [age, setAge] = useState(resident?.age != null ? String(resident.age) : "");
-  const [residentName, setResidentName] = useState(resident?.resident_name ?? "");
+  const [age, setAge] = useState(p?.age != null ? String(p.age) : "");
+  const [residentName, setResidentName] = useState(p?.resident_name ?? "");
 
   const othersOption = diagnosisOptions.find((o) => o.name_en === "Others");
   const nilOption = diagnosisOptions.find((o) => o.name_en === "NIL");
@@ -284,8 +298,8 @@ export function ResidentForm({
   const anyInfectiousSelected = existingDiagnoses.some((d) => INFECTIOUS_IDS.has(d.diagnosis_option_id));
   const [infectiousExpanded, setInfectiousExpanded] = useState(anyInfectiousSelected);
 
-  // Assessment collapse (expanded for new, collapsed for edit)
-  const [assessmentExpanded, setAssessmentExpanded] = useState(!resident);
+  // Assessment collapse (expanded for new, collapsed for edit/readmit)
+  const [assessmentExpanded, setAssessmentExpanded] = useState(!resident && !prefill);
 
   const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
   const isMalaysian = malaysiaId != null && String(malaysiaId) === nationalityId;
@@ -293,7 +307,7 @@ export function ResidentForm({
   const [reviewedByOther, setReviewedByOther] = useState(resident?.reviewed_by_other ?? "");
 
   // Allergy questionnaire
-  const parsedAllergy = resident?.allergy ? parseAllergyText(resident.allergy) : null;
+  const parsedAllergy = p?.allergy ? parseAllergyText(p.allergy) : null;
   const allergyIsFallback = !!resident?.allergy && !parsedAllergy;
   const [allergyQ, setAllergyQ] = useState<AllergyAnswers>(parsedAllergy ?? EMPTY_ALLERGY);
 
@@ -510,7 +524,7 @@ export function ResidentForm({
             />
           </Field>
           <Field label={t("Gender")}>
-            <select name="gender" defaultValue={resident?.gender ?? ""} className={inputCls}>
+            <select name="gender" defaultValue={p?.gender ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
               {GENDER_OPTIONS.map((g) => (
                 <option key={g} value={g}>{t(g)}</option>
@@ -518,7 +532,7 @@ export function ResidentForm({
             </select>
           </Field>
           <Field label={t("Marital status")}>
-            <select name="marital_status" defaultValue={resident?.marital_status ?? ""} className={inputCls}>
+            <select name="marital_status" defaultValue={p?.marital_status ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
               {MARITAL_STATUS_OPTIONS.map((o) => (
                 <option key={o} value={o}>{t(o)}</option>
@@ -541,7 +555,7 @@ export function ResidentForm({
             <input type="hidden" name="status" value="ACTIVE" />
           )}
           <Field label={t("Care type")}>
-            <select name="care_type" defaultValue={resident?.care_type ?? ""} className={inputCls}>
+            <select name="care_type" defaultValue={p?.care_type ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
               {CARE_TYPE_OPTIONS.map((o) => (
                 <option key={o} value={o}>{t(o)}</option>
@@ -586,7 +600,7 @@ export function ResidentForm({
           <Field label={t("Emergency contact")} full>
             <textarea
               name="emergency_contact"
-              defaultValue={resident?.emergency_contact ?? ""}
+              defaultValue={p?.emergency_contact ?? ""}
               rows={2}
               placeholder={t("e.g. Jasmin (Daughter) - 012-34567890")}
               className={inputCls}
@@ -597,7 +611,7 @@ export function ResidentForm({
         {/* ── Care ──────────────────────────────────────────────────────── */}
         <Section title={t("Care")}>
           <Field label={t("Mobility")}>
-            <select name="mobility" defaultValue={resident?.mobility ?? ""} className={inputCls}>
+            <select name="mobility" defaultValue={p?.mobility ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
               {MOBILITY_OPTIONS.map((o) => (
                 <option key={o} value={o}>{t(o)}</option>
@@ -605,7 +619,7 @@ export function ResidentForm({
             </select>
           </Field>
           <Field label={t("Hygiene")}>
-            <select name="hygiene" defaultValue={resident?.hygiene ?? ""} className={inputCls}>
+            <select name="hygiene" defaultValue={p?.hygiene ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
               {HYGIENE_OPTIONS.map((o) => (
                 <option key={o} value={o}>{t(o)}</option>
@@ -613,7 +627,7 @@ export function ResidentForm({
             </select>
           </Field>
           <Field label={t("Diet type")}>
-            <select name="diet_type_id" defaultValue={resident?.diet_type_id ?? ""} className={inputCls}>
+            <select name="diet_type_id" defaultValue={p?.diet_type_id ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
               {sortDietTypes(dietTypes).map((d) => (
                 <option key={d.id} value={d.id}>{d.label}</option>
@@ -621,9 +635,9 @@ export function ResidentForm({
             </select>
           </Field>
           <Field label={t("Feeding type")}>
-            <select name="feeding_type_id" defaultValue={resident?.feeding_type_id ?? ""} className={inputCls}>
+            <select name="feeding_type_id" defaultValue={p?.feeding_type_id ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
-              {feedingTypes.map((f) => (
+              {sortFeedingTypes(feedingTypes).map((f) => (
                 <option key={f.id} value={f.id}>{f.label}</option>
               ))}
             </select>

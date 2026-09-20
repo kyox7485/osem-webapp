@@ -147,6 +147,38 @@ export async function createResident(formData: FormData) {
   redirect(`/residents/${data.id}`);
 }
 
+export async function dischargeResident(residentId: number, formData: FormData) {
+  const account = await getCurrentUser();
+  if (!account) redirect("/login");
+
+  const status = formData.get("status") as string;
+  const dischargeDate = optional(formData.get("discharge_date"));
+  const dischargedBy = optional(formData.get("discharged_by"));
+  const dischargedByOther = optional(formData.get("discharged_by_other"));
+
+  if (!status || status === "ACTIVE") {
+    return { error: "Please select a discharge status" };
+  }
+  if (!dischargeDate) {
+    return { error: "Discharge date is required" };
+  }
+  if (!dischargedBy && !dischargedByOther) {
+    return { error: "Please select who is recording this discharge" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tbl_residents")
+    .update({ status, discharge_date: dischargeDate })
+    .eq("id", residentId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/residents");
+  revalidatePath(`/residents/${residentId}`);
+  redirect(`/residents/${residentId}`);
+}
+
 export async function updateResident(residentId: number, formData: FormData) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
