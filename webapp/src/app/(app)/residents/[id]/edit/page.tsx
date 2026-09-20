@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ResidentForm } from "@/components/resident-form";
-import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch, getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
+import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch, getDiagnosisOptions, getResidentDiagnoses, getDemoBranchIds } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Resident } from "@/lib/types";
@@ -13,7 +13,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: resident }, currentUser, nationalities, dietTypes, feedingTypes, branches, allStaff, diagnosisOptions, existingDiagnoses] = await Promise.all([
+  const [{ data: resident }, currentUser, nationalities, dietTypes, feedingTypes, branches, allStaff, diagnosisOptions, existingDiagnoses, demoBranchIds] = await Promise.all([
     supabase.from("tbl_residents").select("*").eq("id", id).single(),
     getCurrentUser(),
     getNationalities(),
@@ -23,10 +23,13 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
     getAllStaffWithBranch(),
     getDiagnosisOptions(),
     getResidentDiagnoses(parseInt(id, 10)),
+    getDemoBranchIds(),
   ]);
 
   if (!resident) notFound();
 
+  const isDemoUser = demoBranchIds.includes(currentUser?.branch_id ?? -1);
+  const effectiveIsAdmin = isAdmin(currentUser) && !isDemoUser;
   const boundAction = updateResident.bind(null, resident.id);
 
   return (
@@ -42,7 +45,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
         diagnosisOptions={diagnosisOptions}
         existingDiagnoses={existingDiagnoses}
         defaultBranchId={null}
-        isAdmin={isAdmin(currentUser)}
+        isAdmin={effectiveIsAdmin}
         action={boundAction}
         backHref={`/residents/${id}`}
       />
