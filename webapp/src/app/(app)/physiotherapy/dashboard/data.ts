@@ -140,6 +140,7 @@ export async function fetchAssessments(params: {
   allowedBranchIds: number[] | null;
   branchFilter: number | null;
   therapistFilter: string | null;
+  excludedBranchIds?: number[];
 }): Promise<AssessmentRow[]> {
   const supabase = await createClient();
   let query = supabase
@@ -151,6 +152,9 @@ export async function fetchAssessments(params: {
     .lte("entry_timestamp", params.range.end.toISOString());
 
   if (params.allowedBranchIds) query = query.in("branch_id", params.allowedBranchIds);
+  if (params.excludedBranchIds && params.excludedBranchIds.length > 0) {
+    query = query.not("branch_id", "in", `(${params.excludedBranchIds.join(",")})`);
+  }
   if (params.branchFilter !== null) query = query.eq("branch_id", params.branchFilter);
   if (params.therapistFilter) query = query.eq("documented_by", params.therapistFilter);
 

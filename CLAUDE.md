@@ -121,6 +121,15 @@ rather than assuming the change is live.
   (residential/nursing branch), `'PHY'` (standalone physio hub, e.g. AMP),
   or `'HQ'`. A lot of access rules key off this rather than a hardcoded
   branch id.
+  **`BranchCode = 'DEMO'` marks the demo/test branch** (currently
+  `BranchID = 6`). Its 20 residents (IDs 365–384) are fake data used only
+  for demonstrations via the `test` account. ADMIN logins bypass RLS and
+  would normally see all branches — but demo data is noise for a real admin,
+  so every admin-facing resident and clinical query must exclude it at the
+  application layer. Use `getDemoBranchIds()` from `src/lib/lookups.ts` and
+  append `.not("branch_id", "in", "(${ids})")` on the admin path. The demo
+  branch must NOT be excluded from the Accounts tab (the `test` account
+  legitimately lives there and the admin needs to manage it).
 - `tbl_user_accounts` — logins. `rights` is `ADMIN | MODERATOR | STAFF`,
   scoped to one `branch_id` (except `ADMIN`, which sees everything). This
   is what RLS policies actually check (`auth_role()` / `auth_branch_id()`
@@ -148,6 +157,24 @@ rather than assuming the change is live.
 
 ## Known feedback / conventions to keep applying
 
+- **DEMO branch exclusion** — any new query that fetches residents or
+  clinical records for an ADMIN user must call `getDemoBranchIds()` and
+  add `.not("branch_id", "in", ...)` on the admin path. The pattern is
+  already applied in `residents/page.tsx`, `clinical/page.tsx`, the
+  three action-based clinical fetchers (`getWoundSessionHistory`,
+  `getObservationCharts`, `getBehaviourCharts`), and the physiotherapy
+  module (`physiotherapy/page.tsx` patient list + assessment review,
+  `physiotherapy/dashboard/page.tsx` branch options + `fetchAssessments`).
+  If you add a new module or a new admin-visible list, do the same —
+  otherwise fake demo residents will appear alongside real ones.
+- **Never import `lib/lookups.ts` (or any file that imports `lib/supabase/server.ts`) from a `"use client"` component** — `server.ts` uses `next/headers`, so the entire import chain gets pulled into the client bundle and Turbopack fails the production build with a "Pages Router" error. If a client component needs a pure helper that lives in `lookups.ts` (e.g. `formatBranch`), inline it or move it to a separate file with no server imports. `tsc --noEmit` will not catch this; only `next build` does.
+- **Accounts tab UX** — rows are clickable (entire row, not just the
+  username link). Clicking a row shows a confirmation modal ("Edit account
+  for [username]?"); confirming navigates to `/accounts/[id]/edit`. The
+  view page (`/accounts/[id]`) still exists but is no longer the primary
+  entry point from the list. The modal is implemented in
+  `accounts/accounts-table.tsx` (client component), keeping the list page
+  itself a server component.
 - **Medical Progress Notes** (`tbl_progress_notes`): `feeding_plan` and
   `monitoring_plan` are longtext, exactly like `physical_examination` and
   `medical_plan`. In forms, review grids, and table views, size them
@@ -171,10 +198,10 @@ rather than assuming the change is live.
 | Tab | Sub-tabs / notes |
 |---|---|
 | Residents | Resident roster + detail page (shows Resident ID) |
-| Clinical | Nursing Chart, Vital Signs, Wound Photo, Medical Progress Notes, Hospital Referral |
+| Clinical | Nursing Chart, Observation Chart, Behaviour Chart, Vital Signs, Wound Photo, Medical Progress Notes, Hospital Referral |
 | Physiotherapy | IP/OP split, its own assessment form with a body-chart section, treatment types + credit hours (Supabase-driven), an Analytics dashboard |
 | Staff | Roster (`tbl_staff`), separate from logins |
-| Accounts | Logins (`tbl_user_accounts`) |
+| Accounts | Logins (`tbl_user_accounts`); admin-only; clickable rows open an edit-confirmation modal |
 
 Wound Photo is the most involved sub-tab: a front/back body-chart image
 (`webapp/public/body-chart-wound.png`) with percentage-positioned tap

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, canAccessPhysioOp } from "@/lib/current-user";
+import { getDemoBranchIds } from "@/lib/lookups";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PageTitle } from "@/components/page-header";
 import { BedDouble, DoorOpen, Home, Clock } from "lucide-react";
@@ -58,13 +59,22 @@ export default async function PhysioDashboardPage({
   const prevRange = previousPeriod(range);
   const weeks = rangeInWeeks(range);
 
-  const [allowedBranchIds, allBranches, therapists] = await Promise.all([
+  const [allowedBranchIds, allBranches, therapists, demoBranchIds] = await Promise.all([
     getAllowedBranchIds(account),
     getPhysioRelevantBranches(),
     getPhysioTherapists(),
+    getDemoBranchIds(),
   ]);
 
-  const branchOptions = (allowedBranchIds ? allBranches.filter((b) => allowedBranchIds.includes(b.id)) : allBranches).map(
+  // Show DEMO data only when the logged-in account belongs to the DEMO branch itself.
+  const isDemoUser = demoBranchIds.includes(account.branch_id);
+  const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
+
+  const visibleBranches = excludedBranchIds.length > 0
+    ? allBranches.filter((b) => !excludedBranchIds.includes(b.id))
+    : allBranches;
+
+  const branchOptions = (allowedBranchIds ? visibleBranches.filter((b) => allowedBranchIds.includes(b.id)) : visibleBranches).map(
     (b) => ({ id: b.id, label: b.label })
   );
 
@@ -72,8 +82,8 @@ export default async function PhysioDashboardPage({
   let loadError: string | null = null;
   try {
     [rows, prevRows] = await Promise.all([
-      fetchAssessments({ range, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null }),
-      fetchAssessments({ range: prevRange, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null }),
+      fetchAssessments({ range, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null, excludedBranchIds }),
+      fetchAssessments({ range: prevRange, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null, excludedBranchIds }),
     ]);
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Failed to load dashboard data";
@@ -89,7 +99,7 @@ export default async function PhysioDashboardPage({
   // filter needed it (see getPhysioRelevantBranches) -- the raw join in
   // fetchAssessments only carries the plain locale, which is ambiguous when
   // multiple branches share one (e.g. the three Alma branches).
-  const branchLabelById = new Map(allBranches.map((b) => [b.id, b.label]));
+  const branchLabelById = new Map(visibleBranches.map((b) => [b.id, b.label]));
   const branchAgg = aggregateByBranch(rows).map((b) => ({ ...b, name: branchLabelById.get(Number(b.id)) ?? b.name }));
   const branchIdByLabel = new Map(rows.map((r) => [r.branch_label, r.branch_id] as const));
   const therapistAgg = aggregateByTherapist(rows).map((th) => ({

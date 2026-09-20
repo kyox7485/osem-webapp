@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { getCurrentUser, canAccessPhysioOp } from "@/lib/current-user";
-import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds } from "@/lib/lookups";
+import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds, getDemoBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 import {
@@ -76,6 +76,10 @@ export default async function PhysiotherapyPage({
   const careSetting: PhysioCareSetting = type === "op" && opAllowed ? "OP" : "IP";
   const supabase = await createClient();
 
+  const allDemoBranchIds = await getDemoBranchIds();
+  // Show DEMO patients/assessments only when the logged-in account belongs to the DEMO branch itself.
+  const demoBranchIds = allDemoBranchIds.includes(account.branch_id) ? [] : allDemoBranchIds;
+
   // IP patients are active tbl_residents; OP patients are the separate
   // tbl_physio_op_patients list (no "ACTIVE" status column of its own --
   // every row in that table is a standing outpatient registration).
@@ -88,8 +92,11 @@ export default async function PhysiotherapyPage({
     if (careSetting === "OP") {
       patientQuery = patientQuery.eq("branch_id", account.branch_id);
     } else {
-      patientQuery = patientQuery.in("branch_id", await getPhysioIpBranchIds(account));
+      const ipBranchIds = (await getPhysioIpBranchIds(account)).filter((id) => !demoBranchIds.includes(id));
+      patientQuery = patientQuery.in("branch_id", ipBranchIds);
     }
+  } else if (demoBranchIds.length > 0) {
+    patientQuery = patientQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
   }
 
   const { data: patients } = await patientQuery;
@@ -125,6 +132,7 @@ export default async function PhysiotherapyPage({
             residentId={selectedPatient?.id ?? null}
             careSetting={careSetting}
             account={account}
+            demoBranchIds={demoBranchIds}
           />
         </div>
       </PhysioDirtyProvider>
@@ -141,9 +149,11 @@ export default async function PhysiotherapyPage({
 async function AllPatientsReview({
   careSetting,
   account,
+  demoBranchIds,
 }: {
   careSetting: PhysioCareSetting;
   account: { rights: string; branch_id: number; branch_function: string | null };
+  demoBranchIds: number[];
 }) {
   const supabase = await createClient();
 
@@ -158,8 +168,12 @@ async function AllPatientsReview({
     .order("entry_timestamp", { ascending: false });
 
   if (account.rights !== "ADMIN") {
-    const allowedBranchIds = careSetting === "OP" ? [account.branch_id] : await getPhysioIpBranchIds(account);
+    const allowedBranchIds = careSetting === "OP"
+      ? [account.branch_id]
+      : (await getPhysioIpBranchIds(account)).filter((id) => !demoBranchIds.includes(id));
     query = query.in("branch_id", allowedBranchIds);
+  } else if (demoBranchIds.length > 0) {
+    query = query.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
   }
 
   const { data: assessments, error } = await query;
@@ -238,13 +252,15 @@ async function PhysiotherapyContent({
   residentId,
   careSetting,
   account,
+  demoBranchIds,
 }: {
   residentId: number | null;
   careSetting: PhysioCareSetting;
   account: { rights: string; branch_id: number; branch_function: string | null };
+  demoBranchIds: number[];
 }) {
   if (residentId === null) {
-    return <AllPatientsReview careSetting={careSetting} account={account} />;
+    return <AllPatientsReview careSetting={careSetting} account={account} demoBranchIds={demoBranchIds} />;
   }
 
   const supabase = await createClient();
