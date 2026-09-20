@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { StaffForm } from "@/components/staff-form";
 import { BackButton } from "@/components/back-button";
-import { getPositions, getBranches } from "@/lib/lookups";
+import { getPositions, getBranches, getDemoBranchIds } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -12,7 +12,9 @@ export default async function NewStaffPage() {
   const currentUser = await getCurrentUser();
   if (!isAdmin(currentUser)) redirect("/staff");
 
-  const [positions, branches] = await Promise.all([getPositions(), getBranches()]);
+  const [positions, allBranches, demoBranchIds] = await Promise.all([getPositions(), getBranches(), getDemoBranchIds()]);
+  const isDemoUser = currentUser && demoBranchIds.includes(Number(currentUser.branch_id));
+  const branches = isDemoUser ? allBranches : allBranches.filter((b) => !demoBranchIds.includes(Number(b.id)));
 
   return (
     <div>

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { StaffForm } from "@/components/staff-form";
-import { getPositions, getBranches } from "@/lib/lookups";
+import { getPositions, getBranches, getDemoBranchIds } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Staff } from "@/lib/types";
@@ -16,11 +16,14 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: staff }, positions, branches] = await Promise.all([
+  const [{ data: staff }, positions, allBranches, demoBranchIds] = await Promise.all([
     supabase.from("tbl_staff").select("*").eq("StaffID", id).single(),
     getPositions(),
     getBranches(),
+    getDemoBranchIds(),
   ]);
+  const isDemoUser = currentUser && demoBranchIds.includes(Number(currentUser.branch_id));
+  const branches = isDemoUser ? allBranches : allBranches.filter((b) => !demoBranchIds.includes(Number(b.id)));
 
   if (!staff) notFound();
 
