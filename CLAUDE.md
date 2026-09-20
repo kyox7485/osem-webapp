@@ -122,14 +122,22 @@ rather than assuming the change is live.
   or `'HQ'`. A lot of access rules key off this rather than a hardcoded
   branch id.
   **`BranchCode = 'DEMO'` marks the demo/test branch** (currently
-  `BranchID = 6`). Its 20 residents (IDs 365–384) are fake data used only
-  for demonstrations via the `test` account. ADMIN logins bypass RLS and
-  would normally see all branches — but demo data is noise for a real admin,
-  so every admin-facing resident and clinical query must exclude it at the
-  application layer. Use `getDemoBranchIds()` from `src/lib/lookups.ts` and
-  append `.not("branch_id", "in", "(${ids})")` on the admin path. The demo
-  branch must NOT be excluded from the Accounts tab (the `test` account
-  legitimately lives there and the admin needs to manage it).
+  `BranchID = 6`). Its residents (IDs 365–384), all physio assessments, and
+  all OP patients are fake data used only for demonstrations via the `test`
+  account. Because `BranchCode = 'DEMO'` has `Function = 'NUR'`, PHY hub
+  accounts (whose allowed branch list includes every NUR branch) would also
+  pick it up — so the exclusion must apply to **every user** whose own
+  `branch_id` is not the DEMO branch, not just ADMIN. The canonical check is:
+  ```ts
+  const demoBranchIds = await getDemoBranchIds();
+  const isDemoUser = demoBranchIds.includes(account.branch_id);
+  const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
+  ```
+  Only the `test` / DEMO account itself (`isDemoUser === true`) may see demo
+  data. Apply `.not("branch_id", "in", `(${excludedBranchIds.join(",")})`)` on
+  every query that could return multi-branch data. The demo branch must NOT be
+  excluded from the Accounts tab (the `test` account legitimately lives there
+  and the admin needs to manage it).
 - `tbl_user_accounts` — logins. `rights` is `ADMIN | MODERATOR | STAFF`,
   scoped to one `branch_id` (except `ADMIN`, which sees everything). This
   is what RLS policies actually check (`auth_role()` / `auth_branch_id()`
@@ -157,16 +165,21 @@ rather than assuming the change is live.
 
 ## Known feedback / conventions to keep applying
 
-- **DEMO branch exclusion** — any new query that fetches residents or
-  clinical records for an ADMIN user must call `getDemoBranchIds()` and
-  add `.not("branch_id", "in", ...)` on the admin path. The pattern is
-  already applied in `residents/page.tsx`, `clinical/page.tsx`, the
-  three action-based clinical fetchers (`getWoundSessionHistory`,
-  `getObservationCharts`, `getBehaviourCharts`), and the physiotherapy
-  module (`physiotherapy/page.tsx` patient list + assessment review,
-  `physiotherapy/dashboard/page.tsx` branch options + `fetchAssessments`).
-  If you add a new module or a new admin-visible list, do the same —
-  otherwise fake demo residents will appear alongside real ones.
+- **DEMO branch exclusion** — demo data must be invisible to every user
+  except the `test` / DEMO account itself (see canonical `isDemoUser` check
+  in the domain model section above). The pattern is already applied in:
+  - `residents/page.tsx` — resident list for ADMIN
+  - `clinical/page.tsx` + `getWoundSessionHistory`, `getObservationCharts`,
+    `getBehaviourCharts` — all clinical fetchers for ADMIN
+  - `physiotherapy/page.tsx` — IP/OP patient picker and `AllPatientsReview`
+    for ALL users (not just ADMIN, because DEMO is `Function='NUR'` and
+    PHY hub accounts enumerate every NUR branch)
+  - `physiotherapy/dashboard/page.tsx` — branch dropdown and both
+    `fetchAssessments` calls (current + previous period) for ALL users
+  - `staff/new/page.tsx` and `staff/[id]/edit/page.tsx` — branch picker
+    in the staff registration and edit forms for ALL users
+  If you add a new module or any dropdown / list that spans branches, apply
+  the same exclusion — otherwise fake demo data will surface to real users.
 - **Never import `lib/lookups.ts` (or any file that imports `lib/supabase/server.ts`) from a `"use client"` component** — `server.ts` uses `next/headers`, so the entire import chain gets pulled into the client bundle and Turbopack fails the production build with a "Pages Router" error. If a client component needs a pure helper that lives in `lookups.ts` (e.g. `formatBranch`), inline it or move it to a separate file with no server imports. `tsc --noEmit` will not catch this; only `next build` does.
 - **Accounts tab UX** — rows are clickable (entire row, not just the
   username link). Clicking a row shows a confirmation modal ("Edit account
