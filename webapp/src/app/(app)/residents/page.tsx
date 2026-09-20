@@ -27,9 +27,11 @@ export default async function ResidentsPage({
   const [allBranches, demoBranchIds] = admin
     ? await Promise.all([getBranches(), getDemoBranchIds()])
     : [[], [] as number[]];
-  // Exclude demo/test branches from the branch filter so admins never accidentally
-  // select them, and filter them out of the resident query too.
-  const branches = allBranches.filter((b) => !demoBranchIds.includes(Number(b.id)));
+  const isDemoUser = demoBranchIds.includes(currentUser?.branch_id ?? -1);
+  const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
+  // Real admins never see demo branches in the filter or results.
+  // The DEMO account (isDemoUser) sees all branches including its own.
+  const branches = allBranches.filter((b) => !excludedBranchIds.includes(Number(b.id)));
   const noResults = selectedStatuses.length === 0 || (selectedBranches !== null && selectedBranches.length === 0);
 
   let residents: {
@@ -54,7 +56,7 @@ export default async function ResidentsPage({
 
     if (admin) {
       if (selectedBranches) query = query.in("branch_id", selectedBranches);
-      if (demoBranchIds.length > 0) query = query.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
+      if (excludedBranchIds.length > 0) query = query.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     } else if (currentUser) {
       // Non-admin logins (branch emails, possibly shared) never see other
       // branches here -- there's no filter control for it, this is fixed.
