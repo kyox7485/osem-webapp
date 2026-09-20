@@ -76,6 +76,9 @@ export async function createResident(formData: FormData) {
   if (!payload.reviewed_by && !payload.reviewed_by_other) {
     return { error: "Select who's entering this" };
   }
+  if (payload.status && payload.status !== "ACTIVE" && !payload.discharge_date) {
+    return { error: "Discharge date is required when status is not Active" };
+  }
 
   const { data, error } = await supabase.from("tbl_residents").insert(payload).select("id").single();
 
@@ -160,6 +163,9 @@ export async function updateResident(residentId: number, formData: FormData) {
   }
   if (!payload.reviewed_by && !payload.reviewed_by_other) {
     return { error: "Select who's entering this" };
+  }
+  if (payload.status && payload.status !== "ACTIVE" && !payload.discharge_date) {
+    return { error: "Discharge date is required when status is not Active" };
   }
 
   const { error } = await supabase.from("tbl_residents").update(payload).eq("id", residentId);

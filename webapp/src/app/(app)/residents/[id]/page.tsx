@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatBranch } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
+import { PdfDownloadLink } from "@/components/pdf-download-link";
 
 export default async function ResidentViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = await getServerTranslator();
@@ -30,18 +31,7 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
       <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${t(resident.status)}`} />
       <div className="mb-4 flex items-center justify-end">
         <div className="flex gap-2">
-          <Link
-            href={`/residents/${resident.id}/progress-notes`}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("Medical Progress Notes")}
-          </Link>
-          <Link
-            href={`/physiotherapy?type=ip&resident=${resident.id}`}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t("Physiotherapy")}
-          </Link>
+          <PdfDownloadLink href={`/api/reports/resident?id=${resident.id}`} label={t("Print PDF")} />
           <Link
             href={`/residents/${resident.id}/edit`}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"

@@ -72,6 +72,10 @@ export const dictResidents: Record<string, string> = {
   "Is patient having any food allergy?": "Adakah pesakit mengalami alahan makanan?",
   "Is patient having any medicine allergy?": "Adakah pesakit mengalami alahan ubat?",
   "What is the reaction?": "Apakah reaksinya?",
+  "Describe it.": "Huraikan.",
+  "Infectious Disease": "Penyakit Berjangkit",
+  "Collapse": "Tutup",
+  "Expand": "Buka",
   "Past medical condition": "Sejarah perubatan lampau",
   "Known history of Medical/Surgical Condition": "Sejarah perubatan/pembedahan yang diketahui",
   "Assessment and summary": "Penilaian dan ringkasan",
@@ -112,7 +116,7 @@ export const dictResidents: Record<string, string> = {
   "TCA notes": "Nota TCA",
 
   "Select a branch": "Pilih cawangan",
-  "e.g. Jasmin (Daughter) - 012-4948717": "cth. Jasmin (Anak perempuan) - 012-4948717",
+  "e.g. Jasmin (Daughter) - 012-34567890": "cth. Jasmin (Anak perempuan) - 012-34567890",
   "e.g. MOPD 1/12/2026, SOPD 21/11/2026": "cth. MOPD 1/12/2026, SOPD 21/11/2026",
 
   "Reviewed by": "Disemak oleh",

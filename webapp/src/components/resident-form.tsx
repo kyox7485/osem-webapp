@@ -80,7 +80,20 @@ const EMPTY_ASSESSMENT: AssessmentAnswers = {
   feedingTube: "", feedingTubeDate: "",
 };
 
-const ARRIVAL_MODES = ["Wheelchair", "Walking", "Stretcher"] as const;
+const ARRIVAL_MODES = ["Walking", "Wheelchair", "Stretcher"] as const;
+
+const INFECTIOUS_IDS = new Set([18, 19, 20, 21, 22, 23, 24]);
+const BONE_FRACTURE_ID = 17;
+const OTHERS_DIAGNOSIS_ID = 25;
+
+function sortDietTypes(types: Array<{ id: number | string; label: string }>) {
+  const PRIORITY: Record<string, number> = { "Normal Diet": 0, "Soft Diet": 1 };
+  return [...types].sort((a, b) => {
+    const pa = PRIORITY[a.label] ?? 2;
+    const pb = PRIORITY[b.label] ?? 2;
+    return pa !== pb ? pa - pb : Number(a.id) - Number(b.id);
+  });
+}
 
 const AVPU_OPTIONS = [
   { value: "A", labelKey: "A – Alert" },
@@ -254,6 +267,25 @@ export function ResidentForm({
   const [diagnosisOthersRemark, setDiagnosisOthersRemark] = useState<string>(
     existingDiagnoses.find((d) => d.diagnosis_option_id === othersOption?.id)?.remark ?? "",
   );
+
+  // Diagnosis grouping
+  const mainDiagnosisOptions = (() => {
+    const base = diagnosisOptions.filter((o) => !INFECTIOUS_IDS.has(o.id) && o.id !== OTHERS_DIAGNOSIS_ID);
+    const othersOpt = diagnosisOptions.find((o) => o.id === OTHERS_DIAGNOSIS_ID);
+    const bfIdx = base.findIndex((o) => o.id === BONE_FRACTURE_ID);
+    if (othersOpt !== undefined && bfIdx >= 0) {
+      const result = [...base];
+      result.splice(bfIdx + 1, 0, othersOpt);
+      return result;
+    }
+    return othersOpt ? [...base, othersOpt] : base;
+  })();
+  const infectiousDiagnosisOptions = diagnosisOptions.filter((o) => INFECTIOUS_IDS.has(o.id));
+  const anyInfectiousSelected = existingDiagnoses.some((d) => INFECTIOUS_IDS.has(d.diagnosis_option_id));
+  const [infectiousExpanded, setInfectiousExpanded] = useState(anyInfectiousSelected);
+
+  // Assessment collapse (expanded for new, collapsed for edit)
+  const [assessmentExpanded, setAssessmentExpanded] = useState(!resident);
 
   const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
   const isMalaysian = malaysiaId != null && String(malaysiaId) === nationalityId;
@@ -524,12 +556,13 @@ export function ResidentForm({
               className={inputCls}
             />
           </Field>
-          {(status === "DISCHARGED" || status === "DECEASED") && (
-            <Field label={t("Discharge date")}>
+          {status !== "ACTIVE" && (
+            <Field label={t("Discharge date")} required>
               <input
                 name="discharge_date"
                 type="date"
                 defaultValue={resident?.discharge_date ?? ""}
+                required
                 className={inputCls}
               />
             </Field>
@@ -555,7 +588,7 @@ export function ResidentForm({
               name="emergency_contact"
               defaultValue={resident?.emergency_contact ?? ""}
               rows={2}
-              placeholder={t("e.g. Jasmin (Daughter) - 012-4948717")}
+              placeholder={t("e.g. Jasmin (Daughter) - 012-34567890")}
               className={inputCls}
             />
           </Field>
@@ -582,7 +615,7 @@ export function ResidentForm({
           <Field label={t("Diet type")}>
             <select name="diet_type_id" defaultValue={resident?.diet_type_id ?? ""} className={inputCls}>
               <option value="">{t("--")}</option>
-              {dietTypes.map((d) => (
+              {sortDietTypes(dietTypes).map((d) => (
                 <option key={d.id} value={d.id}>{d.label}</option>
               ))}
             </select>
@@ -612,7 +645,7 @@ export function ResidentForm({
                     label={t("Is patient having any food allergy?")}
                     yn={allergyQ.foodYN}
                     reaction={allergyQ.foodReaction}
-                    reactionPlaceholder={t("What is the reaction?")}
+                    reactionPlaceholder={t("Describe it.")}
                     onYN={(v) => allergySet("foodYN", v)}
                     onReaction={(v) => allergySet("foodReaction", v)}
                     t={t}
@@ -621,7 +654,7 @@ export function ResidentForm({
                     label={t("Is patient having any medicine allergy?")}
                     yn={allergyQ.medYN}
                     reaction={allergyQ.medReaction}
-                    reactionPlaceholder={t("What is the reaction?")}
+                    reactionPlaceholder={t("Describe it.")}
                     onYN={(v) => allergySet("medYN", v)}
                     onReaction={(v) => allergySet("medReaction", v)}
                     t={t}
@@ -644,7 +677,7 @@ export function ResidentForm({
             })}
             <input type="hidden" name="diagnosis_others_remark" value={diagnosisOthersRemark} />
             <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {diagnosisOptions.map((opt) => {
+              {mainDiagnosisOptions.map((opt) => {
                 const checked = selectedDiagnosisIds.includes(opt.id);
                 return (
                   <label
@@ -680,6 +713,52 @@ export function ResidentForm({
                 className={`mt-2 ${inputCls}`}
               />
             )}
+            {/* Infectious Disease collapsible sub-block */}
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setInfectiousExpanded((v) => !v)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <svg
+                  width="14" height="14" viewBox="0 0 16 16" fill="none"
+                  className={`transition-transform ${infectiousExpanded ? "rotate-90" : ""}`}
+                >
+                  <path d="M6 12L10 8 6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {t("Infectious Disease")}
+              </button>
+              {infectiousExpanded && (
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {infectiousDiagnosisOptions.map((opt) => {
+                    const checked = selectedDiagnosisIds.includes(opt.id);
+                    return (
+                      <label
+                        key={opt.id}
+                        className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                          checked
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-800"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleDiagnosis(opt.id)}
+                          className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                        />
+                        <span className="text-sm leading-tight">
+                          {opt.name_en}
+                          {opt.name_ms && opt.name_ms !== opt.name_en && (
+                            <span className="block text-xs text-gray-400">{opt.name_ms}</span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </Field>
 
           {/* Assessment and Summary */}
@@ -698,7 +777,16 @@ export function ResidentForm({
                   name="assessment_and_summary"
                   value={compileAssessment(assessmentQ)}
                 />
-                <div className="mt-3 space-y-6">
+                <div className="mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setAssessmentExpanded((v) => !v)}
+                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                  >
+                    {assessmentExpanded ? t("Collapse") : t("Expand")}
+                  </button>
+                </div>
+                {assessmentExpanded && <div className="mt-3 space-y-6">
 
                   {/* Arrival */}
                   <div className="space-y-3">
@@ -884,7 +972,7 @@ export function ResidentForm({
                     </div>
                   </div>
 
-                </div>
+                </div>}
               </>
             )}
           </Field>
