@@ -26,6 +26,7 @@ export async function getWoundSessionHistory(filters: {
   residentId?: string;
   start?: string;
   end?: string;
+  excludedBranchIds?: number[];
 }): Promise<{ sessions: WoundSession[]; error: string | null }> {
   const account = await getCurrentUser();
   if (!account) return { sessions: [], error: "Not authenticated" };
@@ -47,7 +48,11 @@ export async function getWoundSessionHistory(filters: {
     )
     .order("session_started_at", { ascending: false });
 
-  if (account.rights !== "ADMIN") query = query.eq("branch_id", account.branch_id);
+  if (account.rights !== "ADMIN") {
+    query = query.eq("branch_id", account.branch_id);
+  } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
+    query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
+  }
   if (filters.residentId) query = query.eq("resident_id", parseInt(filters.residentId));
   if (filters.start) query = query.gte("session_started_at", `${filters.start}T00:00:00`);
   if (filters.end) query = query.lte("session_started_at", `${filters.end}T23:59:59`);

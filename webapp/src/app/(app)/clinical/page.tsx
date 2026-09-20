@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts } from "@/lib/lookups";
+import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds } from "@/lib/lookups";
 import { getObservationCharts } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
 import { getBehaviourCharts } from "./behaviour-chart-actions";
@@ -35,6 +35,8 @@ export default async function ClinicalPage({
 
   const supabase = await createClient();
 
+  const demoBranchIds = account.rights === "ADMIN" ? await getDemoBranchIds() : [];
+
   // Fetch residents for both tabs
   let residentQuery = supabase
     .from("tbl_residents")
@@ -44,6 +46,8 @@ export default async function ClinicalPage({
 
   if (account.rights !== "ADMIN") {
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
+  } else if (demoBranchIds.length > 0) {
+    residentQuery = residentQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
   }
 
   const [{ data: residents }, allStaff, nursingStaff, nursingChartLookups, feedingTypes, woundBodyParts] = await Promise.all([
@@ -98,6 +102,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       vitalsQuery = vitalsQuery.eq("branch_id", account.branch_id);
+    } else if (demoBranchIds.length > 0) {
+      vitalsQuery = vitalsQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
     }
 
     if (residentFilter) vitalsQuery = vitalsQuery.eq("resident_id", parseInt(residentFilter));
@@ -158,6 +164,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       notesQuery = notesQuery.eq("branch_id", account.branch_id);
+    } else if (demoBranchIds.length > 0) {
+      notesQuery = notesQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
     }
 
     if (residentFilter) notesQuery = notesQuery.eq("resident_id", parseInt(residentFilter));
@@ -205,6 +213,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       chartQuery = chartQuery.eq("branch_id", account.branch_id);
+    } else if (demoBranchIds.length > 0) {
+      chartQuery = chartQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
     }
 
     if (residentFilter) chartQuery = chartQuery.eq("resident_id", parseInt(residentFilter));
@@ -338,6 +348,8 @@ export default async function ClinicalPage({
 
     if (account.rights !== "ADMIN") {
       referralsQuery = referralsQuery.eq("branch_id", account.branch_id);
+    } else if (demoBranchIds.length > 0) {
+      referralsQuery = referralsQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
     }
 
     if (residentFilter) referralsQuery = referralsQuery.eq("resident_id", parseInt(residentFilter));
@@ -354,15 +366,15 @@ export default async function ClinicalPage({
 
     error = referralsError?.message || null;
   } else if (currentTab === "wound-photo") {
-    const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate });
+    const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds: demoBranchIds });
     woundSessions = result.sessions;
     error = result.error;
   } else if (currentTab === "observation-chart") {
-    const result = await getObservationCharts({ residentId: residentFilter, start: startDate, end: endDate });
+    const result = await getObservationCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds: demoBranchIds });
     observationEntries = result.entries;
     error = result.error;
   } else if (currentTab === "behaviour-chart") {
-    const result = await getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate });
+    const result = await getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds: demoBranchIds });
     behaviourEntries = result.entries;
     error = result.error;
   }

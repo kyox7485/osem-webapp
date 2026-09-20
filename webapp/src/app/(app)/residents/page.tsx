@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
-import { getBranches, formatBranch } from "@/lib/lookups";
+import { getBranches, formatBranch, getDemoBranchIds } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
@@ -24,7 +24,12 @@ export default async function ResidentsPage({
   const selectedStatuses = status !== undefined ? status.split(",").filter(Boolean) : DEFAULT_STATUSES;
   const selectedBranches = admin && branch_id !== undefined ? branch_id.split(",").filter(Boolean) : null;
 
-  const branches = admin ? await getBranches() : [];
+  const [allBranches, demoBranchIds] = admin
+    ? await Promise.all([getBranches(), getDemoBranchIds()])
+    : [[], [] as number[]];
+  // Exclude demo/test branches from the branch filter so admins never accidentally
+  // select them, and filter them out of the resident query too.
+  const branches = allBranches.filter((b) => !demoBranchIds.includes(Number(b.id)));
   const noResults = selectedStatuses.length === 0 || (selectedBranches !== null && selectedBranches.length === 0);
 
   let residents: {
@@ -49,6 +54,7 @@ export default async function ResidentsPage({
 
     if (admin) {
       if (selectedBranches) query = query.in("branch_id", selectedBranches);
+      if (demoBranchIds.length > 0) query = query.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
     } else if (currentUser) {
       // Non-admin logins (branch emails, possibly shared) never see other
       // branches here -- there's no filter control for it, this is fixed.

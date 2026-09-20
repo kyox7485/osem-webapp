@@ -57,6 +57,19 @@ export async function getBranches(onlyFunction?: string): Promise<LookupOption[]
   return (data ?? []).map((r) => ({ id: r.id, label: formatBranch(r) }));
 }
 
+// Branches whose BranchCode is "DEMO" hold fake/test residents used only for
+// demonstrations. Admins see all branches by default, but demo data pollutes
+// their views of real clinical activity, so these IDs are used to exclude
+// demo residents and their records from every admin-facing query.
+export async function getDemoBranchIds(): Promise<number[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_branches")
+    .select("BranchID")
+    .eq("BranchCode", "DEMO");
+  return (data ?? []).map((b) => Number(b.BranchID));
+}
+
 // A physio-hub branch (Function = "PHY", e.g. AMP) has no residents of its
 // own -- its physiotherapists cover the residential (Function = "NUR")
 // branches for inpatient work instead, and their own hub for outpatients.

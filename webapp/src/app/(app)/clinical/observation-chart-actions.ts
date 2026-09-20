@@ -201,6 +201,7 @@ export async function getObservationCharts(filters: {
   residentId?: string;
   start?: string;
   end?: string;
+  excludedBranchIds?: number[];
 }): Promise<{ entries: ObservationEntry[]; error: string | null }> {
   const account = await getCurrentUser();
   if (!account) return { entries: [], error: "Not authenticated" };
@@ -225,6 +226,8 @@ export async function getObservationCharts(filters: {
 
   if (account.rights !== "ADMIN") {
     query = query.eq("branch_id", account.branch_id);
+  } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
+    query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
   }
 
   if (filters.residentId) query = query.eq("resident_id", parseInt(filters.residentId));

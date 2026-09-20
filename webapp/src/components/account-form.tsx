@@ -22,9 +22,15 @@ export function AccountForm({ account, branches, action }: Props) {
   async function handleSubmit(formData: FormData) {
     setSubmitting(true);
     setError(null);
-    const result = await action(formData);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await action(formData);
+      if (result?.error) {
+        setError(result.error);
+        setSubmitting(false);
+      }
+      // On success the server action redirects; stay in submitting state until navigation
+    } catch {
+      setError("An unexpected error occurred. Please try again.");
       setSubmitting(false);
     }
   }
