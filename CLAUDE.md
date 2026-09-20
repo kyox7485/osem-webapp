@@ -165,6 +165,23 @@ rather than assuming the change is live.
 
 ## Known feedback / conventions to keep applying
 
+- **Loading state on form submit — use `useTransition`, not `useState` + `setSubmitting`.**
+  When a form calls a Server Action that ends with `redirect()`, the navigation happens before
+  React can paint a `setState`-triggered re-render, so the user sees no loading indicator.
+  The correct pattern is:
+  ```tsx
+  const [isPending, startTransition] = useTransition();
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      const result = await action(formData);
+      if (result?.error) setError(result.error);
+    });
+  }
+  ```
+  Use `isPending` (not a `submitting` state variable) to disable the button and show a spinner.
+  The button should render a spinning SVG icon alongside "Saving..." while `isPending` is true.
+  **Apply this pattern to every form in the project that calls a Server Action.**
+
 - **DEMO branch exclusion** — demo data must be invisible to every user
   except the `test` / DEMO account itself (see canonical `isDemoUser` check
   in the domain model section above). The pattern is already applied in:

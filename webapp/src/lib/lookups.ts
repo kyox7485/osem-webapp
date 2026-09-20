@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { LookupOption } from "@/lib/types";
+import type { LookupOption, DiagnosisOption, ExistingDiagnosis } from "@/lib/types";
 import type { TreatmentTypeOption } from "@/lib/physio-scoring";
 
 // Malaysia is pinned first -- the overwhelming majority of residents/patients
@@ -175,6 +175,24 @@ export async function getWoundBodyParts(): Promise<LookupOption[]> {
     .eq("active", true)
     .order("sort_order");
   return (data ?? []).map((r) => ({ id: r.id, label: r.label }));
+}
+
+export async function getDiagnosisOptions(): Promise<DiagnosisOption[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_diagnosis_options")
+    .select("id, name_en, name_ms")
+    .order("id");
+  return (data ?? []).map((r) => ({ id: Number(r.id), name_en: r.name_en, name_ms: r.name_ms ?? null }));
+}
+
+export async function getResidentDiagnoses(residentId: number): Promise<ExistingDiagnosis[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tbl_resident_diagnoses")
+    .select("diagnosis_option_id, remark")
+    .eq("resident_id", residentId);
+  return (data ?? []).map((r) => ({ diagnosis_option_id: Number(r.diagnosis_option_id), remark: r.remark ?? null }));
 }
 
 export async function getPhysioTreatmentTypes(): Promise<TreatmentTypeOption[]> {

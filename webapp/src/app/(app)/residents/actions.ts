@@ -33,19 +33,12 @@ function buildResidentPayload(formData: FormData) {
     accompanied_by: optional(formData.get("accompanied_by")),
     emergency_contact: optional(formData.get("emergency_contact")),
     allergy: optional(formData.get("allergy")),
-    past_medical_condition: optional(formData.get("past_medical_condition")),
-    current_medication_list: optional(formData.get("current_medication_list")),
     mobility: optional(formData.get("mobility")),
     feeding_type_id: optionalInt(formData.get("feeding_type_id")),
     hygiene: optional(formData.get("hygiene")),
     diet_type_id: optionalInt(formData.get("diet_type_id")),
     tca_notes: optional(formData.get("tca_notes")),
     assessment_and_summary: optional(formData.get("assessment_and_summary")),
-    // Explicitly picked on the form -- never inferred from the logged-in
-    // account, since branch logins can be shared by multiple people.
-    // tbl_staff's PK is a text code (e.g. "AMN-1"), not a bigint.
-    // When "Others" is selected the sentinel "__others__" is translated to
-    // null here and the free-text name goes in reviewed_by_other instead.
     reviewed_by: (() => {
       const v = optional(formData.get("reviewed_by"));
       return v === "__others__" ? null : v;
@@ -57,12 +50,22 @@ function buildResidentPayload(formData: FormData) {
   };
 }
 
+function readDiagnosisFormData(formData: FormData) {
+  const ids = formData.getAll("diagnosis_option_ids")
+    .map((v) => parseInt(String(v), 10))
+    .filter((n) => !isNaN(n));
+  const labels = formData.getAll("diagnosis_option_labels").map(String);
+  const othersRemark = optional(formData.get("diagnosis_others_remark"));
+  return { ids, labels, othersRemark };
+}
+
 export async function createResident(formData: FormData) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
 
   const supabase = await createClient();
   const payload = buildResidentPayload(formData);
+  const { ids: diagnosisIds, labels: diagnosisLabels, othersRemark } = readDiagnosisFormData(formData);
 
   if (!payload.resident_name) {
     return { error: "Resident name is required" };
@@ -80,16 +83,37 @@ export async function createResident(formData: FormData) {
     return { error: error.message };
   }
 
-  // Send Telegram notification to the branch group
-  const branchMeta = await supabase
-    .from("tbl_branches")
-    .select("telegram_chat_id, BranchCode")
-    .eq("BranchID", payload.branch_id)
-    .single();
-  const branchChatId = branchMeta.data?.telegram_chat_id ?? null;
+  // Insert structured diagnoses
+  if (diagnosisIds.length > 0) {
+    const othersIdx = diagnosisLabels.findIndex((l) => l === "Others");
+    const othersId = othersIdx >= 0 ? diagnosisIds[othersIdx] : null;
+    const diagnosisRows = diagnosisIds.map((diagnosis_option_id) => ({
+      resident_id: data.id,
+      diagnosis_option_id,
+      remark: diagnosis_option_id === othersId ? othersRemark ?? null : null,
+    }));
+    await supabase.from("tbl_resident_diagnoses").insert(diagnosisRows);
+  }
 
-  const reviewerLabel = payload.reviewed_by_other ?? payload.reviewed_by ?? "Unknown";
+  // Send Telegram notification
+  const [branchMeta, staffRow, feedingTypeRow] = await Promise.all([
+    supabase.from("tbl_branches").select("telegram_chat_id").eq("BranchID", payload.branch_id).single(),
+    payload.reviewed_by
+      ? supabase.from("tbl_staff").select("staff_name").eq("StaffID", payload.reviewed_by).single()
+      : Promise.resolve({ data: null }),
+    payload.feeding_type_id
+      ? supabase.from("tbl_feeding_types").select("name").eq("id", payload.feeding_type_id).single()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const branchChatId = branchMeta.data?.telegram_chat_id ?? null;
+  const reviewerLabel = payload.reviewed_by_other ?? (staffRow as any).data?.staff_name ?? payload.reviewed_by ?? "Unknown";
+  const feedingTypeLabel = (feedingTypeRow as any).data?.name ?? null;
+
   const val = (v: string | number | null | undefined) => (v != null && v !== "" ? String(v) : "--");
+  const diagnosisLine = diagnosisLabels.length > 0
+    ? diagnosisLabels.map((l) => l === "Others" && othersRemark ? `Others: ${othersRemark}` : l).join(", ")
+    : "--";
 
   const lines = [
     `🏠 <b>New Resident Admitted</b>`,
@@ -102,7 +126,12 @@ export async function createResident(formData: FormData) {
     payload.admission_date ? `📅 Admission date: ${payload.admission_date}` : null,
     payload.transfer_from ? `🏥 Transfer from: ${payload.transfer_from}` : null,
     payload.allergy ? `⚠️ Allergy: ${payload.allergy}` : null,
-    payload.past_medical_condition ? `📋 Medical history: ${payload.past_medical_condition}` : null,
+    `🩺 Known medical/surgical history: ${diagnosisLine}`,
+    ``,
+    `🧍 Mobility: ${val(payload.mobility)}`,
+    `🚿 Hygiene: ${val(payload.hygiene)}`,
+    feedingTypeLabel ? `🥣 Feeding type: ${feedingTypeLabel}` : null,
+    payload.assessment_and_summary ? `📝 Assessment & Summary: ${payload.assessment_and_summary}` : null,
     ``,
     `✍️ Entered by: ${reviewerLabel}`,
   ]
@@ -121,6 +150,7 @@ export async function updateResident(residentId: number, formData: FormData) {
 
   const supabase = await createClient();
   const payload = buildResidentPayload(formData);
+  const { ids: diagnosisIds, othersRemark } = readDiagnosisFormData(formData);
 
   if (!payload.resident_name) {
     return { error: "Resident name is required" };
@@ -136,6 +166,24 @@ export async function updateResident(residentId: number, formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Replace diagnoses: delete existing then re-insert
+  await supabase.from("tbl_resident_diagnoses").delete().eq("resident_id", residentId);
+  if (diagnosisIds.length > 0) {
+    // Get the "Others" option id by checking labels (not available here, use a quick lookup)
+    const { data: othersOpt } = await supabase
+      .from("tbl_diagnosis_options")
+      .select("id")
+      .eq("name_en", "Others")
+      .single();
+    const othersId = othersOpt?.id ?? null;
+    const diagnosisRows = diagnosisIds.map((diagnosis_option_id) => ({
+      resident_id: residentId,
+      diagnosis_option_id,
+      remark: diagnosis_option_id === othersId ? othersRemark ?? null : null,
+    }));
+    await supabase.from("tbl_resident_diagnoses").insert(diagnosisRows);
   }
 
   revalidatePath("/residents");

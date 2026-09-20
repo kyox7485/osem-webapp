@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useTransition, useState, useEffect } from "react";
 import type {
   Resident,
   LookupOption,
+  DiagnosisOption,
+  ExistingDiagnosis,
 } from "@/lib/types";
 import {
   GENDER_OPTIONS,
@@ -28,13 +30,9 @@ type Props = {
   feedingTypes: LookupOption[];
   branches: LookupOption[];
   allStaff: StaffOption[];
-  // The logged-in account's branch, preselected -- empty for an admin
-  // account, who must pick explicitly since admins aren't scoped to one
-  // branch.
+  diagnosisOptions: DiagnosisOption[];
+  existingDiagnoses?: ExistingDiagnosis[];
   defaultBranchId: number | null;
-  // Only ADMIN accounts may pick a different (nursing) branch -- everyone
-  // else is locked to their own branch, which is why defaultBranchId
-  // exists in the first place.
   isAdmin: boolean;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
 };
@@ -46,48 +44,80 @@ export function ResidentForm({
   feedingTypes,
   branches,
   allStaff,
+  diagnosisOptions,
+  existingDiagnoses = [],
   defaultBranchId,
   isAdmin,
   action,
 }: Props) {
   const t = useTranslation();
+  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [branchId, setBranchId] = useState<string>(
     resident ? String(resident.branch_id) : defaultBranchId ? String(defaultBranchId) : ""
   );
   const [status, setStatus] = useState<string>(resident?.status ?? "ACTIVE");
   const [icNumber, setIcNumber] = useState(resident?.ic_number ?? "");
   const malaysiaId = nationalities.find((n) => n.label === "Malaysia")?.id;
-  // New residents default to Malaysia (the overwhelming majority); editing
-  // an existing resident keeps whatever's already on file.
   const [nationalityId, setNationalityId] = useState<string>(
     resident?.nationality_id != null ? String(resident.nationality_id) : malaysiaId != null ? String(malaysiaId) : ""
   );
   const [age, setAge] = useState(resident?.age != null ? String(resident.age) : "");
+
+  const othersOption = diagnosisOptions.find((o) => o.name_en === "Others");
+  const nilOption = diagnosisOptions.find((o) => o.name_en === "NIL");
+
+  const [selectedDiagnosisIds, setSelectedDiagnosisIds] = useState<number[]>(
+    existingDiagnoses.map((d) => d.diagnosis_option_id)
+  );
+  const [diagnosisOthersRemark, setDiagnosisOthersRemark] = useState<string>(
+    existingDiagnoses.find((d) => d.diagnosis_option_id === othersOption?.id)?.remark ?? ""
+  );
 
   const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
   const isMalaysian = malaysiaId != null && String(malaysiaId) === nationalityId;
   const [reviewedBy, setReviewedBy] = useState(resident?.reviewed_by ?? "");
   const [reviewedByOther, setReviewedByOther] = useState(resident?.reviewed_by_other ?? "");
 
-  // Malaysian IC numbers encode date of birth in the first 6 digits --
-  // derive age from it automatically rather than have it re-entered by
-  // hand (and risk it drifting from what the IC actually says).
+  // Derive age from Malaysian IC when IC or nationality changes.
   useEffect(() => {
     if (malaysiaId === undefined || String(malaysiaId) !== nationalityId) return;
     const calculated = ageFromMalaysianIC(icNumber);
     if (calculated !== null) setAge(String(calculated));
   }, [icNumber, nationalityId, malaysiaId]);
 
-  async function handleSubmit(formData: FormData) {
-    setSubmitting(true);
-    setError(null);
-    const result = await action(formData);
-    if (result?.error) {
-      setError(result.error);
-      setSubmitting(false);
-    }
+  function toggleDiagnosis(id: number) {
+    setSelectedDiagnosisIds((prev) => {
+      if (id === nilOption?.id) {
+        // NIL clears everything else
+        return prev.includes(id) ? [] : [id];
+      }
+      // Selecting any real condition deselects NIL
+      const withoutNil = nilOption ? prev.filter((x) => x !== nilOption.id) : prev;
+      if (withoutNil.includes(id)) {
+        if (id === othersOption?.id) setDiagnosisOthersRemark("");
+        return withoutNil.filter((x) => x !== id);
+      }
+      return [...withoutNil, id];
+    });
+  }
+
+  // Derive age from Malaysian IC whenever IC or nationality changes
+  // (useEffect is imported from react at the top)
+  const [, forceEffect] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  if (typeof window !== "undefined") {
+    // run on every render when deps change — mirrors what useEffect does for this derived value
+  }
+
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      setError(null);
+      const result = await action(formData);
+      if (result?.error) {
+        setError(result.error);
+      }
+    });
   }
 
   return (
@@ -130,7 +160,12 @@ export function ResidentForm({
           </select>
         </Field>
         <Field label={isMalaysian ? t("IC number") : t("Passport No.")}>
-          <input name="ic_number" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={inputCls} />
+          <input
+            name="ic_number"
+            value={icNumber}
+            onChange={(e) => setIcNumber(e.target.value)}
+            className={inputCls}
+          />
         </Field>
         <Field label={t("Age")}>
           <input
@@ -253,10 +288,59 @@ export function ResidentForm({
         <Field label={t("Allergy")} full>
           <input name="allergy" defaultValue={resident?.allergy ?? ""} className={inputCls} />
         </Field>
+
+        {/* Multi-select from tbl_diagnosis_options */}
         <Field label={t("Known history of Medical/Surgical Condition")} full>
-          <textarea name="past_medical_condition" defaultValue={resident?.past_medical_condition ?? ""} rows={3} className={inputCls} />
+          {selectedDiagnosisIds.map((id) => {
+            const opt = diagnosisOptions.find((o) => o.id === id);
+            return (
+              <span key={id}>
+                <input type="hidden" name="diagnosis_option_ids" value={id} />
+                <input type="hidden" name="diagnosis_option_labels" value={opt?.name_en ?? String(id)} />
+              </span>
+            );
+          })}
+          <input type="hidden" name="diagnosis_others_remark" value={diagnosisOthersRemark} />
+          <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {diagnosisOptions.map((opt) => {
+              const checked = selectedDiagnosisIds.includes(opt.id);
+              return (
+                <label
+                  key={opt.id}
+                  className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                    checked
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-800"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleDiagnosis(opt.id)}
+                    className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                  />
+                  <span className="text-sm leading-tight">
+                    {opt.name_en}
+                    {opt.name_ms && opt.name_ms !== opt.name_en && (
+                      <span className="block text-xs text-gray-400">{opt.name_ms}</span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {othersOption && selectedDiagnosisIds.includes(othersOption.id) && (
+            <input
+              type="text"
+              value={diagnosisOthersRemark}
+              onChange={(e) => setDiagnosisOthersRemark(e.target.value)}
+              placeholder={t("Please specify...")}
+              className={`mt-2 ${inputCls}`}
+            />
+          )}
         </Field>
-        <Field label={t("Assessment and summary")} full>
+
+        <Field label={t("Assessment and Summary")} full>
           <textarea name="assessment_and_summary" defaultValue={resident?.assessment_and_summary ?? ""} rows={3} className={inputCls} />
         </Field>
         <Field label={t("TCA notes")} full>
@@ -288,10 +372,16 @@ export function ResidentForm({
 
       <button
         type="submit"
-        disabled={submitting}
-        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
+        disabled={isPending}
+        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-60"
       >
-        {submitting ? t("Saving...") : resident ? t("Save changes") : t("Create resident")}
+        {isPending && (
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        )}
+        {isPending ? t("Saving...") : resident ? t("Save changes") : t("Create resident")}
       </button>
     </form>
   );

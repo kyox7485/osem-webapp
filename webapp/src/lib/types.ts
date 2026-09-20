@@ -142,6 +142,9 @@ export type UserAccount = {
 // number for every other lookup (positions, branches, etc.).
 export type LookupOption = { id: number | string; label: string };
 
+export type DiagnosisOption = { id: number; name_en: string; name_ms: string | null };
+export type ExistingDiagnosis = { diagnosis_option_id: number; remark: string | null };
+
 export const GENDER_OPTIONS = ["M", "F"] as const;
 export const MARITAL_STATUS_OPTIONS = ["Single", "Married", "Windowed", "Divorced"] as const;
 export const RESIDENT_STATUS_OPTIONS = ["ACTIVE", "DISCHARGED", "DECEASED", "TRANSFERRED OUT"] as const;

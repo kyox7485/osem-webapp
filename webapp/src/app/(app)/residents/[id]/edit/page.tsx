@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ResidentForm } from "@/components/resident-form";
-import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch } from "@/lib/lookups";
+import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch, getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Resident } from "@/lib/types";
@@ -13,7 +13,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: resident }, currentUser, nationalities, dietTypes, feedingTypes, branches, allStaff] = await Promise.all([
+  const [{ data: resident }, currentUser, nationalities, dietTypes, feedingTypes, branches, allStaff, diagnosisOptions, existingDiagnoses] = await Promise.all([
     supabase.from("tbl_residents").select("*").eq("id", id).single(),
     getCurrentUser(),
     getNationalities(),
@@ -21,6 +21,8 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
     getFeedingTypes(),
     getBranches("NUR"),
     getAllStaffWithBranch(),
+    getDiagnosisOptions(),
+    getResidentDiagnoses(parseInt(id, 10)),
   ]);
 
   if (!resident) notFound();
@@ -37,6 +39,8 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
         feedingTypes={feedingTypes}
         branches={branches}
         allStaff={allStaff}
+        diagnosisOptions={diagnosisOptions}
+        existingDiagnoses={existingDiagnoses}
         defaultBranchId={null}
         isAdmin={isAdmin(currentUser)}
         action={boundAction}
