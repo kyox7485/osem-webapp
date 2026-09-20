@@ -8,6 +8,7 @@ import { FilterPendingProvider } from "@/components/filter-pending";
 import { NavButton } from "@/components/nav-button";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
+import { ResidentsModuleTabs } from "./module-tabs";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -71,6 +72,9 @@ export default async function ResidentsPage({
   return (
     <div>
       <PageTitle title={t("Residents")} />
+      <div className="mb-4">
+        <ResidentsModuleTabs />
+      </div>
       <div className="mb-6 flex items-center justify-end">
         <NavButton
           href="/residents/new"
