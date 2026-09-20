@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition, useState, useEffect } from "react";
+import { useTransition, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type {
   Resident,
   LookupOption,
@@ -35,6 +36,7 @@ type Props = {
   defaultBranchId: number | null;
   isAdmin: boolean;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
+  backHref?: string;
 };
 
 // ── Questionnaire state types ─────────────────────────────────────────────────
@@ -54,6 +56,7 @@ type AssessmentAnswers = {
   fever: "yes" | "no" | "";
   pain: "yes" | "no" | "";
   activeComplaints: "yes" | "no" | "";
+  activeComplaintsDetail: string;
   treatmentGiven: string;
   lastMeal: string;
   foodAfterAdmission: string;
@@ -71,7 +74,7 @@ const EMPTY_ALLERGY: AllergyAnswers = {
 const EMPTY_ASSESSMENT: AssessmentAnswers = {
   arrivalTime: "", modeOfArrival: "", avpu: "",
   cough: "", fever: "", pain: "",
-  activeComplaints: "", treatmentGiven: "",
+  activeComplaints: "", activeComplaintsDetail: "", treatmentGiven: "",
   lastMeal: "", foodAfterAdmission: "", lastBowelOutput: "",
   urineCatheter: "", urineCatheterDate: "",
   feedingTube: "", feedingTubeDate: "",
@@ -86,27 +89,19 @@ const AVPU_OPTIONS = [
   { value: "U", labelKey: "U – Unresponsive" },
 ] as const;
 
-// ── Compile questionnaire → single stored string ──────────────────────────────
-// Compiled format is always English regardless of the UI language, so it's
-// parseable and consistent for display/Telegram notifications.
+// ── Compile questionnaire → stored string (always English) ───────────────────
 
 function compileAllergy(a: AllergyAnswers): string {
   const lines: string[] = [];
   if (a.foodYN) {
     const base = `Food allergy: ${a.foodYN === "yes" ? "Yes" : "No"}`;
-    lines.push(
-      a.foodYN === "yes" && a.foodReaction.trim()
-        ? `${base}; Reaction: ${a.foodReaction.trim()}`
-        : base,
-    );
+    lines.push(a.foodYN === "yes" && a.foodReaction.trim()
+      ? `${base}; Reaction: ${a.foodReaction.trim()}` : base);
   }
   if (a.medYN) {
     const base = `Medicine allergy: ${a.medYN === "yes" ? "Yes" : "No"}`;
-    lines.push(
-      a.medYN === "yes" && a.medReaction.trim()
-        ? `${base}; Reaction: ${a.medReaction.trim()}`
-        : base,
-    );
+    lines.push(a.medYN === "yes" && a.medReaction.trim()
+      ? `${base}; Reaction: ${a.medReaction.trim()}` : base);
   }
   return lines.join("\n");
 }
@@ -125,37 +120,28 @@ function compileAssessment(a: AssessmentAnswers): string {
   addYN("Pain", a.pain);
   if (a.activeComplaints) {
     const base = `Active complaints: ${a.activeComplaints === "yes" ? "Yes" : "No"}`;
-    parts.push(
-      a.activeComplaints === "yes" && a.treatmentGiven.trim()
-        ? `${base}; Treatment given: ${a.treatmentGiven.trim()}`
-        : base,
-    );
+    parts.push(a.activeComplaints === "yes" && a.activeComplaintsDetail.trim()
+      ? `${base}; Detail: ${a.activeComplaintsDetail.trim()}` : base);
   }
+  // Treatment given is shared — any symptom = Yes triggers it
+  add("Treatment given", a.treatmentGiven);
   add("Last meal", a.lastMeal);
   add("Food after admission", a.foodAfterAdmission);
   add("Last bowel output", a.lastBowelOutput);
   if (a.urineCatheter) {
     const base = `Urine catheter: ${a.urineCatheter === "yes" ? "Yes" : "No"}`;
-    parts.push(
-      a.urineCatheter === "yes" && a.urineCatheterDate
-        ? `${base}; Last inserted: ${a.urineCatheterDate}`
-        : base,
-    );
+    parts.push(a.urineCatheter === "yes" && a.urineCatheterDate
+      ? `${base}; Last inserted: ${a.urineCatheterDate}` : base);
   }
   if (a.feedingTube) {
     const base = `Feeding tube: ${a.feedingTube === "yes" ? "Yes" : "No"}`;
-    parts.push(
-      a.feedingTube === "yes" && a.feedingTubeDate
-        ? `${base}; Last inserted: ${a.feedingTubeDate}`
-        : base,
-    );
+    parts.push(a.feedingTube === "yes" && a.feedingTubeDate
+      ? `${base}; Last inserted: ${a.feedingTubeDate}` : base);
   }
   return parts.join("\n");
 }
 
 // ── Parse compiled text back into questionnaire fields (for edit mode) ────────
-// Returns null if the text doesn't match the questionnaire format, triggering
-// a plain textarea fallback so old free-text data isn't silently overwritten.
 
 function parseAllergyText(text: string): AllergyAnswers | null {
   const foodM = text.match(/^Food allergy: (Yes|No)(?:; Reaction: (.+))?$/m);
@@ -180,11 +166,15 @@ function parseAssessmentText(text: string): AssessmentAnswers | null {
   const avpu = getLine("AVPU");
   const cough = getLine("Cough");
   const fever = getLine("Fever");
-  // At least one structured key must be present; otherwise treat as legacy free-text
   if (!arrivalTime && !modeOfArrival && !avpu && !cough && !fever) return null;
-  const complaintsM = text.match(/^Active complaints: (Yes|No)(?:; Treatment given: (.+))?$/m);
+  // Active complaints: supports both new "Detail:" format and legacy "Treatment given:" inline
+  const complaintsM = text.match(
+    /^Active complaints: (Yes|No)(?:; (?:Detail|Treatment given): (.+))?$/m,
+  );
   const cathM = text.match(/^Urine catheter: (Yes|No)(?:; Last inserted: (.+))?$/m);
   const tubeM = text.match(/^Feeding tube: (Yes|No)(?:; Last inserted: (.+))?$/m);
+  // Treatment given: standalone line (new) OR extracted from old inline format
+  const standaloneTreatment = getLine("Treatment given");
   return {
     arrivalTime,
     modeOfArrival,
@@ -193,7 +183,8 @@ function parseAssessmentText(text: string): AssessmentAnswers | null {
     fever: toYN(fever),
     pain: toYN(getLine("Pain")),
     activeComplaints: complaintsM ? (complaintsM[1] === "Yes" ? "yes" : "no") : "",
-    treatmentGiven: complaintsM?.[2]?.trim() ?? "",
+    activeComplaintsDetail: (complaintsM?.[2]?.trim() ?? ""),
+    treatmentGiven: standaloneTreatment,
     lastMeal: getLine("Last meal"),
     foodAfterAdmission: getLine("Food after admission"),
     lastBowelOutput: getLine("Last bowel output"),
@@ -218,10 +209,29 @@ export function ResidentForm({
   defaultBranchId,
   isAdmin,
   action,
+  backHref,
 }: Props) {
   const t = useTranslation();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const markDirty = () => setIsDirty(true);
+
+  // Warn on browser-level navigation (tab close, external link, browser back) when dirty
+  useEffect(() => {
+    if (!isDirty || isPending) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty, isPending]);
+
   const [branchId, setBranchId] = useState<string>(
     resident ? String(resident.branch_id) : defaultBranchId ? String(defaultBranchId) : "",
   );
@@ -231,11 +241,10 @@ export function ResidentForm({
   const [nationalityId, setNationalityId] = useState<string>(
     resident?.nationality_id != null
       ? String(resident.nationality_id)
-      : malaysiaId != null
-        ? String(malaysiaId)
-        : "",
+      : malaysiaId != null ? String(malaysiaId) : "",
   );
   const [age, setAge] = useState(resident?.age != null ? String(resident.age) : "");
+  const [residentName, setResidentName] = useState(resident?.resident_name ?? "");
 
   const othersOption = diagnosisOptions.find((o) => o.name_en === "Others");
   const nilOption = diagnosisOptions.find((o) => o.name_en === "NIL");
@@ -251,13 +260,12 @@ export function ResidentForm({
   const [reviewedBy, setReviewedBy] = useState(resident?.reviewed_by ?? "");
   const [reviewedByOther, setReviewedByOther] = useState(resident?.reviewed_by_other ?? "");
 
-  // Allergy questionnaire — falls back to plain textarea when existing text
-  // doesn't match the structured format (legacy free-text entries).
+  // Allergy questionnaire
   const parsedAllergy = resident?.allergy ? parseAllergyText(resident.allergy) : null;
   const allergyIsFallback = !!resident?.allergy && !parsedAllergy;
   const [allergyQ, setAllergyQ] = useState<AllergyAnswers>(parsedAllergy ?? EMPTY_ALLERGY);
 
-  // Assessment questionnaire — same fallback pattern.
+  // Assessment questionnaire
   const parsedAssessment = resident?.assessment_and_summary
     ? parseAssessmentText(resident.assessment_and_summary)
     : null;
@@ -266,7 +274,7 @@ export function ResidentForm({
     parsedAssessment ?? EMPTY_ASSESSMENT,
   );
 
-  // Derive age from Malaysian IC when IC or nationality changes.
+  // Auto-derive age from Malaysian IC
   useEffect(() => {
     if (malaysiaId === undefined || String(malaysiaId) !== nationalityId) return;
     const calculated = ageFromMalaysianIC(icNumber);
@@ -274,6 +282,7 @@ export function ResidentForm({
   }, [icNumber, nationalityId, malaysiaId]);
 
   function toggleDiagnosis(id: number) {
+    markDirty();
     setSelectedDiagnosisIds((prev) => {
       if (id === nilOption?.id) return prev.includes(id) ? [] : [id];
       const withoutNil = nilOption ? prev.filter((x) => x !== nilOption.id) : prev;
@@ -285,531 +294,668 @@ export function ResidentForm({
     });
   }
 
+  function allergySet<K extends keyof AllergyAnswers>(key: K, val: AllergyAnswers[K]) {
+    markDirty();
+    setAllergyQ((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function assessSet<K extends keyof AssessmentAnswers>(key: K, val: AssessmentAnswers[K]) {
+    markDirty();
+    setAssessmentQ((prev) => ({ ...prev, [key]: val }));
+  }
+
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       setError(null);
       const result = await action(formData);
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+      }
+      // On success the server action calls redirect() so isDirty resets implicitly
     });
   }
 
-  function allergySet<K extends keyof AllergyAnswers>(key: K, val: AllergyAnswers[K]) {
-    setAllergyQ((prev) => ({ ...prev, [key]: val }));
+  function handleBackClick() {
+    if (isDirty) {
+      setShowExitModal(true);
+    } else {
+      router.push(backHref ?? "/residents");
+    }
   }
-  function assessSet<K extends keyof AssessmentAnswers>(key: K, val: AssessmentAnswers[K]) {
-    setAssessmentQ((prev) => ({ ...prev, [key]: val }));
+
+  function handleExitWithoutSaving() {
+    setIsDirty(false);
+    setShowExitModal(false);
+    router.push(backHref ?? "/residents");
   }
+
+  function handleSaveAndExit() {
+    setShowExitModal(false);
+    formRef.current?.requestSubmit();
+  }
+
+  // Whether treatment-given row should appear (any active symptom = yes)
+  const anySymptomYes =
+    assessmentQ.cough === "yes" ||
+    assessmentQ.fever === "yes" ||
+    assessmentQ.pain === "yes" ||
+    assessmentQ.activeComplaints === "yes";
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+    <>
+      {/* ── Unsaved-changes confirmation modal ─────────────────────────── */}
+      {showExitModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowExitModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-gray-900">{t("Unsaved changes")}</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {t("You have unsaved changes. What would you like to do?")}
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleSaveAndExit}
+                className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+              >
+                {t("Save and exit")}
+              </button>
+              <button
+                type="button"
+                onClick={handleExitWithoutSaving}
+                className="w-full rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+              >
+                {t("Exit without saving")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowExitModal(false)}
+                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                {t("Continue editing")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <Section title={t("Basic details")}>
-        <Field label={t("Name")} required>
-          <input name="resident_name" defaultValue={resident?.resident_name} required className={inputCls} />
-        </Field>
-        <Field label={t("Branch")} required>
-          {isAdmin ? (
-            <select
-              name="branch_id"
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
+      <form
+        ref={formRef}
+        action={handleSubmit}
+        onChange={markDirty}
+        className="space-y-5"
+      >
+        {/* Back button */}
+        {backHref !== undefined && (
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M10 12.5L5.5 8l4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {t("Back")}
+            {isDirty && (
+              <span className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-400" title={t("Unsaved changes")} />
+            )}
+          </button>
+        )}
+
+        {error && (
+          <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+
+        {/* ── Basic details ─────────────────────────────────────────────── */}
+        <Section title={t("Basic details")}>
+          <Field label={t("Name")} required>
+            <input
+              name="resident_name"
+              value={residentName}
+              onChange={(e) => setResidentName(e.target.value.toUpperCase())}
               required
               className={inputCls}
+            />
+          </Field>
+          <Field label={t("Branch")} required>
+            {isAdmin ? (
+              <select
+                name="branch_id"
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                required
+                className={inputCls}
+              >
+                <option value="" disabled>{t("Select a branch")}</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.label}</option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <div className={`${inputCls} bg-gray-50 text-gray-500`}>
+                  {branches.find((b) => String(b.id) === branchId)?.label ?? t("--")}
+                </div>
+                <input type="hidden" name="branch_id" value={branchId} />
+              </>
+            )}
+          </Field>
+          <Field label={t("Nationality")}>
+            <select
+              name="nationality_id"
+              value={nationalityId}
+              onChange={(e) => setNationalityId(e.target.value)}
+              className={inputCls}
             >
-              <option value="" disabled>{t("Select a branch")}</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.label}</option>
+              <option value="">{t("--")}</option>
+              {nationalities.map((n) => (
+                <option key={n.id} value={n.id}>{n.label}</option>
               ))}
             </select>
-          ) : (
-            <>
-              <div className={`${inputCls} bg-gray-50 text-gray-500`}>
-                {branches.find((b) => String(b.id) === branchId)?.label ?? t("--")}
-              </div>
-              <input type="hidden" name="branch_id" value={branchId} />
-            </>
-          )}
-        </Field>
-        <Field label={t("Nationality")}>
-          <select
-            name="nationality_id"
-            value={nationalityId}
-            onChange={(e) => setNationalityId(e.target.value)}
-            className={inputCls}
-          >
-            <option value="">{t("--")}</option>
-            {nationalities.map((n) => (
-              <option key={n.id} value={n.id}>{n.label}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={isMalaysian ? t("IC number") : t("Passport No.")}>
-          <input
-            name="ic_number"
-            value={icNumber}
-            onChange={(e) => setIcNumber(e.target.value)}
-            className={inputCls}
-          />
-        </Field>
-        <Field label={t("Age")}>
-          <input
-            name="age"
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            className={inputCls}
-          />
-        </Field>
-        <Field label={t("Gender")}>
-          <select name="gender" defaultValue={resident?.gender ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {GENDER_OPTIONS.map((g) => (
-              <option key={g} value={g}>{t(g)}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Marital status")}>
-          <select name="marital_status" defaultValue={resident?.marital_status ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {MARITAL_STATUS_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
-      </Section>
-
-      <Section title={t("Admission")}>
-        {resident ? (
-          <Field label={t("Status")}>
-            <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-              {RESIDENT_STATUS_OPTIONS.map((o) => (
+          </Field>
+          <Field label={isMalaysian ? t("IC number") : t("Passport No.")}>
+            <input
+              name="ic_number"
+              value={icNumber}
+              onChange={(e) => setIcNumber(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+          <Field label={t("Age")}>
+            <input
+              name="age"
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+          <Field label={t("Gender")}>
+            <select name="gender" defaultValue={resident?.gender ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {GENDER_OPTIONS.map((g) => (
+                <option key={g} value={g}>{t(g)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Marital status")}>
+            <select name="marital_status" defaultValue={resident?.marital_status ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {MARITAL_STATUS_OPTIONS.map((o) => (
                 <option key={o} value={o}>{t(o)}</option>
               ))}
             </select>
           </Field>
-        ) : (
-          <input type="hidden" name="status" value="ACTIVE" />
-        )}
-        <Field label={t("Care type")}>
-          <select name="care_type" defaultValue={resident?.care_type ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {CARE_TYPE_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Admission date")}>
-          <input
-            name="admission_date"
-            type="date"
-            defaultValue={resident?.admission_date ?? new Date().toISOString().split("T")[0]}
-            className={inputCls}
-          />
-        </Field>
-        {(status === "DISCHARGED" || status === "DECEASED") && (
-          <Field label={t("Discharge date")}>
+        </Section>
+
+        {/* ── Admission ─────────────────────────────────────────────────── */}
+        <Section title={t("Admission")}>
+          {resident ? (
+            <Field label={t("Status")}>
+              <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+                {RESIDENT_STATUS_OPTIONS.map((o) => (
+                  <option key={o} value={o}>{t(o)}</option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <input type="hidden" name="status" value="ACTIVE" />
+          )}
+          <Field label={t("Care type")}>
+            <select name="care_type" defaultValue={resident?.care_type ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {CARE_TYPE_OPTIONS.map((o) => (
+                <option key={o} value={o}>{t(o)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Admission date")}>
             <input
-              name="discharge_date"
+              name="admission_date"
               type="date"
-              defaultValue={resident?.discharge_date ?? ""}
+              defaultValue={resident?.admission_date ?? new Date().toISOString().split("T")[0]}
               className={inputCls}
             />
           </Field>
-        )}
-        <Field label={t("Transfer from")}>
-          <select name="transfer_from" defaultValue={resident?.transfer_from ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {TRANSFER_FROM_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Accompanied by")}>
-          <select name="accompanied_by" defaultValue={resident?.accompanied_by ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {ACCOMPANIED_BY_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Emergency contact")} full>
-          <textarea
-            name="emergency_contact"
-            defaultValue={resident?.emergency_contact ?? ""}
-            rows={2}
-            placeholder={t("e.g. Jasmin (Daughter) - 012-4948717")}
-            className={inputCls}
-          />
-        </Field>
-      </Section>
-
-      <Section title={t("Care")}>
-        <Field label={t("Mobility")}>
-          <select name="mobility" defaultValue={resident?.mobility ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {MOBILITY_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Hygiene")}>
-          <select name="hygiene" defaultValue={resident?.hygiene ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {HYGIENE_OPTIONS.map((o) => (
-              <option key={o} value={o}>{t(o)}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Diet type")}>
-          <select name="diet_type_id" defaultValue={resident?.diet_type_id ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {dietTypes.map((d) => (
-              <option key={d.id} value={d.id}>{d.label}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Feeding type")}>
-          <select name="feeding_type_id" defaultValue={resident?.feeding_type_id ?? ""} className={inputCls}>
-            <option value="">{t("--")}</option>
-            {feedingTypes.map((f) => (
-              <option key={f.id} value={f.id}>{f.label}</option>
-            ))}
-          </select>
-        </Field>
-      </Section>
-
-      <Section title={t("Clinical notes")}>
-
-        {/* ── Allergy questionnaire ───────────────────────────────────────── */}
-        <Field label={t("Allergy")} full>
-          {allergyIsFallback ? (
-            // Existing resident with old free-text data — preserve as-is
-            <textarea name="allergy" defaultValue={resident!.allergy ?? ""} rows={2} className={inputCls} />
-          ) : (
-            <>
-              <input type="hidden" name="allergy" value={compileAllergy(allergyQ)} />
-              <div className="mt-2 space-y-4">
-                <AllergyQuestion
-                  label={t("Is patient having any food allergy?")}
-                  yn={allergyQ.foodYN}
-                  reaction={allergyQ.foodReaction}
-                  reactionPlaceholder={t("What is the reaction?")}
-                  onYN={(v) => allergySet("foodYN", v)}
-                  onReaction={(v) => allergySet("foodReaction", v)}
-                  t={t}
-                />
-                <AllergyQuestion
-                  label={t("Is patient having any medicine allergy?")}
-                  yn={allergyQ.medYN}
-                  reaction={allergyQ.medReaction}
-                  reactionPlaceholder={t("What is the reaction?")}
-                  onYN={(v) => allergySet("medYN", v)}
-                  onReaction={(v) => allergySet("medReaction", v)}
-                  t={t}
-                />
-              </div>
-            </>
+          {(status === "DISCHARGED" || status === "DECEASED") && (
+            <Field label={t("Discharge date")}>
+              <input
+                name="discharge_date"
+                type="date"
+                defaultValue={resident?.discharge_date ?? ""}
+                className={inputCls}
+              />
+            </Field>
           )}
-        </Field>
-
-        {/* ── Known history of Medical/Surgical Condition ─────────────────── */}
-        <Field label={t("Known history of Medical/Surgical Condition")} full>
-          {selectedDiagnosisIds.map((id) => {
-            const opt = diagnosisOptions.find((o) => o.id === id);
-            return (
-              <span key={id}>
-                <input type="hidden" name="diagnosis_option_ids" value={id} />
-                <input type="hidden" name="diagnosis_option_labels" value={opt?.name_en ?? String(id)} />
-              </span>
-            );
-          })}
-          <input type="hidden" name="diagnosis_others_remark" value={diagnosisOthersRemark} />
-          <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {diagnosisOptions.map((opt) => {
-              const checked = selectedDiagnosisIds.includes(opt.id);
-              return (
-                <label
-                  key={opt.id}
-                  className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
-                    checked
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-800"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleDiagnosis(opt.id)}
-                    className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
-                  />
-                  <span className="text-sm leading-tight">
-                    {opt.name_en}
-                    {opt.name_ms && opt.name_ms !== opt.name_en && (
-                      <span className="block text-xs text-gray-400">{opt.name_ms}</span>
-                    )}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-          {othersOption && selectedDiagnosisIds.includes(othersOption.id) && (
-            <input
-              type="text"
-              value={diagnosisOthersRemark}
-              onChange={(e) => setDiagnosisOthersRemark(e.target.value)}
-              placeholder={t("Please specify...")}
-              className={`mt-2 ${inputCls}`}
-            />
-          )}
-        </Field>
-
-        {/* ── Assessment and Summary questionnaire ────────────────────────── */}
-        <Field label={t("Assessment and Summary")} full>
-          {assessmentIsFallback ? (
-            // Existing resident with old free-text data — preserve as-is
+          <Field label={t("Transfer from")}>
+            <select name="transfer_from" defaultValue={resident?.transfer_from ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {TRANSFER_FROM_OPTIONS.map((o) => (
+                <option key={o} value={o}>{t(o)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Accompanied by")}>
+            <select name="accompanied_by" defaultValue={resident?.accompanied_by ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {ACCOMPANIED_BY_OPTIONS.map((o) => (
+                <option key={o} value={o}>{t(o)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Emergency contact")} full>
             <textarea
-              name="assessment_and_summary"
-              defaultValue={resident!.assessment_and_summary ?? ""}
-              rows={3}
+              name="emergency_contact"
+              defaultValue={resident?.emergency_contact ?? ""}
+              rows={2}
+              placeholder={t("e.g. Jasmin (Daughter) - 012-4948717")}
               className={inputCls}
             />
-          ) : (
-            <>
+          </Field>
+        </Section>
+
+        {/* ── Care ──────────────────────────────────────────────────────── */}
+        <Section title={t("Care")}>
+          <Field label={t("Mobility")}>
+            <select name="mobility" defaultValue={resident?.mobility ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {MOBILITY_OPTIONS.map((o) => (
+                <option key={o} value={o}>{t(o)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Hygiene")}>
+            <select name="hygiene" defaultValue={resident?.hygiene ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {HYGIENE_OPTIONS.map((o) => (
+                <option key={o} value={o}>{t(o)}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Diet type")}>
+            <select name="diet_type_id" defaultValue={resident?.diet_type_id ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {dietTypes.map((d) => (
+                <option key={d.id} value={d.id}>{d.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("Feeding type")}>
+            <select name="feeding_type_id" defaultValue={resident?.feeding_type_id ?? ""} className={inputCls}>
+              <option value="">{t("--")}</option>
+              {feedingTypes.map((f) => (
+                <option key={f.id} value={f.id}>{f.label}</option>
+              ))}
+            </select>
+          </Field>
+        </Section>
+
+        {/* ── Clinical notes ────────────────────────────────────────────── */}
+        <Section title={t("Clinical notes")}>
+
+          {/* Allergy */}
+          <Field label={t("Allergy")} full>
+            {allergyIsFallback ? (
+              <textarea name="allergy" defaultValue={resident!.allergy ?? ""} rows={2} className={inputCls} />
+            ) : (
+              <>
+                <input type="hidden" name="allergy" value={compileAllergy(allergyQ)} />
+                <div className="mt-3 space-y-4">
+                  <AllergyQuestion
+                    label={t("Is patient having any food allergy?")}
+                    yn={allergyQ.foodYN}
+                    reaction={allergyQ.foodReaction}
+                    reactionPlaceholder={t("What is the reaction?")}
+                    onYN={(v) => allergySet("foodYN", v)}
+                    onReaction={(v) => allergySet("foodReaction", v)}
+                    t={t}
+                  />
+                  <AllergyQuestion
+                    label={t("Is patient having any medicine allergy?")}
+                    yn={allergyQ.medYN}
+                    reaction={allergyQ.medReaction}
+                    reactionPlaceholder={t("What is the reaction?")}
+                    onYN={(v) => allergySet("medYN", v)}
+                    onReaction={(v) => allergySet("medReaction", v)}
+                    t={t}
+                  />
+                </div>
+              </>
+            )}
+          </Field>
+
+          {/* Known history of Medical/Surgical Condition */}
+          <Field label={t("Known history of Medical/Surgical Condition")} full>
+            {selectedDiagnosisIds.map((id) => {
+              const opt = diagnosisOptions.find((o) => o.id === id);
+              return (
+                <span key={id}>
+                  <input type="hidden" name="diagnosis_option_ids" value={id} />
+                  <input type="hidden" name="diagnosis_option_labels" value={opt?.name_en ?? String(id)} />
+                </span>
+              );
+            })}
+            <input type="hidden" name="diagnosis_others_remark" value={diagnosisOthersRemark} />
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {diagnosisOptions.map((opt) => {
+                const checked = selectedDiagnosisIds.includes(opt.id);
+                return (
+                  <label
+                    key={opt.id}
+                    className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                      checked
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-800"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleDiagnosis(opt.id)}
+                      className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                    />
+                    <span className="text-sm leading-tight">
+                      {opt.name_en}
+                      {opt.name_ms && opt.name_ms !== opt.name_en && (
+                        <span className="block text-xs text-gray-400">{opt.name_ms}</span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {othersOption && selectedDiagnosisIds.includes(othersOption.id) && (
               <input
-                type="hidden"
-                name="assessment_and_summary"
-                value={compileAssessment(assessmentQ)}
+                type="text"
+                value={diagnosisOthersRemark}
+                onChange={(e) => { markDirty(); setDiagnosisOthersRemark(e.target.value); }}
+                placeholder={t("Please specify...")}
+                className={`mt-2 ${inputCls}`}
               />
-              <div className="mt-3 space-y-5">
+            )}
+          </Field>
 
-                {/* Group: Arrival */}
-                <div className="space-y-3">
-                  <QGroupHeader title={t("Arrival")} />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-sm text-gray-700">{t("Arrive at what time?")}</p>
-                      <input
-                        type="time"
-                        value={assessmentQ.arrivalTime}
-                        onChange={(e) => assessSet("arrivalTime", e.target.value)}
-                        className={inputCls}
-                      />
+          {/* Assessment and Summary */}
+          <Field label={t("Assessment and Summary")} full>
+            {assessmentIsFallback ? (
+              <textarea
+                name="assessment_and_summary"
+                defaultValue={resident!.assessment_and_summary ?? ""}
+                rows={3}
+                className={inputCls}
+              />
+            ) : (
+              <>
+                <input
+                  type="hidden"
+                  name="assessment_and_summary"
+                  value={compileAssessment(assessmentQ)}
+                />
+                <div className="mt-3 space-y-6">
+
+                  {/* Arrival */}
+                  <div className="space-y-3">
+                    <QGroupHeader title={t("Arrival")} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <QLabel>{t("Arrive at what time?")}</QLabel>
+                        <input
+                          type="time"
+                          value={assessmentQ.arrivalTime}
+                          onChange={(e) => assessSet("arrivalTime", e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <QLabel>{t("Mode of arrival")}</QLabel>
+                        <div className="mt-1.5 flex gap-2 flex-wrap">
+                          {ARRIVAL_MODES.map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() =>
+                                assessSet("modeOfArrival", assessmentQ.modeOfArrival === mode ? "" : mode)
+                              }
+                              className={`px-3 py-1.5 text-sm rounded-lg border font-medium transition-colors cursor-pointer ${
+                                assessmentQ.modeOfArrival === mode
+                                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                  : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                              }`}
+                            >
+                              {t(mode)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Clinical status on arrival */}
+                  <div className="space-y-4">
+                    <QGroupHeader title={t("Clinical status on arrival")} />
                     <div>
-                      <p className="text-sm text-gray-700">{t("Mode of arrival")}</p>
-                      <div className="mt-1 flex gap-2 flex-wrap">
-                        {ARRIVAL_MODES.map((mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() =>
-                              assessSet(
-                                "modeOfArrival",
-                                assessmentQ.modeOfArrival === mode ? "" : mode,
-                              )
-                            }
-                            className={`px-3 py-1 text-sm rounded-full border font-medium transition-colors ${
-                              assessmentQ.modeOfArrival === mode
-                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                : "border-gray-300 bg-white text-gray-600 hover:border-gray-400"
-                            }`}
-                          >
-                            {t(mode)}
-                          </button>
+                      <QLabel>{t("AVPU status")}</QLabel>
+                      <select
+                        value={assessmentQ.avpu}
+                        onChange={(e) => assessSet("avpu", e.target.value)}
+                        className={`sm:max-w-xs ${inputCls}`}
+                      >
+                        <option value="">{t("--")}</option>
+                        {AVPU_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
                         ))}
-                      </div>
+                      </select>
                     </div>
-                  </div>
-                </div>
-
-                {/* Group: Clinical status on arrival */}
-                <div className="space-y-3">
-                  <QGroupHeader title={t("Clinical status on arrival")} />
-                  <div>
-                    <p className="text-sm text-gray-700">{t("AVPU status")}</p>
-                    <select
-                      value={assessmentQ.avpu}
-                      onChange={(e) => assessSet("avpu", e.target.value)}
-                      className={inputCls}
-                    >
-                      <option value="">{t("--")}</option>
-                      {AVPU_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {(
+                        [
+                          { key: "cough", label: t("Got cough?") },
+                          { key: "fever", label: t("Got fever?") },
+                          { key: "pain", label: t("Got pain?") },
+                        ] as { key: "cough" | "fever" | "pain"; label: string }[]
+                      ).map(({ key, label }) => (
+                        <div key={key}>
+                          <QLabel>{label}</QLabel>
+                          <YesNoButtons
+                            value={assessmentQ[key]}
+                            onChange={(v) => assessSet(key, v)}
+                            t={t}
+                          />
+                        </div>
                       ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {(
-                      [
-                        { key: "cough", label: t("Got cough?") },
-                        { key: "fever", label: t("Got fever?") },
-                        { key: "pain", label: t("Got pain?") },
-                      ] as { key: "cough" | "fever" | "pain"; label: string }[]
-                    ).map(({ key, label }) => (
-                      <div key={key}>
-                        <p className="text-sm text-gray-700">{label}</p>
-                        <YesNoButtons
-                          value={assessmentQ[key]}
-                          onChange={(v) => assessSet(key, v)}
-                          t={t}
+                    </div>
+                    <div>
+                      <QLabel>{t("Any other active complaints?")}</QLabel>
+                      <YesNoButtons
+                        value={assessmentQ.activeComplaints}
+                        onChange={(v) => {
+                          assessSet("activeComplaints", v);
+                          if (v === "no") assessSet("activeComplaintsDetail", "");
+                        }}
+                        t={t}
+                      />
+                      {assessmentQ.activeComplaints === "yes" && (
+                        <input
+                          type="text"
+                          value={assessmentQ.activeComplaintsDetail}
+                          onChange={(e) => assessSet("activeComplaintsDetail", e.target.value)}
+                          placeholder={t("Please specify the complaint")}
+                          className={`mt-2 ${inputCls}`}
+                        />
+                      )}
+                    </div>
+                    {/* Treatment given — shared, shown when any symptom is Yes */}
+                    {anySymptomYes && (
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-3">
+                        <QLabel>{t("Any treatment given?")}</QLabel>
+                        <input
+                          type="text"
+                          value={assessmentQ.treatmentGiven}
+                          onChange={(e) => assessSet("treatmentGiven", e.target.value)}
+                          placeholder={t("e.g. Paracetamol 500mg PO stat")}
+                          className={`mt-1.5 ${inputCls}`}
                         />
                       </div>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-700">{t("Any other active complaints?")}</p>
-                    <YesNoButtons
-                      value={assessmentQ.activeComplaints}
-                      onChange={(v) => assessSet("activeComplaints", v)}
-                      t={t}
-                    />
-                    {assessmentQ.activeComplaints === "yes" && (
-                      <input
-                        type="text"
-                        value={assessmentQ.treatmentGiven}
-                        onChange={(e) => assessSet("treatmentGiven", e.target.value)}
-                        placeholder={t("Any treatment given?")}
-                        className={`mt-2 ${inputCls}`}
-                      />
                     )}
                   </div>
-                </div>
 
-                {/* Group: Nutrition & elimination */}
-                <div className="space-y-3">
-                  <QGroupHeader title={t("Nutrition & elimination")} />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-sm text-gray-700">{t("When is the last meal taken?")}</p>
-                      <input
-                        type="text"
-                        value={assessmentQ.lastMeal}
-                        onChange={(e) => assessSet("lastMeal", e.target.value)}
-                        className={inputCls}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-700">{t("Any food served after the admission?")}</p>
-                      <input
-                        type="text"
-                        value={assessmentQ.foodAfterAdmission}
-                        onChange={(e) => assessSet("foodAfterAdmission", e.target.value)}
-                        className={inputCls}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-700">{t("When is last bowel output?")}</p>
-                      <input
-                        type="text"
-                        value={assessmentQ.lastBowelOutput}
-                        onChange={(e) => assessSet("lastBowelOutput", e.target.value)}
-                        className={inputCls}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-700">{t("Is patient on urine catheter?")}</p>
-                    <YesNoButtons
-                      value={assessmentQ.urineCatheter}
-                      onChange={(v) => {
-                        assessSet("urineCatheter", v);
-                        if (v === "no") assessSet("urineCatheterDate", "");
-                      }}
-                      t={t}
-                    />
-                    {assessmentQ.urineCatheter === "yes" && (
-                      <div className="mt-2 sm:max-w-xs">
-                        <p className="text-xs text-gray-500">{t("When was it last inserted?")}</p>
+                  {/* Nutrition & elimination */}
+                  <div className="space-y-4">
+                    <QGroupHeader title={t("Nutrition & elimination")} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <QLabel>{t("When is the last meal taken?")}</QLabel>
                         <input
-                          type="date"
-                          value={assessmentQ.urineCatheterDate}
-                          onChange={(e) => assessSet("urineCatheterDate", e.target.value)}
+                          type="text"
+                          value={assessmentQ.lastMeal}
+                          onChange={(e) => assessSet("lastMeal", e.target.value)}
                           className={inputCls}
                         />
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-700">{t("Is patient on feeding tube?")}</p>
-                    <YesNoButtons
-                      value={assessmentQ.feedingTube}
-                      onChange={(v) => {
-                        assessSet("feedingTube", v);
-                        if (v === "no") assessSet("feedingTubeDate", "");
-                      }}
-                      t={t}
-                    />
-                    {assessmentQ.feedingTube === "yes" && (
-                      <div className="mt-2 sm:max-w-xs">
-                        <p className="text-xs text-gray-500">{t("When was it last inserted?")}</p>
+                      <div>
+                        <QLabel>{t("Any food served after the admission?")}</QLabel>
                         <input
-                          type="date"
-                          value={assessmentQ.feedingTubeDate}
-                          onChange={(e) => assessSet("feedingTubeDate", e.target.value)}
+                          type="text"
+                          value={assessmentQ.foodAfterAdmission}
+                          onChange={(e) => assessSet("foodAfterAdmission", e.target.value)}
                           className={inputCls}
                         />
                       </div>
-                    )}
+                      <div>
+                        <QLabel>{t("When is the last bowel output?")}</QLabel>
+                        <input
+                          type="text"
+                          value={assessmentQ.lastBowelOutput}
+                          onChange={(e) => assessSet("lastBowelOutput", e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <QLabel>{t("Is patient on urine catheter?")}</QLabel>
+                      <YesNoButtons
+                        value={assessmentQ.urineCatheter}
+                        onChange={(v) => {
+                          assessSet("urineCatheter", v);
+                          if (v === "no") assessSet("urineCatheterDate", "");
+                        }}
+                        t={t}
+                      />
+                      {assessmentQ.urineCatheter === "yes" && (
+                        <div className="mt-2 sm:max-w-xs">
+                          <QLabel small>{t("When was it last inserted?")}</QLabel>
+                          <input
+                            type="date"
+                            value={assessmentQ.urineCatheterDate}
+                            onChange={(e) => assessSet("urineCatheterDate", e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <QLabel>{t("Is patient on feeding tube?")}</QLabel>
+                      <YesNoButtons
+                        value={assessmentQ.feedingTube}
+                        onChange={(v) => {
+                          assessSet("feedingTube", v);
+                          if (v === "no") assessSet("feedingTubeDate", "");
+                        }}
+                        t={t}
+                      />
+                      {assessmentQ.feedingTube === "yes" && (
+                        <div className="mt-2 sm:max-w-xs">
+                          <QLabel small>{t("When was it last inserted?")}</QLabel>
+                          <input
+                            type="date"
+                            value={assessmentQ.feedingTubeDate}
+                            onChange={(e) => assessSet("feedingTubeDate", e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-              </div>
-            </>
+                </div>
+              </>
+            )}
+          </Field>
+
+          {/* TCA notes */}
+          <Field label={t("TCA notes")} full>
+            <textarea
+              name="tca_notes"
+              defaultValue={resident?.tca_notes ?? ""}
+              rows={2}
+              placeholder={t("e.g. MOPD 1/12/2026, SOPD 21/11/2026")}
+              className={inputCls}
+            />
+          </Field>
+        </Section>
+
+        {/* ── Attribution ───────────────────────────────────────────────── */}
+        <Section title={t("Attribution")}>
+          <Field label={t("Reviewed by")} required full>
+            <input type="hidden" name="reviewed_by" value={reviewedBy} />
+            <input type="hidden" name="reviewed_by_other" value={reviewedByOther} />
+            <StaffPickerWithOther
+              value={reviewedBy}
+              otherName={reviewedByOther}
+              onValueChange={(v) => {
+                markDirty();
+                setReviewedBy(v);
+                if (v !== OTHERS_SENTINEL) setReviewedByOther("");
+              }}
+              onOtherNameChange={(v) => { markDirty(); setReviewedByOther(v); }}
+              staffOptions={staffForBranch}
+              disabled={!branchId}
+              required
+            />
+          </Field>
+        </Section>
+
+        {/* ── Submit ────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-60 cursor-pointer"
+          >
+            {isPending && (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
+            {isPending ? t("Saving...") : resident ? t("Save changes") : t("Create resident")}
+          </button>
+          {backHref !== undefined && !isPending && (
+            <button
+              type="button"
+              onClick={handleBackClick}
+              className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              {t("Cancel")}
+            </button>
           )}
-        </Field>
-
-        <Field label={t("TCA notes")} full>
-          <textarea
-            name="tca_notes"
-            defaultValue={resident?.tca_notes ?? ""}
-            rows={2}
-            placeholder={t("e.g. MOPD 1/12/2026, SOPD 21/11/2026")}
-            className={inputCls}
-          />
-        </Field>
-      </Section>
-
-      <Section title={t("Attribution")}>
-        <Field label={t("Reviewed by")} required full>
-          <input type="hidden" name="reviewed_by" value={reviewedBy} />
-          <input type="hidden" name="reviewed_by_other" value={reviewedByOther} />
-          <StaffPickerWithOther
-            value={reviewedBy}
-            otherName={reviewedByOther}
-            onValueChange={(v) => {
-              setReviewedBy(v);
-              if (v !== OTHERS_SENTINEL) setReviewedByOther("");
-            }}
-            onOtherNameChange={setReviewedByOther}
-            staffOptions={staffForBranch}
-            disabled={!branchId}
-            required
-          />
-        </Field>
-      </Section>
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-60"
-      >
-        {isPending && (
-          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        )}
-        {isPending ? t("Saving...") : resident ? t("Save changes") : t("Create resident")}
-      </button>
-    </form>
+        </div>
+      </form>
+    </>
   );
 }
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+  "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-colors";
 
 function YesNoButtons({
   value,
@@ -821,18 +967,18 @@ function YesNoButtons({
   t: (s: string) => string;
 }) {
   return (
-    <div className="mt-1 flex gap-2">
+    <div className="mt-1.5 flex gap-2">
       {(["yes", "no"] as const).map((opt) => (
         <button
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`min-w-[64px] px-4 py-1 text-sm rounded-full border font-medium transition-colors ${
+          className={`min-w-[72px] px-4 py-2 text-sm rounded-lg border font-medium transition-colors cursor-pointer ${
             value === opt
               ? opt === "yes"
-                ? "border-green-500 bg-green-50 text-green-700"
-                : "border-gray-400 bg-gray-100 text-gray-700"
-              : "border-gray-300 bg-white text-gray-500 hover:border-gray-400"
+                ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
+                : "border-gray-400 bg-gray-100 text-gray-700 shadow-sm"
+              : "border-gray-300 bg-white text-gray-500 hover:border-gray-400 hover:bg-gray-50"
           }`}
         >
           {opt === "yes" ? t("Yes") : t("No")}
@@ -861,7 +1007,7 @@ function AllergyQuestion({
 }) {
   return (
     <div className="space-y-1">
-      <p className="text-sm text-gray-700">{label}</p>
+      <p className="text-sm font-medium text-gray-700">{label}</p>
       <YesNoButtons value={yn} onChange={onYN} t={t} />
       {yn === "yes" && (
         <input
@@ -876,20 +1022,37 @@ function AllergyQuestion({
   );
 }
 
+function QLabel({ children, small }: { children: React.ReactNode; small?: boolean }) {
+  return (
+    <p className={`font-medium text-gray-700 ${small ? "text-xs text-gray-500" : "text-sm"}`}>
+      {children}
+    </p>
+  );
+}
+
 function QGroupHeader({ title }: { title: string }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-100 pb-1">
-      {title}
-    </p>
+    <div className="flex items-center gap-2">
+      <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">{title}</p>
+      <div className="flex-1 h-px bg-indigo-100" />
+    </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <legend className="px-1 text-sm font-medium text-gray-900">{title}</legend>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">{children}</div>
-    </fieldset>
+    <div
+      role="group"
+      aria-label={title}
+      className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+    >
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <p className="text-sm font-bold text-gray-900">{title}</p>
+      </div>
+      <div className="p-4 grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2 md:grid-cols-3">
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -906,9 +1069,9 @@ function Field({
 }) {
   return (
     <div className={`text-sm text-gray-700 ${full ? "sm:col-span-2 md:col-span-3" : ""}`}>
-      <p className="font-medium">
+      <p className="font-semibold text-gray-800">
         {label}
-        {required && <span className="text-red-500"> *</span>}
+        {required && <span className="ml-0.5 text-red-500">*</span>}
       </p>
       {children}
     </div>

@@ -44,6 +44,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
         defaultBranchId={null}
         isAdmin={isAdmin(currentUser)}
         action={boundAction}
+        backHref={`/residents/${id}`}
       />
     </div>
   );

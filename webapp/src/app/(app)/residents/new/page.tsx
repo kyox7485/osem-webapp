@@ -1,5 +1,4 @@
 import { ResidentForm } from "@/components/resident-form";
-import { BackButton } from "@/components/back-button";
 import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch, getDiagnosisOptions } from "@/lib/lookups";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createResident } from "../actions";
@@ -21,7 +20,6 @@ export default async function NewResidentPage() {
   return (
     <div>
       <PageTitle title={t("New resident")} />
-      <BackButton />
       <ResidentForm
         nationalities={nationalities}
         dietTypes={dietTypes}
@@ -32,6 +30,7 @@ export default async function NewResidentPage() {
         defaultBranchId={isAdmin(currentUser) ? null : currentUser?.branch_id ?? null}
         isAdmin={isAdmin(currentUser)}
         action={createResident}
+        backHref="/residents"
       />
     </div>
   );
