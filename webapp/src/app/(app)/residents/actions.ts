@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 function optional(value: FormDataEntryValue | null): string | null {
   const s = value?.toString().trim();
@@ -78,6 +79,37 @@ export async function createResident(formData: FormData) {
   if (error) {
     return { error: error.message };
   }
+
+  // Send Telegram notification to the branch group
+  const branchMeta = await supabase
+    .from("tbl_branches")
+    .select("telegram_chat_id, BranchCode")
+    .eq("BranchID", payload.branch_id)
+    .single();
+  const branchChatId = branchMeta.data?.telegram_chat_id ?? null;
+
+  const reviewerLabel = payload.reviewed_by_other ?? payload.reviewed_by ?? "Unknown";
+  const val = (v: string | number | null | undefined) => (v != null && v !== "" ? String(v) : "--");
+
+  const lines = [
+    `🏠 <b>New Resident Admitted</b>`,
+    ``,
+    `👤 <b>${payload.resident_name}</b>`,
+    payload.ic_number ? `🪪 IC/Passport: ${payload.ic_number}` : null,
+    payload.age ? `🎂 Age: ${payload.age}` : null,
+    payload.gender ? `⚧ Gender: ${payload.gender}` : null,
+    payload.care_type ? `🛏 Care type: ${payload.care_type}` : null,
+    payload.admission_date ? `📅 Admission date: ${payload.admission_date}` : null,
+    payload.transfer_from ? `🏥 Transfer from: ${payload.transfer_from}` : null,
+    payload.allergy ? `⚠️ Allergy: ${payload.allergy}` : null,
+    payload.past_medical_condition ? `📋 Medical history: ${payload.past_medical_condition}` : null,
+    ``,
+    `✍️ Entered by: ${reviewerLabel}`,
+  ]
+    .filter((l) => l !== null)
+    .join("\n");
+
+  await sendTelegramMessage(lines, branchChatId);
 
   revalidatePath("/residents");
   redirect(`/residents/${data.id}`);

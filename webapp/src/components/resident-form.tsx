@@ -253,14 +253,11 @@ export function ResidentForm({
         <Field label={t("Allergy")} full>
           <input name="allergy" defaultValue={resident?.allergy ?? ""} className={inputCls} />
         </Field>
-        <Field label={t("Past medical condition")} full>
+        <Field label={t("Known history of Medical/Surgical Condition")} full>
           <textarea name="past_medical_condition" defaultValue={resident?.past_medical_condition ?? ""} rows={3} className={inputCls} />
         </Field>
         <Field label={t("Assessment and summary")} full>
           <textarea name="assessment_and_summary" defaultValue={resident?.assessment_and_summary ?? ""} rows={3} className={inputCls} />
-        </Field>
-        <Field label={t("Current medication list")} full>
-          <textarea name="current_medication_list" defaultValue={resident?.current_medication_list ?? ""} rows={3} className={inputCls} />
         </Field>
         <Field label={t("TCA notes")} full>
           <textarea
