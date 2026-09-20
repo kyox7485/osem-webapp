@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/components/language-provider";
-import { formatBranch } from "@/lib/lookups";
+
+function formatBranch(branch: { locale: string | null; code: string } | null | undefined): string {
+  if (!branch) return "--";
+  return branch.locale ?? branch.code;
+}
 
 type AccountRow = {
   id: number;
