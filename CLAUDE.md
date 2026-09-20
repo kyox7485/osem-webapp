@@ -138,6 +138,19 @@ rather than assuming the change is live.
   every query that could return multi-branch data. The demo branch must NOT be
   excluded from the Accounts tab (the `test` account legitimately lives there
   and the admin needs to manage it).
+  **NEVER gate `getDemoBranchIds()` behind an `account.rights === "ADMIN"`
+  check.** The `test` account itself has `ADMIN` rights — gating it means
+  `demoBranchIds` gets populated, then every query excludes the demo branch,
+  and the demo account ends up unable to see any of its own residents or
+  records. `getDemoBranchIds()` must always be called unconditionally; the
+  `isDemoUser` check is what decides whether those IDs go into
+  `excludedBranchIds` or not. The pattern is always three lines, always in
+  this order, always unconditional:
+  ```ts
+  const demoBranchIds = await getDemoBranchIds();          // never gated on rights
+  const isDemoUser = demoBranchIds.includes(account.branch_id);
+  const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
+  ```
 - `tbl_user_accounts` — logins. `rights` is `ADMIN | MODERATOR | STAFF`,
   scoped to one `branch_id` (except `ADMIN`, which sees everything). This
   is what RLS policies actually check (`auth_role()` / `auth_branch_id()`
