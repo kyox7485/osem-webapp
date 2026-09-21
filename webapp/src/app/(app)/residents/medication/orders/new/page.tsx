@@ -7,6 +7,7 @@ import { getServerTranslator } from "@/lib/i18n/server";
 import { ResidentsModuleTabs } from "../../../module-tabs";
 import { MedicationSubTabs } from "../../medication-tabs";
 import { OrderForm } from "../order-form";
+import type { ResidentOption, StaffEntry } from "../order-form";
 
 export default async function NewMedicationOrderPage() {
   const { t } = await getServerTranslator();
@@ -20,7 +21,7 @@ export default async function NewMedicationOrderPage() {
   const isDemoUser = demoBranchIds.includes(currentUser.branch_id);
   const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
 
-  // ── Active residents with a ResidentID (required for the Sheet) ────────────
+  // ── Active residents with a ResidentID (required for the Sheet) ──────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let residentsQuery: any = supabase
     .from("tbl_residents")
@@ -50,11 +51,44 @@ export default async function NewMedicationOrderPage() {
     branch_id: number;
   };
 
-  const residents = ((residentsRaw ?? []) as ResidentRow[]).map((r) => ({
+  const residents: ResidentOption[] = (
+    (residentsRaw ?? []) as ResidentRow[]
+  ).map((r) => ({
     id: r.id,
     name: r.resident_name,
     residentTextId: r.ResidentID,
+    branchId: r.branch_id,
   }));
+
+  // ── Staff for Noted By picker ────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let staffQuery: any = supabase
+    .from("tbl_staff")
+    .select("staff_name, branch_id")
+    .order("staff_name");
+
+  if (admin) {
+    if (excludedBranchIds.length > 0) {
+      staffQuery = staffQuery.not(
+        "branch_id",
+        "in",
+        `(${excludedBranchIds.join(",")})`
+      );
+    }
+  } else {
+    staffQuery = staffQuery.eq("branch_id", currentUser.branch_id);
+  }
+
+  const { data: staffRaw } = await staffQuery;
+
+  type StaffRow = { staff_name: string; branch_id: number };
+
+  const staffOptions: StaffEntry[] = ((staffRaw ?? []) as StaffRow[]).map(
+    (s) => ({
+      name: s.staff_name,
+      branchId: s.branch_id,
+    })
+  );
 
   return (
     <div>
@@ -67,10 +101,12 @@ export default async function NewMedicationOrderPage() {
       </div>
 
       <div className="mb-4 flex items-center gap-2">
-        <h2 className="text-base font-semibold text-gray-800">{t("New Medication Order")}</h2>
+        <h2 className="text-base font-semibold text-gray-800">
+          {t("New Medication Order")}
+        </h2>
       </div>
 
-      <OrderForm mode="create" residents={residents} />
+      <OrderForm mode="create" residents={residents} staffOptions={staffOptions} />
     </div>
   );
 }

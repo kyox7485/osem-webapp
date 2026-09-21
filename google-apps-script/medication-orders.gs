@@ -16,7 +16,7 @@
 //    deployment → New version. A plain Ctrl+S does NOT update the /exec URL.
 
 const SPREADSHEET_ID = "1HXT8HFjjjBakaZiLeU9FggM8cKLZJDBrUjnNqRK3goA";
-const SHEET_NAME = "tbl_medication_order";
+const SHEET_NAME = "tbl_medicationorder";
 const SHARED_SECRET = "REPLACE_ME";
 
 // Column names exactly as defined in the sheet — do not reorder.
@@ -151,6 +151,9 @@ function updateOrder(rxOrderId, order) {
         if (col === "RxOrderID") continue; // never overwrite the identifier
         const idx = colMap[col];
         if (idx !== undefined && order[col] !== undefined) {
+          // Don't clear PreviousRxOrderID with an empty string — preserve the
+          // existing value if the caller didn't supply a non-empty replacement.
+          if (col === "PreviousRxOrderID" && order[col] === "") continue;
           newRow[idx] = order[col] !== null ? order[col] : "";
         }
       }

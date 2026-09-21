@@ -7,6 +7,7 @@ import { getServerTranslator } from "@/lib/i18n/server";
 import { ResidentsModuleTabs } from "../../../../module-tabs";
 import { MedicationSubTabs } from "../../../medication-tabs";
 import { OrderForm } from "../../order-form";
+import type { StaffEntry } from "../../order-form";
 
 export default async function EditMedicationOrderPage({
   params,
@@ -48,7 +49,7 @@ export default async function EditMedicationOrderPage({
     }
   }
 
-  // ── Fetch resident for display ─────────────────────────────────────────────
+  // ── Fetch resident for display ────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const residentQ: any = supabase
     .from("tbl_residents")
@@ -61,9 +62,25 @@ export default async function EditMedicationOrderPage({
     ? `${residentRaw.ResidentID ?? ""}${residentRaw.ResidentID ? " – " : ""}${residentRaw.resident_name}`
     : `Resident #${orderRaw.resident_id}`;
 
-  // ── Map Supabase column names → form field names ───────────────────────────
-  // Supabase mirror uses snake_case; the form uses camelCase matching the
-  // OrderFormValues type.
+  // ── Staff for Noted By picker (filtered to order's branch) ────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const staffQ: any = supabase
+    .from("tbl_staff")
+    .select("staff_name, branch_id")
+    .eq("branch_id", orderRaw.branch_id)
+    .order("staff_name");
+  const { data: staffRaw } = await staffQ;
+
+  type StaffRow = { staff_name: string; branch_id: number };
+
+  const staffOptions: StaffEntry[] = ((staffRaw ?? []) as StaffRow[]).map(
+    (s) => ({
+      name: s.staff_name,
+      branchId: s.branch_id,
+    })
+  );
+
+  // ── Map Supabase columns → form field names ───────────────────────────────
   const initialValues = {
     dosageForm: orderRaw.dosage_form ?? "",
     brandName: orderRaw.brand_name ?? "",
@@ -82,6 +99,8 @@ export default async function EditMedicationOrderPage({
     orderedBy: orderRaw.ordered_by ?? "",
     suppliedBy: orderRaw.supplied_by ?? "",
     status: orderRaw.status ?? "Active",
+    // previous_order_id in mirror is bigint FK; we send "" so the Apps Script
+    // preserves the existing sheet value (see updateOrderAction logic).
     previousRxOrderId: "",
   };
 
@@ -96,14 +115,18 @@ export default async function EditMedicationOrderPage({
       </div>
 
       <div className="mb-4">
-        <h2 className="text-base font-semibold text-gray-800">{t("Edit Medication Order")}</h2>
+        <h2 className="text-base font-semibold text-gray-800">
+          {t("Edit Medication Order")}
+        </h2>
       </div>
 
       <OrderForm
         mode="edit"
         rxOrderId={rxOrderId}
         residentDisplay={residentDisplay}
+        residentBranchId={orderRaw.branch_id}
         initialValues={initialValues}
+        staffOptions={staffOptions}
       />
     </div>
   );

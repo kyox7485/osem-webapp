@@ -9,9 +9,6 @@ import {
   updateMedicationOrder,
 } from "@/lib/medication-orders-script";
 
-// Generates an 8-character lowercase hex ID and checks the Supabase mirror
-// for collisions. The mirror's unique index on external_ref_id is the ground
-// truth for whether an ID is already taken.
 async function generateRxOrderId(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<string> {
@@ -28,7 +25,7 @@ async function generateRxOrderId(
 }
 
 export type OrderFormValues = {
-  residentId: string; // numeric tbl_residents.id as string
+  residentId: string;
   dosageForm: string;
   brandName: string;
   activeIngredient: string;
@@ -40,8 +37,8 @@ export type OrderFormValues = {
   indication: string;
   instruction: string;
   durationType: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD or ""
+  startDate: string;
+  endDate: string;
   notedBy: string;
   orderedBy: string;
   suppliedBy: string;
@@ -49,20 +46,51 @@ export type OrderFormValues = {
   previousRxOrderId: string;
 };
 
+function validateOrderFields(
+  values: Omit<OrderFormValues, "residentId">
+): string | null {
+  if (!values.dosageForm?.trim()) return "Dosage form is required";
+  if (!values.activeIngredient?.trim()) return "Active ingredient is required";
+
+  const doseNum = parseFloat(values.dose ?? "");
+  if (!values.dose?.trim() || isNaN(doseNum) || doseNum <= 0)
+    return "A valid dose is required";
+
+  if (!values.unit?.trim()) return "Unit is required";
+  if (!values.frequency?.trim()) return "Frequency is required";
+
+  if (values.frequency !== "PRN" && !values.administrationTimes?.trim())
+    return "Administration times are required";
+
+  if (
+    (values.frequency === "Selected Days" || values.frequency === "Others") &&
+    !values.dosingDays?.trim()
+  )
+    return "Dosing days are required";
+
+  if (!values.durationType?.trim()) return "Duration type is required";
+
+  if (values.durationType === "Short Term" && !values.endDate?.trim())
+    return "End date is required for Short Term orders";
+
+  if (!values.startDate?.trim()) return "Start date is required";
+  if (!values.orderedBy?.trim()) return "Ordered by is required";
+  if (!values.suppliedBy?.trim()) return "Supplied by is required";
+
+  return null;
+}
+
 export async function createOrderAction(
   values: OrderFormValues
 ): Promise<{ success: boolean; error?: string; rxOrderId?: string }> {
   const account = await getCurrentUser();
   if (!account) return { success: false, error: "Not authenticated" };
 
-  if (!values.activeIngredient?.trim())
-    return { success: false, error: "Active ingredient is required" };
-  if (!values.startDate)
-    return { success: false, error: "Start date is required" };
-  if (!values.orderedBy?.trim())
-    return { success: false, error: "Ordered by is required" };
   if (!values.residentId)
     return { success: false, error: "Resident is required" };
+
+  const validationError = validateOrderFields(values);
+  if (validationError) return { success: false, error: validationError };
 
   const supabase = await createClient();
 
@@ -76,7 +104,10 @@ export async function createOrderAction(
 
   if (!resident) return { success: false, error: "Resident not found" };
   if (!resident.ResidentID)
-    return { success: false, error: "Resident has no ResidentID — cannot submit order" };
+    return {
+      success: false,
+      error: "Resident has no ResidentID — cannot submit order",
+    };
 
   const admin = isAdmin(account);
 
@@ -106,23 +137,23 @@ export async function createOrderAction(
     await createMedicationOrder({
       RxOrderID: rxOrderId,
       ResidentID: resident.ResidentID,
-      "Dosage Form": values.dosageForm || "",
+      "Dosage Form": values.dosageForm,
       "Brand Name": values.brandName || "",
       "Active Ingredient": values.activeIngredient.trim(),
-      Dose: values.dose || "",
-      Unit: values.unit || "",
-      Frequency: values.frequency || "",
+      Dose: values.dose,
+      Unit: values.unit,
+      Frequency: values.frequency,
       "Administration Times": values.administrationTimes || "",
       "Dosing Days": values.dosingDays || "",
       Indication: values.indication || "",
       Instruction: values.instruction || "",
-      "Duration Type": values.durationType || "",
+      "Duration Type": values.durationType,
       "Start Date": values.startDate,
       "End Date": values.endDate || "",
       "Noted By": values.notedBy || "",
-      "Ordered By": values.orderedBy.trim(),
-      "Supplied By": values.suppliedBy || "",
-      Status: values.status || "Active",
+      "Ordered By": values.orderedBy,
+      "Supplied By": values.suppliedBy,
+      Status: "Active",
       PreviousRxOrderID: values.previousRxOrderId || "",
     });
   } catch (err) {
@@ -143,16 +174,11 @@ export async function updateOrderAction(
   const account = await getCurrentUser();
   if (!account) return { success: false, error: "Not authenticated" };
 
-  if (!values.activeIngredient?.trim())
-    return { success: false, error: "Active ingredient is required" };
-  if (!values.startDate)
-    return { success: false, error: "Start date is required" };
-  if (!values.orderedBy?.trim())
-    return { success: false, error: "Ordered by is required" };
+  const validationError = validateOrderFields(values);
+  if (validationError) return { success: false, error: validationError };
 
   const supabase = await createClient();
 
-  // Verify order exists and confirm access via the Supabase mirror.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingOrderQ: any = supabase
     .from("tbl_medication_orders")
@@ -177,27 +203,40 @@ export async function updateOrderAction(
     }
   }
 
+  // Build update payload — omit PreviousRxOrderID when empty so the Apps
+  // Script preserves the existing sheet value rather than clearing it.
+  const updatePayload: Omit<
+    Parameters<typeof updateMedicationOrder>[1],
+    "PreviousRxOrderID"
+  > & { PreviousRxOrderID?: string } = {
+    "Dosage Form": values.dosageForm,
+    "Brand Name": values.brandName || "",
+    "Active Ingredient": values.activeIngredient.trim(),
+    Dose: values.dose,
+    Unit: values.unit,
+    Frequency: values.frequency,
+    "Administration Times": values.administrationTimes || "",
+    "Dosing Days": values.dosingDays || "",
+    Indication: values.indication || "",
+    Instruction: values.instruction || "",
+    "Duration Type": values.durationType,
+    "Start Date": values.startDate,
+    "End Date": values.endDate || "",
+    "Noted By": values.notedBy || "",
+    "Ordered By": values.orderedBy,
+    "Supplied By": values.suppliedBy,
+    Status: "Active",
+  };
+
+  if (values.previousRxOrderId) {
+    updatePayload.PreviousRxOrderID = values.previousRxOrderId;
+  }
+
   try {
-    await updateMedicationOrder(rxOrderId, {
-      "Dosage Form": values.dosageForm || "",
-      "Brand Name": values.brandName || "",
-      "Active Ingredient": values.activeIngredient.trim(),
-      Dose: values.dose || "",
-      Unit: values.unit || "",
-      Frequency: values.frequency || "",
-      "Administration Times": values.administrationTimes || "",
-      "Dosing Days": values.dosingDays || "",
-      Indication: values.indication || "",
-      Instruction: values.instruction || "",
-      "Duration Type": values.durationType || "",
-      "Start Date": values.startDate,
-      "End Date": values.endDate || "",
-      "Noted By": values.notedBy || "",
-      "Ordered By": values.orderedBy.trim(),
-      "Supplied By": values.suppliedBy || "",
-      Status: values.status || "Active",
-      PreviousRxOrderID: values.previousRxOrderId || "",
-    });
+    await updateMedicationOrder(
+      rxOrderId,
+      updatePayload as Parameters<typeof updateMedicationOrder>[1]
+    );
   } catch (err) {
     console.error("updateOrderAction — Apps Script error:", err);
     return {
