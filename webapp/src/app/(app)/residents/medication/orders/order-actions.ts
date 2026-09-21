@@ -40,11 +40,9 @@ export type OrderFormValues = {
   startDate: string;
   endDate: string;
   notedBy: string;
-  notedByStaffId: string;
   orderedBy: string;
   suppliedBy: string;
   status: string;
-  previousRxOrderId: string;
 };
 
 function validateOrderFields(
@@ -152,11 +150,10 @@ export async function createOrderAction(
       "Start Date": values.startDate,
       "End Date": values.endDate || "",
       "Noted By": values.notedBy || "",
-      "Noted By StaffID": values.notedByStaffId || "",
       "Ordered By": values.orderedBy,
       "Supplied By": values.suppliedBy,
       Status: "Active",
-      PreviousRxOrderID: values.previousRxOrderId || "",
+      PreviousRxOrderID: "",
     });
   } catch (err) {
     console.error("createOrderAction — Apps Script error:", err);
@@ -169,10 +166,18 @@ export async function createOrderAction(
   return { success: true, rxOrderId };
 }
 
+// An edit never overwrites the order in place. It discontinues the old row
+// (rxOrderId) and appends a brand-new revision row with a fresh RxOrderID
+// and PreviousRxOrderID = rxOrderId, giving a full audit trail — see
+// medication-orders.gs's updateOrder. Note that Active Ingredient, Dosage
+// Form, Dose, Unit, Frequency, Administration Times, Dosing Days,
+// Indication, and Instruction are always carried over from the OLD row by
+// Apps Script regardless of what's submitted here — they're locked in the
+// edit form UI for the same reason (see order-form.tsx).
 export async function updateOrderAction(
   rxOrderId: string,
   values: Omit<OrderFormValues, "residentId">
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; newRxOrderId?: string }> {
   const account = await getCurrentUser();
   if (!account) return { success: false, error: "Not authenticated" };
 
@@ -184,7 +189,7 @@ export async function updateOrderAction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingOrderQ: any = supabase
     .from("tbl_medication_orders")
-    .select("id, branch_id")
+    .select("id, branch_id, resident_id")
     .eq("external_ref_id", rxOrderId)
     .single();
   const { data: existingOrder } = await existingOrderQ;
@@ -205,41 +210,56 @@ export async function updateOrderAction(
     }
   }
 
-  // Build update payload — omit PreviousRxOrderID when empty so the Apps
-  // Script preserves the existing sheet value rather than clearing it.
-  const updatePayload: Omit<
-    Parameters<typeof updateMedicationOrder>[1],
-    "PreviousRxOrderID"
-  > & { PreviousRxOrderID?: string } = {
-    "Dosage Form": values.dosageForm,
-    "Brand Name": values.brandName || "",
-    "Active Ingredient": values.activeIngredient.trim(),
-    Dose: values.dose,
-    Unit: values.unit,
-    Frequency: values.frequency,
-    "Administration Times": values.administrationTimes || "",
-    "Dosing Days": values.dosingDays || "",
-    Indication: values.indication || "",
-    Instruction: values.instruction || "",
-    "Duration Type": values.durationType,
-    "Start Date": values.startDate,
-    "End Date": values.endDate || "",
-    "Noted By": values.notedBy || "",
-    "Noted By StaffID": values.notedByStaffId || "",
-    "Ordered By": values.orderedBy,
-    "Supplied By": values.suppliedBy,
-    Status: "Active",
-  };
+  // The new revision row needs the resident's Google-format ResidentID (the
+  // sheet's own identifier), not the Supabase numeric id.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const residentQ: any = supabase
+    .from("tbl_residents")
+    .select("ResidentID")
+    .eq("id", existingOrder.resident_id)
+    .single();
+  const { data: resident } = await residentQ;
 
-  if (values.previousRxOrderId) {
-    updatePayload.PreviousRxOrderID = values.previousRxOrderId;
+  if (!resident?.ResidentID) {
+    return {
+      success: false,
+      error: "Resident has no ResidentID — cannot submit order",
+    };
+  }
+
+  let newRxOrderId: string;
+  try {
+    newRxOrderId = await generateRxOrderId(supabase);
+  } catch {
+    return {
+      success: false,
+      error: "Failed to generate a unique order ID. Please try again.",
+    };
   }
 
   try {
-    await updateMedicationOrder(
-      rxOrderId,
-      updatePayload as Parameters<typeof updateMedicationOrder>[1]
-    );
+    await updateMedicationOrder(rxOrderId, {
+      RxOrderID: newRxOrderId,
+      ResidentID: resident.ResidentID,
+      "Dosage Form": values.dosageForm,
+      "Brand Name": values.brandName || "",
+      "Active Ingredient": values.activeIngredient.trim(),
+      Dose: values.dose,
+      Unit: values.unit,
+      Frequency: values.frequency,
+      "Administration Times": values.administrationTimes || "",
+      "Dosing Days": values.dosingDays || "",
+      Indication: values.indication || "",
+      Instruction: values.instruction || "",
+      "Duration Type": values.durationType,
+      "Start Date": values.startDate,
+      "End Date": values.endDate || "",
+      "Noted By": values.notedBy || "",
+      "Ordered By": values.orderedBy,
+      "Supplied By": values.suppliedBy,
+      Status: "Active",
+      PreviousRxOrderID: rxOrderId,
+    });
   } catch (err) {
     console.error("updateOrderAction — Apps Script error:", err);
     return {
@@ -248,5 +268,5 @@ export async function updateOrderAction(
     };
   }
 
-  return { success: true };
+  return { success: true, newRxOrderId };
 }

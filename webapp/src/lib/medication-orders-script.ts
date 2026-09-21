@@ -27,7 +27,15 @@ const sleep = (ms: number) =>
 type MedicationScriptResponse = {
   success: boolean;
   error?: string;
+  // Only present on "update" — an edit never overwrites the order in place;
+  // it discontinues the old row and appends a new one with this RxOrderID.
+  newRxOrderId?: string;
   supabaseSync?: {
+    success: boolean;
+    error?: string;
+    [key: string]: unknown;
+  };
+  previousOrderSync?: {
     success: boolean;
     error?: string;
     [key: string]: unknown;
@@ -74,6 +82,14 @@ async function callScript(
     );
   }
 
+  if (json.previousOrderSync && json.previousOrderSync.success === false) {
+    console.error(
+      "Old order row was discontinued in the Google Sheet, but syncing " +
+        "that status change to Supabase failed (will retry automatically):",
+      json.previousOrderSync.error
+    );
+  }
+
   return json;
 }
 
@@ -92,10 +108,9 @@ export type MedicationOrderSheetFields = {
   Indication: string;
   Instruction: string;
   "Duration Type": string;
-  "Start Date": string; // YYYY-MM-DD
-  "End Date": string; // YYYY-MM-DD or ""
-  "Noted By": string; // display name — internal staff's name, or an external doctor's name typed via "Others"
-  "Noted By StaffID": string; // set only when "Noted By" is an internal tbl_staff pick; "" for external/"Others"
+  "Start Date": string; // YYYY-MM-DD — Apps Script reformats to DD/MM/YYYY for the sheet
+  "End Date": string; // YYYY-MM-DD or "" — same reformatting
+  "Noted By": string; // internal staff's StaffID, or a free-text name typed via "Others"
   "Ordered By": string;
   "Supplied By": string;
   Status: string;
@@ -108,10 +123,13 @@ export async function createMedicationOrder(
   return callScript({ action: "create", order });
 }
 
-// RxOrderID is immutable — pass only the mutable fields.
+// An "edit" never overwrites the order in place (see medication-orders.gs's
+// updateOrder). rxOrderId identifies the OLD row to discontinue; `order`
+// describes the brand-new revision row, including its own new RxOrderID and
+// PreviousRxOrderID = rxOrderId.
 export async function updateMedicationOrder(
   rxOrderId: string,
-  order: Omit<MedicationOrderSheetFields, "RxOrderID" | "ResidentID">
+  order: MedicationOrderSheetFields
 ): Promise<MedicationScriptResponse> {
   return callScript({ action: "update", rxOrderId, order });
 }

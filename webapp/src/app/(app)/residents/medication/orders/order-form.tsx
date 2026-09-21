@@ -203,12 +203,17 @@ export function OrderForm(props: Props) {
           startDate: new Date().toISOString().split("T")[0],
           endDate: "",
           notedBy: "",
-          notedByStaffId: "",
           orderedBy: "",
           suppliedBy: "",
           status: "Active",
-          previousRxOrderId: "",
         };
+
+  // Editing an order never changes it in place — it discontinues the old
+  // row and creates a new revision (see order-actions.ts/medication-orders.gs).
+  // Drug identity + dosing schedule fields always carry over from the old
+  // row regardless of what's submitted, so they're locked here to avoid
+  // implying an edit there would take effect.
+  const lockInheritedFields = props.mode === "edit";
 
   // ── Resident combobox (create mode) ─────────────────────────────────────────
   const [residentId, setResidentId] = useState("");
@@ -261,13 +266,11 @@ export function OrderForm(props: Props) {
 
   // Noted By — the picker's value is the staff member's display name (kept
   // as-is so the Google Sheet stays human-readable); the actual tbl_staff
-  // StaffID is resolved from it at submit time in buildValues() below and
-  // sent as a separate field. For prefill, match by the stored StaffID when
-  // we have one; fall back to matching by name for legacy orders saved
-  // before "Noted By StaffID" existed.
-  const initNotedByIsOther = init.notedByStaffId
-    ? !props.staffOptions.some((s) => s.staffId === init.notedByStaffId)
-    : !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
+  // StaffID is resolved from it at submit time in buildValues() below. For
+  // edit mode, init.notedBy has already been resolved back to a display
+  // name from the stored StaffID/external name (see edit/page.tsx).
+  const initNotedByIsOther =
+    !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
   const [notedByVal, setNotedByVal] = useState(
     initNotedByIsOther ? OTHERS_SENTINEL : init.notedBy
   );
@@ -355,6 +358,8 @@ export function OrderForm(props: Props) {
     // notedByStaffOptions is already scoped to staffFilterBranchId, so a
     // name match here is unambiguous even though the same display name can
     // exist at other branches (e.g. a physiotherapist who rotates branches).
+    // The sheet's single "Noted By" column holds the StaffID when an
+    // internal staff member was matched, or the free-text name otherwise.
     const matchedStaff =
       notedByVal !== OTHERS_SENTINEL
         ? props.staffOptions.find(
@@ -377,12 +382,13 @@ export function OrderForm(props: Props) {
       durationType,
       startDate,
       endDate: durationType === "Short Term" ? endDate : "",
-      notedBy: notedByVal === OTHERS_SENTINEL ? notedByOther.trim() : notedByVal,
-      notedByStaffId: matchedStaff?.staffId ?? "",
+      notedBy:
+        notedByVal === OTHERS_SENTINEL
+          ? notedByOther.trim()
+          : matchedStaff?.staffId ?? notedByVal,
       orderedBy,
       suppliedBy,
       status: "Active",
-      previousRxOrderId: init.previousRxOrderId || "",
     };
   }
 
@@ -414,7 +420,8 @@ export function OrderForm(props: Props) {
           return;
         }
         setIsDirty(false);
-        push("/residents/medication/orders");
+        setSuccessId(result.newRxOrderId ?? null);
+        setTimeout(() => push("/residents/medication/orders"), 1800);
       }
     });
   }
@@ -590,6 +597,7 @@ export function OrderForm(props: Props) {
                   }}
                   placeholder={t("e.g. Atorvastatin")}
                   className={inputCls}
+                  disabled={lockInheritedFields}
                 />
               </Field>
             </div>
@@ -615,6 +623,7 @@ export function OrderForm(props: Props) {
                   mark();
                 }}
                 className={inputCls + " cursor-pointer"}
+                disabled={lockInheritedFields}
               >
                 <option value="">{t("Select dosage form")}</option>
                 {DOSAGE_FORM_OPTIONS.map((o) => (
@@ -634,12 +643,20 @@ export function OrderForm(props: Props) {
                   }}
                   placeholder={t("Please specify...")}
                   className={inputCls + " mt-2"}
+                  disabled={lockInheritedFields}
                 />
               )}
             </Field>
 
             {/* ── Dosing ──────────────────────────────────────────────────────── */}
             <SectionHeading title={t("Dosing")} />
+            {lockInheritedFields && (
+              <p className="col-span-full -mt-1 mb-1 text-xs text-gray-400">
+                {t(
+                  "Dosing and drug identity fields can't be changed from an edit — discontinue this order and create a new one instead."
+                )}
+              </p>
+            )}
 
             <Field label={t("Dose")} required>
               <input
@@ -653,6 +670,7 @@ export function OrderForm(props: Props) {
                 min="0.01"
                 step="0.01"
                 className={inputCls}
+                disabled={lockInheritedFields}
               />
             </Field>
 
@@ -664,6 +682,7 @@ export function OrderForm(props: Props) {
                   mark();
                 }}
                 className={inputCls + " cursor-pointer"}
+                disabled={lockInheritedFields}
               >
                 <option value="">{t("Select unit")}</option>
                 {UNIT_OPTIONS.map((o) => (
@@ -679,6 +698,7 @@ export function OrderForm(props: Props) {
                 value={frequency}
                 onChange={(e) => handleFrequencyChange(e.target.value)}
                 className={inputCls + " cursor-pointer"}
+                disabled={lockInheritedFields}
               >
                 <option value="">{t("Select frequency")}</option>
                 {FREQUENCY_OPTIONS.map((o) => (
@@ -699,7 +719,7 @@ export function OrderForm(props: Props) {
                     options={TIME_SLOTS}
                     selected={adminTimes}
                     onToggle={toggleAdminTime}
-                    disabled={!frequency}
+                    disabled={!frequency || lockInheritedFields}
                   />
                   {frequency === "PRN" && (
                     <p className="mt-1.5 text-xs text-gray-400">
@@ -723,6 +743,7 @@ export function OrderForm(props: Props) {
                       options={DAY_OPTIONS}
                       selected={dosingDays}
                       onToggle={toggleDosingDay}
+                      disabled={lockInheritedFields}
                     />
                   </div>
                 </Field>
@@ -742,6 +763,7 @@ export function OrderForm(props: Props) {
                 }}
                 placeholder={t("e.g. Hypertension")}
                 className={inputCls}
+                disabled={lockInheritedFields}
               />
             </Field>
 
@@ -756,6 +778,7 @@ export function OrderForm(props: Props) {
                   rows={2}
                   placeholder={t("e.g. Take after meal")}
                   className={inputCls}
+                  disabled={lockInheritedFields}
                 />
               </Field>
             </div>
