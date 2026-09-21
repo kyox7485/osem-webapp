@@ -1,0 +1,86 @@
+// Server-side bridge to the medication-orders Google Apps Script Web App.
+// Required env vars (server-only, never NEXT_PUBLIC_):
+//   MEDICATION_ORDER_SCRIPT_URL    -- the deployed /exec URL
+//   MEDICATION_ORDER_SCRIPT_SECRET -- shared secret matching the Apps Script constant
+//
+// Pattern mirrors google-drive.ts: fetch with retry for Apps Script flakiness.
+
+export function isMedicationScriptConfigured(): boolean {
+  return Boolean(
+    process.env.MEDICATION_ORDER_SCRIPT_URL &&
+      process.env.MEDICATION_ORDER_SCRIPT_SECRET
+  );
+}
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function callScript(
+  payload: Record<string, unknown>,
+  attempt = 1
+): Promise<void> {
+  if (!isMedicationScriptConfigured()) {
+    throw new Error(
+      "Medication order script not configured (missing MEDICATION_ORDER_SCRIPT_URL or MEDICATION_ORDER_SCRIPT_SECRET)"
+    );
+  }
+
+  const res = await fetch(process.env.MEDICATION_ORDER_SCRIPT_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...payload,
+      secret: process.env.MEDICATION_ORDER_SCRIPT_SECRET,
+    }),
+    redirect: "follow", // Apps Script /exec URLs 302 once before executing
+  });
+
+  if (!res.ok) {
+    if (attempt < 3) {
+      await sleep(500 * attempt);
+      return callScript(payload, attempt + 1);
+    }
+    throw new Error(`Apps Script HTTP ${res.status}`);
+  }
+
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || "Apps Script request failed");
+}
+
+// Fields sent to the sheet — exact column names from the spec.
+export type MedicationOrderSheetFields = {
+  RxOrderID: string;
+  ResidentID: string;
+  "Dosage Form": string;
+  "Brand Name": string;
+  "Active Ingredient": string;
+  Dose: string;
+  Unit: string;
+  Frequency: string;
+  "Administration Times": string;
+  "Dosing Days": string;
+  Indication: string;
+  Instruction: string;
+  "Duration Type": string;
+  "Start Date": string; // YYYY-MM-DD
+  "End Date": string; // YYYY-MM-DD or ""
+  "Noted By": string;
+  "Ordered By": string;
+  "Supplied By": string;
+  Status: string;
+  PreviousRxOrderID: string;
+};
+
+export async function createMedicationOrder(
+  order: MedicationOrderSheetFields
+): Promise<void> {
+  await callScript({ action: "create", order });
+}
+
+// RxOrderID is immutable — pass only the mutable fields.
+export async function updateMedicationOrder(
+  rxOrderId: string,
+  order: Omit<MedicationOrderSheetFields, "RxOrderID" | "ResidentID">
+): Promise<void> {
+  await callScript({ action: "update", rxOrderId, order });
+}
