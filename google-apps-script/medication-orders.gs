@@ -73,7 +73,7 @@ const COLUMNS = [
 // NOTE: This list is intentionally empty — all fields (including dosing,
 // indication, instruction) can now be edited directly from the edit form.
 // The audit trail is preserved via PreviousRxOrderID on the new revision row.
-const INHERITED_ON_REVISION: string[] = [];
+const INHERITED_ON_REVISION = [];
 
 // Converts an incoming "YYYY-MM-DD" date (what the webapp's <input type=date>
 // sends) into the sheet's display format, DD/MM/YYYY. Values that don't

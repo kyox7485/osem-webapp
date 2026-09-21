@@ -129,6 +129,7 @@ export const dictMedication: Record<string, string> = {
   "Order submitted successfully.": "Pesanan berjaya diserahkan.",
   "Redirecting...": "Mengalih hala...",
   "Edit order": "Sunting pesanan",
+  "Restart order": "Mulakan semula pesanan",
 
   // Placeholders
   Optional: "Pilihan",

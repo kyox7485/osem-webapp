@@ -24,9 +24,7 @@ export type OrderItem = {
   residentId: number;
 };
 
-// Build the human-readable dosage label.
-// Format: "{Dosage Form} {Active Ingredient} {Dose} {Unit} {Frequency} {Dosing Days}"
-// e.g.  "Tablet amlodipine 5mg 1 Tablet OD Everyday"
+// Build the full one-line drug label (used in the discontinue confirmation modal).
 function formatDrugLabel(order: OrderItem): string {
   const days = order.dosingDays
     ? order.dosingDays
@@ -38,6 +36,25 @@ function formatDrugLabel(order: OrderItem): string {
 
   return [
     order.dosageForm,
+    order.activeIngredient,
+    [order.dose, order.unit].filter(Boolean).join(" "),
+    order.frequency,
+    days,
+  ]
+    .filter(Boolean)
+    .join(" ") || "—";
+}
+
+// Active ingredient + dosing schedule on one line (rows 2 of the 3-row drug cell).
+function formatIngredientLine(order: OrderItem): string {
+  const days = order.dosingDays
+    ? order.dosingDays
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join("/")
+    : null;
+  return [
     order.activeIngredient,
     [order.dose, order.unit].filter(Boolean).join(" "),
     order.frequency,
@@ -149,7 +166,7 @@ function DiscontinueModal({
 export function OrdersList({ orders }: { orders: OrderItem[] }) {
   const t = useTranslation();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("Active");
   const [discontinuingId, setDiscontinuingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [localStatuses, setLocalStatuses] = useState<Record<number, string>>({});
@@ -329,14 +346,21 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
                               className="transition-colors hover:bg-gray-50/60"
                             >
                               <td className="px-4 py-3">
-                                <p className="font-medium text-gray-900">
-                                  {formatDrugLabel(order)}
-                                </p>
-                                {order.brandName && (
-                                  <p className="mt-0.5 text-xs text-gray-400">
-                                    {order.brandName}
+                                <div className="space-y-0.5">
+                                  {order.dosageForm && (
+                                    <p className="text-xs text-gray-400">
+                                      {order.dosageForm}
+                                    </p>
+                                  )}
+                                  <p className="font-medium text-gray-900">
+                                    {formatIngredientLine(order)}
                                   </p>
-                                )}
+                                  {order.brandName && (
+                                    <p className="text-xs text-gray-400">
+                                      {order.brandName}
+                                    </p>
+                                  )}
+                                </div>
                               </td>
                               <td className="hidden md:table-cell px-4 py-3 text-gray-500">
                                 {formatDate(order.startDate)}
@@ -356,12 +380,21 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center justify-end gap-1">
-                                  <Link
-                                    href={`/residents/medication/orders/${order.rxOrderId}/edit`}
-                                    className="rounded-md px-2.5 py-1.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
-                                  >
-                                    {t("Edit order")}
-                                  </Link>
+                                  {effectiveStatus === "Discontinued" ? (
+                                    <Link
+                                      href={`/residents/medication/orders/${order.rxOrderId}/edit`}
+                                      className="rounded-md px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                    >
+                                      {t("Restart order")}
+                                    </Link>
+                                  ) : (
+                                    <Link
+                                      href={`/residents/medication/orders/${order.rxOrderId}/edit`}
+                                      className="rounded-md px-2.5 py-1.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
+                                    >
+                                      {t("Edit order")}
+                                    </Link>
+                                  )}
                                   {isActive && (
                                     <button
                                       type="button"
