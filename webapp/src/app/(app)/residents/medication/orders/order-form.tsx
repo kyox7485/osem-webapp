@@ -575,7 +575,7 @@ export function OrderForm(props: Props) {
                 Left col  → Dosage Form
                 Right col → Active Ingredient (top) + Brand Name (bottom, same cell)
             */}
-            <Field label={t("Dosage Form")} required>
+            <Field label={t("Dosage Form")} required span2>
               <select
                 value={dosageForm}
                 onChange={(e) => {
@@ -606,33 +606,31 @@ export function OrderForm(props: Props) {
               )}
             </Field>
 
-            {/* Active Ingredient + Brand Name stacked in one column */}
-            <div className="space-y-3">
-              <Field label={t("Active Ingredient")} required>
-                <input
-                  type="text"
-                  value={activeIngredient}
-                  onChange={(e) => {
-                    setActiveIngredient(e.target.value);
-                    mark();
-                  }}
-                  placeholder={t("e.g. amlodipine 5mg")}
-                  className={inputCls}
-                />
-              </Field>
-              <Field label={t("Brand Name")}>
-                <input
-                  type="text"
-                  value={brandName}
-                  onChange={(e) => {
-                    setBrandName(e.target.value);
-                    mark();
-                  }}
-                  placeholder={t("Optional")}
-                  className={inputCls}
-                />
-              </Field>
-            </div>
+            <Field label={t("Active Ingredient")} required span2>
+              <input
+                type="text"
+                value={activeIngredient}
+                onChange={(e) => {
+                  setActiveIngredient(e.target.value);
+                  mark();
+                }}
+                placeholder={t("e.g. amlodipine 5mg")}
+                className={inputCls}
+              />
+            </Field>
+
+            <Field label={t("Brand Name")} span2>
+              <input
+                type="text"
+                value={brandName}
+                onChange={(e) => {
+                  setBrandName(e.target.value);
+                  mark();
+                }}
+                placeholder={t("Optional")}
+                className={inputCls}
+              />
+            </Field>
 
             {/* ── Dosing ──────────────────────────────────────────────────────── */}
             <SectionHeading title={t("Dosing")} />

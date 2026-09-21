@@ -201,8 +201,8 @@ function OrderDetailModal({
               </h4>
               <div className="grid grid-cols-1 gap-3">
                 <DetailField label="Ordered By" value={order.orderedBy} />
-                <DetailField label="Noted By" value={order.notedByName} />
                 <DetailField label="Supplied By" value={order.suppliedBy} />
+                <DetailField label="Noted By" value={order.notedByName} />
               </div>
             </section>
           )}
@@ -443,13 +443,7 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
                       <thead>
                         <tr className="bg-white">
                           <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                            {t("Dosage Form")}
-                          </th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                            {t("Active Ingredient")}
-                          </th>
-                          <th className="hidden md:table-cell px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                            {t("Brand Name")}
+                            {t("Drug")}
                           </th>
                           <th className="hidden md:table-cell px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                             {t("Start Date")}
@@ -471,14 +465,8 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
                               onClick={() => setSelectedOrder(order)}
                               className="cursor-pointer transition-colors hover:bg-indigo-50/40"
                             >
-                              <td className="px-4 py-3 text-sm text-gray-700">
-                                {order.dosageForm ?? <span className="text-gray-300">—</span>}
-                              </td>
                               <td className="px-4 py-3">
-                                <p className="font-medium text-gray-900">{formatIngredientLine(order)}</p>
-                              </td>
-                              <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500">
-                                {order.brandName ?? <span className="text-gray-300">—</span>}
+                                <p className="font-medium text-gray-900">{formatDrugLabel(order)}</p>
                               </td>
                               <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500">
                                 {formatDate(order.startDate)}
