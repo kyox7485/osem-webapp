@@ -15,10 +15,29 @@ export function isMedicationScriptConfigured(): boolean {
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+// The Apps Script response has two independent layers:
+//   success       -- did the Google Sheet write succeed? (the source of truth)
+//   supabaseSync  -- did the row also mirror to Supabase + rebuild the
+//                    resident's current_medication_list? Can fail on its own
+//                    (transient network blip) without the sheet write failing.
+// A supabaseSync failure does NOT throw here — the order is already durably
+// recorded in the Sheet, and Apps Script's 1-minute heartbeat / 24h
+// reconciliation triggers retry it automatically. It is logged loudly so a
+// stuck sync is still visible in Vercel logs instead of disappearing.
+type MedicationScriptResponse = {
+  success: boolean;
+  error?: string;
+  supabaseSync?: {
+    success: boolean;
+    error?: string;
+    [key: string]: unknown;
+  };
+};
+
 async function callScript(
   payload: Record<string, unknown>,
   attempt = 1
-): Promise<void> {
+): Promise<MedicationScriptResponse> {
   if (!isMedicationScriptConfigured()) {
     throw new Error(
       "Medication order script not configured (missing MEDICATION_ORDER_SCRIPT_URL or MEDICATION_ORDER_SCRIPT_SECRET)"
@@ -43,8 +62,19 @@ async function callScript(
     throw new Error(`Apps Script HTTP ${res.status}`);
   }
 
-  const json = await res.json();
+  const json = (await res.json()) as MedicationScriptResponse;
   if (!json.success) throw new Error(json.error || "Apps Script request failed");
+
+  if (json.supabaseSync && json.supabaseSync.success === false) {
+    console.error(
+      "Medication order saved to Google Sheet, but Supabase sync failed " +
+        "(Apps Script's 1-minute heartbeat / 24h reconciliation will retry " +
+        "automatically):",
+      json.supabaseSync.error
+    );
+  }
+
+  return json;
 }
 
 // Fields sent to the sheet — exact column names from the spec.
@@ -73,14 +103,14 @@ export type MedicationOrderSheetFields = {
 
 export async function createMedicationOrder(
   order: MedicationOrderSheetFields
-): Promise<void> {
-  await callScript({ action: "create", order });
+): Promise<MedicationScriptResponse> {
+  return callScript({ action: "create", order });
 }
 
 // RxOrderID is immutable — pass only the mutable fields.
 export async function updateMedicationOrder(
   rxOrderId: string,
   order: Omit<MedicationOrderSheetFields, "RxOrderID" | "ResidentID">
-): Promise<void> {
-  await callScript({ action: "update", rxOrderId, order });
+): Promise<MedicationScriptResponse> {
+  return callScript({ action: "update", rxOrderId, order });
 }

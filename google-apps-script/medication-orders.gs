@@ -206,19 +206,55 @@ function updateOrder(rxOrderId, order) {
 // changed on an update.
 //
 // A failure here does NOT undo the sheet write above — the Google Sheet
-// remains the source of truth, and MedicationSync.gs's 24h reconciliation plus
-// MedicationSummary.gs's 1-minute heartbeat will retry automatically. We still
-// return the error to the caller so Vercel can log/surface it instead of it
-// failing silently.
+// remains the source of truth. Retries a couple of times inline first (most
+// failures at this point are transient Supabase/network blips), then leaves
+// the row for the two automatic safety nets to pick up:
+//   - MedicationSummary.gs's 1-minute heartbeat (medicationSummaryHeartbeat)
+//   - MedicationSync.gs's 24-hour reconciliation (syncAllMedicationOrdersToSupabase)
+// Both re-run the same underlying sync, so a row that fails here is retried
+// automatically without any human action — PROVIDED those triggers are
+// actually installed. If they are not, run setupMedicationSummaryTrigger()
+// and setupMedicationReconciliationTrigger() once each (Apps Script editor,
+// or the Triggers/clock-icon page to confirm they exist) — those two
+// triggers are what actually makes "sync must not fail" true; this function
+// is only the fast path.
 function syncOrderAndSummary_(rxOrderId, residentId) {
-  try {
-    const result = syncMedicationOrderAndSummaryNow(rxOrderId, residentId);
-    return { supabaseSync: result };
-  } catch (err) {
-    const message = err && err.message ? err.message : String(err);
-    console.error(
-      "syncOrderAndSummary_ failed for RxOrderID " + rxOrderId + ": " + message
-    );
-    return { supabaseSync: { success: false, error: message } };
+  const MAX_ATTEMPTS = 2;
+  let lastError;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = syncMedicationOrderAndSummaryNow(rxOrderId, residentId);
+      return { supabaseSync: result };
+    } catch (err) {
+      lastError = err;
+      const message = err && err.message ? err.message : String(err);
+      console.error(
+        "syncOrderAndSummary_ attempt " + attempt + "/" + MAX_ATTEMPTS +
+        " failed for RxOrderID " + rxOrderId + ": " + message
+      );
+      if (attempt < MAX_ATTEMPTS) {
+        Utilities.sleep(800);
+      }
+    }
   }
+
+  const message = lastError && lastError.message ? lastError.message : String(lastError);
+
+  // Write the failure into the visible tbl_MedicationSyncLog sheet (function
+  // shared from MedicationSync.gs), not just the execution transcript — so a
+  // human can see it without opening Apps Script logs.
+  try {
+    logMedicationSyncError_(findMedicationRowByRxOrderID_(rxOrderId), lastError);
+  } catch (logErr) {
+    console.error("Could not write to tbl_MedicationSyncLog: " + logErr);
+  }
+
+  return {
+    supabaseSync: {
+      success: false,
+      error: message,
+      willRetryAutomatically: true
+    }
+  };
 }
