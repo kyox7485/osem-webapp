@@ -1,18 +1,26 @@
-// ─── Medication Orders Web App ────────────────────────────────────────────────
-// Deployed under osemmedicare@gmail.com as a Google Apps Script Web App.
+// ─── Medication Orders (create/update) ────────────────────────────────────────
+// Deployed as part of the same Apps Script project/Web App as Code.gs, under
+// osemmedicare@gmail.com.
+//
+// IMPORTANT: this file does NOT define doPost/doGet. Code.gs is the single
+// entry point for the whole project's Web App — its doPost() routes
+// action:"create"/"update" here (createOrder/updateOrder), gated by
+// SHARED_SECRET below. A previous version of this file defined its own
+// doPost/doGet, which silently collided with Code.gs's doPost/doGet (Apps
+// Script only allows one global function of a given name per project — the
+// last file evaluated wins, discarding the other's routes entirely). That
+// caused intermittent failures depending on load order: sometimes Code.gs's
+// dispatcher won and rejected "create"/"update" as an unknown action,
+// sometimes this file's won and Code.gs's MedicationByResident/VitalUpdates
+// GET consumers broke instead. Never redefine doPost/doGet here again.
 //
 // SETUP:
 // 1. This file lives in the same Apps Script project as Config.gs, Utils.gs,
 //    MedicationSync.gs and MedicationSummary.gs, and reuses their shared
 //    CONFIG object and functions instead of duplicating them.
-// 2. Deploy → New deployment → Web app.
-//      Execute as: Me (osemmedicare@gmail.com)
-//      Who has access: Anyone
-//    ("Anyone" is required since Next.js calls this over plain HTTPS with no
-//    Google login — the SHARED_SECRET check is the actual access control.)
-// 3. Copy the /exec URL into MEDICATION_ORDER_SCRIPT_URL in Vercel env vars,
-//    and make sure SHARED_SECRET below matches MEDICATION_ORDER_SCRIPT_SECRET.
-// 4. Whenever this code changes: Deploy → Manage deployments → edit existing
+// 2. Make sure SHARED_SECRET below matches MEDICATION_ORDER_SCRIPT_SECRET in
+//    Vercel env vars.
+// 3. Whenever this code changes: Deploy → Manage deployments → edit existing
 //    deployment → New version. A plain Ctrl+S does NOT update the /exec URL.
 //
 // WHY A DIRECT, SYNCHRONOUS CALL (no async trigger):
@@ -55,38 +63,6 @@ const COLUMNS = [
   "Status",
   "PreviousRxOrderID",
 ];
-
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
-
-    if (payload.secret !== SHARED_SECRET) {
-      return jsonResponse({ success: false, error: "Unauthorized" });
-    }
-
-    if (payload.action === "create") {
-      return jsonResponse(createOrder(payload.order));
-    }
-
-    if (payload.action === "update") {
-      return jsonResponse(updateOrder(payload.rxOrderId, payload.order));
-    }
-
-    return jsonResponse({ success: false, error: "Unknown action: " + payload.action });
-  } catch (err) {
-    return jsonResponse({ success: false, error: String(err) });
-  }
-}
-
-// Simple health check — confirms the deployment is live and reachable.
-function doGet() {
-  return jsonResponse({ ok: true });
-}
-
-function jsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
 
 // Reuses the shared CONFIG (Config.gs) and getMedicationSheet() (Utils.gs) so
 // this file can never point at a different spreadsheet/tab name than
