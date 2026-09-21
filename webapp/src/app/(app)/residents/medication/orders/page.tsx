@@ -30,7 +30,7 @@ export default async function MedicationOrdersPage() {
   let ordersQuery: any = supabase
     .from("tbl_medication_orders")
     .select(
-      "id, external_ref_id, dosage_form, active_ingredient, brand_name, dose, unit, frequency, dosing_days, start_date, end_date, status, ordered_by, resident_id, branch_id"
+      "id, external_ref_id, dosage_form, active_ingredient, brand_name, dose, unit, frequency, dosing_days, indication, instruction, duration_type, start_date, end_date, status, ordered_by, supplied_by, noted_by, noted_by_external_name, resident_id, branch_id"
     )
     .order("start_date", { ascending: false })
     .limit(500);
@@ -59,10 +59,16 @@ export default async function MedicationOrdersPage() {
     unit: string | null;
     frequency: string | null;
     dosing_days: string | null;
+    indication: string | null;
+    instruction: string | null;
+    duration_type: string | null;
     start_date: string;
     end_date: string | null;
     status: string;
-    ordered_by: string;
+    ordered_by: string | null;
+    supplied_by: string | null;
+    noted_by: string | null;
+    noted_by_external_name: string | null;
     resident_id: number;
     branch_id: number;
   };
@@ -93,6 +99,24 @@ export default async function MedicationOrdersPage() {
     );
   }
 
+  // ── Resolve noted_by staff IDs → names ────────────────────────────────────
+  const notedByIds = [
+    ...new Set(orders.filter((o) => o.noted_by).map((o) => o.noted_by as string)),
+  ];
+  type StaffRow = { StaffID: string; staff_name: string };
+  let staffNameMap = new Map<string, string>();
+  if (notedByIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const staffQ: any = supabase
+      .from("tbl_staff")
+      .select("StaffID, staff_name")
+      .in("StaffID", notedByIds);
+    const { data: staffRaw } = await staffQ;
+    staffNameMap = new Map(
+      ((staffRaw ?? []) as StaffRow[]).map((s) => [s.StaffID, s.staff_name])
+    );
+  }
+
   type OrderItem = {
     id: number;
     rxOrderId: string;
@@ -103,10 +127,15 @@ export default async function MedicationOrdersPage() {
     unit: string | null;
     frequency: string | null;
     dosingDays: string | null;
+    indication: string | null;
+    instruction: string | null;
+    durationType: string | null;
     startDate: string;
     endDate: string | null;
     status: string;
-    orderedBy: string;
+    orderedBy: string | null;
+    suppliedBy: string | null;
+    notedByName: string | null;
     residentName: string;
     residentTextId: string | null;
     residentId: number;
@@ -114,6 +143,9 @@ export default async function MedicationOrdersPage() {
 
   const items: OrderItem[] = orders.map((o) => {
     const r = residentMap.get(o.resident_id);
+    const notedByName = o.noted_by
+      ? (staffNameMap.get(o.noted_by) ?? o.noted_by)
+      : (o.noted_by_external_name ?? null);
     return {
       id: o.id,
       rxOrderId: o.external_ref_id,
@@ -124,10 +156,15 @@ export default async function MedicationOrdersPage() {
       unit: o.unit,
       frequency: o.frequency,
       dosingDays: o.dosing_days,
+      indication: o.indication,
+      instruction: o.instruction,
+      durationType: o.duration_type,
       startDate: o.start_date,
       endDate: o.end_date,
       status: o.status,
       orderedBy: o.ordered_by,
+      suppliedBy: o.supplied_by,
+      notedByName,
       residentName: r?.resident_name ?? "—",
       residentTextId: r?.ResidentID ?? null,
       residentId: o.resident_id,

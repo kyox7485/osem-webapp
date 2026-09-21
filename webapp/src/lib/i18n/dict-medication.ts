@@ -152,6 +152,10 @@ export const dictMedication: Record<string, string> = {
   // Table headers
   Drug: "Ubat",
 
+  // Detail modal
+  Close: "Tutup",
+  Clinical: "Klinikal",
+
   // Coming soon
   "Coming soon.": "Akan datang.",
 };
