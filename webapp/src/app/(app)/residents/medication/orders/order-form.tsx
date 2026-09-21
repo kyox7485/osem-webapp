@@ -20,7 +20,6 @@ const FREQUENCY_OPTIONS = ["OD", "BD", "TDS", "QID", "ON", "EOD", "Every 3 Days"
 
 const DAY_OPTIONS = ["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-// All hours round the clock in medication format e.g. 0800AM, 0600PM
 const TIME_SLOTS = [
   "1200AM", "0100AM", "0200AM", "0300AM", "0400AM", "0500AM",
   "0600AM", "0700AM", "0800AM", "0900AM", "1000AM", "1100AM",
@@ -80,14 +79,16 @@ function Field({
   required,
   children,
   span2,
+  span3,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   span2?: boolean;
+  span3?: boolean;
 }) {
   return (
-    <div className={span2 ? "sm:col-span-2" : ""}>
+    <div className={span2 ? "sm:col-span-2" : span3 ? "col-span-3" : ""}>
       <label className={labelCls}>
         {label}
         {required && <span className="ml-0.5 text-red-500"> *</span>}
@@ -117,14 +118,14 @@ function ToggleGroup({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {options.map((opt) => (
         <button
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
           disabled={disabled}
-          className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50
+          className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50
             ${value === opt
               ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
               : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
@@ -208,13 +209,6 @@ export function OrderForm(props: Props) {
           status: "Active",
         };
 
-  // Editing an order never changes it in place — it discontinues the old
-  // row and creates a new revision (see order-actions.ts/medication-orders.gs).
-  // Drug identity + dosing schedule fields always carry over from the old
-  // row regardless of what's submitted, so they're locked here to avoid
-  // implying an edit there would take effect.
-  const lockInheritedFields = props.mode === "edit";
-
   // ── Resident combobox (create mode) ─────────────────────────────────────────
   const [residentId, setResidentId] = useState("");
   const [residentSearch, setResidentSearch] = useState("");
@@ -264,11 +258,7 @@ export function OrderForm(props: Props) {
   const [orderedBy, setOrderedBy] = useState(init.orderedBy);
   const [suppliedBy, setSuppliedBy] = useState(init.suppliedBy);
 
-  // Noted By — the picker's value is the staff member's display name (kept
-  // as-is so the Google Sheet stays human-readable); the actual tbl_staff
-  // StaffID is resolved from it at submit time in buildValues() below. For
-  // edit mode, init.notedBy has already been resolved back to a display
-  // name from the stored StaffID/external name (see edit/page.tsx).
+  // Noted By — the picker's value is the staff member's display name.
   const initNotedByIsOther =
     !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
   const [notedByVal, setNotedByVal] = useState(
@@ -311,7 +301,6 @@ export function OrderForm(props: Props) {
   const showEndDate = durationType === "Short Term";
   const adminTimesRequired = !!frequency && frequency !== "PRN";
 
-  // Staff options for Noted By — filter to the relevant branch
   const staffFilterBranchId =
     props.mode === "edit"
       ? props.residentBranchId
@@ -355,11 +344,6 @@ export function OrderForm(props: Props) {
   // ── Build values ─────────────────────────────────────────────────────────────
 
   function buildValues(): OrderFormValues {
-    // notedByStaffOptions is already scoped to staffFilterBranchId, so a
-    // name match here is unambiguous even though the same display name can
-    // exist at other branches (e.g. a physiotherapist who rotates branches).
-    // The sheet's single "Noted By" column holds the StaffID when an
-    // internal staff member was matched, or the free-text name otherwise.
     const matchedStaff =
       notedByVal !== OTHERS_SENTINEL
         ? props.staffOptions.find(
@@ -586,35 +570,11 @@ export function OrderForm(props: Props) {
             {/* ── Drug Information ─────────────────────────────────────────────── */}
             <SectionHeading title={t("Drug Information")} />
 
-            <div className="sm:col-span-2">
-              <Field label={t("Active Ingredient")} required>
-                <input
-                  type="text"
-                  value={activeIngredient}
-                  onChange={(e) => {
-                    setActiveIngredient(e.target.value);
-                    mark();
-                  }}
-                  placeholder={t("e.g. Atorvastatin")}
-                  className={inputCls}
-                  disabled={lockInheritedFields}
-                />
-              </Field>
-            </div>
-
-            <Field label={t("Brand Name")}>
-              <input
-                type="text"
-                value={brandName}
-                onChange={(e) => {
-                  setBrandName(e.target.value);
-                  mark();
-                }}
-                placeholder={t("Optional")}
-                className={inputCls}
-              />
-            </Field>
-
+            {/*
+              PC layout (sm:grid-cols-2):
+                Left col  → Dosage Form
+                Right col → Active Ingredient (top) + Brand Name (bottom, same cell)
+            */}
             <Field label={t("Dosage Form")} required>
               <select
                 value={dosageForm}
@@ -623,7 +583,6 @@ export function OrderForm(props: Props) {
                   mark();
                 }}
                 className={inputCls + " cursor-pointer"}
-                disabled={lockInheritedFields}
               >
                 <option value="">{t("Select dosage form")}</option>
                 {DOSAGE_FORM_OPTIONS.map((o) => (
@@ -643,74 +602,94 @@ export function OrderForm(props: Props) {
                   }}
                   placeholder={t("Please specify...")}
                   className={inputCls + " mt-2"}
-                  disabled={lockInheritedFields}
                 />
               )}
             </Field>
 
+            {/* Active Ingredient + Brand Name stacked in one column */}
+            <div className="space-y-3">
+              <Field label={t("Active Ingredient")} required>
+                <input
+                  type="text"
+                  value={activeIngredient}
+                  onChange={(e) => {
+                    setActiveIngredient(e.target.value);
+                    mark();
+                  }}
+                  placeholder={t("e.g. amlodipine 5mg")}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label={t("Brand Name")}>
+                <input
+                  type="text"
+                  value={brandName}
+                  onChange={(e) => {
+                    setBrandName(e.target.value);
+                    mark();
+                  }}
+                  placeholder={t("Optional")}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
             {/* ── Dosing ──────────────────────────────────────────────────────── */}
             <SectionHeading title={t("Dosing")} />
-            {lockInheritedFields && (
-              <p className="col-span-full -mt-1 mb-1 text-xs text-gray-400">
-                {t(
-                  "Dosing and drug identity fields can't be changed from an edit — discontinue this order and create a new one instead."
-                )}
-              </p>
-            )}
 
-            <Field label={t("Dose")} required>
-              <input
-                type="number"
-                value={dose}
-                onChange={(e) => {
-                  setDose(e.target.value);
-                  mark();
-                }}
-                placeholder="e.g. 10"
-                min="0.01"
-                step="0.01"
-                className={inputCls}
-                disabled={lockInheritedFields}
-              />
-            </Field>
+            {/*
+              PC layout: Dose | Unit | Frequency in a 3-column row
+              Mobile: stacked
+            */}
+            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-4">
+              <Field label={t("Dose")} required>
+                <input
+                  type="number"
+                  value={dose}
+                  onChange={(e) => {
+                    setDose(e.target.value);
+                    mark();
+                  }}
+                  placeholder="e.g. 1"
+                  min="0.01"
+                  step="0.01"
+                  className={inputCls}
+                />
+              </Field>
 
-            <Field label={t("Unit")} required>
-              <select
-                value={unit}
-                onChange={(e) => {
-                  setUnit(e.target.value);
-                  mark();
-                }}
-                className={inputCls + " cursor-pointer"}
-                disabled={lockInheritedFields}
-              >
-                <option value="">{t("Select unit")}</option>
-                {UNIT_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {t(o)}
-                  </option>
-                ))}
-              </select>
-            </Field>
+              <Field label={t("Unit")} required>
+                <select
+                  value={unit}
+                  onChange={(e) => {
+                    setUnit(e.target.value);
+                    mark();
+                  }}
+                  className={inputCls + " cursor-pointer"}
+                >
+                  <option value="">{t("Select unit")}</option>
+                  {UNIT_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {t(o)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
-            <Field label={t("Frequency")} required>
-              <select
-                value={frequency}
-                onChange={(e) => handleFrequencyChange(e.target.value)}
-                className={inputCls + " cursor-pointer"}
-                disabled={lockInheritedFields}
-              >
-                <option value="">{t("Select frequency")}</option>
-                {FREQUENCY_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {t(o)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            {/* Spacer to keep grid balanced */}
-            <div className="hidden sm:block" />
+              <Field label={t("Frequency")} required>
+                <select
+                  value={frequency}
+                  onChange={(e) => handleFrequencyChange(e.target.value)}
+                  className={inputCls + " cursor-pointer"}
+                >
+                  <option value="">{t("Select frequency")}</option>
+                  {FREQUENCY_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {t(o)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
 
             <div className="sm:col-span-2">
               <Field label={t("Administration Times")} required={adminTimesRequired}>
@@ -719,7 +698,7 @@ export function OrderForm(props: Props) {
                     options={TIME_SLOTS}
                     selected={adminTimes}
                     onToggle={toggleAdminTime}
-                    disabled={!frequency || lockInheritedFields}
+                    disabled={!frequency}
                   />
                   {frequency === "PRN" && (
                     <p className="mt-1.5 text-xs text-gray-400">
@@ -743,7 +722,6 @@ export function OrderForm(props: Props) {
                       options={DAY_OPTIONS}
                       selected={dosingDays}
                       onToggle={toggleDosingDay}
-                      disabled={lockInheritedFields}
                     />
                   </div>
                 </Field>
@@ -763,7 +741,6 @@ export function OrderForm(props: Props) {
                 }}
                 placeholder={t("e.g. Hypertension")}
                 className={inputCls}
-                disabled={lockInheritedFields}
               />
             </Field>
 
@@ -778,7 +755,6 @@ export function OrderForm(props: Props) {
                   rows={2}
                   placeholder={t("e.g. Take after meal")}
                   className={inputCls}
-                  disabled={lockInheritedFields}
                 />
               </Field>
             </div>
@@ -857,7 +833,7 @@ export function OrderForm(props: Props) {
               </div>
             </Field>
 
-            <Field label={t("Noted By")}>
+            <Field label={t("Noted By")} required>
               <StaffPickerWithOther
                 value={notedByVal}
                 otherName={notedByOther}
@@ -870,6 +846,7 @@ export function OrderForm(props: Props) {
                   mark();
                 }}
                 staffOptions={notedByStaffOptions}
+                required
                 disabled={isCreate && !residentId}
               />
               {isCreate && !residentId && (

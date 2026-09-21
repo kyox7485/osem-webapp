@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getDemoBranchIds } from "@/lib/lookups";
+import { revalidatePath } from "next/cache";
 import {
   createMedicationOrder,
   updateMedicationOrder,
@@ -75,8 +76,75 @@ function validateOrderFields(
   if (!values.startDate?.trim()) return "Start date is required";
   if (!values.orderedBy?.trim()) return "Ordered by is required";
   if (!values.suppliedBy?.trim()) return "Supplied by is required";
+  if (!values.notedBy?.trim()) return "Noted By is required";
 
   return null;
+}
+
+// Discontinue a single order in Supabase (status → Discontinued).
+// The Apps Script's heartbeat/reconciliation will sync this to the Sheet.
+export async function discontinueOrderAction(
+  rxOrderId: string
+): Promise<{ success: boolean; error?: string }> {
+  const account = await getCurrentUser();
+  if (!account) return { success: false, error: "Not authenticated" };
+
+  const supabase = await createClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existingOrder } = await (supabase as any)
+    .from("tbl_medication_orders")
+    .select("id, branch_id, status")
+    .eq("external_ref_id", rxOrderId)
+    .single();
+
+  if (!existingOrder) return { success: false, error: "Order not found" };
+  if (existingOrder.status !== "Active")
+    return { success: false, error: "Order is not active" };
+
+  const admin = isAdmin(account);
+  if (!admin && existingOrder.branch_id !== account.branch_id)
+    return { success: false, error: "Access denied" };
+
+  if (admin) {
+    const demoBranchIds = await getDemoBranchIds();
+    const isDemoUser = demoBranchIds.includes(account.branch_id);
+    if (!isDemoUser && demoBranchIds.includes(existingOrder.branch_id))
+      return { success: false, error: "Access denied" };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("tbl_medication_orders")
+    .update({ status: "Discontinued" })
+    .eq("external_ref_id", rxOrderId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/residents/medication/orders");
+  return { success: true };
+}
+
+// Auto-expire active orders whose end_date has passed.
+// Called at page load; updates Supabase status only (Sheet syncs via heartbeat).
+export async function autoExpireOrdersAction(branchId: number, adminUser: boolean, excludedBranchIds: number[]): Promise<void> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any = (supabase as any)
+    .from("tbl_medication_orders")
+    .update({ status: "Discontinued" })
+    .lt("end_date", today)
+    .eq("status", "Active");
+
+  if (!adminUser) {
+    q = q.eq("branch_id", branchId);
+  } else if (excludedBranchIds.length > 0) {
+    q = q.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
+  }
+
+  await q;
 }
 
 export async function createOrderAction(
@@ -168,12 +236,10 @@ export async function createOrderAction(
 
 // An edit never overwrites the order in place. It discontinues the old row
 // (rxOrderId) and appends a brand-new revision row with a fresh RxOrderID
-// and PreviousRxOrderID = rxOrderId, giving a full audit trail — see
-// medication-orders.gs's updateOrder. Note that Active Ingredient, Dosage
-// Form, Dose, Unit, Frequency, Administration Times, Dosing Days,
-// Indication, and Instruction are always carried over from the OLD row by
-// Apps Script regardless of what's submitted here — they're locked in the
-// edit form UI for the same reason (see order-form.tsx).
+// and PreviousRxOrderID = rxOrderId, giving a full audit trail.
+// All submitted form values (including dose, unit, frequency, etc.) are
+// applied to the new revision row — the Apps Script INHERITED_ON_REVISION
+// list has been cleared to allow full editing.
 export async function updateOrderAction(
   rxOrderId: string,
   values: Omit<OrderFormValues, "residentId">

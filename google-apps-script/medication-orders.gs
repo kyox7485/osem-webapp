@@ -69,22 +69,11 @@ const COLUMNS = [
 
 // On an edit-triggered revision (see updateOrder below), these columns are
 // always carried over from the OLD row as-is — the submitted form's values
-// for them are ignored for the new row. Everything else in COLUMNS comes
-// from whatever was submitted (dates, personnel, status, brand name, etc.).
-// This is a deliberate clinical/business rule: an "edit" revises
-// administrative details of an order, not its drug identity or dosing
-// schedule — changing those requires discontinuing and creating a new order.
-const INHERITED_ON_REVISION = [
-  "Dosage Form",
-  "Active Ingredient",
-  "Dose",
-  "Unit",
-  "Frequency",
-  "Administration Times",
-  "Dosing Days",
-  "Indication",
-  "Instruction",
-];
+// for them are ignored for the new row.
+// NOTE: This list is intentionally empty — all fields (including dosing,
+// indication, instruction) can now be edited directly from the edit form.
+// The audit trail is preserved via PreviousRxOrderID on the new revision row.
+const INHERITED_ON_REVISION: string[] = [];
 
 // Converts an incoming "YYYY-MM-DD" date (what the webapp's <input type=date>
 // sends) into the sheet's display format, DD/MM/YYYY. Values that don't
