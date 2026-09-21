@@ -40,6 +40,7 @@ export type OrderFormValues = {
   startDate: string;
   endDate: string;
   notedBy: string;
+  notedByStaffId: string;
   orderedBy: string;
   suppliedBy: string;
   status: string;
@@ -151,6 +152,7 @@ export async function createOrderAction(
       "Start Date": values.startDate,
       "End Date": values.endDate || "",
       "Noted By": values.notedBy || "",
+      "Noted By StaffID": values.notedByStaffId || "",
       "Ordered By": values.orderedBy,
       "Supplied By": values.suppliedBy,
       Status: "Active",
@@ -223,6 +225,7 @@ export async function updateOrderAction(
     "Start Date": values.startDate,
     "End Date": values.endDate || "",
     "Noted By": values.notedBy || "",
+    "Noted By StaffID": values.notedByStaffId || "",
     "Ordered By": values.orderedBy,
     "Supplied By": values.suppliedBy,
     Status: "Active",

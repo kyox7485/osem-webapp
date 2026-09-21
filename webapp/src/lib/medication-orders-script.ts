@@ -94,7 +94,8 @@ export type MedicationOrderSheetFields = {
   "Duration Type": string;
   "Start Date": string; // YYYY-MM-DD
   "End Date": string; // YYYY-MM-DD or ""
-  "Noted By": string;
+  "Noted By": string; // display name — internal staff's name, or an external doctor's name typed via "Others"
+  "Noted By StaffID": string; // set only when "Noted By" is an internal tbl_staff pick; "" for external/"Others"
   "Ordered By": string;
   "Supplied By": string;
   Status: string;

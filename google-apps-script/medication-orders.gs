@@ -49,6 +49,7 @@ const COLUMNS = [
   "Start Date",
   "End Date",
   "Noted By",
+  "Noted By StaffID",
   "Ordered By",
   "Supplied By",
   "Status",

@@ -64,7 +64,7 @@ export default async function NewMedicationOrderPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let staffQuery: any = supabase
     .from("tbl_staff")
-    .select("staff_name, branch_id")
+    .select('staff_name, branch_id, staffId:StaffID')
     .order("staff_name");
 
   if (admin) {
@@ -81,10 +81,11 @@ export default async function NewMedicationOrderPage() {
 
   const { data: staffRaw } = await staffQuery;
 
-  type StaffRow = { staff_name: string; branch_id: number };
+  type StaffRow = { staff_name: string; branch_id: number; staffId: string };
 
   const staffOptions: StaffEntry[] = ((staffRaw ?? []) as StaffRow[]).map(
     (s) => ({
+      staffId: s.staffId,
       name: s.staff_name,
       branchId: s.branch_id,
     })

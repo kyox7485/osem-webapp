@@ -28,7 +28,7 @@ export default async function EditMedicationOrderPage({
   const orderQ: any = supabase
     .from("tbl_medication_orders")
     .select(
-      "id, external_ref_id, branch_id, resident_id, active_ingredient, brand_name, dosage_form, dose, unit, frequency, administration_times, dosing_days, indication, instruction, duration_type, start_date, end_date, noted_by, ordered_by, supplied_by, status, previous_order_id"
+      "id, external_ref_id, branch_id, resident_id, active_ingredient, brand_name, dosage_form, dose, unit, frequency, administration_times, dosing_days, indication, instruction, duration_type, start_date, end_date, noted_by, noted_by_external_name, ordered_by, supplied_by, status, previous_order_id"
     )
     .eq("external_ref_id", rxOrderId)
     .single();
@@ -66,15 +66,16 @@ export default async function EditMedicationOrderPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const staffQ: any = supabase
     .from("tbl_staff")
-    .select("staff_name, branch_id")
+    .select('staff_name, branch_id, staffId:StaffID')
     .eq("branch_id", orderRaw.branch_id)
     .order("staff_name");
   const { data: staffRaw } = await staffQ;
 
-  type StaffRow = { staff_name: string; branch_id: number };
+  type StaffRow = { staff_name: string; branch_id: number; staffId: string };
 
   const staffOptions: StaffEntry[] = ((staffRaw ?? []) as StaffRow[]).map(
     (s) => ({
+      staffId: s.staffId,
       name: s.staff_name,
       branchId: s.branch_id,
     })
@@ -95,7 +96,17 @@ export default async function EditMedicationOrderPage({
     durationType: orderRaw.duration_type ?? "",
     startDate: orderRaw.start_date ?? "",
     endDate: orderRaw.end_date ?? "",
-    notedBy: orderRaw.noted_by ?? "",
+    // noted_by (when set) is a StaffID FK — resolve it back to a display
+    // name for the form. noted_by_external_name covers people not in
+    // tbl_staff (e.g. a visiting doctor entered via "Others"). Older orders
+    // saved before this split existed may still have a plain name in
+    // noted_by with no matching staffId — the form falls back to treating
+    // that as "Others" text (see initNotedByIsOther in order-form.tsx).
+    notedBy: orderRaw.noted_by
+      ? staffOptions.find((s) => s.staffId === orderRaw.noted_by)?.name ??
+        orderRaw.noted_by
+      : orderRaw.noted_by_external_name ?? "",
+    notedByStaffId: orderRaw.noted_by ?? "",
     orderedBy: orderRaw.ordered_by ?? "",
     suppliedBy: orderRaw.supplied_by ?? "",
     status: orderRaw.status ?? "Active",

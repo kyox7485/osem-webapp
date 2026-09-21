@@ -46,6 +46,7 @@ export type ResidentOption = {
 };
 
 export type StaffEntry = {
+  staffId: string;
   name: string;
   branchId: number;
 };
@@ -202,6 +203,7 @@ export function OrderForm(props: Props) {
           startDate: new Date().toISOString().split("T")[0],
           endDate: "",
           notedBy: "",
+          notedByStaffId: "",
           orderedBy: "",
           suppliedBy: "",
           status: "Active",
@@ -257,9 +259,15 @@ export function OrderForm(props: Props) {
   const [orderedBy, setOrderedBy] = useState(init.orderedBy);
   const [suppliedBy, setSuppliedBy] = useState(init.suppliedBy);
 
-  // Noted By — staff picker uses staff name as option value (stored directly in Sheet)
-  const initNotedByIsOther =
-    !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
+  // Noted By — the picker's value is the staff member's display name (kept
+  // as-is so the Google Sheet stays human-readable); the actual tbl_staff
+  // StaffID is resolved from it at submit time in buildValues() below and
+  // sent as a separate field. For prefill, match by the stored StaffID when
+  // we have one; fall back to matching by name for legacy orders saved
+  // before "Noted By StaffID" existed.
+  const initNotedByIsOther = init.notedByStaffId
+    ? !props.staffOptions.some((s) => s.staffId === init.notedByStaffId)
+    : !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
   const [notedByVal, setNotedByVal] = useState(
     initNotedByIsOther ? OTHERS_SENTINEL : init.notedBy
   );
@@ -344,6 +352,16 @@ export function OrderForm(props: Props) {
   // ── Build values ─────────────────────────────────────────────────────────────
 
   function buildValues(): OrderFormValues {
+    // notedByStaffOptions is already scoped to staffFilterBranchId, so a
+    // name match here is unambiguous even though the same display name can
+    // exist at other branches (e.g. a physiotherapist who rotates branches).
+    const matchedStaff =
+      notedByVal !== OTHERS_SENTINEL
+        ? props.staffOptions.find(
+            (s) => s.name === notedByVal && s.branchId === staffFilterBranchId
+          )
+        : undefined;
+
     return {
       residentId,
       dosageForm: dosageForm === "Others" ? dosageFormOther.trim() : dosageForm,
@@ -360,6 +378,7 @@ export function OrderForm(props: Props) {
       startDate,
       endDate: durationType === "Short Term" ? endDate : "",
       notedBy: notedByVal === OTHERS_SENTINEL ? notedByOther.trim() : notedByVal,
+      notedByStaffId: matchedStaff?.staffId ?? "",
       orderedBy,
       suppliedBy,
       status: "Active",
