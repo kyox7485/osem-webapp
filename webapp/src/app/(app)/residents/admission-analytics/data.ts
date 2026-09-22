@@ -49,6 +49,7 @@ export function resolveDateRange(
 
 export type ResidentRow = {
   id: number;
+  resident_name: string;
   branch_id: number;
   age: number | null;
   gender: string | null;

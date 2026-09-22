@@ -227,6 +227,9 @@ function ResidentListTable({
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+              {t("Name")}
+            </th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
               {t("ID")}
             </th>
             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
@@ -250,7 +253,8 @@ function ResidentListTable({
         <tbody className="divide-y divide-gray-200">
           {residents.map((r) => (
             <tr key={r.id} className="hover:bg-gray-50">
-              <td className="px-3 py-2 text-sm text-gray-900 font-medium">{r.id}</td>
+              <td className="px-3 py-2 text-sm text-gray-900 font-semibold">{r.resident_name}</td>
+              <td className="px-3 py-2 text-sm text-gray-600">{r.id}</td>
               <td className="px-3 py-2 text-sm text-gray-600">{r.status}</td>
               <td className="px-3 py-2 text-sm text-gray-600">
                 {r.admission_date ? formatDate(new Date(r.admission_date)) : "–"}

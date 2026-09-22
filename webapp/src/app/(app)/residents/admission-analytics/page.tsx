@@ -76,7 +76,7 @@ export default async function AdmissionAnalyticsPage({
   let query = supabase
     .from("tbl_residents")
     .select(
-      "id, branch_id, age, gender, status, admission_date, discharge_date, mobility, feeding_type_id, hygiene"
+      "id, resident_name, branch_id, age, gender, status, admission_date, discharge_date, mobility, feeding_type_id, hygiene"
     );
 
   if (!admin) {
