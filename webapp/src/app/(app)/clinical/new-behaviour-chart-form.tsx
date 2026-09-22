@@ -7,7 +7,7 @@ import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { toDatetimeLocalValue } from "@/lib/format-date";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Clock } from "lucide-react";
 
 const VERBAL_OPTIONS = ["Quiet", "Shouting", "Scolding Staff", "Incoherent Speech"];
 const PHYSICAL_OPTIONS = ["Calm", "Restless", "Walking Around", "Hitting Staff"];
@@ -21,13 +21,8 @@ const DISTURBANCE_OPTIONS = [
   { value: 4, label: "4 – Persistent sound (disturbing activity)" },
 ];
 
-const CATEGORY_OPTIONS = ["Verbal", "Physical", "Mood", "Restraint"] as const;
-const BEHAVIOUR_BY_CATEGORY: Record<string, string[]> = {
-  Verbal: VERBAL_OPTIONS,
-  Physical: PHYSICAL_OPTIONS,
-  Mood: EMOTION_OPTIONS,
-  Restraint: RESTRAINT_OPTIONS,
-};
+type Occurrence = { uid: string; startTime: string; endTime: string; note: string };
+type BehaviourTimes = Record<string, Occurrence[]>;
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -41,7 +36,11 @@ type Props = {
 const inputCls =
   "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100";
 const labelCls = "mb-1 block text-sm font-medium text-gray-700";
-const sectionCls = "rounded-md border border-gray-200 bg-white p-4 shadow-sm space-y-4";
+const sectionCls = "rounded-md border border-gray-200 bg-white p-4 shadow-sm space-y-3";
+
+let uidCounter = 0;
+function newUid() { return `occ-${++uidCounter}`; }
+function newOccurrence(): Occurrence { return { uid: newUid(), startTime: "", endTime: "", note: "" }; }
 
 function MultiChips({
   options,
@@ -72,8 +71,112 @@ function MultiChips({
   );
 }
 
-function emptyEpisode(): EpisodeInput {
-  return { category: "Verbal", behaviour: "", startTime: "", endTime: "", note: null };
+function OccurrenceRow({
+  occ,
+  onChange,
+  onRemove,
+  t,
+}: {
+  occ: Occurrence;
+  onChange: (field: keyof Occurrence, value: string) => void;
+  onRemove: () => void;
+  t: (s: string) => string;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded bg-white border border-gray-200 px-3 py-2">
+      <div className="flex items-end gap-2 flex-1 min-w-0 flex-wrap">
+        <div>
+          <label className="mb-0.5 block text-xs text-gray-500">{t("From")}</label>
+          <input
+            type="time"
+            value={occ.startTime}
+            onChange={(e) => onChange("startTime", e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="mb-0.5 block text-xs text-gray-500">{t("To")}</label>
+          <input
+            type="time"
+            value={occ.endTime}
+            onChange={(e) => onChange("endTime", e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="flex-1 min-w-[120px]">
+          <label className="mb-0.5 block text-xs text-gray-500">{t("Note")} <span className="text-gray-400">({t("optional")})</span></label>
+          <input
+            type="text"
+            value={occ.note}
+            onChange={(e) => onChange("note", e.target.value)}
+            placeholder={t("Any note for this period")}
+            className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+        aria-label="Remove this period"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function BehaviourTimingSection({
+  selected,
+  times,
+  onAddOccurrence,
+  onRemoveOccurrence,
+  onChangeOccurrence,
+  t,
+}: {
+  selected: string[];
+  times: BehaviourTimes;
+  onAddOccurrence: (behaviour: string) => void;
+  onRemoveOccurrence: (behaviour: string, uid: string) => void;
+  onChangeOccurrence: (behaviour: string, uid: string, field: keyof Occurrence, value: string) => void;
+  t: (s: string) => string;
+}) {
+  if (selected.length === 0) return null;
+  return (
+    <div className="space-y-3 pt-1">
+      {selected.map((behaviour) => {
+        const occs = times[behaviour] ?? [];
+        return (
+          <div key={behaviour} className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+              <span className="text-xs font-semibold text-gray-700">{behaviour}</span>
+            </div>
+            {occs.length === 0 && (
+              <p className="text-xs text-gray-400 pl-5">{t("Time not specified")} — {t("add a period to record exact time")}</p>
+            )}
+            {occs.map((occ) => (
+              <OccurrenceRow
+                key={occ.uid}
+                occ={occ}
+                onChange={(field, value) => onChangeOccurrence(behaviour, occ.uid, field, value)}
+                onRemove={() => onRemoveOccurrence(behaviour, occ.uid)}
+                t={t}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => onAddOccurrence(behaviour)}
+              className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 pl-5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {occs.length === 0 ? t("Add a period") : t("Add another period")}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, onSaved }: Props) {
@@ -84,15 +187,19 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
   const [entryTimestamp, setEntryTimestamp] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
 
   const [verbalBehavior, setVerbalBehavior] = useState<string[]>([]);
+  const [verbalTimes, setVerbalTimes] = useState<BehaviourTimes>({});
   const [complaints, setComplaints] = useState("");
+
   const [physicalBehavior, setPhysicalBehavior] = useState<string[]>([]);
+  const [physicalTimes, setPhysicalTimes] = useState<BehaviourTimes>({});
+
+  const [emotionMood, setEmotionMood] = useState<string[]>([]);
+  const [moodTimes, setMoodTimes] = useState<BehaviourTimes>({});
+
   const [sleepFrom, setSleepFrom] = useState("");
   const [sleepTo, setSleepTo] = useState("");
   const [restraint, setRestraint] = useState<string[]>([]);
-  const [emotionMood, setEmotionMood] = useState<string[]>([]);
   const [disturbanceLevel, setDisturbanceLevel] = useState<string>("");
-
-  const [episodes, setEpisodes] = useState<EpisodeInput[]>([]);
 
   const [createdBy, setCreatedBy] = useState("");
   const [createdByOtherName, setCreatedByOtherName] = useState("");
@@ -102,44 +209,98 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
   const selectedResident = residents.find((r) => String(r.id) === residentId);
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id);
 
+  function toggleBehaviour(
+    opt: string,
+    selected: string[],
+    setSelected: React.Dispatch<React.SetStateAction<string[]>>,
+    setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
+  ) {
+    if (selected.includes(opt)) {
+      setSelected((prev) => prev.filter((v) => v !== opt));
+      setTimes((prev) => { const next = { ...prev }; delete next[opt]; return next; });
+    } else {
+      setSelected((prev) => [...prev, opt]);
+      // No auto-add occurrence: time is optional
+    }
+  }
+
+  function addOccurrence(
+    behaviour: string,
+    setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
+  ) {
+    setTimes((prev) => ({
+      ...prev,
+      [behaviour]: [...(prev[behaviour] ?? []), newOccurrence()],
+    }));
+  }
+
+  function removeOccurrence(
+    behaviour: string,
+    uid: string,
+    setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
+  ) {
+    setTimes((prev) => ({
+      ...prev,
+      [behaviour]: (prev[behaviour] ?? []).filter((o) => o.uid !== uid),
+    }));
+  }
+
+  function changeOccurrence(
+    behaviour: string,
+    uid: string,
+    field: keyof Occurrence,
+    value: string,
+    setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
+  ) {
+    setTimes((prev) => ({
+      ...prev,
+      [behaviour]: (prev[behaviour] ?? []).map((o) =>
+        o.uid === uid ? { ...o, [field]: value } : o
+      ),
+    }));
+  }
+
   function toggle(set: React.Dispatch<React.SetStateAction<string[]>>, opt: string) {
     set((prev) => (prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt]));
   }
 
-  function addEpisode() {
-    setEpisodes((prev) => [...prev, emptyEpisode()]);
-  }
-
-  function removeEpisode(idx: number) {
-    setEpisodes((prev) => prev.filter((_, i) => i !== idx));
-  }
-
-  function updateEpisode(idx: number, field: keyof EpisodeInput, value: string | null) {
-    setEpisodes((prev) =>
-      prev.map((ep, i) => {
-        if (i !== idx) return ep;
-        if (field === "category") {
-          return { ...ep, category: value as EpisodeInput["category"], behaviour: "" };
+  function collectEpisodes(): EpisodeInput[] {
+    const result: EpisodeInput[] = [];
+    const collect = (
+      behaviours: string[],
+      times: BehaviourTimes,
+      category: EpisodeInput["category"]
+    ) => {
+      for (const behaviour of behaviours) {
+        const occs = times[behaviour] ?? [];
+        for (const occ of occs) {
+          result.push({
+            category,
+            behaviour,
+            startTime: occ.startTime || null,
+            endTime: occ.endTime || null,
+            note: occ.note.trim() || null,
+          });
         }
-        return { ...ep, [field]: value };
-      })
-    );
+      }
+    };
+    collect(verbalBehavior, verbalTimes, "Verbal");
+    collect(physicalBehavior, physicalTimes, "Physical");
+    collect(emotionMood, moodTimes, "Mood");
+    return result;
   }
 
   function resetForm() {
     if (!presetResidentId) setResidentId("");
     setEntryTimestamp(toDatetimeLocalValue(new Date().toISOString()));
-    setVerbalBehavior([]);
+    setVerbalBehavior([]); setVerbalTimes({});
     setComplaints("");
-    setPhysicalBehavior([]);
-    setSleepFrom("");
-    setSleepTo("");
+    setPhysicalBehavior([]); setPhysicalTimes({});
+    setEmotionMood([]); setMoodTimes({});
+    setSleepFrom(""); setSleepTo("");
     setRestraint([]);
-    setEmotionMood([]);
     setDisturbanceLevel("");
-    setEpisodes([]);
-    setCreatedBy("");
-    setCreatedByOtherName("");
+    setCreatedBy(""); setCreatedByOtherName("");
     setError("");
   }
 
@@ -153,13 +314,21 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
       return;
     }
 
-    // Validate episodes
-    for (let i = 0; i < episodes.length; i++) {
-      const ep = episodes[i];
-      if (!ep.behaviour) { setError(`Episode ${i + 1}: ${t("Please select a behaviour")}`); return; }
-      if (!ep.startTime) { setError(`Episode ${i + 1}: ${t("Please enter start time")}`); return; }
-      if (!ep.endTime) { setError(`Episode ${i + 1}: ${t("Please enter end time")}`); return; }
-      if (ep.endTime <= ep.startTime) { setError(`Episode ${i + 1}: ${t("End time must be after start time")}`); return; }
+    // Validate occurrences: if one of start/end is filled, both must be filled and end > start
+    const allOccurrences: Array<{ label: string; occ: Occurrence }> = [];
+    for (const b of verbalBehavior) for (const o of verbalTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
+    for (const b of physicalBehavior) for (const o of physicalTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
+    for (const b of emotionMood) for (const o of moodTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
+
+    for (const { label, occ } of allOccurrences) {
+      const hasStart = !!occ.startTime;
+      const hasEnd = !!occ.endTime;
+      if (hasStart && !hasEnd) { setError(`${label}: ${t("Please enter end time")}`); return; }
+      if (!hasStart && hasEnd) { setError(`${label}: ${t("Please enter start time")}`); return; }
+      if (hasStart && hasEnd && occ.endTime <= occ.startTime) {
+        setError(`${label}: ${t("End time must be after start time")}`);
+        return;
+      }
     }
 
     startTransition(async () => {
@@ -178,11 +347,10 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
         createdBy: createdBy === OTHERS_SENTINEL ? "" : createdBy,
         createdByName: createdBy === OTHERS_SENTINEL ? null : (staffOptions.find((s) => s.id === createdBy)?.label ?? null),
         createdByOther: createdBy === OTHERS_SENTINEL ? createdByOtherName.trim() : null,
-        episodes,
+        episodes: collectEpisodes(),
       });
 
       if (!result.success) { setError(result.error || t("Failed to save")); return; }
-
       resetForm();
       onSaved();
     });
@@ -228,8 +396,20 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
         <h3 className="text-sm font-bold text-gray-900">🗣️ {t("Verbal Behavior")}</h3>
         <div>
           <label className={labelCls}>{t("Select all that apply")}</label>
-          <MultiChips options={VERBAL_OPTIONS} selected={verbalBehavior} onToggle={(opt) => toggle(setVerbalBehavior, opt)} />
+          <MultiChips
+            options={VERBAL_OPTIONS}
+            selected={verbalBehavior}
+            onToggle={(opt) => toggleBehaviour(opt, verbalBehavior, setVerbalBehavior, setVerbalTimes)}
+          />
         </div>
+        <BehaviourTimingSection
+          selected={verbalBehavior}
+          times={verbalTimes}
+          onAddOccurrence={(b) => addOccurrence(b, setVerbalTimes)}
+          onRemoveOccurrence={(b, uid) => removeOccurrence(b, uid, setVerbalTimes)}
+          onChangeOccurrence={(b, uid, f, v) => changeOccurrence(b, uid, f, v, setVerbalTimes)}
+          t={t}
+        />
         <div>
           <label className={labelCls}>💬 {t("Active Complaints")}</label>
           <textarea
@@ -245,10 +425,46 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
       {/* Physical Behavior */}
       <div className={sectionCls}>
         <h3 className="text-sm font-bold text-gray-900">✋ {t("Physical Behavior")}</h3>
-        <MultiChips options={PHYSICAL_OPTIONS} selected={physicalBehavior} onToggle={(opt) => toggle(setPhysicalBehavior, opt)} />
+        <div>
+          <label className={labelCls}>{t("Select all that apply")}</label>
+          <MultiChips
+            options={PHYSICAL_OPTIONS}
+            selected={physicalBehavior}
+            onToggle={(opt) => toggleBehaviour(opt, physicalBehavior, setPhysicalBehavior, setPhysicalTimes)}
+          />
+        </div>
+        <BehaviourTimingSection
+          selected={physicalBehavior}
+          times={physicalTimes}
+          onAddOccurrence={(b) => addOccurrence(b, setPhysicalTimes)}
+          onRemoveOccurrence={(b, uid) => removeOccurrence(b, uid, setPhysicalTimes)}
+          onChangeOccurrence={(b, uid, f, v) => changeOccurrence(b, uid, f, v, setPhysicalTimes)}
+          t={t}
+        />
       </div>
 
-      {/* Rest & Restraint */}
+      {/* Emotion / Mood */}
+      <div className={sectionCls}>
+        <h3 className="text-sm font-bold text-gray-900">😌 {t("Emotion / Mood")}</h3>
+        <div>
+          <label className={labelCls}>{t("Select all that apply")}</label>
+          <MultiChips
+            options={EMOTION_OPTIONS}
+            selected={emotionMood}
+            onToggle={(opt) => toggleBehaviour(opt, emotionMood, setEmotionMood, setMoodTimes)}
+          />
+        </div>
+        <BehaviourTimingSection
+          selected={emotionMood}
+          times={moodTimes}
+          onAddOccurrence={(b) => addOccurrence(b, setMoodTimes)}
+          onRemoveOccurrence={(b, uid) => removeOccurrence(b, uid, setMoodTimes)}
+          onChangeOccurrence={(b, uid, f, v) => changeOccurrence(b, uid, f, v, setMoodTimes)}
+          t={t}
+        />
+      </div>
+
+      {/* Rest & Restraint (observation-level, no timing) */}
       <div className={sectionCls}>
         <h3 className="text-sm font-bold text-gray-900">🛌 {t("Rest & Restraint")}</h3>
         <div>
@@ -270,18 +486,18 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
           </div>
         </div>
         <div>
-          <label className={labelCls}>{t("Restraint")} <span className="text-xs font-normal text-gray-500">({t("select all that apply")})</span></label>
-          <MultiChips options={RESTRAINT_OPTIONS} selected={restraint} onToggle={(opt) => toggle(setRestraint, opt)} />
+          <label className={labelCls}>
+            {t("Restraint")} <span className="text-xs font-normal text-gray-500">({t("select all that apply")})</span>
+          </label>
+          <MultiChips
+            options={RESTRAINT_OPTIONS}
+            selected={restraint}
+            onToggle={(opt) => toggle(setRestraint, opt)}
+          />
         </div>
       </div>
 
-      {/* Emotion / Mood */}
-      <div className={sectionCls}>
-        <h3 className="text-sm font-bold text-gray-900">😌 {t("Emotion / Mood")}</h3>
-        <MultiChips options={EMOTION_OPTIONS} selected={emotionMood} onToggle={(opt) => toggle(setEmotionMood, opt)} />
-      </div>
-
-      {/* Level of Disturbance */}
+      {/* Level of Disturbance (observation-level) */}
       <div className={sectionCls}>
         <h3 className="text-sm font-bold text-gray-900">🤯 {t("Level of Disturbance")}</h3>
         <select value={disturbanceLevel} onChange={(e) => setDisturbanceLevel(e.target.value)} className={inputCls}>
@@ -290,114 +506,6 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-      </div>
-
-      {/* Timed Episodes */}
-      <div className={sectionCls}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-900">⏱️ {t("Timed Episodes")} <span className="text-xs font-normal text-gray-400">({t("optional")})</span></h3>
-          <button
-            type="button"
-            onClick={addEpisode}
-            className="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t("Add period")}
-          </button>
-        </div>
-
-        {episodes.length === 0 && (
-          <p className="text-sm text-gray-400">{t("Record specific time periods for each behaviour episode.")}</p>
-        )}
-
-        <div className="space-y-3">
-          {episodes.map((ep, idx) => (
-            <div key={idx} className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("Episode")} {idx + 1}</span>
-                <button
-                  type="button"
-                  onClick={() => removeEpisode(idx)}
-                  className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                  aria-label="Remove episode"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">{t("Category")}</label>
-                  <select
-                    value={ep.category}
-                    onChange={(e) => updateEpisode(idx, "category", e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {CATEGORY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{t(c)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">{t("Behaviour")}</label>
-                  <select
-                    value={ep.behaviour}
-                    onChange={(e) => updateEpisode(idx, "behaviour", e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    <option value="">{t("Select")}</option>
-                    {BEHAVIOUR_BY_CATEGORY[ep.category]?.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">{t("From")}</label>
-                  <input
-                    type="time"
-                    value={ep.startTime}
-                    onChange={(e) => updateEpisode(idx, "startTime", e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">{t("To")}</label>
-                  <input
-                    type="time"
-                    value={ep.endTime}
-                    onChange={(e) => updateEpisode(idx, "endTime", e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">{t("Note")} <span className="text-gray-400">({t("optional")})</span></label>
-                <input
-                  type="text"
-                  value={ep.note ?? ""}
-                  onChange={(e) => updateEpisode(idx, "note", e.target.value || null)}
-                  placeholder={t("Any note for this episode")}
-                  className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {episodes.length > 0 && (
-          <button
-            type="button"
-            onClick={addEpisode}
-            className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800"
-          >
-            <Plus className="h-4 w-4" />
-            {t("Add another period")}
-          </button>
-        )}
       </div>
 
       {/* Entered By */}

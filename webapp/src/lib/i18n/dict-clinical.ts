@@ -316,4 +316,23 @@ export const dictClinical: Record<string, string> = {
   "End time": "Masa tamat",
   Duration: "Tempoh",
   "Chart summaries (no timed episodes)": "Ringkasan carta (tiada episod berjangka)",
+  // Severity colours / concern levels
+  "Normal / Neutral": "Normal / Neutral",
+  "Mild Concern": "Kebimbangan Ringan",
+  "Abnormal": "Tidak Normal",
+  "High Concern": "Kebimbangan Tinggi",
+  // Range presets
+  Today: "Hari Ini",
+  Custom: "Tersuai",
+  Apply: "Guna",
+  // Day view / drill-down
+  "Back to": "Kembali ke",
+  "Click to view this day in detail": "Klik untuk lihat hari ini secara terperinci",
+  "Tap a day to view its detailed 24-hour timeline": "Ketik hari untuk lihat garis masa 24 jam terperinci",
+  // Inline timing
+  "Time not specified": "Masa tidak dinyatakan",
+  "add a period to record exact time": "tambah tempoh untuk rekod masa tepat",
+  "Add a period": "Tambah tempoh",
+  "Any note for this period": "Sebarang nota untuk tempoh ini",
+  "Not specified": "Tidak dinyatakan",
 };

@@ -30,16 +30,16 @@ export type BehaviourEpisode = {
   branch_id: number;
   category: string;
   behaviour: string;
-  started_at: string;
-  ended_at: string;
+  started_at: string | null; // null = untimed (behaviour observed, time not recorded)
+  ended_at: string | null;
   note: string | null;
 };
 
 export type EpisodeInput = {
-  category: "Verbal" | "Physical" | "Mood" | "Restraint";
+  category: "Verbal" | "Physical" | "Mood"; // Restraint is observation-level, not timed
   behaviour: string;
-  startTime: string; // "HH:MM"
-  endTime: string;   // "HH:MM"
+  startTime: string | null; // null = untimed
+  endTime: string | null;
   note: string | null;
 };
 
@@ -130,8 +130,8 @@ export async function createBehaviourChart(
       resident_id: input.residentId,
       category: ep.category,
       behaviour: ep.behaviour,
-      started_at: `${obsDate}T${ep.startTime}:00+08:00`,
-      ended_at: `${obsDate}T${ep.endTime}:00+08:00`,
+      started_at: ep.startTime ? `${obsDate}T${ep.startTime}:00+08:00` : null,
+      ended_at: ep.endTime ? `${obsDate}T${ep.endTime}:00+08:00` : null,
       note: ep.note || null,
     }));
     const { error: epError } = await supabase.from("tbl_behaviour_episodes").insert(episodeRows);

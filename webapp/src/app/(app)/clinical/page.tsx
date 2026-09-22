@@ -20,6 +20,7 @@ export default async function ClinicalPage({
     resident?: string;
     start?: string;
     end?: string;
+    prev?: string;
   }>;
 }) {
   const account = await getCurrentUser();
@@ -32,6 +33,7 @@ export default async function ClinicalPage({
   const residentFilter = params.resident || "";
   const startDate = params.start || "";
   const endDate = params.end || "";
+  const prevParam = params.prev || "";
 
   const supabase = await createClient();
 
@@ -410,6 +412,7 @@ export default async function ClinicalPage({
         currentResident={residentFilter}
         currentStart={startDate}
         currentEnd={endDate}
+        currentPrev={prevParam}
         error={error}
       />
     </div>

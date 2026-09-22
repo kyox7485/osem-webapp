@@ -104,6 +104,7 @@ type Props = {
   currentResident: string;
   currentStart: string;
   currentEnd: string;
+  currentPrev?: string;
   error: string | null;
 };
 
@@ -127,6 +128,7 @@ export function ClinicalContent({
   currentResident,
   currentStart,
   currentEnd,
+  currentPrev,
   error,
 }: Props) {
   const push = useNavPush();
@@ -209,6 +211,7 @@ export function ClinicalContent({
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}
+            currentPrev={currentPrev}
             error={error}
           />
         )}
