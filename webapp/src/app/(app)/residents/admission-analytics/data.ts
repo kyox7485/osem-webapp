@@ -60,6 +60,18 @@ export type ResidentRow = {
   hygiene: string | null;
 };
 
+export type ResidentDetail = ResidentRow & {
+  resident_id?: string;
+  name?: string;
+};
+
+export type BranchCapacityInfo = {
+  branch_id: number;
+  branch_label: string;
+  bed_capacity: number | null;
+  active_residents: number;
+};
+
 // ─── KPI computations ────────────────────────────────────────────────────────
 
 export function computeAdmissions(residents: ResidentRow[], range: DateRange): number {
@@ -82,6 +94,48 @@ export function computeDischarges(residents: ResidentRow[], range: DateRange): n
 
 export function computeCurrentOccupancy(residents: ResidentRow[]): number {
   return residents.filter((r) => r.status === "ACTIVE").length;
+}
+
+// Calculate occupancy percentage given active resident count and total bed capacity.
+// Returns null if capacity is not configured (null/0).
+export function computeOccupancyPercentage(activeResidents: number, bedCapacity: number | null): number | null {
+  if (!bedCapacity || bedCapacity <= 0) return null;
+  return Math.round((activeResidents / bedCapacity) * 100);
+}
+
+// Get residents admitted in a given date range (for drill-down).
+export function getAdmittedResidents(residents: ResidentRow[], range: DateRange): ResidentRow[] {
+  return residents.filter((r) => {
+    if (!r.admission_date) return false;
+    const d = new Date(r.admission_date);
+    return d >= range.start && d <= range.end;
+  });
+}
+
+// Get residents discharged in a given date range (for drill-down).
+export function getDischargedResidents(residents: ResidentRow[], range: DateRange): ResidentRow[] {
+  return residents.filter((r) => {
+    if (!r.discharge_date) return false;
+    const d = new Date(r.discharge_date);
+    return d >= range.start && d <= range.end;
+  });
+}
+
+// Get currently active residents (for drill-down).
+export function getActiveResidents(residents: ResidentRow[]): ResidentRow[] {
+  return residents.filter((r) => r.status === "ACTIVE");
+}
+
+// Calculate length of stay for a single resident (in days).
+export function calculateResidentLOS(resident: ResidentRow, asOfDate: Date): number | null {
+  if (!resident.admission_date) return null;
+  const admDate = new Date(resident.admission_date);
+
+  // If discharged, use discharge date; otherwise use asOfDate
+  const endDate = resident.discharge_date ? new Date(resident.discharge_date) : asOfDate;
+
+  const days = Math.round((endDate.getTime() - admDate.getTime()) / 86_400_000);
+  return Math.max(0, days);
 }
 
 export function computeAvgLOS(residents: ResidentRow[]): number | null {
@@ -199,14 +253,19 @@ const LOS_BUCKETS: { label: string; min: number; max: number }[] = [
   { label: ">180 days", min: 181, max: Infinity },
 ];
 
-export function computeLOSDistribution(residents: ResidentRow[]): LOSBucket[] {
-  const completed = residents.filter((r) => r.admission_date && r.discharge_date);
+// Calculate LOS distribution including both completed and active residents.
+// For active residents, LOS is calculated using the provided asOfDate (calculation date).
+export function computeLOSDistribution(residents: ResidentRow[], asOfDate: Date = new Date()): LOSBucket[] {
+  // Include all residents with an admission date (completed + active)
+  const residents_with_admission = residents.filter((r) => r.admission_date);
+
   return LOS_BUCKETS.map(({ label, min, max }) => ({
     label,
-    count: completed.filter((r) => {
+    count: residents_with_admission.filter((r) => {
+      // Calculate LOS using discharge_date if available, otherwise asOfDate
+      const endDate = r.discharge_date ? new Date(r.discharge_date) : asOfDate;
       const days = Math.round(
-        (new Date(r.discharge_date!).getTime() - new Date(r.admission_date!).getTime()) /
-          86_400_000
+        (endDate.getTime() - new Date(r.admission_date!).getTime()) / 86_400_000
       );
       return days >= min && days <= max;
     }).length,
