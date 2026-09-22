@@ -36,6 +36,29 @@ const FREQ_TIME_DEFAULTS: Record<string, string[]> = {
   ON:  ["1000PM"],
 };
 
+const DOSAGE_FORM_TO_UNIT_MAP: Record<string, string> = {
+  "Tablet": "Tablet",
+  "Capsule": "Capsule",
+  "Powder": "Sachet",
+  "Syrup": "ml",
+  "Cream": "Application",
+  "Ointment": "Application",
+  "Lotion": "Application",
+  "Gel": "Application",
+  "Patch": "Unit",
+  "Ear Drop": "Drop",
+  "Eye Drop": "Drop",
+  "S/C Injection": "Ampoule",
+  "I/M Injection": "Ampoule",
+  "Neb.": "Unit",
+  "Inhaler": "Puff",
+  "Others": "Unit",
+};
+
+function getDefaultUnitForDosageForm(dosageForm: string): string | null {
+  return DOSAGE_FORM_TO_UNIT_MAP[dosageForm] ?? null;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ResidentOption = {
@@ -618,8 +641,15 @@ export function OrderForm(props: Props) {
               <select
                 value={dosageForm}
                 onChange={(e) => {
-                  setDosageForm(e.target.value);
+                  const newForm = e.target.value;
+                  setDosageForm(newForm);
                   mark();
+                  if (isCreate && newForm) {
+                    const defaultUnit = getDefaultUnitForDosageForm(newForm);
+                    if (defaultUnit && !unit) {
+                      setUnit(defaultUnit);
+                    }
+                  }
                 }}
                 className={inputCls + " cursor-pointer"}
               >
