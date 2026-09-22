@@ -130,10 +130,11 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onChangeCapture={markDirty}>
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">{t("Record Vital Signs")}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onChangeCapture={markDirty}>
+      <div className="flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl sm:max-h-[90dvh]">
+        {/* Header */}
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6">
+          <h2 className="text-lg font-bold text-gray-900 sm:text-xl">{t("Record Vital Signs")}</h2>
           <button
             type="button"
             onClick={handleClose}
@@ -146,9 +147,12 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
           </button>
         </div>
 
-        {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-4 sm:px-6 sm:py-6">
+            {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" id="vital-signs-form">
           <div>
             <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
               {t("Resident")} <span className="text-red-500">*</span>
@@ -454,7 +458,13 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+            </form>
+          </div>
+        </div>
+
+        {/* Sticky Footer */}
+        <div className="flex-shrink-0 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleClose}
@@ -466,12 +476,13 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             <button
               type="submit"
               disabled={isSaving}
+              form="vital-signs-form"
               className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {isSaving ? t("Saving...") : t("Save")}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
