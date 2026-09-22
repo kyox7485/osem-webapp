@@ -3,8 +3,8 @@ import { getCurrentUser } from "@/lib/current-user";
 import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds } from "@/lib/lookups";
 import { getObservationCharts } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
-import { getBehaviourCharts } from "./behaviour-chart-actions";
-import type { BehaviourEntry } from "./behaviour-chart-actions";
+import { getBehaviourCharts, getBehaviourEpisodes } from "./behaviour-chart-actions";
+import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 import { redirect } from "next/navigation";
 import { ClinicalContent } from "./clinical-content";
 import { getWoundSessionHistory } from "./wound-photo-actions";
@@ -69,6 +69,7 @@ export default async function ClinicalPage({
   let woundSessions: Awaited<ReturnType<typeof getWoundSessionHistory>>["sessions"] = [];
   let observationEntries: ObservationEntry[] = [];
   let behaviourEntries: BehaviourEntry[] = [];
+  let behaviourEpisodes: BehaviourEpisode[] = [];
   let error = null;
 
   if (currentTab === "vitals") {
@@ -376,9 +377,15 @@ export default async function ClinicalPage({
     observationEntries = result.entries;
     error = result.error;
   } else if (currentTab === "behaviour-chart") {
-    const result = await getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds });
-    behaviourEntries = result.entries;
-    error = result.error;
+    const [chartsResult, episodesResult] = await Promise.all([
+      getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds }),
+      residentFilter
+        ? getBehaviourEpisodes({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds })
+        : { episodes: [], error: null },
+    ]);
+    behaviourEntries = chartsResult.entries;
+    behaviourEpisodes = episodesResult.episodes;
+    error = chartsResult.error ?? episodesResult.error;
   }
 
   return (
@@ -399,6 +406,7 @@ export default async function ClinicalPage({
         woundBodyParts={woundBodyParts}
         observationEntries={observationEntries}
         behaviourEntries={behaviourEntries}
+        behaviourEpisodes={behaviourEpisodes}
         currentResident={residentFilter}
         currentStart={startDate}
         currentEnd={endDate}

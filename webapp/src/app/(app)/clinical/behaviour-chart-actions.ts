@@ -23,6 +23,26 @@ export type BehaviourEntry = {
   tbl_staff: { StaffID: string; staff_name: string } | null;
 };
 
+export type BehaviourEpisode = {
+  id: number;
+  chart_id: number;
+  resident_id: number;
+  branch_id: number;
+  category: string;
+  behaviour: string;
+  started_at: string;
+  ended_at: string;
+  note: string | null;
+};
+
+export type EpisodeInput = {
+  category: "Verbal" | "Physical" | "Mood" | "Restraint";
+  behaviour: string;
+  startTime: string; // "HH:MM"
+  endTime: string;   // "HH:MM"
+  note: string | null;
+};
+
 type CreateBehaviourChartInput = {
   residentId: number;
   residentName: string;
@@ -38,6 +58,7 @@ type CreateBehaviourChartInput = {
   createdBy: string;
   createdByName: string | null;
   createdByOther: string | null;
+  episodes: EpisodeInput[];
 };
 
 const DISTURBANCE_LABELS: Record<number, string> = {
@@ -47,6 +68,12 @@ const DISTURBANCE_LABELS: Record<number, string> = {
   3: "Frequent sound (others can't sleep)",
   4: "Persistent sound (disturbing activity)",
 };
+
+const TIME_ZONE = "Asia/Kuala_Lumpur";
+
+function obsDateMYT(isoUtc: string): string {
+  return new Date(isoUtc).toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
+}
 
 export async function createBehaviourChart(
   input: CreateBehaviourChartInput
@@ -63,31 +90,53 @@ export async function createBehaviourChart(
     .single();
 
   if (!resident.data) return { success: false, error: "Resident not found" };
+  const branchId = resident.data.branch_id;
 
   const branchMeta = await supabase
     .from("tbl_branches")
     .select("telegram_chat_id")
-    .eq("BranchID", resident.data.branch_id)
+    .eq("BranchID", branchId)
     .single();
   const branchChatId = branchMeta.data?.telegram_chat_id ?? null;
 
-  const { error } = await supabase.from("tbl_behaviour_charts").insert({
-    branch_id: resident.data.branch_id,
-    resident_id: input.residentId,
-    entry_timestamp: input.entryTimestamp,
-    verbal_behavior: input.verbalBehavior.length > 0 ? input.verbalBehavior : null,
-    complaints: input.complaints || null,
-    physical_behavior: input.physicalBehavior.length > 0 ? input.physicalBehavior : null,
-    sleep_from: input.sleepFrom || null,
-    sleep_to: input.sleepTo || null,
-    restraint: input.restraint.length > 0 ? input.restraint : null,
-    emotion_mood: input.emotionMood.length > 0 ? input.emotionMood : null,
-    disturbance_level: input.disturbanceLevel,
-    created_by: input.createdBy || null,
-    created_by_other: input.createdByOther || null,
-  });
+  const { data: chartData, error: chartError } = await supabase
+    .from("tbl_behaviour_charts")
+    .insert({
+      branch_id: branchId,
+      resident_id: input.residentId,
+      entry_timestamp: input.entryTimestamp,
+      verbal_behavior: input.verbalBehavior.length > 0 ? input.verbalBehavior : null,
+      complaints: input.complaints || null,
+      physical_behavior: input.physicalBehavior.length > 0 ? input.physicalBehavior : null,
+      sleep_from: input.sleepFrom || null,
+      sleep_to: input.sleepTo || null,
+      restraint: input.restraint.length > 0 ? input.restraint : null,
+      emotion_mood: input.emotionMood.length > 0 ? input.emotionMood : null,
+      disturbance_level: input.disturbanceLevel,
+      created_by: input.createdBy || null,
+      created_by_other: input.createdByOther || null,
+    })
+    .select("id")
+    .single();
 
-  if (error) return { success: false, error: error.message };
+  if (chartError || !chartData) return { success: false, error: chartError?.message ?? "Insert failed" };
+
+  // Save timed episodes if provided
+  if (input.episodes.length > 0) {
+    const obsDate = obsDateMYT(input.entryTimestamp);
+    const episodeRows = input.episodes.map((ep) => ({
+      chart_id: chartData.id,
+      branch_id: branchId,
+      resident_id: input.residentId,
+      category: ep.category,
+      behaviour: ep.behaviour,
+      started_at: `${obsDate}T${ep.startTime}:00+08:00`,
+      ended_at: `${obsDate}T${ep.endTime}:00+08:00`,
+      note: ep.note || null,
+    }));
+    const { error: epError } = await supabase.from("tbl_behaviour_episodes").insert(episodeRows);
+    if (epError) return { success: false, error: epError.message };
+  }
 
   const staffLabel = input.createdByOther || input.createdByName || input.createdBy || "Unknown";
   const val = (v: string | null | undefined) => (v ? v : "--");
@@ -104,6 +153,10 @@ export async function createBehaviourChart(
     input.disturbanceLevel != null
       ? `${input.disturbanceLevel} – ${DISTURBANCE_LABELS[input.disturbanceLevel]}`
       : "--";
+
+  const episodeSummary = input.episodes.length > 0
+    ? `\n⏱️ <b>Timed Episodes:</b> ${input.episodes.length} recorded`
+    : "";
 
   const lines = [
     `🔔 <b>Behaviour Chart Update</b>`,
@@ -123,6 +176,7 @@ export async function createBehaviourChart(
     `😌 <b>Emotion/Mood:</b> ${arr(input.emotionMood)}`,
     ``,
     `🤯 <b>Level of Disturbance:</b> ${disturbLine}`,
+    episodeSummary || null,
     ``,
     `✍️ Entered by: ${staffLabel}`,
   ]
@@ -171,11 +225,46 @@ export async function getBehaviourCharts(filters: {
 
   const { data, error } = await query;
 
-  const entries = (data ?? []).map((e: any) => ({
+  // Supabase returns joined rows as single-element arrays; unwrap them.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entries: BehaviourEntry[] = (data ?? []).map((e: any) => ({
     ...e,
     tbl_residents: Array.isArray(e.tbl_residents) ? e.tbl_residents[0] : e.tbl_residents,
     tbl_staff: Array.isArray(e.tbl_staff) ? e.tbl_staff[0] : e.tbl_staff,
   }));
 
   return { entries, error: error?.message ?? null };
+}
+
+export async function getBehaviourEpisodes(filters: {
+  residentId: string;
+  start?: string;
+  end?: string;
+  excludedBranchIds?: number[];
+}): Promise<{ episodes: BehaviourEpisode[]; error: string | null }> {
+  if (!filters.residentId) return { episodes: [], error: null };
+
+  const account = await getCurrentUser();
+  if (!account) return { episodes: [], error: "Not authenticated" };
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("tbl_behaviour_episodes")
+    .select("id, chart_id, resident_id, branch_id, category, behaviour, started_at, ended_at, note")
+    .eq("resident_id", parseInt(filters.residentId))
+    .order("started_at", { ascending: true });
+
+  if (account.rights !== "ADMIN") {
+    query = query.eq("branch_id", account.branch_id);
+  } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
+    query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
+  }
+
+  if (filters.start) query = query.gte("started_at", `${filters.start}T00:00:00+08:00`);
+  if (filters.end) query = query.lte("started_at", `${filters.end}T23:59:59+08:00`);
+
+  const { data, error } = await query;
+
+  return { episodes: (data ?? []) as BehaviourEpisode[], error: error?.message ?? null };
 }

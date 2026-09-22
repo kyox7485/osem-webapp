@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format-date";
 import { NewBehaviourChartForm } from "./new-behaviour-chart-form";
+import { BehaviourTimeline } from "./behaviour-timeline";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { ListChecks, Plus } from "lucide-react";
-import type { BehaviourEntry } from "./behaviour-chart-actions";
+import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 
 const DISTURBANCE_LABELS: Record<number, string> = {
   0: "No disturb",
@@ -23,6 +24,7 @@ type Resident = { id: number; resident_name: string; branch_id: number };
 
 type Props = {
   entries: BehaviourEntry[];
+  episodes: BehaviourEpisode[];
   residents: Resident[];
   allStaff: (LookupOption & { branch_id: number })[];
   currentResident: string;
@@ -31,15 +33,46 @@ type Props = {
   error: string | null;
 };
 
-const val = (v: string | number | null | undefined) => (v != null && v !== "" ? String(v) : "--");
-const arr = (v: string[] | null) => (v && v.length > 0 ? v.join(", ") : "--");
+const RANGE_DAYS = [7, 14, 30] as const;
 
-export function BehaviourChartModule({ entries, residents, allStaff, currentResident, currentStart, currentEnd, error }: Props) {
+function todayMYT(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+}
+
+function daysAgoMYT(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - (n - 1));
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+}
+
+export function BehaviourChartModule({
+  entries,
+  episodes,
+  residents,
+  allStaff,
+  currentResident,
+  currentStart,
+  currentEnd,
+  error,
+}: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // Derive the current range (7/14/30) from the URL start/end, defaulting to 7
+  function activeDays(): 7 | 14 | 30 {
+    if (!currentStart || !currentEnd) return 7;
+    const start = new Date(`${currentStart}T12:00:00+08:00`);
+    const end = new Date(`${currentEnd}T12:00:00+08:00`);
+    const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    if (diff >= 28) return 30;
+    if (diff >= 13) return 14;
+    return 7;
+  }
+
+  const days = activeDays();
+  const endDate = currentEnd || todayMYT();
 
   function applyFilters(residentId: string, start: string, end: string) {
     const params = new URLSearchParams();
@@ -48,6 +81,12 @@ export function BehaviourChartModule({ entries, residents, allStaff, currentResi
     if (start) params.set("start", start);
     if (end) params.set("end", end);
     push(`/clinical?${params.toString()}`);
+  }
+
+  function applyRange(n: 7 | 14 | 30) {
+    const end = todayMYT();
+    const start = daysAgoMYT(n);
+    applyFilters(currentResident, start, end);
   }
 
   return (
@@ -62,146 +101,123 @@ export function BehaviourChartModule({ entries, residents, allStaff, currentResi
       </TabRow>
 
       {innerTab === "review" ? (
-        <>
+        <div className="space-y-4">
           {/* Filters */}
           <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[180px]">
                 <label htmlFor="beh-resident-filter" className="mb-1 block text-sm font-medium text-gray-700">
                   {t("Resident")}
                 </label>
                 <select
                   id="beh-resident-filter"
                   value={currentResident}
-                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
+                  onChange={(e) => applyFilters(e.target.value, currentStart || daysAgoMYT(days), currentEnd || todayMYT())}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="">{t("All residents")}</option>
+                  <option value="">{t("Select a resident")}</option>
                   {residents.map((r) => (
                     <option key={r.id} value={r.id}>{r.resident_name}</option>
                   ))}
                 </select>
               </div>
+
+              {/* Range preset buttons */}
               <div>
-                <label htmlFor="beh-start-date" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("Start date")}
-                </label>
-                <input
-                  type="date"
-                  id="beh-start-date"
-                  value={currentStart}
-                  onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="beh-end-date" className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("End date")}
-                </label>
-                <input
-                  type="date"
-                  id="beh-end-date"
-                  value={currentEnd}
-                  onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
+                <p className="mb-1 text-sm font-medium text-gray-700">{t("Range")}</p>
+                <div className="flex gap-1">
+                  {RANGE_DAYS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => applyRange(n)}
+                      className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                        days === n && currentResident
+                          ? "border-indigo-600 bg-indigo-600 text-white"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
+                      }`}
+                    >
+                      {n} {t("Days")}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="space-y-3">
-            {entries.length === 0 ? (
-              <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-                {t("No behaviour chart entries yet.")}
-              </div>
-            ) : (
-              entries.map((entry) => {
-                const isExpanded = expandedId === entry.id;
-                const enteredBy = entry.tbl_staff?.staff_name ?? entry.created_by_other ?? "--";
-                const residentName = entry.tbl_residents?.resident_name ?? "--";
-                const distLabel =
-                  entry.disturbance_level != null
-                    ? `${entry.disturbance_level} – ${DISTURBANCE_LABELS[entry.disturbance_level]}`
-                    : "--";
-
-                const sleepLine =
-                  entry.sleep_from && entry.sleep_to
-                    ? `${entry.sleep_from} – ${entry.sleep_to}`
-                    : entry.sleep_from ?? entry.sleep_to ?? "--";
-
-                return (
-                  <div
-                    key={entry.id}
-                    onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                    className="cursor-pointer rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-indigo-200"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold text-gray-900">{residentName}</span>
-                      <span className="flex items-center gap-2 text-xs text-gray-400">
-                        {formatDateTime(entry.entry_timestamp)}
-                        <svg
-                          width="14" height="14" viewBox="0 0 16 16" fill="none"
-                          className={`text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                        >
-                          <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+          {!currentResident ? (
+            <div className="rounded-md border border-dashed border-gray-300 p-8 text-center">
+              <p className="text-sm text-gray-400">{t("Select a resident above to view the behaviour timeline.")}</p>
+            </div>
+          ) : (
+            <>
+              {/* Disturbance level sidebar for current date range */}
+              {days > 7 && entries.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {entries.slice(0, 7).map((e) => {
+                    const lvl = e.disturbance_level;
+                    return lvl != null ? (
+                      <span key={e.id} className="rounded border border-gray-200 bg-white px-2 py-1 text-gray-600">
+                        {formatDateTime(e.entry_timestamp).split(",")[0]}: L{lvl} – {DISTURBANCE_LABELS[lvl]}
                       </span>
-                    </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
 
-                    {/* Summary line */}
-                    {!isExpanded && (
-                      <p className="text-sm text-gray-500">
-                        {arr(entry.verbal_behavior)} · {arr(entry.physical_behavior)}
-                        {entry.disturbance_level != null && ` · Disturbance: ${entry.disturbance_level}`}
-                      </p>
-                    )}
+              {episodes.length === 0 && entries.length === 0 ? (
+                <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+                  {t("No behaviour episodes recorded in this period.")}
+                </div>
+              ) : (
+                <BehaviourTimeline
+                  episodes={episodes}
+                  charts={entries}
+                  days={days}
+                  endDate={endDate}
+                />
+              )}
 
-                    {isExpanded && (
-                      <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">🗣️ {t("Verbal Behavior")}</p>
-                          <p className="text-sm text-gray-700">{arr(entry.verbal_behavior)}</p>
-                          {entry.complaints && (
-                            <p className="mt-1 text-sm text-gray-700">
-                              <span className="text-gray-400">💬 {t("Complaints")}: </span>{entry.complaints}
-                            </p>
+              {/* Legacy chart entries that have no timed episodes (summary only) */}
+              {episodes.length === 0 && entries.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mt-2">
+                    {t("Chart summaries (no timed episodes)")}
+                  </p>
+                  {entries.map((entry) => {
+                    const enteredBy = entry.tbl_staff?.staff_name ?? entry.created_by_other ?? "--";
+                    const distLabel =
+                      entry.disturbance_level != null
+                        ? `${entry.disturbance_level} – ${DISTURBANCE_LABELS[entry.disturbance_level]}`
+                        : null;
+                    return (
+                      <div key={entry.id} className="rounded-md border border-gray-200 bg-white p-3 shadow-sm text-sm">
+                        <div className="flex justify-between text-gray-500 text-xs mb-1">
+                          <span>{formatDateTime(entry.entry_timestamp)}</span>
+                          <span>{enteredBy}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-gray-700">
+                          {entry.verbal_behavior && entry.verbal_behavior.length > 0 && (
+                            <span>🗣️ {entry.verbal_behavior.join(", ")}</span>
                           )}
-                        </div>
-
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">✋ {t("Physical Behavior")}</p>
-                          <p className="text-sm text-gray-700">{arr(entry.physical_behavior)}</p>
-                        </div>
-
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">🛌 {t("Rest & Restraint")}</p>
-                          <div className="text-sm text-gray-700 space-y-0.5">
-                            <p><span className="text-gray-400">{t("Sleep")}: </span>{val(sleepLine)}</p>
-                            <p><span className="text-gray-400">{t("Restraint")}: </span>{arr(entry.restraint)}</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">😌 {t("Emotion / Mood")}</p>
-                          <p className="text-sm text-gray-700">{arr(entry.emotion_mood)}</p>
-                        </div>
-
-                        <div>
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">🤯 {t("Level of Disturbance")}</p>
-                          <p className="text-sm text-gray-700">{distLabel}</p>
+                          {entry.physical_behavior && entry.physical_behavior.length > 0 && (
+                            <span>✋ {entry.physical_behavior.join(", ")}</span>
+                          )}
+                          {entry.emotion_mood && entry.emotion_mood.length > 0 && (
+                            <span>😌 {entry.emotion_mood.join(", ")}</span>
+                          )}
+                          {distLabel && <span>🤯 {distLabel}</span>}
                         </div>
                       </div>
-                    )}
-
-                    <div className="mt-2 text-xs text-gray-400">{t("Entered by")}: {enteredBy}</div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       ) : (
         <NewBehaviourChartForm
           residents={residents}
