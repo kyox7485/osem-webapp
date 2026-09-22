@@ -184,7 +184,7 @@ export default async function AdmissionAnalyticsPage({
         allResidentsWithAdmission={allResidentsWithAdmission}
         residents={residents}
         dateRange={range}
-        selectedBranches={selectedBranches}
+        selectedBranches={selectedBranches.map((b) => ({ ...b, id: Number(b.id) }))}
       />
 
       {/* ── Occupancy trend ────────────────────────────────────────────────── */}
