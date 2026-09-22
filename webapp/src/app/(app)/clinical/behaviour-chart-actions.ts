@@ -71,6 +71,36 @@ const DISTURBANCE_LABELS: Record<number, string> = {
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
 
+function esc(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+const EPISODE_CATEGORY_CONFIG: Array<{ key: "Verbal" | "Physical" | "Mood"; icon: string; label: string }> = [
+  { key: "Verbal", icon: "🗣️", label: "Verbal Behavior" },
+  { key: "Physical", icon: "✋", label: "Physical Behavior" },
+  { key: "Mood", icon: "😌", label: "Emotion/Mood" },
+];
+
+function buildEpisodeSections(episodes: EpisodeInput[]): string {
+  const sections: string[] = [];
+  for (const { key, icon, label } of EPISODE_CATEGORY_CONFIG) {
+    const catEps = episodes.filter((ep) => ep.category === key);
+    if (catEps.length === 0) continue;
+    const lines: string[] = [`${icon} <b>${label}</b>`];
+    for (const ep of catEps) {
+      lines.push(`  • ${esc(ep.behaviour)}`);
+      if (ep.startTime && ep.endTime) {
+        lines.push(`    ${ep.startTime} – ${ep.endTime}`);
+      } else {
+        lines.push(`    Time not specified — observed during the day`);
+      }
+      if (ep.note) lines.push(`    Note: ${esc(ep.note)}`);
+    }
+    sections.push(lines.join("\n"));
+  }
+  return sections.join("\n\n");
+}
+
 function obsDateMYT(isoUtc: string): string {
   return new Date(isoUtc).toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
 }
@@ -139,8 +169,6 @@ export async function createBehaviourChart(
   }
 
   const staffLabel = input.createdByOther || input.createdByName || input.createdBy || "Unknown";
-  const val = (v: string | null | undefined) => (v ? v : "--");
-  const arr = (v: string[]) => (v.length > 0 ? v.join(", ") : "--");
 
   const sleepLine =
     input.sleepFrom && input.sleepTo
@@ -154,31 +182,26 @@ export async function createBehaviourChart(
       ? `${input.disturbanceLevel} – ${DISTURBANCE_LABELS[input.disturbanceLevel]}`
       : "--";
 
-  const episodeSummary = input.episodes.length > 0
-    ? `\n⏱️ <b>Timed Episodes:</b> ${input.episodes.length} recorded`
-    : "";
+  const restraintLine =
+    input.restraint.length > 0 ? input.restraint.map(esc).join(", ") : "Not on any restrain";
+
+  const episodeSections = buildEpisodeSections(input.episodes);
 
   const lines = [
     `🔔 <b>Behaviour Chart Update</b>`,
     ``,
-    `👤 <b>${input.residentName}</b>`,
+    `👤 <b>${esc(input.residentName)}</b>`,
     `📅 ${formatDateTime(input.entryTimestamp)}`,
-    ``,
-    `🗣️ <b>Verbal Behavior:</b> ${arr(input.verbalBehavior)}`,
-    input.complaints ? `💬 Complaints: ${input.complaints}` : null,
-    ``,
-    `✋ <b>Physical Behavior:</b> ${arr(input.physicalBehavior)}`,
+    episodeSections ? `\n${episodeSections}` : null,
     ``,
     `🛌 <b>Rest &amp; Restraint</b>`,
-    `  Sleep: ${val(sleepLine)}`,
-    `  Restraint: ${arr(input.restraint)}`,
-    ``,
-    `😌 <b>Emotion/Mood:</b> ${arr(input.emotionMood)}`,
+    `  Sleep: ${sleepLine}`,
+    `  Restraint: ${restraintLine}`,
     ``,
     `🤯 <b>Level of Disturbance:</b> ${disturbLine}`,
-    episodeSummary || null,
+    input.complaints ? `\n💬 <b>Active Complaints:</b> ${esc(input.complaints)}` : null,
     ``,
-    `✍️ Entered by: ${staffLabel}`,
+    `✍️ Entered by: ${esc(staffLabel)}`,
   ]
     .filter((l) => l !== null)
     .join("\n");
