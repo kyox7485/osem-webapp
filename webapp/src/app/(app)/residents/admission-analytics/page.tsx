@@ -4,16 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getBranchesWithCapacity, getDemoBranchIds } from "@/lib/lookups";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PageTitle } from "@/components/page-header";
-import {
-  Users,
-  DoorOpen,
-  BedDouble,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Clock,
-  BarChart3,
-} from "lucide-react";
 
 import { ResidentsModuleTabs } from "../module-tabs";
 import { AnalyticsFilters } from "./filters";
@@ -32,12 +22,12 @@ import {
   type ResidentRow,
 } from "./data";
 import {
-  KpiCard,
   OccupancyTrendChart,
   AgeGenderTable,
   CategoryBars,
   LOSBars,
 } from "./charts";
+import { KpiCardsClient } from "./kpi-cards-client";
 
 export default async function AdmissionAnalyticsPage({
   searchParams,
@@ -180,72 +170,22 @@ export default async function AdmissionAnalyticsPage({
         </div>
       )}
 
-      {/* ── KPI row ────────────────────────────────────────────────────────── */}
-      <div className={`mb-4 grid gap-3 ${isCurrentPeriod ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"}`}>
-        <KpiCard
-          label={t("Admissions")}
-          value={admissions}
-          sub={t("in selected period")}
-          tint="bg-blue-50 text-blue-600"
-          icon={<Users className="h-4 w-4" strokeWidth={2} />}
-          clickable
-        />
-        <KpiCard
-          label={t("Discharges")}
-          value={discharges}
-          sub={t("in selected period")}
-          tint="bg-amber-50 text-amber-600"
-          icon={<DoorOpen className="h-4 w-4" strokeWidth={2} />}
-          clickable
-        />
-        {isCurrentPeriod && (
-          <KpiCard
-            label={t("Active Residents")}
-            value={currentOccupancy}
-            sub={t("current occupancy")}
-            tint="bg-emerald-50 text-emerald-600"
-            icon={<BedDouble className="h-4 w-4" strokeWidth={2} />}
-            clickable
-          />
-        )}
-        <KpiCard
-          label={t("Net Bed Change")}
-          value={
-            <span className={netGrowth > 0 ? "text-emerald-700" : netGrowth < 0 ? "text-red-600" : "text-gray-900"}>
-              {netGrowth > 0 ? "+" : ""}
-              {netGrowth}
-            </span>
-          }
-          sub={t("admissions − discharges")}
-          tint={netGrowth > 0 ? "bg-emerald-50 text-emerald-600" : netGrowth < 0 ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}
-          icon={
-            netGrowth > 0 ? (
-              <TrendingUp className="h-4 w-4" strokeWidth={2} />
-            ) : netGrowth < 0 ? (
-              <TrendingDown className="h-4 w-4" strokeWidth={2} />
-            ) : (
-              <Minus className="h-4 w-4" strokeWidth={2} />
-            )
-          }
-          clickable
-        />
-        <KpiCard
-          label={t("Avg Length of Stay")}
-          value={avgLos !== null ? `${avgLos}d` : "–"}
-          sub={`${allResidentsWithAdmission} ${t("residents")}`}
-          tint="bg-violet-50 text-violet-600"
-          icon={<Clock className="h-4 w-4" strokeWidth={2} />}
-          clickable
-        />
-        <KpiCard
-          label={t("Occupancy %")}
-          value={occupancyPercentage !== null ? `${occupancyPercentage}%` : "–"}
-          sub={occupancyPercentage !== null ? `${currentOccupancy}/${totalBedCapacity} beds` : t("Capacity not configured")}
-          tint={occupancyPercentage !== null ? "bg-indigo-50 text-indigo-600" : "bg-gray-100 text-gray-500"}
-          icon={<BarChart3 className="h-4 w-4" strokeWidth={2} />}
-          clickable={occupancyPercentage !== null}
-        />
-      </div>
+      {/* ── KPI row (client component for interactivity) ────────────────────── */}
+      <KpiCardsClient
+        admissions={admissions}
+        discharges={discharges}
+        currentOccupancy={currentOccupancy}
+        netGrowth={netGrowth}
+        avgLos={avgLos}
+        occupancyPercentage={occupancyPercentage}
+        totalBedCapacity={totalBedCapacity}
+        isCurrentPeriod={isCurrentPeriod}
+        completedStays={completedStays}
+        allResidentsWithAdmission={allResidentsWithAdmission}
+        residents={residents}
+        dateRange={range}
+        selectedBranches={selectedBranches}
+      />
 
       {/* ── Occupancy trend ────────────────────────────────────────────────── */}
       <div className="mb-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">

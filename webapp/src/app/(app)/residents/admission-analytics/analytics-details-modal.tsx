@@ -163,21 +163,26 @@ export function AnalyticsDetailsModal({
                 </div>
               </div>
 
-              {branchBreakdown.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-semibold text-gray-700 mb-2">{t("By Branch")}</h4>
-                  <div className="space-y-2">
+              {branchBreakdown && branchBreakdown.length > 0 && (
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <h4 className="font-semibold text-gray-700 mb-3">{t("By Branch")}</h4>
+                  <div className="space-y-3">
                     {branchBreakdown.map((b) => {
                       const pct =
                         b.capacity && b.capacity > 0
                           ? Math.round((b.active / b.capacity) * 100)
                           : null;
                       return (
-                        <div key={b.label} className="flex items-center justify-between text-sm border-l-2 border-indigo-300 pl-3 py-2">
-                          <span className="text-gray-700">{b.label}</span>
-                          <span className="text-gray-600">
-                            {b.active}/{b.capacity ?? "–"} {pct !== null && `(${pct}%)`}
-                          </span>
+                        <div key={b.label} className="rounded-lg bg-gray-50 p-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-gray-900">{b.label}</span>
+                            <span className="text-indigo-600 font-semibold">
+                              {pct !== null ? `${pct}%` : "–"}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-xs text-gray-600">
+                            {b.active} / {b.capacity ?? "–"} beds
+                          </div>
                         </div>
                       );
                     })}
