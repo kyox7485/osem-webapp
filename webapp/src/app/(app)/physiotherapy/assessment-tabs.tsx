@@ -7,6 +7,7 @@ import type { LookupOption } from "@/lib/types";
 import type { PhysioCareSetting, TreatmentTypeOption } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
 
 // residentId/residentName/... are null when no patient is selected in the
@@ -44,6 +45,7 @@ export function PhysioAssessmentTabs({
   reviewAssessments,
 }: Props) {
   const t = useTranslation();
+  const { guardedAction } = useSafeNavigation();
   // Starts on New Entry once a patient is picked -- that should go
   // straight to a clean entry form, not the review list. With no patient
   // picked yet, there's no entry form to show, so start on Review Notes.
@@ -52,7 +54,7 @@ export function PhysioAssessmentTabs({
   return (
     <div>
       <TabRow className="mb-4">
-        <TabButton icon={ListChecks} active={tab === "review"} onClick={() => setTab("review")}>
+        <TabButton icon={ListChecks} active={tab === "review"} onClick={() => guardedAction(() => setTab("review"))}>
           {t("Review Notes")}
         </TabButton>
         <TabButton icon={Plus} active={tab === "new"} onClick={() => setTab("new")}>

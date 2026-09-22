@@ -53,4 +53,14 @@ export const dictCommon: Record<string, string> = {
   // Language switcher itself -- option text is language names, shown as-is
   // regardless of current language, so not run through t().
   Language: "Bahasa",
+
+  // Unsaved-changes guard dialog
+  "Unsaved changes": "Perubahan belum disimpan",
+  "You have unsaved changes. What would you like to do?":
+    "Anda mempunyai perubahan yang belum disimpan. Apa yang anda ingin lakukan?",
+  "Exit Without Saving": "Keluar Tanpa Menyimpan",
+  "Save & Exit": "Simpan & Keluar",
+  "Failed to save changes": "Gagal menyimpan perubahan",
+  "Save failed. Please try again.": "Simpan gagal. Sila cuba lagi.",
+  "This form can't be saved automatically.": "Borang ini tidak boleh disimpan secara automatik.",
 };

@@ -6,6 +6,7 @@ import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { toDatetimeLocalValue } from "@/lib/format-date";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 const BEHAVIOR_OPTIONS = [
   "Calm",
@@ -95,6 +96,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [vitalsLoading, setVitalsLoading] = useState(false);
+  const { markDirty, markClean } = useFormDirtyTracking("observation-chart-new", submitForm);
 
   const selectedResident = residents.find((r) => String(r.id) === residentId);
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id);
@@ -123,6 +125,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
   }, [residentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleBehavior(option: string) {
+    markDirty();
     setBehavior((prev) =>
       prev.includes(option) ? prev.filter((b) => b !== option) : [...prev, option]
     );
@@ -156,15 +159,19 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await submitForm();
+  }
+
+  async function submitForm(): Promise<{ success: boolean; error?: string }> {
     setError("");
 
     if (!residentId) {
       setError(t("Please select a resident"));
-      return;
+      return { success: false, error: t("Please select a resident") };
     }
     if (!createdBy || (createdBy === OTHERS_SENTINEL && !createdByOtherName.trim())) {
       setError(t("Please select who entered this chart"));
-      return;
+      return { success: false, error: t("Please select who entered this chart") };
     }
 
     setIsSaving(true);
@@ -201,15 +208,17 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
 
     if (!result.success) {
       setError(result.error || t("Failed to save"));
-      return;
+      return { success: false, error: result.error || t("Failed to save") };
     }
 
     resetForm();
+    markClean();
     onSaved();
+    return { success: true };
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onChangeCapture={markDirty}>
       {/* Resident + Timestamp */}
       <div className={sectionCls}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -220,7 +229,6 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
             <select
               value={residentId}
               onChange={(e) => setResidentId(e.target.value)}
-              disabled={!!presetResidentId}
               className={inputCls}
             >
               <option value="">{t("Select resident")}</option>
@@ -262,13 +270,13 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
           {/* SOB / Cough */}
           <div>
             <label className={labelCls}>🫁 {t("SOB / Cough")}</label>
-            <YesNoToggle value={sobCough} onChange={setSobCough} />
+            <YesNoToggle value={sobCough} onChange={(v) => { setSobCough(v); markDirty(); }} />
           </div>
 
           {/* Pain */}
           <div className="space-y-2">
             <label className={labelCls}>⚡ {t("Pain")}</label>
-            <YesNoToggle value={pain} onChange={setPain} />
+            <YesNoToggle value={pain} onChange={(v) => { setPain(v); markDirty(); }} />
             {pain === true && (
               <input
                 type="text"
@@ -307,13 +315,13 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
           {/* Vomiting */}
           <div>
             <label className={labelCls}>🤮 {t("Vomiting")}</label>
-            <YesNoToggle value={vomiting} onChange={setVomiting} />
+            <YesNoToggle value={vomiting} onChange={(v) => { setVomiting(v); markDirty(); }} />
           </div>
 
           {/* Diarrhea */}
           <div>
             <label className={labelCls}>💩 {t("Diarrhea")}</label>
-            <YesNoToggle value={diarrhea} onChange={setDiarrhea} />
+            <YesNoToggle value={diarrhea} onChange={(v) => { setDiarrhea(v); markDirty(); }} />
           </div>
 
           {/* Urine */}

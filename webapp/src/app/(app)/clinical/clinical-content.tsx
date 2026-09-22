@@ -18,6 +18,7 @@ import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ClipboardList, Activity, FileText, Ambulance, Camera, Eye, Brain } from "lucide-react";
 
 type Vital = {
@@ -134,6 +135,7 @@ export function ClinicalContent({
   const push = useNavPush();
   const t = useTranslation();
   const searchParams = useSearchParams();
+  const { guardedAction } = useSafeNavigation();
   const [activeTab, setActiveTab] = useState<TabKey>((searchParams.get("tab") as TabKey) || "nursing-chart");
 
   useEffect(() => {
@@ -146,10 +148,13 @@ export function ClinicalContent({
   }, [searchParams]);
 
   function switchTab(tab: TabKey) {
-    setActiveTab(tab);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    push(`/clinical?${params.toString()}`);
+    if (tab === activeTab) return;
+    guardedAction(() => {
+      setActiveTab(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", tab);
+      push(`/clinical?${params.toString()}`);
+    });
   }
 
   return (

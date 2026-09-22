@@ -6,6 +6,7 @@ import { ResidentDashboard } from "./resident-dashboard";
 import type { LookupOption } from "@/lib/types";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useTranslation } from "@/components/language-provider";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 type Resident = {
   id: number;
@@ -16,8 +17,8 @@ type Resident = {
 type Props = {
   residents: Resident[];
   allStaff: (LookupOption & { branch_id: number })[];
-  // Pre-selects and locks the resident picker -- used when the Review tab's
-  // resident filter is already set, so "New entry" doesn't ask again.
+  // Pre-selects the resident picker when opened from a filtered context,
+  // but the user can change it if needed.
   presetResidentId?: string;
   onSaved: () => void;
 };
@@ -39,6 +40,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
   const [isSaving, setIsSaving] = useState(false);
   const [dashboard, setDashboard] = useState<ResidentDashboardData | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const { markDirty, markClean } = useFormDirtyTracking("progress-note-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
@@ -69,21 +71,25 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await submitForm();
+  }
+
+  async function submitForm(): Promise<{ success: boolean; error?: string }> {
     setError("");
 
     if (!residentId) {
       setError(t("Please select a resident"));
-      return;
+      return { success: false, error: t("Please select a resident") };
     }
 
     if (!progressNote) {
       setError(t("Progress note is required"));
-      return;
+      return { success: false, error: t("Progress note is required") };
     }
 
     if (!createdBy || (createdBy === OTHERS_SENTINEL && !createdByOtherName.trim())) {
       setError(t("Please select who entered this note"));
-      return;
+      return { success: false, error: t("Please select who entered this note") };
     }
 
     setIsSaving(true);
@@ -106,15 +112,17 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
     if (!result.success) {
       setError(result.error || t("Failed to save progress note"));
-      return;
+      return { success: false, error: result.error || t("Failed to save progress note") };
     }
 
     resetForm();
+    markClean();
     onSaved();
+    return { success: true };
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onChangeCapture={markDirty}>
       <div>
         <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
           {t("Resident")} <span className="text-red-500">*</span>
@@ -127,9 +135,8 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             setCreatedBy("");
             setCreatedByOtherName("");
           }}
-          disabled={!!presetResidentId}
           required
-          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option value="">{t("Select resident")}</option>
           {residents.map((r) => (

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { UserAccount, LookupOption } from "@/lib/types";
 import { RIGHTS_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 type Props = {
   account?: UserAccount;
@@ -18,8 +19,14 @@ export function AccountForm({ account, branches, action }: Props) {
   const t = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const formId = account ? `account-edit-${account.id}` : "account-new";
+  const { markDirty, markClean } = useFormDirtyTracking(formId, async () => {
+    const form = document.getElementById(formId) as HTMLFormElement | null;
+    if (!form) return { success: false, error: "Form not found" };
+    return handleSubmit(new FormData(form));
+  });
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(formData: FormData): Promise<{ success: boolean; error?: string }> {
     setSubmitting(true);
     setError(null);
     try {
@@ -27,16 +34,20 @@ export function AccountForm({ account, branches, action }: Props) {
       if (result?.error) {
         setError(result.error);
         setSubmitting(false);
+        return { success: false, error: result.error };
       }
       // On success the server action redirects; stay in submitting state until navigation
+      markClean();
+      return { success: true };
     } catch {
       setError("An unexpected error occurred. Please try again.");
       setSubmitting(false);
+      return { success: false, error: "An unexpected error occurred. Please try again." };
     }
   }
 
   return (
-    <form action={handleSubmit} className="max-w-lg space-y-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <form id={formId} action={(fd) => { void handleSubmit(fd); }} onChangeCapture={markDirty} className="max-w-lg space-y-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {!account && (

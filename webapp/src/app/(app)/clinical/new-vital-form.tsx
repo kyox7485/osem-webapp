@@ -6,6 +6,8 @@ import { SPO2_CONDITION_OPTIONS, DXT_REMARK_OPTIONS, type LookupOption } from "@
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 
 type Resident = {
   id: number;
@@ -48,34 +50,48 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
   const [reviewedByOtherName, setReviewedByOtherName] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { markDirty, markClean } = useFormDirtyTracking("vital-signs-new", submitForm);
+  const { guardedAction } = useSafeNavigation();
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
 
+  function handleClose() {
+    guardedAction(onClose);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await submitForm();
+  }
+
+  async function submitForm(): Promise<{ success: boolean; error?: string }> {
     setError("");
 
     if (!residentId) {
-      setError(t("Please select a resident"));
-      return;
+      const msg = t("Please select a resident");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     if (!reviewedBy || (reviewedBy === OTHERS_SENTINEL && !reviewedByOtherName.trim())) {
-      setError(t("Please select who reviewed this reading"));
-      return;
+      const msg = t("Please select who reviewed this reading");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     // Validate SpO2 condition when SpO2 is filled
     if (spo2 && !spo2Condition) {
-      setError(t("SpO2 condition is required when SpO2 is recorded"));
-      return;
+      const msg = t("SpO2 condition is required when SpO2 is recorded");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     // Validate DXT remark when DXT is filled
     if (dxt && !dxtRemark) {
-      setError(t("DXT remark is required when DXT is recorded"));
-      return;
+      const msg = t("DXT remark is required when DXT is recorded");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     setIsSaving(true);
@@ -103,21 +119,24 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
     setIsSaving(false);
 
     if (!result.success) {
-      setError(result.error || t("Failed to save vital signs"));
-      return;
+      const msg = result.error || t("Failed to save vital signs");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
+    markClean();
     onSaved();
+    return { success: true };
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onChangeCapture={markDirty}>
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">{t("Record Vital Signs")}</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
             disabled={isSaving}
           >
@@ -438,7 +457,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
           <div className="flex justify-end gap-2 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSaving}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
             >

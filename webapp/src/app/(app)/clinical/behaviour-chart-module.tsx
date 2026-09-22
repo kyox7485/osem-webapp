@@ -9,6 +9,7 @@ import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, ChevronLeft } from "lucide-react";
 import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 
@@ -66,6 +67,7 @@ export function BehaviourChartModule({
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
   const [showCustom, setShowCustom] = useState(false);
   const [customFrom, setCustomFrom] = useState(currentStart || daysAgoMYT(7));
@@ -127,10 +129,10 @@ export function BehaviourChartModule({
   return (
     <div className="space-y-4">
       <TabRow>
-        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => setInnerTab("review")}>
+        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => guardedAction(() => setInnerTab("review"))}>
           {t("Review Notes")}
         </TabButton>
-        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>
+        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
           {t("New Entry")}
         </TabButton>
       </TabRow>

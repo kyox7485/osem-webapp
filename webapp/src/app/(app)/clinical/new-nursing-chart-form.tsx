@@ -7,6 +7,7 @@ import type { LookupOption } from "@/lib/types";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 type Meal = {
@@ -75,6 +76,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const [defaultFeedingVolume, setDefaultFeedingVolume] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const { markDirty, markClean } = useFormDirtyTracking("nursing-chart-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
@@ -138,15 +140,19 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await submitForm();
+  }
+
+  async function submitForm(): Promise<{ success: boolean; error?: string }> {
     setError("");
 
     if (!residentId) {
       setError(t("Please select a resident"));
-      return;
+      return { success: false, error: t("Please select a resident") };
     }
     if (!enteredBy || (enteredBy === OTHERS_SENTINEL && !enteredByOtherName.trim())) {
       setError(t("Please select who entered this"));
-      return;
+      return { success: false, error: t("Please select who entered this") };
     }
 
     setIsSaving(true);
@@ -202,15 +208,17 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
     if (!result.success) {
       setError(result.error || t("Failed to save entry"));
-      return;
+      return { success: false, error: result.error || t("Failed to save entry") };
     }
 
     resetForm();
+    markClean();
     onSaved();
+    return { success: true };
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onChangeCapture={markDirty}>
       <div>
         <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
           {t("Resident")} <span className="text-red-500">*</span>
@@ -223,9 +231,8 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             setEnteredBy("");
             setEnteredByOtherName("");
           }}
-          disabled={!!presetResidentId}
           required
-          className={`max-w-md disabled:bg-gray-100 ${selectCls}`}
+          className={`max-w-md ${selectCls}`}
         >
           <option value="">{t("Select resident")}</option>
           {residents.map((r) => (

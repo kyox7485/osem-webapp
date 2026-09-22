@@ -7,6 +7,7 @@ import { formatDateTime } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
 
 type Note = {
@@ -57,12 +58,13 @@ type Props = {
 // keep reference info out of the way while writing).
 export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError, dashboard }: Props) {
   const t = useTranslation();
+  const { guardedAction } = useSafeNavigation();
   const [tab, setTab] = useState<"review" | "new">("review");
 
   return (
     <div>
       <TabRow className="mb-4">
-        <TabButton icon={ListChecks} active={tab === "review"} onClick={() => setTab("review")}>
+        <TabButton icon={ListChecks} active={tab === "review"} onClick={() => guardedAction(() => setTab("review"))}>
           {t("Review notes")}
         </TabButton>
         <TabButton icon={Plus} active={tab === "new"} onClick={() => setTab("new")}>

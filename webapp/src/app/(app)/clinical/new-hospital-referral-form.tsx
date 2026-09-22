@@ -11,6 +11,7 @@ import { MOBILITY_OPTIONS, HYGIENE_OPTIONS, SPO2_CONDITION_OPTIONS, DXT_REMARK_O
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 type Resident = {
   id: number;
@@ -56,6 +57,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
   const [isSaving, setIsSaving] = useState(false);
   const [particulars, setParticulars] = useState<ResidentReferralData | null>(null);
   const [particularsLoading, setParticularsLoading] = useState(false);
+  const { markDirty, markClean } = useFormDirtyTracking("hospital-referral-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
@@ -104,31 +106,40 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await submitForm();
+  }
+
+  async function submitForm(): Promise<{ success: boolean; error?: string }> {
     setError("");
 
     if (!residentId) {
-      setError(t("Please select a resident"));
-      return;
+      const msg = t("Please select a resident");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     if (!chiefComplaints) {
-      setError(t("Chief complaints is required"));
-      return;
+      const msg = t("Chief complaints is required");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     if (spo2 && !spo2Condition) {
-      setError(t("SpO2 condition is required when SpO2 is recorded"));
-      return;
+      const msg = t("SpO2 condition is required when SpO2 is recorded");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     if (dxt && !dxtRemark) {
-      setError(t("DXT remark is required when DXT is recorded"));
-      return;
+      const msg = t("DXT remark is required when DXT is recorded");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     if (!reviewedBy || (reviewedBy === OTHERS_SENTINEL && !reviewedByOtherName.trim())) {
-      setError(t("Please select who is reporting this referral"));
-      return;
+      const msg = t("Please select who is reporting this referral");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     const vitalSignsLines = [
@@ -161,16 +172,19 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
     setIsSaving(false);
 
     if (!result.success || !result.id) {
-      setError(result.error || t("Failed to save hospital referral"));
-      return;
+      const msg = result.error || t("Failed to save hospital referral");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     resetForm();
+    markClean();
     onSaved(result.id);
+    return { success: true };
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onChangeCapture={markDirty}>
       <div>
         <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
           {t("Resident")} <span className="text-red-500">*</span>
@@ -183,9 +197,8 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
             setReviewedBy("");
             setReviewedByOtherName("");
           }}
-          disabled={!!presetResidentId}
           required
-          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option value="">{t("Select resident")}</option>
           {residents.map((r) => (

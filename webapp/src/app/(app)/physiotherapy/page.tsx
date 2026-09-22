@@ -17,7 +17,7 @@ import {
 import { CareSettingTabs } from "./care-setting-tabs";
 import { PhysioModuleTabs } from "./module-tabs";
 import { PhysioAssessmentTabs } from "./assessment-tabs";
-import { PhysioDirtyProvider } from "./physio-dirty-context";
+import { PhysioDirtyProvider, PhysioGlobalDirtyBridge } from "./physio-dirty-context";
 import { ResidentPicker } from "./resident-picker";
 import { NewOpPatientForm } from "./new-op-patient-form";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
@@ -115,6 +115,7 @@ export default async function PhysiotherapyPage({
       </div>
 
       <PhysioDirtyProvider>
+        <PhysioGlobalDirtyBridge />
         <ResidentPicker
           residents={patients ?? []}
           currentResident={residentIdParam || ""}

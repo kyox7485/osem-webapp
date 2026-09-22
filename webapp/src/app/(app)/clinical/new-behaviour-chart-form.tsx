@@ -8,6 +8,7 @@ import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { Plus, Trash2, Clock } from "lucide-react";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 const VERBAL_OPTIONS = ["Quiet", "Shouting", "Scolding Staff", "Incoherent Speech"];
 const PHYSICAL_OPTIONS = ["Calm", "Restless", "Walking Around", "Hitting Staff"];
@@ -205,6 +206,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
   const [createdByOtherName, setCreatedByOtherName] = useState("");
 
   const [error, setError] = useState("");
+  const { markDirty, markClean } = useFormDirtyTracking("behaviour-chart-new", submitForm);
 
   const selectedResident = residents.find((r) => String(r.id) === residentId);
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id);
@@ -215,6 +217,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
     setSelected: React.Dispatch<React.SetStateAction<string[]>>,
     setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
   ) {
+    markDirty();
     if (selected.includes(opt)) {
       setSelected((prev) => prev.filter((v) => v !== opt));
       setTimes((prev) => { const next = { ...prev }; delete next[opt]; return next; });
@@ -228,6 +231,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
     behaviour: string,
     setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
   ) {
+    markDirty();
     setTimes((prev) => ({
       ...prev,
       [behaviour]: [...(prev[behaviour] ?? []), newOccurrence()],
@@ -239,6 +243,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
     uid: string,
     setTimes: React.Dispatch<React.SetStateAction<BehaviourTimes>>
   ) {
+    markDirty();
     setTimes((prev) => ({
       ...prev,
       [behaviour]: (prev[behaviour] ?? []).filter((o) => o.uid !== uid),
@@ -261,6 +266,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
   }
 
   function toggle(set: React.Dispatch<React.SetStateAction<string[]>>, opt: string) {
+    markDirty();
     set((prev) => (prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt]));
   }
 
@@ -306,58 +312,89 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    submitForm();
+  }
 
-    if (!residentId) { setError(t("Please select a resident")); return; }
-    if (!createdBy || (createdBy === OTHERS_SENTINEL && !createdByOtherName.trim())) {
-      setError(t("Please select who entered this chart"));
-      return;
-    }
+  function submitForm(): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      setError("");
 
-    // Validate occurrences: if one of start/end is filled, both must be filled and end > start
-    const allOccurrences: Array<{ label: string; occ: Occurrence }> = [];
-    for (const b of verbalBehavior) for (const o of verbalTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
-    for (const b of physicalBehavior) for (const o of physicalTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
-    for (const b of emotionMood) for (const o of moodTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
-
-    for (const { label, occ } of allOccurrences) {
-      const hasStart = !!occ.startTime;
-      const hasEnd = !!occ.endTime;
-      if (hasStart && !hasEnd) { setError(`${label}: ${t("Please enter end time")}`); return; }
-      if (!hasStart && hasEnd) { setError(`${label}: ${t("Please enter start time")}`); return; }
-      if (hasStart && hasEnd && occ.endTime <= occ.startTime) {
-        setError(`${label}: ${t("End time must be after start time")}`);
+      if (!residentId) {
+        const msg = t("Please select a resident");
+        setError(msg);
+        resolve({ success: false, error: msg });
         return;
       }
-    }
+      if (!createdBy || (createdBy === OTHERS_SENTINEL && !createdByOtherName.trim())) {
+        const msg = t("Please select who entered this chart");
+        setError(msg);
+        resolve({ success: false, error: msg });
+        return;
+      }
 
-    startTransition(async () => {
-      const result = await createBehaviourChart({
-        residentId: parseInt(residentId),
-        residentName: selectedResident?.resident_name ?? "",
-        entryTimestamp: new Date(entryTimestamp).toISOString(),
-        verbalBehavior,
-        complaints: complaints.trim() || null,
-        physicalBehavior,
-        sleepFrom: sleepFrom || null,
-        sleepTo: sleepTo || null,
-        restraint,
-        emotionMood,
-        disturbanceLevel: disturbanceLevel !== "" ? parseInt(disturbanceLevel) : null,
-        createdBy: createdBy === OTHERS_SENTINEL ? "" : createdBy,
-        createdByName: createdBy === OTHERS_SENTINEL ? null : (staffOptions.find((s) => s.id === createdBy)?.label ?? null),
-        createdByOther: createdBy === OTHERS_SENTINEL ? createdByOtherName.trim() : null,
-        episodes: collectEpisodes(),
+      // Validate occurrences: if one of start/end is filled, both must be filled and end > start
+      const allOccurrences: Array<{ label: string; occ: Occurrence }> = [];
+      for (const b of verbalBehavior) for (const o of verbalTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
+      for (const b of physicalBehavior) for (const o of physicalTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
+      for (const b of emotionMood) for (const o of moodTimes[b] ?? []) allOccurrences.push({ label: b, occ: o });
+
+      for (const { label, occ } of allOccurrences) {
+        const hasStart = !!occ.startTime;
+        const hasEnd = !!occ.endTime;
+        if (hasStart && !hasEnd) {
+          const msg = `${label}: ${t("Please enter end time")}`;
+          setError(msg);
+          resolve({ success: false, error: msg });
+          return;
+        }
+        if (!hasStart && hasEnd) {
+          const msg = `${label}: ${t("Please enter start time")}`;
+          setError(msg);
+          resolve({ success: false, error: msg });
+          return;
+        }
+        if (hasStart && hasEnd && occ.endTime <= occ.startTime) {
+          const msg = `${label}: ${t("End time must be after start time")}`;
+          setError(msg);
+          resolve({ success: false, error: msg });
+          return;
+        }
+      }
+
+      startTransition(async () => {
+        const result = await createBehaviourChart({
+          residentId: parseInt(residentId),
+          residentName: selectedResident?.resident_name ?? "",
+          entryTimestamp: new Date(entryTimestamp).toISOString(),
+          verbalBehavior,
+          complaints: complaints.trim() || null,
+          physicalBehavior,
+          sleepFrom: sleepFrom || null,
+          sleepTo: sleepTo || null,
+          restraint,
+          emotionMood,
+          disturbanceLevel: disturbanceLevel !== "" ? parseInt(disturbanceLevel) : null,
+          createdBy: createdBy === OTHERS_SENTINEL ? "" : createdBy,
+          createdByName: createdBy === OTHERS_SENTINEL ? null : (staffOptions.find((s) => s.id === createdBy)?.label ?? null),
+          createdByOther: createdBy === OTHERS_SENTINEL ? createdByOtherName.trim() : null,
+          episodes: collectEpisodes(),
+        });
+
+        if (!result.success) {
+          setError(result.error || t("Failed to save"));
+          resolve({ success: false, error: result.error || t("Failed to save") });
+          return;
+        }
+        resetForm();
+        markClean();
+        onSaved();
+        resolve({ success: true });
       });
-
-      if (!result.success) { setError(result.error || t("Failed to save")); return; }
-      resetForm();
-      onSaved();
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" onChangeCapture={markDirty}>
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
       {/* Patient + Timestamp */}
@@ -370,7 +407,6 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
             <select
               value={residentId}
               onChange={(e) => setResidentId(e.target.value)}
-              disabled={!!presetResidentId}
               className={inputCls}
             >
               <option value="">{t("Select resident")}</option>

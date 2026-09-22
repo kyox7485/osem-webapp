@@ -6,6 +6,7 @@ import { useTranslation } from "@/components/language-provider";
 import { createOrderAction, updateOrderAction, type OrderFormValues } from "./order-actions";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { LookupOption } from "@/lib/types";
+import { useDirtyForm } from "@/lib/dirty-form-context";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -269,9 +270,30 @@ export function OrderForm(props: Props) {
   );
 
   // ── Dirty tracking ────────────────────────────────────────────────────────────
+  // Local isDirty/showCancelModal above already drive this form's own
+  // Cancel-button flow (Save and Exit / Exit Without Saving / Cancel,
+  // below). Mirroring the same state into the app-wide dirty-form guard
+  // additionally covers sidebar links and browser refresh/close -- without
+  // duplicating this form's own confirmation UI for its own Cancel button.
+  const orderFormId = isCreate ? "medication-order-new" : `medication-order-edit-${(props as Extract<Props, { mode: "edit" }>).rxOrderId}`;
+  const { markDirty: markGlobalDirty, markClean: markGlobalClean } = useDirtyForm(orderFormId);
+  // Always points at the latest render's doSubmitAsync closure, so the
+  // registration effect below (which only re-runs on isDirty flips, not on
+  // every keystroke) never calls a stale save with outdated field values.
+  const doSubmitRef = useRef<() => Promise<{ success: boolean; error?: string }>>(null!);
+
   function mark() {
     setIsDirty(true);
   }
+
+  useEffect(() => {
+    if (isDirty) {
+      markGlobalDirty(() => doSubmitRef.current());
+    } else {
+      markGlobalClean();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -378,37 +400,53 @@ export function OrderForm(props: Props) {
 
   // ── Submit ───────────────────────────────────────────────────────────────────
 
-  function doSubmit() {
+  function doSubmitAsync(): Promise<{ success: boolean; error?: string }> {
     setError(null);
     setSuccessId(null);
 
-    startTransition(async () => {
-      if (isCreate) {
-        const result = await createOrderAction(buildValues());
-        if (!result.success) {
-          setError(result.error ?? "Unknown error");
-          return;
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        if (isCreate) {
+          const result = await createOrderAction(buildValues());
+          if (!result.success) {
+            setError(result.error ?? "Unknown error");
+            resolve({ success: false, error: result.error ?? "Unknown error" });
+            return;
+          }
+          setIsDirty(false);
+          markGlobalClean();
+          setSuccessId(result.rxOrderId ?? null);
+          setTimeout(() => push("/residents/medication/orders"), 1800);
+          resolve({ success: true });
+        } else {
+          const { residentId: _rid, ...rest } = buildValues();
+          void _rid;
+          const result = await updateOrderAction(
+            (props as Extract<Props, { mode: "edit" }>).rxOrderId,
+            rest
+          );
+          if (!result.success) {
+            setError(result.error ?? "Unknown error");
+            resolve({ success: false, error: result.error ?? "Unknown error" });
+            return;
+          }
+          setIsDirty(false);
+          markGlobalClean();
+          setSuccessId(result.newRxOrderId ?? null);
+          setTimeout(() => push("/residents/medication/orders"), 1800);
+          resolve({ success: true });
         }
-        setIsDirty(false);
-        setSuccessId(result.rxOrderId ?? null);
-        setTimeout(() => push("/residents/medication/orders"), 1800);
-      } else {
-        const { residentId: _rid, ...rest } = buildValues();
-        void _rid;
-        const result = await updateOrderAction(
-          (props as Extract<Props, { mode: "edit" }>).rxOrderId,
-          rest
-        );
-        if (!result.success) {
-          setError(result.error ?? "Unknown error");
-          return;
-        }
-        setIsDirty(false);
-        setSuccessId(result.newRxOrderId ?? null);
-        setTimeout(() => push("/residents/medication/orders"), 1800);
-      }
+      });
     });
   }
+
+  function doSubmit() {
+    void doSubmitAsync();
+  }
+
+  useEffect(() => {
+    doSubmitRef.current = doSubmitAsync;
+  });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -479,6 +517,7 @@ export function OrderForm(props: Props) {
               <button
                 onClick={() => {
                   setIsDirty(false);
+                  markGlobalClean();
                   setShowCancelModal(false);
                   push("/residents/medication/orders");
                 }}

@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { useDirtyForm } from "@/lib/dirty-form-context";
 
 type RequestSaveFn = () => Promise<boolean>;
 
@@ -37,4 +38,30 @@ export function usePhysioDirty(): Ctx {
   const ctx = useContext(PhysioDirtyContext);
   if (!ctx) throw new Error("usePhysioDirty must be used within PhysioDirtyProvider");
   return ctx;
+}
+
+// Mirrors this module's own resident-switch dirty tracking (above) into the
+// app-wide dirty-form guard, so sidebar links, the Assessments/Analytics and
+// Inpatient/Outpatient tabs, and browser refresh/close all pick up the same
+// "unsaved changes" state -- without touching the resident picker's own
+// tailored save/discard dialog, which stays as the in-module UX for
+// switching resident specifically.
+export function PhysioGlobalDirtyBridge() {
+  const { isDirty, requestSave } = usePhysioDirty();
+  const { markDirty, markClean } = useDirtyForm("physio-assessment-new");
+
+  useEffect(() => {
+    if (isDirty) {
+      markDirty(async () => {
+        if (!requestSave) return { success: false, error: "This assessment can't be saved automatically." };
+        const ok = await requestSave();
+        return ok ? { success: true } : { success: false, error: "Couldn't save the current assessment." };
+      });
+    } else {
+      markClean();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, requestSave]);
+
+  return null;
 }
