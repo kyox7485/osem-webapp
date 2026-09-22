@@ -646,7 +646,7 @@ export function OrderForm(props: Props) {
                   mark();
                   if (isCreate && newForm) {
                     const defaultUnit = getDefaultUnitForDosageForm(newForm);
-                    if (defaultUnit && !unit) {
+                    if (defaultUnit) {
                       setUnit(defaultUnit);
                     }
                   }
