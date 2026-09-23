@@ -12,6 +12,7 @@ import { BehaviourChartModule } from "./behaviour-chart-module";
 import type { WoundSession } from "./wound-photo-actions";
 import type { WoundBodyPart } from "./wound-body-diagram";
 import type { ObservationEntry } from "./observation-chart-actions";
+import type { ObservationStatusRow } from "./observation-status-actions";
 import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
@@ -100,6 +101,8 @@ type Props = {
   woundSessions: WoundSession[];
   woundBodyParts: WoundBodyPart[];
   observationEntries: ObservationEntry[];
+  activeObservationEpisodes: ObservationStatusRow[];
+  completedObservationEpisodes: ObservationStatusRow[];
   behaviourEntries: BehaviourEntry[];
   behaviourEpisodes: BehaviourEpisode[];
   currentResident: string;
@@ -124,6 +127,8 @@ export function ClinicalContent({
   woundSessions,
   woundBodyParts,
   observationEntries,
+  activeObservationEpisodes,
+  completedObservationEpisodes,
   behaviourEntries,
   behaviourEpisodes,
   currentResident,
@@ -199,9 +204,9 @@ export function ClinicalContent({
         {activeTab === "observation-chart" && (
           <ObservationChartModule
             entries={observationEntries}
-            residents={residents}
+            activeEpisodes={activeObservationEpisodes}
+            completedEpisodes={completedObservationEpisodes}
             allStaff={nursingStaff}
-            currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}

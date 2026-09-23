@@ -197,6 +197,56 @@ export async function createObservationChart(
   return { success: true };
 }
 
+export async function getObservationChartsForResidents(filters: {
+  residentIds: number[];
+  start?: string;
+  end?: string;
+  excludedBranchIds?: number[];
+}): Promise<{ entries: ObservationEntry[]; error: string | null }> {
+  if (filters.residentIds.length === 0) return { entries: [], error: null };
+
+  const account = await getCurrentUser();
+  if (!account) return { entries: [], error: "Not authenticated" };
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("tbl_observation_charts")
+    .select(
+      `
+      id, resident_id, entry_timestamp, active_issue,
+      sob_cough, pain, pain_location, wound, appetite,
+      vomiting, diarrhea, urine, behavior, behavior_other,
+      systolic_bp, diastolic_bp, heart_rate, temperature,
+      spo2, spo2_condition, dxt, avpu,
+      created_by, created_by_other,
+      tbl_residents!resident_id(id, resident_name, branch_id),
+      tbl_staff!created_by(StaffID, staff_name)
+    `
+    )
+    .in("resident_id", filters.residentIds)
+    .order("entry_timestamp", { ascending: false });
+
+  if (account.rights !== "ADMIN") {
+    query = query.eq("branch_id", account.branch_id);
+  } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
+    query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
+  }
+
+  if (filters.start) query = query.gte("entry_timestamp", `${filters.start}T00:00:00`);
+  if (filters.end) query = query.lte("entry_timestamp", `${filters.end}T23:59:59`);
+
+  const { data, error } = await query;
+
+  const entries = (data ?? []).map((e: any) => ({
+    ...e,
+    tbl_residents: Array.isArray(e.tbl_residents) ? e.tbl_residents[0] : e.tbl_residents,
+    tbl_staff: Array.isArray(e.tbl_staff) ? e.tbl_staff[0] : e.tbl_staff,
+  }));
+
+  return { entries, error: error?.message ?? null };
+}
+
 export async function getObservationCharts(filters: {
   residentId?: string;
   start?: string;

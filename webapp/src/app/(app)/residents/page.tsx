@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
-import { getBranches, formatBranch, getDemoBranchIds } from "@/lib/lookups";
+import { getBranches, formatBranch, getDemoBranchIds, getNursingStaff } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
@@ -9,6 +9,8 @@ import { NavButton } from "@/components/nav-button";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { ResidentsModuleTabs } from "./module-tabs";
+import { getActiveObservationStatuses } from "../clinical/observation-status-actions";
+import { ObservationStatusButton } from "./observation-status-button";
 
 const DEFAULT_STATUSES = ["ACTIVE"];
 
@@ -40,6 +42,7 @@ export default async function ResidentsPage({
     resident_name: string;
     ic_number: string | null;
     status: string;
+    branch_id: number;
     tbl_branches: { locale: string | null; code: string } | { locale: string | null; code: string }[] | null;
   }[] = [];
   let error: { message: string } | null = null;
@@ -48,7 +51,7 @@ export default async function ResidentsPage({
     const supabase = await createClient();
     let query = supabase
       .from("tbl_residents")
-      .select("id, resident_name, ic_number, status, tbl_branches(locale:BranchLocale, code:BranchCode)")
+      .select("id, resident_name, ic_number, status, branch_id, tbl_branches(locale:BranchLocale, code:BranchCode)")
       .order("resident_name")
       .in("status", selectedStatuses);
 
@@ -68,6 +71,12 @@ export default async function ResidentsPage({
     residents = result.data ?? [];
     error = result.error;
   }
+
+  const [nursingStaff, activeObservations] = await Promise.all([
+    getNursingStaff(),
+    getActiveObservationStatuses({ excludedBranchIds }),
+  ]);
+  const activeObservationByResident = new Map(activeObservations.episodes.map((ep) => [ep.resident_id, ep.id]));
 
   return (
     <div>
@@ -117,6 +126,7 @@ export default async function ResidentsPage({
                     defaultValues={DEFAULT_STATUSES}
                   />
                 </th>
+                <th className="px-4 py-2 text-right">{t("Observation")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -130,12 +140,22 @@ export default async function ResidentsPage({
                     <td className="px-4 py-2">
                       <StatusBadge status={r.status} label={t(r.status)} />
                     </td>
+                    <td className="px-4 py-2 text-right">
+                      {r.status === "ACTIVE" && (
+                        <ObservationStatusButton
+                          residentId={r.id}
+                          activeEpisodeId={activeObservationByResident.get(r.id) ?? null}
+                          staffOptions={nursingStaff}
+                          residentBranchId={r.branch_id}
+                        />
+                      )}
+                    </td>
                   </ClickableRow>
                 );
               })}
               {residents.length === 0 && (
                 <tr>
-                  <td colSpan={admin ? 4 : 3} className="px-4 py-6 text-center text-gray-400">
+                  <td colSpan={admin ? 5 : 4} className="px-4 py-6 text-center text-gray-400">
                     {t("No residents found.")}
                   </td>
                 </tr>

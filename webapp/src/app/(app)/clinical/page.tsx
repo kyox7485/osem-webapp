@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds } from "@/lib/lookups";
-import { getObservationCharts } from "./observation-chart-actions";
+import { getObservationChartsForResidents } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
+import { getActiveObservationStatuses, getCompletedObservationEpisodes } from "./observation-status-actions";
+import type { ObservationStatusRow } from "./observation-status-actions";
 import { getBehaviourCharts, getBehaviourEpisodes } from "./behaviour-chart-actions";
 import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 import { redirect } from "next/navigation";
@@ -70,6 +72,8 @@ export default async function ClinicalPage({
   let referrals = [];
   let woundSessions: Awaited<ReturnType<typeof getWoundSessionHistory>>["sessions"] = [];
   let observationEntries: ObservationEntry[] = [];
+  let activeObservationEpisodes: ObservationStatusRow[] = [];
+  let completedObservationEpisodes: ObservationStatusRow[] = [];
   let behaviourEntries: BehaviourEntry[] = [];
   let behaviourEpisodes: BehaviourEpisode[] = [];
   let error = null;
@@ -375,9 +379,32 @@ export default async function ClinicalPage({
     woundSessions = result.sessions;
     error = result.error;
   } else if (currentTab === "observation-chart") {
-    const result = await getObservationCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds });
-    observationEntries = result.entries;
-    error = result.error;
+    const [activeResult, completedResult] = await Promise.all([
+      getActiveObservationStatuses({ excludedBranchIds }),
+      getCompletedObservationEpisodes({ excludedBranchIds }),
+    ]);
+    activeObservationEpisodes = activeResult.episodes;
+    completedObservationEpisodes = completedResult.episodes;
+    error = activeResult.error ?? completedResult.error;
+
+    const activeResidentIds = activeObservationEpisodes.map((e) => e.resident_id);
+    if (activeResidentIds.length > 0) {
+      // Default to the last 3 days (Asia/Kuala_Lumpur) when no filter is set.
+      const nowMYT = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+      const defaultEnd = nowMYT.toLocaleDateString("en-CA");
+      const defaultStartDate = new Date(nowMYT);
+      defaultStartDate.setDate(defaultStartDate.getDate() - 2);
+      const defaultStart = defaultStartDate.toLocaleDateString("en-CA");
+
+      const chartsResult = await getObservationChartsForResidents({
+        residentIds: activeResidentIds,
+        start: startDate || defaultStart,
+        end: endDate || defaultEnd,
+        excludedBranchIds,
+      });
+      observationEntries = chartsResult.entries;
+      error = error ?? chartsResult.error;
+    }
   } else if (currentTab === "behaviour-chart") {
     const [chartsResult, episodesResult] = await Promise.all([
       getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds }),
@@ -407,6 +434,8 @@ export default async function ClinicalPage({
         woundSessions={woundSessions}
         woundBodyParts={woundBodyParts}
         observationEntries={observationEntries}
+        activeObservationEpisodes={activeObservationEpisodes}
+        completedObservationEpisodes={completedObservationEpisodes}
         behaviourEntries={behaviourEntries}
         behaviourEpisodes={behaviourEpisodes}
         currentResident={residentFilter}
