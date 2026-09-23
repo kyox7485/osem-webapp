@@ -17,6 +17,7 @@ type Meal = {
   mealPortionOther: string;
   feedingTimeId: string;
   feedingVolume: string;
+  aspirateAmount: string;
 };
 type EliminationEpisode = { bowelOutputIds: number[]; passUrineId: string };
 
@@ -35,7 +36,15 @@ const fieldCls =
 // needs its own breathing room from the left border to read cleanly.
 const selectCls =
   "w-full rounded-md border border-gray-300 pl-4 pr-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
-const emptyMeal: Meal = { mealTypeId: "", mealTypeOther: "", mealPortionId: "", mealPortionOther: "", feedingTimeId: "", feedingVolume: "" };
+const emptyMeal: Meal = {
+  mealTypeId: "",
+  mealTypeOther: "",
+  mealPortionId: "",
+  mealPortionOther: "",
+  feedingTimeId: "",
+  feedingVolume: "",
+  aspirateAmount: "",
+};
 const emptyEliminationEpisode: EliminationEpisode = { bowelOutputIds: [], passUrineId: "" };
 // tbl_hygiene_care_activities ids -- when any is checked (under either
 // hygiene group), something was recorded that Elimination is the place to
@@ -198,6 +207,8 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             othersMealPortionId !== undefined && mealPortionId === Number(othersMealPortionId) ? m.mealPortionOther.trim() || null : null,
           feedingTimeId: tubeFeeding === "Tube Feeding" ? (m.feedingTimeId ? parseInt(m.feedingTimeId, 10) : null) : null,
           feedingVolume: tubeFeeding === "Tube Feeding" ? m.feedingVolume.trim() || null : null,
+          aspirateAmount:
+            tubeFeeding === "Tube Feeding" && m.aspirateAmount.trim() !== "" ? parseFloat(m.aspirateAmount) : null,
         };
       }),
       intervention: intervention.trim() || null,
@@ -297,6 +308,14 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                       onChange={(e) => updateMeal(i, { feedingVolume: e.target.value })}
                       placeholder={t("Feeding volume / regime")}
                       className={`min-w-[220px] flex-1 ${fieldCls}`}
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      value={meal.aspirateAmount}
+                      onChange={(e) => updateMeal(i, { aspirateAmount: e.target.value })}
+                      placeholder={t("Aspirate (mL)")}
+                      className={`w-32 ${fieldCls}`}
                     />
                   </>
                 ) : (

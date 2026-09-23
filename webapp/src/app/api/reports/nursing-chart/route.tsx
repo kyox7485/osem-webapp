@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   const [{ data: mealsRaw }, { data: hygieneRaw }, { data: eliminationRaw }, lookups] = await Promise.all([
     supabase
       .from("tbl_nursing_chart_meals")
-      .select("meal_type_id, meal_type_other, meal_portion_id, meal_portion_other, feeding_time_id, feeding_volume")
+      .select("meal_type_id, meal_type_other, meal_portion_id, meal_portion_other, feeding_time_id, feeding_volume, aspirate_amount")
       .eq("chart_entry_id", id),
     supabase.from("tbl_nursing_chart_hygiene_episodes").select("assistance_level, activity_ids").eq("chart_entry_id", id),
     supabase.from("tbl_nursing_chart_elimination_episodes").select("bowel_output_ids, pass_urine_id").eq("chart_entry_id", id),
@@ -89,6 +89,15 @@ export async function GET(request: NextRequest) {
       .join(" - ")
   );
 
+  // Tube Feeding meals get a dedicated Time / Feeding Regime / Aspirate (mL)
+  // table -- Oral Feed meals have no per-meal time, so they stay as the
+  // joined meal_labels text above.
+  const mealRows = (mealsRaw ?? []).map((m) => ({
+    time: feedingTimeById.get(m.feeding_time_id) ?? "--",
+    regime: m.feeding_volume || "--",
+    aspirate: m.aspirate_amount !== null && m.aspirate_amount !== undefined ? String(m.aspirate_amount) : "--",
+  }));
+
   const hygieneLabels = (hygieneRaw ?? [])
     .map((h) => {
       const activities = (h.activity_ids ?? []).map((i: number) => hygieneActivityById.get(i)).filter(Boolean);
@@ -120,6 +129,7 @@ export async function GET(request: NextRequest) {
       ...(entry.active_complaint_other ? [`Others: ${entry.active_complaint_other}`] : []),
     ],
     meal_labels: mealLabels,
+    meal_rows: entry.tube_feeding === "Tube Feeding" ? mealRows : [],
     hygiene_labels: hygieneLabels,
     intervention: entry.intervention,
     doctors_plan: entry.doctors_plan,
