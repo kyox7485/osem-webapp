@@ -21,6 +21,7 @@ import {
 import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
 import { useTranslation } from "@/components/language-provider";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
+import { useDirtyForm } from "@/lib/dirty-form-context";
 
 type StaffOption = LookupOption & { branch_id: number };
 
@@ -256,6 +257,31 @@ export function ResidentForm({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty, isPending]);
 
+  // Mirrors the above into the app-wide dirty-form guard (sidebar links,
+  // module switches) -- this form's own Back-button flow above stays as
+  // the in-module UX for its own Back button.
+  const residentFormId = resident ? `resident-edit-${resident.id}` : "resident-new";
+  const { markDirty: markGlobalDirty, markClean: markGlobalClean, unregister: unregisterGlobal } = useDirtyForm(residentFormId);
+  const submitFormRef = useRef<(fd: FormData) => Promise<{ success: boolean; error?: string }>>(null!);
+
+  // Clear global dirty state on unmount — covers the case where the Server
+  // Action calls redirect() (which throws on the client, bypassing the
+  // explicit markGlobalClean() in submitForm) and the component unmounts
+  // before the cleanup runs normally.
+  useEffect(() => {
+    return () => {
+      unregisterGlobal();
+    };
+  }, [unregisterGlobal]);
+
+  useEffect(() => {
+    if (isDirty) {
+      markGlobalDirty(() => submitFormRef.current(new FormData(formRef.current!)));
+    } else {
+      markGlobalClean();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty]);
   const p = resident ?? prefill;
   const [branchId, setBranchId] = useState<string>(
     resident ? String(resident.branch_id)
@@ -350,15 +376,29 @@ export function ResidentForm({
     setAssessmentQ((prev) => ({ ...prev, [key]: val }));
   }
 
-  function handleSubmit(formData: FormData) {
-    startTransition(async () => {
-      setError(null);
-      const result = await action(formData);
-      if (result?.error) {
-        setError(result.error);
-      }
-      // On success the server action calls redirect() so isDirty resets implicitly
+  function submitForm(formData: FormData): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        setError(null);
+        const result = await action(formData);
+        if (result?.error) {
+          setError(result.error);
+          resolve({ success: false, error: result.error });
+          return;
+        }
+        // On success the server action calls redirect() so isDirty resets implicitly
+        setIsDirty(false);
+        markGlobalClean();
+        resolve({ success: true });
+      });
     });
+  }
+  useEffect(() => {
+    submitFormRef.current = submitForm;
+  });
+
+  function handleSubmit(formData: FormData) {
+    void submitForm(formData);
   }
 
   function handleBackClick() {
@@ -371,6 +411,7 @@ export function ResidentForm({
 
   function handleExitWithoutSaving() {
     setIsDirty(false);
+    markGlobalClean();
     setShowExitModal(false);
     router.push(backHref ?? "/residents");
   }
