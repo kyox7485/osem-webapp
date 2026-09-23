@@ -80,15 +80,22 @@ export default async function PhysioDashboardPage({
 
   let rows: AssessmentRow[], prevRows: AssessmentRow[];
   let loadError: string | null = null;
-  try {
-    [rows, prevRows] = await Promise.all([
-      fetchAssessments({ range, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null, excludedBranchIds }),
-      fetchAssessments({ range: prevRange, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null, excludedBranchIds }),
-    ]);
-  } catch (e) {
-    loadError = e instanceof Error ? e.message : "Failed to load dashboard data";
+  const isIndividualViewWithoutTherapist = view === "individual" && !therapistFilter;
+
+  if (isIndividualViewWithoutTherapist) {
     rows = [];
     prevRows = [];
+  } else {
+    try {
+      [rows, prevRows] = await Promise.all([
+        fetchAssessments({ range, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null, excludedBranchIds }),
+        fetchAssessments({ range: prevRange, allowedBranchIds, branchFilter, therapistFilter: therapistFilter || null, excludedBranchIds }),
+      ]);
+    } catch (e) {
+      loadError = e instanceof Error ? e.message : "Failed to load dashboard data";
+      rows = [];
+      prevRows = [];
+    }
   }
 
   const totals = sumByType(rows);
@@ -140,6 +147,12 @@ export default async function PhysioDashboardPage({
       />
 
       {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
+
+      {isIndividualViewWithoutTherapist && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm text-amber-800">{t("Select a therapist to view individual analytics.")}</p>
+        </div>
+      )}
 
       {/* KPI row */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

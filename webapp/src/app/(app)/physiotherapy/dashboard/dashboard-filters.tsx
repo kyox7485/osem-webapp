@@ -53,7 +53,7 @@ export function DashboardFilters({ period, start, end, branch, view, therapist, 
         </TabRow>
 
         <TabRow>
-          <TabButton size="sm" active={view === "team"} onClick={() => navigate({ view: "team" })}>
+          <TabButton size="sm" active={view === "team"} onClick={() => navigate({ view: "team", therapist: "" })}>
             {t("Team view")}
           </TabButton>
           <TabButton size="sm" active={view === "individual"} onClick={() => navigate({ view: "individual", therapist: "" })}>
@@ -110,7 +110,7 @@ export function DashboardFilters({ period, start, end, branch, view, therapist, 
               onChange={(e) => navigate({ therapist: e.target.value })}
               className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              <option value="">{t("All therapists")}</option>
+              <option value="">{t("Select therapist")}</option>
               {therapists.map((th) => (
                 <option key={th.id} value={th.id}>
                   {th.label}
