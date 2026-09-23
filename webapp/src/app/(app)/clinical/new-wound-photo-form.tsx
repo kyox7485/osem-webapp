@@ -8,6 +8,7 @@ import type { LookupOption } from "@/lib/types";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useTranslation } from "@/components/language-provider";
 import { Camera, ChevronLeft, RotateCcw, Check, X, Loader2 } from "lucide-react";
+import { useDirtyForm } from "@/lib/dirty-form-context";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -71,20 +72,23 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   const [error, setError] = useState("");
 
   // Dirty once a session exists (at least one photo has started uploading)
-  // and hasn't been finished yet -- drives the leave/refresh confirmation
-  // below. Only guards a real tab close/refresh/URL-bar navigation
-  // (window's native beforeunload); it can't intercept an in-app sidebar
-  // link click, which Next.js App Router has no generic hook for.
+  // and hasn't been finished yet. Registered with the app-wide dirty-form
+  // guard below, which covers both browser-level (refresh/close tab) and
+  // in-app navigation (sidebar links, module/tab switches) -- unlike a
+  // lone beforeunload listener, that guard can intercept in-app clicks too.
   const isDirty = sessionId !== null && !sessionFinished;
+  const { markDirty: registerDirtySession, markClean: clearDirtySession } = useDirtyForm("wound-photo-new");
 
   useEffect(() => {
-    if (!isDirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    if (isDirty) {
+      registerDirtySession(async () => {
+        const result = await handleFinish();
+        return result ?? { success: false, error: t("Please select who uploaded these photos before saving.") };
+      });
+    } else {
+      clearDirtySession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirty]);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
@@ -249,10 +253,11 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     }
   }
 
-  async function handleFinish() {
+  async function handleFinish(): Promise<{ success: boolean; error?: string }> {
     if (!uploadedBy || (uploadedBy === OTHERS_SENTINEL && !uploadedByOtherName.trim())) {
-      setError(t("Please select who uploaded these photos"));
-      return;
+      const msg = t("Please select who uploaded these photos");
+      setError(msg);
+      return { success: false, error: msg };
     }
     setError("");
 
@@ -266,12 +271,14 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     }
 
     if (photos.some((p) => p.status === "failed")) {
-      setError(t("Some photos failed to upload -- retry or remove them before finishing"));
-      return;
+      const msg = t("Some photos failed to upload -- retry or remove them before finishing");
+      setError(msg);
+      return { success: false, error: msg };
     }
     if (!sessionId) {
-      setError(t("Please wait for the photo upload to finish before finishing the session"));
-      return;
+      const msg = t("Please wait for the photo upload to finish before finishing the session");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     setFinishing(true);
@@ -282,11 +289,14 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
     );
     setFinishing(false);
     if (!result.success) {
-      setError(result.error || t("Failed to finish session"));
-      return;
+      const msg = result.error || t("Failed to finish session");
+      setError(msg);
+      return { success: false, error: msg };
     }
     setSessionFinished(true);
+    clearDirtySession();
     onSaved();
+    return { success: true };
   }
 
   const finishBusy = finishing || waitingForUploads;

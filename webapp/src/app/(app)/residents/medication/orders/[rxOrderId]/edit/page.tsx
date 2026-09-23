@@ -106,13 +106,9 @@ export default async function EditMedicationOrderPage({
       ? staffOptions.find((s) => s.staffId === orderRaw.noted_by)?.name ??
         orderRaw.noted_by
       : orderRaw.noted_by_external_name ?? "",
-    notedByStaffId: orderRaw.noted_by ?? "",
     orderedBy: orderRaw.ordered_by ?? "",
     suppliedBy: orderRaw.supplied_by ?? "",
     status: orderRaw.status ?? "Active",
-    // previous_order_id in mirror is bigint FK; we send "" so the Apps Script
-    // preserves the existing sheet value (see updateOrderAction logic).
-    previousRxOrderId: "",
   };
 
   return (

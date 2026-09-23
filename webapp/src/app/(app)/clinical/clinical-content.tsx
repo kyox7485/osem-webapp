@@ -12,12 +12,13 @@ import { BehaviourChartModule } from "./behaviour-chart-module";
 import type { WoundSession } from "./wound-photo-actions";
 import type { WoundBodyPart } from "./wound-body-diagram";
 import type { ObservationEntry } from "./observation-chart-actions";
-import type { BehaviourEntry } from "./behaviour-chart-actions";
+import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ClipboardList, Activity, FileText, Ambulance, Camera, Eye, Brain } from "lucide-react";
 
 type Vital = {
@@ -100,9 +101,11 @@ type Props = {
   woundBodyParts: WoundBodyPart[];
   observationEntries: ObservationEntry[];
   behaviourEntries: BehaviourEntry[];
+  behaviourEpisodes: BehaviourEpisode[];
   currentResident: string;
   currentStart: string;
   currentEnd: string;
+  currentPrev?: string;
   error: string | null;
 };
 
@@ -122,14 +125,17 @@ export function ClinicalContent({
   woundBodyParts,
   observationEntries,
   behaviourEntries,
+  behaviourEpisodes,
   currentResident,
   currentStart,
   currentEnd,
+  currentPrev,
   error,
 }: Props) {
   const push = useNavPush();
   const t = useTranslation();
   const searchParams = useSearchParams();
+  const { guardedAction } = useSafeNavigation();
   const [activeTab, setActiveTab] = useState<TabKey>((searchParams.get("tab") as TabKey) || "nursing-chart");
 
   useEffect(() => {
@@ -142,10 +148,13 @@ export function ClinicalContent({
   }, [searchParams]);
 
   function switchTab(tab: TabKey) {
-    setActiveTab(tab);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    push(`/clinical?${params.toString()}`);
+    if (tab === activeTab) return;
+    guardedAction(() => {
+      setActiveTab(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", tab);
+      push(`/clinical?${params.toString()}`);
+    });
   }
 
   return (
@@ -201,11 +210,13 @@ export function ClinicalContent({
         {activeTab === "behaviour-chart" && (
           <BehaviourChartModule
             entries={behaviourEntries}
+            episodes={behaviourEpisodes}
             residents={residents}
             allStaff={allStaff}
             currentResident={currentResident}
             currentStart={currentStart}
             currentEnd={currentEnd}
+            currentPrev={currentPrev}
             error={error}
           />
         )}

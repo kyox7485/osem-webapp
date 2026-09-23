@@ -4,6 +4,7 @@ import { useNavPush } from "@/components/nav-loading";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { BedDouble, DoorOpen } from "lucide-react";
 
 type Props = {
@@ -14,9 +15,10 @@ type Props = {
 export function CareSettingTabs({ current, showOp = true }: Props) {
   const push = useNavPush();
   const t = useTranslation();
+  const { guardedAction } = useSafeNavigation();
 
   function switchTo(setting: PhysioCareSetting) {
-    push(`/physiotherapy?type=${setting.toLowerCase()}`);
+    guardedAction(() => push(`/physiotherapy?type=${setting.toLowerCase()}`));
   }
 
   return (

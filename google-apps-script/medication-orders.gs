@@ -1,18 +1,26 @@
-// ─── Medication Orders Web App ────────────────────────────────────────────────
-// Deployed under osemmedicare@gmail.com as a Google Apps Script Web App.
+// ─── Medication Orders (create/update) ────────────────────────────────────────
+// Deployed as part of the same Apps Script project/Web App as Code.gs, under
+// osemmedicare@gmail.com.
+//
+// IMPORTANT: this file does NOT define doPost/doGet. Code.gs is the single
+// entry point for the whole project's Web App — its doPost() routes
+// action:"create"/"update" here (createOrder/updateOrder), gated by
+// SHARED_SECRET below. A previous version of this file defined its own
+// doPost/doGet, which silently collided with Code.gs's doPost/doGet (Apps
+// Script only allows one global function of a given name per project — the
+// last file evaluated wins, discarding the other's routes entirely). That
+// caused intermittent failures depending on load order: sometimes Code.gs's
+// dispatcher won and rejected "create"/"update" as an unknown action,
+// sometimes this file's won and Code.gs's MedicationByResident/VitalUpdates
+// GET consumers broke instead. Never redefine doPost/doGet here again.
 //
 // SETUP:
 // 1. This file lives in the same Apps Script project as Config.gs, Utils.gs,
 //    MedicationSync.gs and MedicationSummary.gs, and reuses their shared
 //    CONFIG object and functions instead of duplicating them.
-// 2. Deploy → New deployment → Web app.
-//      Execute as: Me (osemmedicare@gmail.com)
-//      Who has access: Anyone
-//    ("Anyone" is required since Next.js calls this over plain HTTPS with no
-//    Google login — the SHARED_SECRET check is the actual access control.)
-// 3. Copy the /exec URL into MEDICATION_ORDER_SCRIPT_URL in Vercel env vars,
-//    and make sure SHARED_SECRET below matches MEDICATION_ORDER_SCRIPT_SECRET.
-// 4. Whenever this code changes: Deploy → Manage deployments → edit existing
+// 2. Make sure SHARED_SECRET below matches MEDICATION_ORDER_SCRIPT_SECRET in
+//    Vercel env vars.
+// 3. Whenever this code changes: Deploy → Manage deployments → edit existing
 //    deployment → New version. A plain Ctrl+S does NOT update the /exec URL.
 //
 // WHY A DIRECT, SYNCHRONOUS CALL (no async trigger):
@@ -32,6 +40,10 @@ const SHARED_SECRET = "k-google-mirror-osem2020";
 // Column names exactly as defined in the sheet — do not reorder.
 // The script builds a live column map from the sheet's header row, so
 // adding extra columns to the sheet later will not break existing writes.
+// "Noted By" holds either a tbl_staff StaffID (internal staff picked) or a
+// free-text name (an external person entered via "Others" in the picker) —
+// there is deliberately only one column; MedicationSync.gs tells the two
+// cases apart by looking the value up against tbl_staff.
 const COLUMNS = [
   "RxOrderID",
   "ResidentID",
@@ -49,43 +61,29 @@ const COLUMNS = [
   "Start Date",
   "End Date",
   "Noted By",
-  "Noted By StaffID",
   "Ordered By",
   "Supplied By",
   "Status",
   "PreviousRxOrderID",
 ];
 
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
+// On an edit-triggered revision (see updateOrder below), these columns are
+// always carried over from the OLD row as-is — the submitted form's values
+// for them are ignored for the new row.
+// NOTE: This list is intentionally empty — all fields (including dosing,
+// indication, instruction) can now be edited directly from the edit form.
+// The audit trail is preserved via PreviousRxOrderID on the new revision row.
+const INHERITED_ON_REVISION = [];
 
-    if (payload.secret !== SHARED_SECRET) {
-      return jsonResponse({ success: false, error: "Unauthorized" });
-    }
-
-    if (payload.action === "create") {
-      return jsonResponse(createOrder(payload.order));
-    }
-
-    if (payload.action === "update") {
-      return jsonResponse(updateOrder(payload.rxOrderId, payload.order));
-    }
-
-    return jsonResponse({ success: false, error: "Unknown action: " + payload.action });
-  } catch (err) {
-    return jsonResponse({ success: false, error: String(err) });
-  }
-}
-
-// Simple health check — confirms the deployment is live and reachable.
-function doGet() {
-  return jsonResponse({ ok: true });
-}
-
-function jsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+// Converts an incoming "YYYY-MM-DD" date (what the webapp's <input type=date>
+// sends) into the sheet's display format, DD/MM/YYYY. Values that don't
+// match are left untouched (defensive — e.g. already-formatted or blank).
+function formatDateForSheet_(value) {
+  if (value === undefined || value === null) return "";
+  const text = String(value).trim();
+  if (!text) return "";
+  const m = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[3] + "/" + m[2] + "/" + m[1] : text;
 }
 
 // Reuses the shared CONFIG (Config.gs) and getMedicationSheet() (Utils.gs) so
@@ -126,7 +124,9 @@ function createOrder(order) {
   for (const col of COLUMNS) {
     const idx = colMap[col];
     if (idx !== undefined && order[col] !== undefined && order[col] !== null) {
-      row[idx] = order[col];
+      row[idx] = (col === "Start Date" || col === "End Date")
+        ? formatDateForSheet_(order[col])
+        : order[col];
     }
   }
 
@@ -138,10 +138,20 @@ function createOrder(order) {
   );
 }
 
-// Finds the row whose RxOrderID matches, then updates every field in the
-// payload except RxOrderID (immutable) and any key not present in the payload
-// (left unchanged). Syncs to Supabase and rebuilds the affected resident's
-// medication summary before returning (see syncOrderAndSummary_ below).
+// An "edit" never overwrites the order in place. Instead it keeps a full
+// audit trail:
+//   1. The OLD row (rxOrderId) is left untouched except Status, which is set
+//      to "Discontinued".
+//   2. A brand-new row is appended with a new RxOrderID (order["RxOrderID"],
+//      generated by the caller) and PreviousRxOrderID = rxOrderId, chaining
+//      it to the row it replaces.
+//   3. On that new row, INHERITED_ON_REVISION columns (drug identity + dosing
+//      schedule) are copied verbatim from the OLD row — never from the
+//      submitted payload — because changing those is a new prescription, not
+//      an edit. Every other column (dates, personnel, brand name, status)
+//      comes from the submitted payload.
+// Syncs both rows to Supabase and rebuilds the resident's medication summary
+// before returning (see syncOrderAndSummary_ below).
 function updateOrder(rxOrderId, order) {
   const sheet = getSheet();
   if (!sheet) {
@@ -158,43 +168,63 @@ function updateOrder(rxOrderId, order) {
   const header = data[0];
   const colMap = buildColumnMap(header);
   const rxCol = colMap["RxOrderID"];
+  const statusCol = colMap["Status"];
 
   if (rxCol === undefined) {
     return { success: false, error: "RxOrderID column not found in sheet header" };
   }
 
-  let found = false;
+  let oldRow = null;
+  let oldRowNum = -1;
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][rxCol]) === String(rxOrderId)) {
-      const rowNum = i + 1; // Sheets rows are 1-indexed
-      const newRow = data[i].slice(); // copy existing values
-
-      for (const col of COLUMNS) {
-        if (col === "RxOrderID") continue; // never overwrite the identifier
-        const idx = colMap[col];
-        if (idx !== undefined && order[col] !== undefined) {
-          // Don't clear PreviousRxOrderID with an empty string — preserve the
-          // existing value if the caller didn't supply a non-empty replacement.
-          if (col === "PreviousRxOrderID" && order[col] === "") continue;
-          newRow[idx] = order[col] !== null ? order[col] : "";
-        }
-      }
-
-      sheet.getRange(rowNum, 1, 1, newRow.length).setValues([newRow]);
-      found = true;
+      oldRow = data[i];
+      oldRowNum = i + 1; // Sheets rows are 1-indexed
       break;
     }
   }
 
-  if (!found) {
+  if (!oldRow) {
     return { success: false, error: "Order not found: " + rxOrderId };
   }
 
-  return Object.assign(
-    { success: true },
-    syncOrderAndSummary_(rxOrderId, order["ResidentID"])
-  );
+  if (statusCol !== undefined) {
+    sheet.getRange(oldRowNum, statusCol + 1).setValue("Discontinued");
+  }
+
+  const newRow = new Array(Math.max(header.length, COLUMNS.length)).fill("");
+
+  for (const col of COLUMNS) {
+    const idx = colMap[col];
+    if (idx === undefined) continue;
+
+    if (INHERITED_ON_REVISION.indexOf(col) !== -1) {
+      newRow[idx] = oldRow[idx];
+      continue;
+    }
+
+    const val = order[col];
+    if (val === undefined || val === null) continue;
+    newRow[idx] = (col === "Start Date" || col === "End Date")
+      ? formatDateForSheet_(val)
+      : val;
+  }
+
+  sheet.appendRow(newRow);
+
+  const newRxOrderId = order["RxOrderID"];
+  const residentId = order["ResidentID"];
+
+  const oldSync = syncOrderAndSummary_(rxOrderId, residentId);
+  const newSync = syncOrderAndSummary_(newRxOrderId, residentId);
+
+  return {
+    success: true,
+    newRxOrderId: newRxOrderId,
+    supabaseSync: newSync.supabaseSync,
+    previousOrderSync: oldSync.supabaseSync,
+  };
 }
 
 // ─── Supabase sync + resident summary rebuild ─────────────────────────────────

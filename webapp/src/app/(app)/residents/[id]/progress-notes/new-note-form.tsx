@@ -5,6 +5,7 @@ import { createProgressNote } from "./actions";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 const inputCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -26,24 +27,36 @@ export function NewNoteForm({
   const [staffId, setStaffId] = useState("");
   const [staffIdOther, setStaffIdOther] = useState("");
   const formAction = createProgressNote.bind(null, residentId);
+  const { markDirty, markClean } = useFormDirtyTracking(`resident-progress-note-new-${residentId}`, async () => {
+    const form = document.getElementById("new-note-form") as HTMLFormElement | null;
+    if (!form) return { success: false, error: "Form not found" };
+    return submitForm(new FormData(form));
+  });
 
-  async function handleSubmit(formData: FormData) {
+  async function submitForm(formData: FormData): Promise<{ success: boolean; error?: string }> {
     setSubmitting(true);
     setError(null);
     const result = await formAction(formData);
     if (result?.error) {
       setError(result.error);
-    } else {
-      (document.getElementById("new-note-form") as HTMLFormElement)?.reset();
-      setStaffId("");
-      setStaffIdOther("");
-      onSaved?.();
+      setSubmitting(false);
+      return { success: false, error: result.error };
     }
+    (document.getElementById("new-note-form") as HTMLFormElement)?.reset();
+    setStaffId("");
+    setStaffIdOther("");
+    markClean();
+    onSaved?.();
     setSubmitting(false);
+    return { success: true };
+  }
+
+  async function handleSubmit(formData: FormData) {
+    await submitForm(formData);
   }
 
   return (
-    <form id="new-note-form" action={handleSubmit} className="space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <form id="new-note-form" action={handleSubmit} onChangeCapture={markDirty} className="space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <label className="block text-sm text-gray-700">

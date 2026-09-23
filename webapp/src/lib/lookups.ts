@@ -57,6 +57,15 @@ export async function getBranches(onlyFunction?: string): Promise<LookupOption[]
   return (data ?? []).map((r) => ({ id: r.id, label: formatBranch(r) }));
 }
 
+// Fetch branches with bed_capacity for analytics calculations
+export async function getBranchesWithCapacity(onlyFunction?: string): Promise<(LookupOption & { bed_capacity: number | null })[]> {
+  const supabase = await createClient();
+  let query = supabase.from("tbl_branches").select("id:BranchID, locale:BranchLocale, code:BranchCode, bed_capacity");
+  if (onlyFunction) query = query.eq("Function", onlyFunction);
+  const { data } = await query.order("BranchCode");
+  return (data ?? []).map((r) => ({ id: r.id, label: formatBranch(r), bed_capacity: r.bed_capacity }));
+}
+
 // Branches whose BranchCode is "DEMO" hold fake/test residents used only for
 // demonstrations. Admins see all branches by default, but demo data pollutes
 // their views of real clinical activity, so these IDs are used to exclude

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format-date";
 import { NewNursingChartForm } from "./new-nursing-chart-form";
 import { useNavPush } from "@/components/nav-loading";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
@@ -60,6 +61,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -75,7 +77,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
   return (
     <div className="space-y-4">
       <TabRow>
-        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => setInnerTab("review")}>
+        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => guardedAction(() => setInnerTab("review"))}>
           {t("Review Notes")}
         </TabButton>
         <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>

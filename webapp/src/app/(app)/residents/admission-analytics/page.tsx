@@ -1,19 +1,9 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
-import { getBranches, getDemoBranchIds } from "@/lib/lookups";
+import { getBranchesWithCapacity, getDemoBranchIds } from "@/lib/lookups";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PageTitle } from "@/components/page-header";
-import {
-  Users,
-  DoorOpen,
-  BedDouble,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Clock,
-  BarChart3,
-} from "lucide-react";
 
 import { ResidentsModuleTabs } from "../module-tabs";
 import { AnalyticsFilters } from "./filters";
@@ -22,6 +12,7 @@ import {
   computeAdmissions,
   computeDischarges,
   computeCurrentOccupancy,
+  computeOccupancyPercentage,
   computeAvgLOS,
   computeOccupancyTrend,
   computeAgeGender,
@@ -31,12 +22,12 @@ import {
   type ResidentRow,
 } from "./data";
 import {
-  KpiCard,
   OccupancyTrendChart,
   AgeGenderTable,
   CategoryBars,
   LOSBars,
 } from "./charts";
+import { KpiCardsClient } from "./kpi-cards-client";
 
 export default async function AdmissionAnalyticsPage({
   searchParams,
@@ -45,6 +36,11 @@ export default async function AdmissionAnalyticsPage({
 }) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
+
+  // ── Access control: Admission Analytics is NUR/HQ only ────────────────────
+  if (account.branch_function && !["NUR", "HQ"].includes(account.branch_function)) {
+    redirect("/residents");
+  }
 
   const { t } = await getServerTranslator();
   const sp = await searchParams;
@@ -61,7 +57,7 @@ export default async function AdmissionAnalyticsPage({
   // ── Branches (for filter dropdown) ─────────────────────────────────────────
   const admin = isAdmin(account);
   const [allNurBranches, demoBranchIds] = await Promise.all([
-    getBranches("NUR"),
+    getBranchesWithCapacity("NUR"),
     getDemoBranchIds(),
   ]);
 
@@ -80,7 +76,7 @@ export default async function AdmissionAnalyticsPage({
   let query = supabase
     .from("tbl_residents")
     .select(
-      "id, branch_id, age, gender, status, admission_date, discharge_date, mobility, feeding_type_id, hygiene"
+      "id, resident_name, branch_id, age, gender, status, admission_date, discharge_date, mobility, feeding_type_id, hygiene"
     );
 
   if (!admin) {
@@ -117,9 +113,32 @@ export default async function AdmissionAnalyticsPage({
     r.feeding_type_id !== null ? (feedingTypeMap.get(r.feeding_type_id) ?? `Type ${r.feeding_type_id}`) : null
   );
   const hygieneRows = computeCategories(residents, (r) => r.hygiene);
-  const losDistrib = computeLOSDistribution(residents);
+  const losDistrib = computeLOSDistribution(residents, range.end);
+
+  // ── Bed capacity & occupancy percentage ──────────────────────────────────
+  // Calculate total bed capacity from selected branches (aggregated for HQ view)
+  let totalBedCapacity = 0;
+  let selectedBranches = allNurBranches;
+
+  if (branchFilter !== null) {
+    selectedBranches = allNurBranches.filter((b) => Number(b.id) === branchFilter);
+  }
+
+  selectedBranches.forEach((b) => {
+    if (b.bed_capacity && b.bed_capacity > 0) {
+      totalBedCapacity += b.bed_capacity;
+    }
+  });
+
+  const occupancyPercentage = computeOccupancyPercentage(currentOccupancy, totalBedCapacity || null);
+
+  // ── Check if period is "current" (not a historical view) ──────────────────
+  const today = new Date();
+  const isCurrentPeriod = period === "month" ||
+    (period === "year" && range.end.getFullYear() === today.getFullYear() && range.end.getMonth() === today.getMonth());
 
   const completedStays = residents.filter((r) => r.admission_date && r.discharge_date).length;
+  const allResidentsWithAdmission = residents.filter((r) => r.admission_date).length;
 
   // ── Date range label ───────────────────────────────────────────────────────
   const fmt = (d: Date) =>
@@ -151,64 +170,22 @@ export default async function AdmissionAnalyticsPage({
         </div>
       )}
 
-      {/* ── KPI row ────────────────────────────────────────────────────────── */}
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <KpiCard
-          label={t("Admissions")}
-          value={admissions}
-          sub={t("in selected period")}
-          tint="bg-blue-50 text-blue-600"
-          icon={<Users className="h-4 w-4" strokeWidth={2} />}
-        />
-        <KpiCard
-          label={t("Discharges")}
-          value={discharges}
-          sub={t("in selected period")}
-          tint="bg-amber-50 text-amber-600"
-          icon={<DoorOpen className="h-4 w-4" strokeWidth={2} />}
-        />
-        <KpiCard
-          label={t("Active Residents")}
-          value={currentOccupancy}
-          sub={t("current occupancy")}
-          tint="bg-emerald-50 text-emerald-600"
-          icon={<BedDouble className="h-4 w-4" strokeWidth={2} />}
-        />
-        <KpiCard
-          label={t("Net Bed Change")}
-          value={
-            <span className={netGrowth > 0 ? "text-emerald-700" : netGrowth < 0 ? "text-red-600" : "text-gray-900"}>
-              {netGrowth > 0 ? "+" : ""}
-              {netGrowth}
-            </span>
-          }
-          sub={t("admissions − discharges")}
-          tint={netGrowth > 0 ? "bg-emerald-50 text-emerald-600" : netGrowth < 0 ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}
-          icon={
-            netGrowth > 0 ? (
-              <TrendingUp className="h-4 w-4" strokeWidth={2} />
-            ) : netGrowth < 0 ? (
-              <TrendingDown className="h-4 w-4" strokeWidth={2} />
-            ) : (
-              <Minus className="h-4 w-4" strokeWidth={2} />
-            )
-          }
-        />
-        <KpiCard
-          label={t("Avg Length of Stay")}
-          value={avgLos !== null ? `${avgLos}d` : "–"}
-          sub={`${completedStays} ${t("completed stays")}`}
-          tint="bg-violet-50 text-violet-600"
-          icon={<Clock className="h-4 w-4" strokeWidth={2} />}
-        />
-        <KpiCard
-          label={t("Occupancy %")}
-          value="–"
-          sub={t("Bed capacity not configured")}
-          tint="bg-gray-100 text-gray-500"
-          icon={<BarChart3 className="h-4 w-4" strokeWidth={2} />}
-        />
-      </div>
+      {/* ── KPI row (client component for interactivity) ────────────────────── */}
+      <KpiCardsClient
+        admissions={admissions}
+        discharges={discharges}
+        currentOccupancy={currentOccupancy}
+        netGrowth={netGrowth}
+        avgLos={avgLos}
+        occupancyPercentage={occupancyPercentage}
+        totalBedCapacity={totalBedCapacity}
+        isCurrentPeriod={isCurrentPeriod}
+        completedStays={completedStays}
+        allResidentsWithAdmission={allResidentsWithAdmission}
+        residents={residents}
+        dateRange={range}
+        selectedBranches={selectedBranches.map((b) => ({ ...b, id: Number(b.id) }))}
+      />
 
       {/* ── Occupancy trend ────────────────────────────────────────────────── */}
       <div className="mb-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
@@ -249,11 +226,11 @@ export default async function AdmissionAnalyticsPage({
         <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3">
             <h3 className="text-sm font-bold text-gray-900">{t("Length of Stay")}</h3>
-            <p className="text-xs text-gray-400">{t("Completed stays only")}</p>
+            <p className="text-xs text-gray-400">{t("All residents (completed + active)")}</p>
           </div>
-          {completedStays === 0 ? (
+          {allResidentsWithAdmission === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">
-              {t("No completed stays.")}
+              {t("No residents with admission date.")}
             </p>
           ) : (
             <LOSBars buckets={losDistrib} avgDays={avgLos} />

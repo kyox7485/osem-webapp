@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getDemoBranchIds } from "@/lib/lookups";
+import { revalidatePath } from "next/cache";
 import {
   createMedicationOrder,
   updateMedicationOrder,
@@ -40,11 +41,9 @@ export type OrderFormValues = {
   startDate: string;
   endDate: string;
   notedBy: string;
-  notedByStaffId: string;
   orderedBy: string;
   suppliedBy: string;
   status: string;
-  previousRxOrderId: string;
 };
 
 function validateOrderFields(
@@ -77,8 +76,75 @@ function validateOrderFields(
   if (!values.startDate?.trim()) return "Start date is required";
   if (!values.orderedBy?.trim()) return "Ordered by is required";
   if (!values.suppliedBy?.trim()) return "Supplied by is required";
+  if (!values.notedBy?.trim()) return "Noted By is required";
 
   return null;
+}
+
+// Discontinue a single order in Supabase (status → Discontinued).
+// The Apps Script's heartbeat/reconciliation will sync this to the Sheet.
+export async function discontinueOrderAction(
+  rxOrderId: string
+): Promise<{ success: boolean; error?: string }> {
+  const account = await getCurrentUser();
+  if (!account) return { success: false, error: "Not authenticated" };
+
+  const supabase = await createClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existingOrder } = await (supabase as any)
+    .from("tbl_medication_orders")
+    .select("id, branch_id, status")
+    .eq("external_ref_id", rxOrderId)
+    .single();
+
+  if (!existingOrder) return { success: false, error: "Order not found" };
+  if (existingOrder.status !== "Active")
+    return { success: false, error: "Order is not active" };
+
+  const admin = isAdmin(account);
+  if (!admin && existingOrder.branch_id !== account.branch_id)
+    return { success: false, error: "Access denied" };
+
+  if (admin) {
+    const demoBranchIds = await getDemoBranchIds();
+    const isDemoUser = demoBranchIds.includes(account.branch_id);
+    if (!isDemoUser && demoBranchIds.includes(existingOrder.branch_id))
+      return { success: false, error: "Access denied" };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("tbl_medication_orders")
+    .update({ status: "Discontinued" })
+    .eq("external_ref_id", rxOrderId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/residents/medication/orders");
+  return { success: true };
+}
+
+// Auto-expire active orders whose end_date has passed.
+// Called at page load; updates Supabase status only (Sheet syncs via heartbeat).
+export async function autoExpireOrdersAction(branchId: number, adminUser: boolean, excludedBranchIds: number[]): Promise<void> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any = (supabase as any)
+    .from("tbl_medication_orders")
+    .update({ status: "Discontinued" })
+    .lt("end_date", today)
+    .eq("status", "Active");
+
+  if (!adminUser) {
+    q = q.eq("branch_id", branchId);
+  } else if (excludedBranchIds.length > 0) {
+    q = q.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
+  }
+
+  await q;
 }
 
 export async function createOrderAction(
@@ -152,11 +218,10 @@ export async function createOrderAction(
       "Start Date": values.startDate,
       "End Date": values.endDate || "",
       "Noted By": values.notedBy || "",
-      "Noted By StaffID": values.notedByStaffId || "",
       "Ordered By": values.orderedBy,
       "Supplied By": values.suppliedBy,
       Status: "Active",
-      PreviousRxOrderID: values.previousRxOrderId || "",
+      PreviousRxOrderID: "",
     });
   } catch (err) {
     console.error("createOrderAction — Apps Script error:", err);
@@ -169,10 +234,16 @@ export async function createOrderAction(
   return { success: true, rxOrderId };
 }
 
+// An edit never overwrites the order in place. It discontinues the old row
+// (rxOrderId) and appends a brand-new revision row with a fresh RxOrderID
+// and PreviousRxOrderID = rxOrderId, giving a full audit trail.
+// All submitted form values (including dose, unit, frequency, etc.) are
+// applied to the new revision row — the Apps Script INHERITED_ON_REVISION
+// list has been cleared to allow full editing.
 export async function updateOrderAction(
   rxOrderId: string,
   values: Omit<OrderFormValues, "residentId">
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; newRxOrderId?: string }> {
   const account = await getCurrentUser();
   if (!account) return { success: false, error: "Not authenticated" };
 
@@ -184,7 +255,7 @@ export async function updateOrderAction(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingOrderQ: any = supabase
     .from("tbl_medication_orders")
-    .select("id, branch_id")
+    .select("id, branch_id, resident_id")
     .eq("external_ref_id", rxOrderId)
     .single();
   const { data: existingOrder } = await existingOrderQ;
@@ -205,41 +276,56 @@ export async function updateOrderAction(
     }
   }
 
-  // Build update payload — omit PreviousRxOrderID when empty so the Apps
-  // Script preserves the existing sheet value rather than clearing it.
-  const updatePayload: Omit<
-    Parameters<typeof updateMedicationOrder>[1],
-    "PreviousRxOrderID"
-  > & { PreviousRxOrderID?: string } = {
-    "Dosage Form": values.dosageForm,
-    "Brand Name": values.brandName || "",
-    "Active Ingredient": values.activeIngredient.trim(),
-    Dose: values.dose,
-    Unit: values.unit,
-    Frequency: values.frequency,
-    "Administration Times": values.administrationTimes || "",
-    "Dosing Days": values.dosingDays || "",
-    Indication: values.indication || "",
-    Instruction: values.instruction || "",
-    "Duration Type": values.durationType,
-    "Start Date": values.startDate,
-    "End Date": values.endDate || "",
-    "Noted By": values.notedBy || "",
-    "Noted By StaffID": values.notedByStaffId || "",
-    "Ordered By": values.orderedBy,
-    "Supplied By": values.suppliedBy,
-    Status: "Active",
-  };
+  // The new revision row needs the resident's Google-format ResidentID (the
+  // sheet's own identifier), not the Supabase numeric id.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const residentQ: any = supabase
+    .from("tbl_residents")
+    .select("ResidentID")
+    .eq("id", existingOrder.resident_id)
+    .single();
+  const { data: resident } = await residentQ;
 
-  if (values.previousRxOrderId) {
-    updatePayload.PreviousRxOrderID = values.previousRxOrderId;
+  if (!resident?.ResidentID) {
+    return {
+      success: false,
+      error: "Resident has no ResidentID — cannot submit order",
+    };
+  }
+
+  let newRxOrderId: string;
+  try {
+    newRxOrderId = await generateRxOrderId(supabase);
+  } catch {
+    return {
+      success: false,
+      error: "Failed to generate a unique order ID. Please try again.",
+    };
   }
 
   try {
-    await updateMedicationOrder(
-      rxOrderId,
-      updatePayload as Parameters<typeof updateMedicationOrder>[1]
-    );
+    await updateMedicationOrder(rxOrderId, {
+      RxOrderID: newRxOrderId,
+      ResidentID: resident.ResidentID,
+      "Dosage Form": values.dosageForm,
+      "Brand Name": values.brandName || "",
+      "Active Ingredient": values.activeIngredient.trim(),
+      Dose: values.dose,
+      Unit: values.unit,
+      Frequency: values.frequency,
+      "Administration Times": values.administrationTimes || "",
+      "Dosing Days": values.dosingDays || "",
+      Indication: values.indication || "",
+      Instruction: values.instruction || "",
+      "Duration Type": values.durationType,
+      "Start Date": values.startDate,
+      "End Date": values.endDate || "",
+      "Noted By": values.notedBy || "",
+      "Ordered By": values.orderedBy,
+      "Supplied By": values.suppliedBy,
+      Status: "Active",
+      PreviousRxOrderID: rxOrderId,
+    });
   } catch (err) {
     console.error("updateOrderAction — Apps Script error:", err);
     return {
@@ -248,5 +334,5 @@ export async function updateOrderAction(
     };
   }
 
-  return { success: true };
+  return { success: true, newRxOrderId };
 }

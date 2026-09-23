@@ -6,6 +6,7 @@ import { useTranslation } from "@/components/language-provider";
 import { createOrderAction, updateOrderAction, type OrderFormValues } from "./order-actions";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { LookupOption } from "@/lib/types";
+import { useDirtyForm } from "@/lib/dirty-form-context";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,6 @@ const FREQUENCY_OPTIONS = ["OD", "BD", "TDS", "QID", "ON", "EOD", "Every 3 Days"
 
 const DAY_OPTIONS = ["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-// All hours round the clock in medication format e.g. 0800AM, 0600PM
 const TIME_SLOTS = [
   "1200AM", "0100AM", "0200AM", "0300AM", "0400AM", "0500AM",
   "0600AM", "0700AM", "0800AM", "0900AM", "1000AM", "1100AM",
@@ -35,6 +35,29 @@ const FREQ_TIME_DEFAULTS: Record<string, string[]> = {
   QID: ["0800AM", "1200PM", "0600PM", "1000PM"],
   ON:  ["1000PM"],
 };
+
+const DOSAGE_FORM_TO_UNIT_MAP: Record<string, string> = {
+  "Tablet": "Tablet",
+  "Capsule": "Capsule",
+  "Powder": "Sachet",
+  "Syrup": "ml",
+  "Cream": "Application",
+  "Ointment": "Application",
+  "Lotion": "Application",
+  "Gel": "Application",
+  "Patch": "Unit",
+  "Ear Drop": "Drop",
+  "Eye Drop": "Drop",
+  "S/C Injection": "Unit",
+  "I/M Injection": "Unit",
+  "Neb.": "Unit",
+  "Inhaler": "Puff",
+  "Others": "Unit",
+};
+
+function getDefaultUnitForDosageForm(dosageForm: string): string | null {
+  return DOSAGE_FORM_TO_UNIT_MAP[dosageForm] ?? null;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -80,14 +103,16 @@ function Field({
   required,
   children,
   span2,
+  span3,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   span2?: boolean;
+  span3?: boolean;
 }) {
   return (
-    <div className={span2 ? "sm:col-span-2" : ""}>
+    <div className={span2 ? "sm:col-span-2" : span3 ? "col-span-3" : ""}>
       <label className={labelCls}>
         {label}
         {required && <span className="ml-0.5 text-red-500"> *</span>}
@@ -117,14 +142,14 @@ function ToggleGroup({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {options.map((opt) => (
         <button
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
           disabled={disabled}
-          className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50
+          className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50
             ${value === opt
               ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
               : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
@@ -203,11 +228,9 @@ export function OrderForm(props: Props) {
           startDate: new Date().toISOString().split("T")[0],
           endDate: "",
           notedBy: "",
-          notedByStaffId: "",
           orderedBy: "",
           suppliedBy: "",
           status: "Active",
-          previousRxOrderId: "",
         };
 
   // ── Resident combobox (create mode) ─────────────────────────────────────────
@@ -259,15 +282,9 @@ export function OrderForm(props: Props) {
   const [orderedBy, setOrderedBy] = useState(init.orderedBy);
   const [suppliedBy, setSuppliedBy] = useState(init.suppliedBy);
 
-  // Noted By — the picker's value is the staff member's display name (kept
-  // as-is so the Google Sheet stays human-readable); the actual tbl_staff
-  // StaffID is resolved from it at submit time in buildValues() below and
-  // sent as a separate field. For prefill, match by the stored StaffID when
-  // we have one; fall back to matching by name for legacy orders saved
-  // before "Noted By StaffID" existed.
-  const initNotedByIsOther = init.notedByStaffId
-    ? !props.staffOptions.some((s) => s.staffId === init.notedByStaffId)
-    : !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
+  // Noted By — the picker's value is the staff member's display name.
+  const initNotedByIsOther =
+    !!init.notedBy && !props.staffOptions.some((s) => s.name === init.notedBy);
   const [notedByVal, setNotedByVal] = useState(
     initNotedByIsOther ? OTHERS_SENTINEL : init.notedBy
   );
@@ -276,9 +293,30 @@ export function OrderForm(props: Props) {
   );
 
   // ── Dirty tracking ────────────────────────────────────────────────────────────
+  // Local isDirty/showCancelModal above already drive this form's own
+  // Cancel-button flow (Save and Exit / Exit Without Saving / Cancel,
+  // below). Mirroring the same state into the app-wide dirty-form guard
+  // additionally covers sidebar links and browser refresh/close -- without
+  // duplicating this form's own confirmation UI for its own Cancel button.
+  const orderFormId = isCreate ? "medication-order-new" : `medication-order-edit-${(props as Extract<Props, { mode: "edit" }>).rxOrderId}`;
+  const { markDirty: markGlobalDirty, markClean: markGlobalClean } = useDirtyForm(orderFormId);
+  // Always points at the latest render's doSubmitAsync closure, so the
+  // registration effect below (which only re-runs on isDirty flips, not on
+  // every keystroke) never calls a stale save with outdated field values.
+  const doSubmitRef = useRef<() => Promise<{ success: boolean; error?: string }>>(null!);
+
   function mark() {
     setIsDirty(true);
   }
+
+  useEffect(() => {
+    if (isDirty) {
+      markGlobalDirty(() => doSubmitRef.current());
+    } else {
+      markGlobalClean();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -308,7 +346,6 @@ export function OrderForm(props: Props) {
   const showEndDate = durationType === "Short Term";
   const adminTimesRequired = !!frequency && frequency !== "PRN";
 
-  // Staff options for Noted By — filter to the relevant branch
   const staffFilterBranchId =
     props.mode === "edit"
       ? props.residentBranchId
@@ -352,9 +389,6 @@ export function OrderForm(props: Props) {
   // ── Build values ─────────────────────────────────────────────────────────────
 
   function buildValues(): OrderFormValues {
-    // notedByStaffOptions is already scoped to staffFilterBranchId, so a
-    // name match here is unambiguous even though the same display name can
-    // exist at other branches (e.g. a physiotherapist who rotates branches).
     const matchedStaff =
       notedByVal !== OTHERS_SENTINEL
         ? props.staffOptions.find(
@@ -377,47 +411,65 @@ export function OrderForm(props: Props) {
       durationType,
       startDate,
       endDate: durationType === "Short Term" ? endDate : "",
-      notedBy: notedByVal === OTHERS_SENTINEL ? notedByOther.trim() : notedByVal,
-      notedByStaffId: matchedStaff?.staffId ?? "",
+      notedBy:
+        notedByVal === OTHERS_SENTINEL
+          ? notedByOther.trim()
+          : matchedStaff?.staffId ?? notedByVal,
       orderedBy,
       suppliedBy,
       status: "Active",
-      previousRxOrderId: init.previousRxOrderId || "",
     };
   }
 
   // ── Submit ───────────────────────────────────────────────────────────────────
 
-  function doSubmit() {
+  function doSubmitAsync(): Promise<{ success: boolean; error?: string }> {
     setError(null);
     setSuccessId(null);
 
-    startTransition(async () => {
-      if (isCreate) {
-        const result = await createOrderAction(buildValues());
-        if (!result.success) {
-          setError(result.error ?? "Unknown error");
-          return;
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        if (isCreate) {
+          const result = await createOrderAction(buildValues());
+          if (!result.success) {
+            setError(result.error ?? "Unknown error");
+            resolve({ success: false, error: result.error ?? "Unknown error" });
+            return;
+          }
+          setIsDirty(false);
+          markGlobalClean();
+          setSuccessId(result.rxOrderId ?? null);
+          setTimeout(() => push("/residents/medication/orders"), 1800);
+          resolve({ success: true });
+        } else {
+          const { residentId: _rid, ...rest } = buildValues();
+          void _rid;
+          const result = await updateOrderAction(
+            (props as Extract<Props, { mode: "edit" }>).rxOrderId,
+            rest
+          );
+          if (!result.success) {
+            setError(result.error ?? "Unknown error");
+            resolve({ success: false, error: result.error ?? "Unknown error" });
+            return;
+          }
+          setIsDirty(false);
+          markGlobalClean();
+          setSuccessId(result.newRxOrderId ?? null);
+          setTimeout(() => push("/residents/medication/orders"), 1800);
+          resolve({ success: true });
         }
-        setIsDirty(false);
-        setSuccessId(result.rxOrderId ?? null);
-        setTimeout(() => push("/residents/medication/orders"), 1800);
-      } else {
-        const { residentId: _rid, ...rest } = buildValues();
-        void _rid;
-        const result = await updateOrderAction(
-          (props as Extract<Props, { mode: "edit" }>).rxOrderId,
-          rest
-        );
-        if (!result.success) {
-          setError(result.error ?? "Unknown error");
-          return;
-        }
-        setIsDirty(false);
-        push("/residents/medication/orders");
-      }
+      });
     });
   }
+
+  function doSubmit() {
+    void doSubmitAsync();
+  }
+
+  useEffect(() => {
+    doSubmitRef.current = doSubmitAsync;
+  });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -488,6 +540,7 @@ export function OrderForm(props: Props) {
               <button
                 onClick={() => {
                   setIsDirty(false);
+                  markGlobalClean();
                   setShowCancelModal(false);
                   push("/residents/medication/orders");
                 }}
@@ -579,40 +632,24 @@ export function OrderForm(props: Props) {
             {/* ── Drug Information ─────────────────────────────────────────────── */}
             <SectionHeading title={t("Drug Information")} />
 
-            <div className="sm:col-span-2">
-              <Field label={t("Active Ingredient")} required>
-                <input
-                  type="text"
-                  value={activeIngredient}
-                  onChange={(e) => {
-                    setActiveIngredient(e.target.value);
-                    mark();
-                  }}
-                  placeholder={t("e.g. Atorvastatin")}
-                  className={inputCls}
-                />
-              </Field>
-            </div>
-
-            <Field label={t("Brand Name")}>
-              <input
-                type="text"
-                value={brandName}
-                onChange={(e) => {
-                  setBrandName(e.target.value);
-                  mark();
-                }}
-                placeholder={t("Optional")}
-                className={inputCls}
-              />
-            </Field>
-
-            <Field label={t("Dosage Form")} required>
+            {/*
+              PC layout (sm:grid-cols-2):
+                Left col  → Dosage Form
+                Right col → Active Ingredient (top) + Brand Name (bottom, same cell)
+            */}
+            <Field label={t("Dosage Form")} required span2>
               <select
                 value={dosageForm}
                 onChange={(e) => {
-                  setDosageForm(e.target.value);
+                  const newForm = e.target.value;
+                  setDosageForm(newForm);
                   mark();
+                  if (isCreate && newForm) {
+                    const defaultUnit = getDefaultUnitForDosageForm(newForm);
+                    if (defaultUnit) {
+                      setUnit(defaultUnit);
+                    }
+                  }
                 }}
                 className={inputCls + " cursor-pointer"}
               >
@@ -638,59 +675,88 @@ export function OrderForm(props: Props) {
               )}
             </Field>
 
-            {/* ── Dosing ──────────────────────────────────────────────────────── */}
-            <SectionHeading title={t("Dosing")} />
-
-            <Field label={t("Dose")} required>
+            <Field label={t("Active Ingredient")} required span2>
               <input
-                type="number"
-                value={dose}
+                type="text"
+                value={activeIngredient}
                 onChange={(e) => {
-                  setDose(e.target.value);
+                  setActiveIngredient(e.target.value);
                   mark();
                 }}
-                placeholder="e.g. 10"
-                min="0.01"
-                step="0.01"
+                placeholder={t("e.g. amlodipine 5mg")}
                 className={inputCls}
               />
             </Field>
 
-            <Field label={t("Unit")} required>
-              <select
-                value={unit}
+            <Field label={t("Brand Name")} span2>
+              <input
+                type="text"
+                value={brandName}
                 onChange={(e) => {
-                  setUnit(e.target.value);
+                  setBrandName(e.target.value);
                   mark();
                 }}
-                className={inputCls + " cursor-pointer"}
-              >
-                <option value="">{t("Select unit")}</option>
-                {UNIT_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {t(o)}
-                  </option>
-                ))}
-              </select>
+                placeholder={t("Optional")}
+                className={inputCls}
+              />
             </Field>
 
-            <Field label={t("Frequency")} required>
-              <select
-                value={frequency}
-                onChange={(e) => handleFrequencyChange(e.target.value)}
-                className={inputCls + " cursor-pointer"}
-              >
-                <option value="">{t("Select frequency")}</option>
-                {FREQUENCY_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {t(o)}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {/* ── Dosing ──────────────────────────────────────────────────────── */}
+            <SectionHeading title={t("Dosing")} />
 
-            {/* Spacer to keep grid balanced */}
-            <div className="hidden sm:block" />
+            {/*
+              PC layout: Dose | Unit | Frequency in a 3-column row
+              Mobile: stacked
+            */}
+            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-4">
+              <Field label={t("Dose")} required>
+                <input
+                  type="number"
+                  value={dose}
+                  onChange={(e) => {
+                    setDose(e.target.value);
+                    mark();
+                  }}
+                  placeholder="e.g. 1"
+                  min="0.01"
+                  step="0.01"
+                  className={inputCls}
+                />
+              </Field>
+
+              <Field label={t("Unit")} required>
+                <select
+                  value={unit}
+                  onChange={(e) => {
+                    setUnit(e.target.value);
+                    mark();
+                  }}
+                  className={inputCls + " cursor-pointer"}
+                >
+                  <option value="">{t("Select unit")}</option>
+                  {UNIT_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {t(o)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label={t("Frequency")} required>
+                <select
+                  value={frequency}
+                  onChange={(e) => handleFrequencyChange(e.target.value)}
+                  className={inputCls + " cursor-pointer"}
+                >
+                  <option value="">{t("Select frequency")}</option>
+                  {FREQUENCY_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {t(o)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
 
             <div className="sm:col-span-2">
               <Field label={t("Administration Times")} required={adminTimesRequired}>
@@ -834,7 +900,7 @@ export function OrderForm(props: Props) {
               </div>
             </Field>
 
-            <Field label={t("Noted By")}>
+            <Field label={t("Noted By")} required>
               <StaffPickerWithOther
                 value={notedByVal}
                 otherName={notedByOther}
@@ -847,6 +913,7 @@ export function OrderForm(props: Props) {
                   mark();
                 }}
                 staffOptions={notedByStaffOptions}
+                required
                 disabled={isCreate && !residentId}
               />
               {isCreate && !residentId && (

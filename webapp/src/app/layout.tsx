@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LanguageProvider } from "@/components/language-provider";
+import { NavigationGuard } from "@/components/navigation-guard";
+import { UnsavedChangesDialog } from "@/components/unsaved-changes-dialog";
+import { DirtyFormProvider } from "@/lib/dirty-form-context";
 import { getServerLanguage } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -28,7 +31,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LanguageProvider initialLanguage={language}>{children}</LanguageProvider>
+        <DirtyFormProvider>
+          <LanguageProvider initialLanguage={language}>
+            {children}
+            <NavigationGuard />
+            <UnsavedChangesDialog />
+          </LanguageProvider>
+        </DirtyFormProvider>
       </body>
     </html>
   );

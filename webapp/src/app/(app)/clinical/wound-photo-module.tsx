@@ -11,6 +11,7 @@ import type { WoundBodyPart } from "./wound-body-diagram";
 import { WoundProgressionDashboard } from "./wound-progression-dashboard";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, TrendingUp } from "lucide-react";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
@@ -30,6 +31,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "progression" | "new">("review");
 
   function applyFilters(residentId: string, start: string, end: string) {
@@ -44,13 +46,13 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
   return (
     <div className="space-y-4">
       <TabRow>
-        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => setInnerTab("review")}>
+        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => guardedAction(() => setInnerTab("review"))}>
           {t("Wound Photo History")}
         </TabButton>
-        <TabButton icon={TrendingUp} size="sm" active={innerTab === "progression"} onClick={() => setInnerTab("progression")}>
+        <TabButton icon={TrendingUp} size="sm" active={innerTab === "progression"} onClick={() => guardedAction(() => setInnerTab("progression"))}>
           {t("Wound Progression")}
         </TabButton>
-        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>
+        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
           {t("New Entry")}
         </TabButton>
       </TabRow>

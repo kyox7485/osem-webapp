@@ -5,8 +5,8 @@ import type { TrendPoint, AgeGenderRow, LOSBucket, CategoryRow } from "./data";
 
 // ─── Occupancy trend chart ────────────────────────────────────────────────────
 
-// SVG line + area chart. One data point per month-end snapshot.
-// Uses <title> for accessible hover tooltips (no JS required).
+// SVG line + area chart with improved hover interaction.
+// One data point per month-end snapshot.
 export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
   if (points.length === 0) {
     return (
@@ -44,84 +44,97 @@ export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
   const gridValues = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      width="100%"
-      aria-label="Occupancy trend chart"
-      role="img"
-      className="block overflow-visible"
-    >
-      {/* Grid lines + y-axis labels */}
-      {gridValues.map((v) => {
-        const y = yOf(v);
-        return (
-          <g key={v}>
-            <line
-              x1={PAD_L}
-              y1={y}
-              x2={PAD_L + CW}
-              y2={y}
-              stroke="#f1f5f9"
-              strokeWidth="1"
+    <div className="relative">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        aria-label="Occupancy trend chart"
+        role="img"
+        className="block overflow-visible"
+      >
+        {/* Grid lines + y-axis labels */}
+        {gridValues.map((v) => {
+          const y = yOf(v);
+          return (
+            <g key={v}>
+              <line
+                x1={PAD_L}
+                y1={y}
+                x2={PAD_L + CW}
+                y2={y}
+                stroke="#f1f5f9"
+                strokeWidth="1"
+              />
+              <text
+                x={PAD_L - 6}
+                y={y}
+                textAnchor="end"
+                dominantBaseline="middle"
+                fontSize="9"
+                fill="#94a3b8"
+                fontFamily="inherit"
+              >
+                {v}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Area fill */}
+        <path d={areaD} fill="rgba(99,102,241,0.08)" />
+
+        {/* Line */}
+        {points.length > 1 && (
+          <path d={lineD} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        )}
+
+        {/* Dots with hover targets */}
+        {points.map((p, i) => (
+          <g key={i}>
+            {/* Larger invisible hover target */}
+            <circle
+              cx={xOf(i)}
+              cy={yOf(p.occupied)}
+              r="8"
+              fill="transparent"
+              style={{ cursor: "pointer" }}
+              className="hover-target"
             />
+            {/* Visible dot */}
+            <circle
+              cx={xOf(i)}
+              cy={yOf(p.occupied)}
+              r="4"
+              fill="#6366f1"
+              stroke="white"
+              strokeWidth="1.5"
+            />
+            <title>{`${p.label}\nOccupancy: ${p.occupied} residents`}</title>
+          </g>
+        ))}
+
+        {/* X-axis labels */}
+        {points.map((p, i) => {
+          // Show every label when ≤ 8 points, otherwise every 3rd
+          const skip = points.length > 8 && i % 3 !== 0 && i !== points.length - 1;
+          if (skip) return null;
+          return (
             <text
-              x={PAD_L - 6}
-              y={y}
-              textAnchor="end"
-              dominantBaseline="middle"
+              key={i}
+              x={xOf(i)}
+              y={H - 4}
+              textAnchor="middle"
               fontSize="9"
               fill="#94a3b8"
               fontFamily="inherit"
             >
-              {v}
+              {p.label}
             </text>
-          </g>
-        );
-      })}
-
-      {/* Area fill */}
-      <path d={areaD} fill="rgba(99,102,241,0.08)" />
-
-      {/* Line */}
-      {points.length > 1 && (
-        <path d={lineD} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      )}
-
-      {/* Dots */}
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle
-            cx={xOf(i)}
-            cy={yOf(p.occupied)}
-            r="4"
-            fill="#6366f1"
-            stroke="white"
-            strokeWidth="1.5"
-          />
-          <title>{`${p.label}: ${p.occupied} residents`}</title>
-        </g>
-      ))}
-
-      {/* X-axis labels */}
-      {points.map((p, i) => {
-        // Show every label when ≤ 8 points, otherwise every 3rd
-        const skip = points.length > 8 && i % 3 !== 0 && i !== points.length - 1;
-        if (skip) return null;
-        return (
-          <text
-            key={i}
-            x={xOf(i)}
-            y={H - 4}
-            textAnchor="middle"
-            fontSize="9"
-            fill="#94a3b8"
-            fontFamily="inherit"
-          >
-            {p.label}
-          </text>
-        );
-      })}
-    </svg>
+          );
+        })}
+      </svg>
+      <p className="mt-2 text-center text-xs text-gray-400">Hover over data points to see details</p>
+    </div>
   );
 }
 
@@ -295,6 +308,7 @@ export function KpiCard({
   tint,
   icon,
   delta,
+  clickable,
 }: {
   label: string;
   value: React.ReactNode;
@@ -302,9 +316,10 @@ export function KpiCard({
   tint: string;
   icon: React.ReactNode;
   delta?: { value: number; positive: boolean } | null;
+  clickable?: boolean;
 }) {
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <div className={`rounded-md border border-gray-200 bg-white p-4 shadow-sm ${clickable ? "cursor-pointer transition-all hover:border-indigo-300 hover:shadow-md" : ""}`}>
       <div className="flex items-start justify-between">
         <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tint}`}>{icon}</span>
         {delta !== undefined && delta !== null && (
@@ -329,6 +344,7 @@ export function KpiCard({
       <p className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-gray-900">{value}</p>
       <p className="mt-0.5 text-xs text-gray-500">{label}</p>
       {sub && <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>}
+      {clickable && <p className="mt-2 text-[10px] text-gray-400">Click for details</p>}
     </div>
   );
 }

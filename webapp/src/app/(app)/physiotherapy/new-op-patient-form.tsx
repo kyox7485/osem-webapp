@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavPush } from "@/components/nav-loading";
 import { createOpPatient } from "./actions";
 import { useTranslation } from "@/components/language-provider";
+import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 
 const fieldCls =
   "mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
@@ -24,6 +26,8 @@ export function NewOpPatientForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const { markDirty, markClean } = useFormDirtyTracking("op-patient-new", submitForm);
+  const { guardedAction } = useSafeNavigation();
 
   function reset() {
     setPatientName("");
@@ -36,7 +40,12 @@ export function NewOpPatientForm() {
 
   function close() {
     reset();
+    markClean();
     setOpen(false);
+  }
+
+  function requestClose() {
+    guardedAction(close);
   }
 
   // Focus the first field as soon as the modal opens, and let Escape close
@@ -45,7 +54,7 @@ export function NewOpPatientForm() {
     if (!open) return;
     nameInputRef.current?.focus();
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") requestClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -54,11 +63,16 @@ export function NewOpPatientForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await submitForm();
+  }
+
+  async function submitForm(): Promise<{ success: boolean; error?: string }> {
     setError("");
 
     if (!patientName.trim()) {
-      setError(t("Patient name is required"));
-      return;
+      const msg = t("Patient name is required");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
     setSaving(true);
@@ -72,12 +86,16 @@ export function NewOpPatientForm() {
     setSaving(false);
 
     if (!result.success || !result.id) {
-      setError(result.error || t("Failed to register patient"));
-      return;
+      const msg = result.error || t("Failed to register patient");
+      setError(msg);
+      return { success: false, error: msg };
     }
 
-    close();
+    reset();
+    markClean();
+    setOpen(false);
     push(`/physiotherapy?type=op&resident=${result.id}`);
+    return { success: true };
   }
 
   return (
@@ -94,7 +112,7 @@ export function NewOpPatientForm() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => {
-            if (e.target === e.currentTarget) close();
+            if (e.target === e.currentTarget) requestClose();
           }}
         >
           <div role="dialog" aria-modal="true" aria-labelledby="new-op-patient-title" className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
@@ -102,7 +120,7 @@ export function NewOpPatientForm() {
               {t("Register new outpatient")}
             </h3>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} onChangeCapture={markDirty}>
               {error && <div className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-800">{error}</div>}
 
               {/* Every field the same width, one per row -- easier to scan
@@ -154,7 +172,7 @@ export function NewOpPatientForm() {
               <div className="mt-5 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={close}
+                  onClick={requestClose}
                   disabled={saving}
                   className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                 >
