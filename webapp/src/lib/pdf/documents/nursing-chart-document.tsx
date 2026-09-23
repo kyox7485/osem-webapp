@@ -1,6 +1,21 @@
-import { Document } from "@react-pdf/renderer";
-import { ReportPage, InfoGrid, ReportSection, type ReportBranchInfo } from "../report-shell";
+import { Document, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { ReportPage, InfoGrid, ReportSection, ReportTable, type ReportTableColumn, type ReportBranchInfo } from "../report-shell";
 import { formatDateTime } from "@/lib/format-date";
+import { pdfColors } from "../theme";
+
+const mealTableStyles = StyleSheet.create({
+  wrap: { marginBottom: 10 },
+  label: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: pdfColors.accent,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+});
+
+export type NursingChartMealRow = { time: string; regime: string; aspirate: string };
 
 export type NursingChartReportData = {
   entry_timestamp: string;
@@ -16,11 +31,20 @@ export type NursingChartReportData = {
   psycho_social_labels: string[];
   active_complaint_labels: string[];
   meal_labels: string[];
+  // Only populated for Tube Feeding entries -- rendered as a Time / Feeding
+  // Regime / Aspirate (mL) table instead of the joined meal_labels text.
+  meal_rows: NursingChartMealRow[];
   hygiene_labels: string[];
   intervention: string | null;
   doctors_plan: string | null;
   entered_by_name: string;
 };
+
+const mealColumns: ReportTableColumn<NursingChartMealRow>[] = [
+  { label: "Time", width: "25%", render: (r) => r.time },
+  { label: "Feeding Regime", width: "45%", render: (r) => r.regime },
+  { label: "Aspirate (mL)", width: "30%", render: (r) => r.aspirate },
+];
 
 function joinOrNull(items: string[], sep = ", "): string | null {
   return items.length > 0 ? items.join(sep) : null;
@@ -63,7 +87,14 @@ export function NursingChartDocument({
         />
 
         <ReportSection label="Diaper / Elimination Checks" value={joinOrNull(entry.elimination_labels, " | ")} minLines={2} />
-        <ReportSection label="Meals" value={joinOrNull(entry.meal_labels, " | ")} minLines={2} />
+        {entry.tube_feeding === "Tube Feeding" ? (
+          <View style={mealTableStyles.wrap}>
+            <Text style={mealTableStyles.label}>Meals</Text>
+            <ReportTable columns={mealColumns} rows={entry.meal_rows} emptyLabel="No meals recorded." />
+          </View>
+        ) : (
+          <ReportSection label="Meals" value={joinOrNull(entry.meal_labels, " | ")} minLines={2} />
+        )}
         <ReportSection label="Hygiene Care" value={joinOrNull(entry.hygiene_labels, " | ")} minLines={2} />
         <ReportSection label="Activity" value={joinOrNull(entry.activity_labels)} minLines={2} />
         <ReportSection label="Disturbance Level" value={joinOrNull(entry.disturbance_level_labels)} minLines={1} />

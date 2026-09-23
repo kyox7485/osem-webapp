@@ -13,6 +13,7 @@ type MealInput = {
   mealPortionOther: string | null;
   feedingTimeId: number | null;
   feedingVolume: string | null;
+  aspirateAmount: number | null;
 };
 
 type CreateNursingChartEntryInput = {
@@ -123,7 +124,9 @@ export async function createNursingChartEntry(
   }
 
   const mealRows = input.meals
-    .filter((m) => m.mealTypeId !== null || m.feedingTimeId !== null || m.feedingVolume !== null)
+    .filter(
+      (m) => m.mealTypeId !== null || m.feedingTimeId !== null || m.feedingVolume !== null || m.aspirateAmount !== null
+    )
     .map((m) => ({
       branch_id: resident.branch_id,
       chart_entry_id: entryId,
@@ -133,6 +136,7 @@ export async function createNursingChartEntry(
       meal_portion_other: m.mealPortionOther,
       feeding_time_id: m.feedingTimeId,
       feeding_volume: m.feedingVolume,
+      aspirate_amount: m.aspirateAmount,
     }));
   if (mealRows.length > 0) {
     childInserts.push(supabase.from("tbl_nursing_chart_meals").insert(mealRows));

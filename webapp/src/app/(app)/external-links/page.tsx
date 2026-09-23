@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
 import { EXTERNAL_LINKS } from "@/config/external-links";
 import type { Rights } from "@/lib/current-user";
+import { QrCode } from "@/components/qr-code";
 
 const RIGHTS_RANK: Record<Rights, number> = { STAFF: 0, MODERATOR: 1, ADMIN: 2 };
 
@@ -37,7 +38,7 @@ export default async function ExternalLinksPage() {
             <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 transition-colors group-hover:bg-indigo-100">
               <ExternalLink className="h-5 w-5" strokeWidth={2} />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="font-medium text-gray-900 group-hover:text-indigo-700">
                 {link.label}
               </p>
@@ -45,6 +46,7 @@ export default async function ExternalLinksPage() {
                 <p className="mt-1 text-sm text-gray-500">{link.description}</p>
               )}
             </div>
+            <QrCode value={link.url} label={`QR code for ${link.label}`} />
           </a>
         ))}
       </div>
