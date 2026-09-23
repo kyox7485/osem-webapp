@@ -37,6 +37,11 @@ export const EXTERNAL_LINKS: ExternalLink[] = [
     description: "Handle incoming enquiries from prospective residents or families.",
   },
   {
+    label: "Maintenance Report",
+    url: "https://docs.google.com/forms/d/149iSlEYw0b4s2iqXiglBJ99hpWx40j6F6p-vWJlnDck",
+    description: "Submit a new maintenance report.",
+  },
+  {
     label: "Service Agreement Generator",
     url: "https://script.google.com/macros/s/AKfycbz_fs8w-ve4i4dJ60KEBmuelXJXAvWdohdDdhglc6WjHqloRGTpR2ndfvL7mAWl81BneQ/exec",
     description: "Generate service agreement documents.",
@@ -45,7 +50,7 @@ export const EXTERNAL_LINKS: ExternalLink[] = [
   {
     label: "Token Generator",
     url: "https://script.google.com/macros/s/AKfycbxvkIsilvXKAqB4J6HgSeFQ5GOdksL4c2rsrj3NYQdrQlXoPcTyS9oBwTFOI5I1arJy/exec",
-    description: "Generate access tokens.",
+    description: "Generate staff appreciation tokens.",
     minRights: "ADMIN",
   },
 ];
