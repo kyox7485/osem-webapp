@@ -83,6 +83,10 @@ export async function createResident(formData: FormData) {
   const { data, error } = await supabase.from("tbl_residents").insert(payload).select("id").single();
 
   if (error) {
+    // Translate the unique-constraint violation into a user-friendly message
+    if (error.code === "23505" && error.message.includes("residentid")) {
+      return { error: "A Resident ID could not be generated — please try again." };
+    }
     return { error: error.message };
   }
 
