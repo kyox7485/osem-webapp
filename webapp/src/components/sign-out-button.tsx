@@ -4,16 +4,22 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "./language-provider";
+import { useGuardedNavigation } from "@/lib/dirty-form-context";
 
 export function SignOutButton({ collapsed }: { collapsed?: boolean } = {}) {
   const router = useRouter();
   const t = useTranslation();
+  const guardAction = useGuardedNavigation();
 
-  async function handleSignOut() {
+  async function doSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  function handleSignOut() {
+    guardAction(() => { void doSignOut(); });
   }
 
   if (collapsed) {

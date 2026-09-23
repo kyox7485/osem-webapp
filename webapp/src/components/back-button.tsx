@@ -1,15 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslation } from "@/components/language-provider";
+import { useSafeNavigation } from "@/lib/use-safe-navigation";
 
 export function BackButton() {
-  const router = useRouter();
+  const { goBack } = useSafeNavigation();
   const t = useTranslation();
   return (
     <button
       type="button"
-      onClick={() => router.back()}
+      onClick={goBack}
       className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-800"
     >
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
