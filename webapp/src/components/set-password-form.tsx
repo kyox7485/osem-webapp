@@ -26,9 +26,9 @@ export function SetPasswordForm({ accountId }: { accountId: number }) {
   }
 
   return (
-    <form action={handleSubmit} className="max-w-lg space-y-3 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-      <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t("Set new password")}</h2>
-      <p className="text-xs text-gray-400 dark:text-gray-500">
+    <form action={handleSubmit} className="max-w-lg space-y-3 rounded-md border border-line bg-surface p-4 shadow-sm">
+      <h2 className="text-sm font-medium text-fg">{t("Set new password")}</h2>
+      <p className="text-xs text-fg-faint">
         {t("Sets it directly -- no email involved. Not stored anywhere; tell the person once.")}
       </p>
 
@@ -40,16 +40,16 @@ export function SetPasswordForm({ accountId }: { accountId: number }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t("New password (min 6 characters)")}
-        className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        className="w-full rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-green-700">{t("Password updated.")}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {success && <p className="text-sm text-green-700 dark:text-green-300">{t("Password updated.")}</p>}
 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50"
+        className="rounded-md border border-line-strong px-3 py-1.5 text-sm font-medium text-fg-secondary hover:bg-hover disabled:opacity-50"
       >
         {submitting ? t("Saving...") : t("Set password")}
       </button>

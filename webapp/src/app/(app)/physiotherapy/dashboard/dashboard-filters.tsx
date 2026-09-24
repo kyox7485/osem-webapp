@@ -42,7 +42,7 @@ export function DashboardFilters({ period, start, end, branch, view, therapist, 
   }
 
   return (
-    <div className="mb-4 space-y-3 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+    <div className="mb-4 space-y-3 rounded-md border border-line bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TabRow>
           {PERIODS.map((p) => (
@@ -66,32 +66,32 @@ export function DashboardFilters({ period, start, end, branch, view, therapist, 
         {period === "custom" && (
           <>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("Start date")}</label>
+              <label className="mb-1 block text-xs font-medium text-fg-secondary">{t("Start date")}</label>
               <input
                 type="date"
                 value={start}
                 onChange={(e) => navigate({ start: e.target.value })}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong bg-input text-fg px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("End date")}</label>
+              <label className="mb-1 block text-xs font-medium text-fg-secondary">{t("End date")}</label>
               <input
                 type="date"
                 value={end}
                 onChange={(e) => navigate({ end: e.target.value })}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong bg-input text-fg px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
           </>
         )}
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("Branch")}</label>
+          <label className="mb-1 block text-xs font-medium text-fg-secondary">{t("Branch")}</label>
           <select
             value={branch}
             onChange={(e) => navigate({ branch: e.target.value })}
-            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-line-strong bg-input text-fg px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             <option value="">{t("All branches")}</option>
             {branches.map((b) => (
@@ -104,11 +104,11 @@ export function DashboardFilters({ period, start, end, branch, view, therapist, 
 
         {view === "individual" && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("Therapist")}</label>
+            <label className="mb-1 block text-xs font-medium text-fg-secondary">{t("Therapist")}</label>
             <select
               value={therapist}
               onChange={(e) => navigate({ therapist: e.target.value })}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-line-strong bg-input text-fg px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               <option value="">{t("Select therapist")}</option>
               {therapists.map((th) => (

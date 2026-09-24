@@ -31,13 +31,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={language === "ms" ? "ms" : "en"}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // ThemeClassScript adds .light/.dark to <html> before hydration, so the
+      // class attribute legitimately differs from the server render.
+      suppressHydrationWarning
     >
       <head>
         <ThemeClassScript />
       </head>
       <body className="min-h-full flex flex-col">
         <DirtyFormProvider>
-          <ThemeProvider initialTheme="system">
+          <ThemeProvider>
             <LanguageProvider initialLanguage={language}>
               {children}
               <NavigationGuard />

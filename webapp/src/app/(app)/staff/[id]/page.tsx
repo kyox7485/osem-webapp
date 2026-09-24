@@ -37,7 +37,7 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
-      <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="max-w-md rounded-md border border-line bg-surface p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
           <Row label={t("Staff ID")} value={staff.StaffID} fallback={t("--")} />
           <Row label={t("Role")} value={staff.role ? t(staff.role) : staff.role} fallback={t("--")} />
@@ -52,8 +52,8 @@ export default async function StaffViewPage({ params }: { params: Promise<{ id: 
 function Row({ label, value, fallback }: { label: string; value: string | null; fallback: string }) {
   return (
     <div>
-      <dt className="text-xs text-gray-400">{label}</dt>
-      <dd className="text-gray-800">{value ?? fallback}</dd>
+      <dt className="text-xs text-fg-faint">{label}</dt>
+      <dd className="text-fg">{value ?? fallback}</dd>
     </div>
   );
 }

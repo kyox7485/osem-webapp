@@ -92,6 +92,13 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   work done — it flags missing MS dictionary entries, duplicate keys with
   conflicting translations, and likely-untranslated dropdown options.
 
+- **All new UI must support Light and Dark themes.** Prefer semantic theme
+  tokens (`bg-surface`, `text-fg`, `border-line`, … — see
+  `docs/theming.md`) for shared surfaces/text/borders instead of
+  hard-coded light-only colours (`bg-white`, `text-gray-*`,
+  `border-gray-*`); coloured status classes get the documented `dark:`
+  partner. New modules must be tested in Light, Dark and System modes.
+
 ## Domain-specific detail (read only when relevant)
 
 - `docs/database.md` — full core domain model, DEMO exclusion checklist.
@@ -109,6 +116,8 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
 - `docs/deployment.md` — canonical, current deployment reference (Vercel,
   Supabase schema changes, Apps Script redeploy). Supersedes the
   historical root-level `DEPLOYMENT_INSTRUCTIONS.md`.
+- `docs/theming.md` — Light/Dark/System architecture, token cheat-sheet,
+  coloured-status `dark:` convention, testing checklist.
 - `docs/architecture.md` — repo layout, `webapp/` internals, env vars,
   `migration/` scripts, `schema/001_init.sql`.
 - `docs/i18n.md` — full i18n architecture: dictionary-key convention,

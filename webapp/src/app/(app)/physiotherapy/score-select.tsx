@@ -17,13 +17,13 @@ type Props = {
 export function ScoreSelect({ label, value, onChange, options, id }: Props) {
   const t = useTranslation();
   return (
-    <label className="block text-xs text-gray-500 dark:text-gray-400">
+    <label className="block text-xs text-fg-subtle">
       {label}
       <select
         id={id}
         value={value === null ? "" : value}
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-        className="mt-0.5 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        className="mt-0.5 w-full rounded-md border border-line-strong bg-input px-2 py-1.5 text-xs text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       >
         <option value="">{t("Not assessed")}</option>
         {options.map((opt) => (

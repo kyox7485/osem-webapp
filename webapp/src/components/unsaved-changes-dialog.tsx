@@ -38,11 +38,11 @@ export function UnsavedChangesDialog() {
       aria-labelledby="unsaved-changes-title"
       aria-describedby="unsaved-changes-description"
     >
-      <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-900 p-6 shadow-xl">
-        <h2 id="unsaved-changes-title" className="mb-2 text-lg font-bold text-gray-900 dark:text-gray-100">
+      <div className="w-full max-w-md rounded-lg bg-elevated p-6 shadow-xl">
+        <h2 id="unsaved-changes-title" className="mb-2 text-lg font-bold text-fg">
           {t("Unsaved changes")}
         </h2>
-        <p id="unsaved-changes-description" className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+        <p id="unsaved-changes-description" className="mb-6 text-sm text-fg-secondary">
           {t("You have unsaved changes. What would you like to do?")}
         </p>
 
@@ -57,7 +57,7 @@ export function UnsavedChangesDialog() {
             type="button"
             onClick={() => resolveDialog("cancel")}
             disabled={dialogSaving}
-            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            className="rounded-md border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-fg-secondary hover:bg-hover focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {t("Cancel")}
           </button>
@@ -66,7 +66,7 @@ export function UnsavedChangesDialog() {
             type="button"
             onClick={() => resolveDialog("discard")}
             disabled={dialogSaving}
-            className="rounded-md border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+            className="rounded-md border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {t("Exit Without Saving")}
           </button>

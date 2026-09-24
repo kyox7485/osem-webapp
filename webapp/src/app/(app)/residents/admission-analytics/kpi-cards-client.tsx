@@ -161,13 +161,13 @@ export function KpiCardsClient({
           <KpiCard
             label={t("Net Bed Change")}
             value={
-              <span className={netGrowth > 0 ? "text-emerald-700 dark:text-emerald-400" : netGrowth < 0 ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-gray-100"}>
+              <span className={netGrowth > 0 ? "text-emerald-700 dark:text-emerald-400" : netGrowth < 0 ? "text-red-600 dark:text-red-400" : "text-fg"}>
                 {netGrowth > 0 ? "+" : ""}
                 {netGrowth}
               </span>
             }
             sub={t("admissions − discharges")}
-            tint={netGrowth > 0 ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400" : netGrowth < 0 ? "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}
+            tint={netGrowth > 0 ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400" : netGrowth < 0 ? "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400" : "bg-surface-strong text-fg-subtle"}
             icon={
               netGrowth > 0 ? (
                 <TrendingUp className="h-4 w-4" strokeWidth={2} />

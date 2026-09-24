@@ -20,8 +20,8 @@ export default async function ExternalLinksPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">External Links</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-semibold text-fg">External Links</h1>
+        <p className="mt-1 text-sm text-fg-subtle">
           Quick access to frequently used tools and forms.
         </p>
       </div>
@@ -33,17 +33,17 @@ export default async function ExternalLinksPage() {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            className="group flex items-start gap-4 rounded-xl border border-line bg-surface p-5 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
           >
-            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 transition-colors group-hover:bg-indigo-100">
+            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 transition-colors group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40">
               <ExternalLink className="h-5 w-5" strokeWidth={2} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-gray-900 group-hover:text-indigo-700">
+              <p className="font-medium text-fg group-hover:text-indigo-700 dark:group-hover:text-indigo-300">
                 {link.label}
               </p>
               {link.description && (
-                <p className="mt-1 text-sm text-gray-500">{link.description}</p>
+                <p className="mt-1 text-sm text-fg-subtle">{link.description}</p>
               )}
             </div>
             <QrCode value={link.url} label={`QR code for ${link.label}`} />
@@ -52,7 +52,7 @@ export default async function ExternalLinksPage() {
       </div>
 
       {visible.length === 0 && (
-        <p className="text-sm text-gray-500">No links available for your account.</p>
+        <p className="text-sm text-fg-subtle">No links available for your account.</p>
       )}
     </div>
   );

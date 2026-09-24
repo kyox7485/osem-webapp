@@ -54,6 +54,15 @@ export const dictCommon: Record<string, string> = {
   // regardless of current language, so not run through t().
   Language: "Bahasa",
 
+  // Header theme toggle + sidebar rail
+  Theme: "Tema",
+  "Theme: {mode}": "Tema: {mode}",
+  Light: "Cerah",
+  Dark: "Gelap",
+  System: "Sistem",
+  "Collapse sidebar": "Kecilkan bar sisi",
+  "Expand sidebar": "Kembangkan bar sisi",
+
   // Unsaved-changes guard dialog
   "Unsaved changes": "Perubahan belum disimpan",
   "You have unsaved changes. What would you like to do?":

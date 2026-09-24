@@ -59,12 +59,12 @@ function formatIngredientLine(order: OrderItem): string {
 const STATUS_COLORS: Record<string, string> = {
   Active: "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 ring-1 ring-green-600/20",
   Discontinued: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 ring-1 ring-red-600/20",
-  Completed: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 ring-1 ring-gray-500/20",
+  Completed: "bg-surface-strong text-fg-muted ring-1 ring-fg-subtle/20",
   "On Hold": "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-1 ring-amber-600/20",
 };
 
 function statusClass(s: string) {
-  return STATUS_COLORS[s] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 ring-1 ring-gray-500/20";
+  return STATUS_COLORS[s] ?? "bg-surface-strong text-fg-muted ring-1 ring-fg-subtle/20";
 }
 
 function formatDate(dateStr: string) {
@@ -82,10 +82,10 @@ function DetailField({ label, value }: { label: string; value: string | null | u
   if (!value) return null;
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-faint">
         {t(label)}
       </p>
-      <p className="mt-0.5 text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{value}</p>
+      <p className="mt-0.5 text-sm text-fg whitespace-pre-wrap">{value}</p>
     </div>
   );
 }
@@ -124,16 +124,16 @@ function OrderDetailModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-lg rounded-2xl bg-elevated shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-5 py-4">
+        <div className="flex items-start justify-between border-b border-line-subtle bg-surface-muted px-5 py-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{order.residentName}</p>
+              <p className="text-base font-semibold text-fg">{order.residentName}</p>
               {order.residentTextId && (
-                <span className="rounded bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                <span className="rounded bg-line px-1.5 py-0.5 font-mono text-xs text-fg-subtle">
                   {order.residentTextId}
                 </span>
               )}
@@ -141,11 +141,11 @@ function OrderDetailModal({
                 {t(effectiveStatus)}
               </span>
             </div>
-            <p className="mt-0.5 font-mono text-xs text-gray-400 dark:text-gray-500">{order.rxOrderId}</p>
+            <p className="mt-0.5 font-mono text-xs text-fg-faint">{order.rxOrderId}</p>
           </div>
           <button
             onClick={onClose}
-            className="ml-3 shrink-0 rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="ml-3 shrink-0 rounded-lg p-1.5 text-fg-faint hover:bg-line hover:text-fg-muted transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -158,7 +158,7 @@ function OrderDetailModal({
 
           {/* Drug */}
           <section className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               {t("Drug Information")}
             </h4>
             <div className="grid grid-cols-1 gap-3">
@@ -171,8 +171,8 @@ function OrderDetailModal({
 
           {/* Clinical */}
           {(order.indication || order.instruction) && (
-            <section className="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+            <section className="space-y-3 border-t border-line-subtle pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 {t("Clinical")}
               </h4>
               <div className="grid grid-cols-1 gap-3">
@@ -183,8 +183,8 @@ function OrderDetailModal({
           )}
 
           {/* Duration & Dates */}
-          <section className="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+          <section className="space-y-3 border-t border-line-subtle pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               {t("Duration & Dates")}
             </h4>
             <div className="grid grid-cols-2 gap-3">
@@ -195,8 +195,8 @@ function OrderDetailModal({
 
           {/* Personnel */}
           {(order.orderedBy || order.notedByName || order.suppliedBy) && (
-            <section className="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+            <section className="space-y-3 border-t border-line-subtle pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                 {t("Personnel")}
               </h4>
               <div className="grid grid-cols-1 gap-3">
@@ -209,10 +209,10 @@ function OrderDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-3 flex justify-end">
+        <div className="border-t border-line-subtle px-5 py-3 flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+            className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-fg-secondary hover:bg-hover transition-colors"
           >
             {t("Close")}
           </button>
@@ -238,7 +238,7 @@ function DiscontinueModal({
   const t = useTranslation();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl bg-white dark:bg-gray-900 p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-xl bg-elevated p-6 shadow-xl">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-red-600 dark:text-red-400">
@@ -246,12 +246,12 @@ function DiscontinueModal({
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("Discontinue Order")}</h3>
-            <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+            <h3 className="text-sm font-semibold text-fg">{t("Discontinue Order")}</h3>
+            <p className="mt-1.5 text-sm text-fg-subtle">
               {t("Are you sure you want to discontinue this order for")}{" "}
-              <span className="font-medium text-gray-800 dark:text-gray-200">{order.residentName}</span>?
+              <span className="font-medium text-fg">{order.residentName}</span>?
             </p>
-            <p className="mt-1.5 rounded-md bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1.5 rounded-md bg-surface-muted px-2.5 py-1.5 font-mono text-xs text-fg-subtle">
               {formatDrugLabel(order)}
             </p>
             <p className="mt-2 text-xs text-red-500 dark:text-red-400">{t("This action cannot be undone.")}</p>
@@ -276,7 +276,7 @@ function DiscontinueModal({
           <button
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors disabled:opacity-50"
+            className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-fg-secondary hover:bg-hover transition-colors disabled:opacity-50"
           >
             {t("Cancel")}
           </button>
@@ -350,11 +350,11 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
 
   if (orders.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-12 text-center shadow-sm">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-700">
+      <div className="rounded-lg border border-line bg-surface px-6 py-12 text-center shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3 h-10 w-10 text-line-strong">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
         </svg>
-        <p className="text-sm font-medium text-gray-400 dark:text-gray-500">{t("No orders found.")}</p>
+        <p className="text-sm font-medium text-fg-faint">{t("No orders found.")}</p>
       </div>
     );
   }
@@ -386,12 +386,12 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("Search by resident, drug...")}
-            className="min-w-[180px] flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="min-w-[180px] flex-1 rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg placeholder-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg-secondary focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="all">{t("All statuses")}</option>
             {allStatuses.map((s) => (
@@ -407,7 +407,7 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
         )}
 
         {grouped.length === 0 ? (
-          <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500 shadow-sm">
+          <div className="rounded-md border border-line bg-surface px-6 py-8 text-center text-sm text-fg-faint shadow-sm">
             {t("No orders match the current filter.")}
           </div>
         ) : (
@@ -419,19 +419,19 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
               ).length;
 
               return (
-                <div key={residentName} className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                <div key={residentName} className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
                   {/* Resident header */}
-                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2.5">
+                  <div className="flex items-center justify-between border-b border-line-subtle bg-surface-muted px-4 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{residentName}</span>
+                      <span className="text-sm font-semibold text-fg truncate">{residentName}</span>
                       {firstOrder.residentTextId && (
-                        <span className="shrink-0 rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                        <span className="shrink-0 rounded bg-surface-strong px-1.5 py-0.5 font-mono text-xs text-fg-subtle">
                           {firstOrder.residentTextId}
                         </span>
                       )}
                     </div>
                     {activeCount > 0 && (
-                      <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                      <span className="shrink-0 text-xs text-fg-faint">
                         {activeCount} {activeCount === 1 ? t("active order") : t("active orders")}
                       </span>
                     )}
@@ -439,22 +439,22 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
 
                   {/* Orders table */}
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+                    <table className="min-w-full divide-y divide-line-subtle text-sm">
                       <thead>
-                        <tr className="bg-white dark:bg-gray-900">
-                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        <tr className="bg-surface">
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-fg-faint">
                             {t("Drug")}
                           </th>
-                          <th className="hidden md:table-cell px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                          <th className="hidden md:table-cell px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-fg-faint">
                             {t("Start Date")}
                           </th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-fg-faint">
                             {t("Status")}
                           </th>
                           <th className="px-4 py-2" />
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
+                      <tbody className="divide-y divide-line-subtle">
                         {residentOrders.map((order) => {
                           const effectiveStatus = localStatuses[order.id] ?? order.status;
                           const isActive = effectiveStatus === "Active";
@@ -466,12 +466,12 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
                               className="cursor-pointer transition-colors hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30"
                             >
                               <td className="px-4 py-3">
-                                <p className="font-medium text-gray-900 dark:text-gray-100">{formatDrugLabel(order)}</p>
+                                <p className="font-medium text-fg">{formatDrugLabel(order)}</p>
                               </td>
-                              <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              <td className="hidden md:table-cell px-4 py-3 text-sm text-fg-subtle">
                                 {formatDate(order.startDate)}
                                 {order.endDate && (
-                                  <span className="text-gray-400 dark:text-gray-500">{" → "}{formatDate(order.endDate)}</span>
+                                  <span className="text-fg-faint">{" → "}{formatDate(order.endDate)}</span>
                                 )}
                               </td>
                               <td className="px-4 py-3">

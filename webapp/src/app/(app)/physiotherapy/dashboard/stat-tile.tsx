@@ -8,13 +8,13 @@ type Props = {
   share?: number | null; // 0-100, % of the grand total this tile represents
   deltaPct: number | null; // vs previous period, null = no comparable prior data
   icon: LucideIcon;
-  tint: string; // e.g. "bg-indigo-50 text-indigo-600"
+  tint: string; // e.g. "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
   t: (text: string) => string;
 };
 
 export function StatTile({ label, hours, share, deltaPct, icon: Icon, tint, t }: Props) {
   return (
-    <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+    <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between">
         <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tint}`}>
           <Icon className="h-4.5 w-4.5" strokeWidth={2} />
@@ -25,8 +25,8 @@ export function StatTile({ label, hours, share, deltaPct, icon: Icon, tint, t }:
               deltaPct > 0.5
                 ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
                 : deltaPct < -0.5
-                  ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                  ? "bg-surface-strong text-fg-muted"
+                  : "bg-surface-strong text-fg-subtle"
             }`}
           >
             {deltaPct > 0.5 ? <ArrowUp className="h-3 w-3" /> : deltaPct < -0.5 ? <ArrowDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
@@ -34,11 +34,11 @@ export function StatTile({ label, hours, share, deltaPct, icon: Icon, tint, t }:
           </span>
         )}
       </div>
-      <p className="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{formatHours(hours)}</p>
-      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+      <p className="mt-3 text-2xl font-bold tracking-tight text-fg">{formatHours(hours)}</p>
+      <p className="mt-0.5 text-xs text-fg-subtle">
         {label}
         {share !== null && share !== undefined && (
-          <span className="text-gray-400 dark:text-gray-500">
+          <span className="text-fg-faint">
             {" "}
             · {share.toFixed(0)}% {t("of total")}
           </span>

@@ -42,16 +42,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-app px-4">
+      <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-8 shadow-sm">
         <div className="flex justify-center">
-          <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-auto w-full max-w-[312px]" priority />
+          <Image src="/logo.png" alt="OSEM" width={312} height={193} className="mb-1 h-auto w-full max-w-[312px] dark:hidden" priority />
+          <Image src="/logo-dark.png" alt="OSEM" width={312} height={193} className="mb-1 hidden h-auto w-full max-w-[312px] dark:block" />
         </div>
         <p className="mb-6" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-fg-secondary">
               {t("Email")}
             </label>
             <input
@@ -61,11 +62,11 @@ export default function LoginPage() {
               autoCapitalize="none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-fg-secondary">
               {t("Password")}
             </label>
             <input
@@ -74,11 +75,11 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           <button
             type="submit"
@@ -90,13 +91,13 @@ export default function LoginPage() {
 
           <Link
             href="/forgot-password"
-            className="block text-center text-sm text-gray-500 hover:text-gray-900"
+            className="block text-center text-sm text-fg-subtle hover:text-fg"
           >
             {t("Forgot password?")}
           </Link>
         </form>
 
-        <p className="mt-6 text-center text-xs text-gray-400">v{packageJson.version}</p>
+        <p className="mt-6 text-center text-xs text-fg-faint">v{packageJson.version}</p>
       </div>
     </div>
   );

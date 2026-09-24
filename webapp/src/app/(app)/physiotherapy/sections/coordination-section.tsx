@@ -18,7 +18,7 @@ export function CoordinationSection({ value, onChange }: Props) {
     <CollapsibleCard title={t("Coordination")} badge={assessedCount > 0 ? `${assessedCount} ${t("assessed")}` : null}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("Upper Limb")}</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("Upper Limb")}</h3>
           <div className="grid grid-cols-2 gap-2">
             <ScoreSelect
               label={t("Right")}
@@ -35,7 +35,7 @@ export function CoordinationSection({ value, onChange }: Props) {
           </div>
         </div>
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("Lower Limb")}</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("Lower Limb")}</h3>
           <div className="grid grid-cols-2 gap-2">
             <ScoreSelect
               label={t("Right")}

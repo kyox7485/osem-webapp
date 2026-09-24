@@ -98,12 +98,12 @@ export default async function StaffPage({
         </div>
       )}
 
-      {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
+      {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error.message}</p>}
 
       <FilterPendingProvider>
-        <div className="overflow-x-auto rounded-md border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+            <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
               <tr>
                 <th className="px-4 py-2">
                   <ColumnFilter type="text" label={t("Name")} paramName="q" placeholder={t("Search by name...")} />
@@ -157,21 +157,21 @@ export default async function StaffPage({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-line-subtle">
               {staff.map((s) => {
                 const position = Array.isArray(s.tbl_positions) ? s.tbl_positions[0] : s.tbl_positions;
                 const branch = Array.isArray(s.tbl_branches) ? s.tbl_branches[0] : s.tbl_branches;
                 return (
-                  <ClickableRow key={s.id} href={`/staff/${s.id}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-900">{s.staff_name}</td>
-                    <td className="px-4 py-2 text-gray-600">{position?.name ?? t("--")}</td>
-                    {admin && <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>}
-                    <td className="px-4 py-2 text-gray-600">{t(s.role)}</td>
-                    <td className="px-4 py-2 text-gray-600">{s.department ? t(s.department) : t("--")}</td>
+                  <ClickableRow key={s.id} href={`/staff/${s.id}`} className="hover:bg-hover">
+                    <td className="px-4 py-2 font-medium text-fg">{s.staff_name}</td>
+                    <td className="px-4 py-2 text-fg-muted">{position?.name ?? t("--")}</td>
+                    {admin && <td className="px-4 py-2 text-fg-muted">{formatBranch(branch)}</td>}
+                    <td className="px-4 py-2 text-fg-muted">{t(s.role)}</td>
+                    <td className="px-4 py-2 text-fg-muted">{s.department ? t(s.department) : t("--")}</td>
                     <td className="px-4 py-2">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          s.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
+                          s.status === "ACTIVE" ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-surface-strong text-fg-secondary"
                         }`}
                       >
                         {t(s.status)}
@@ -182,7 +182,7 @@ export default async function StaffPage({
               })}
               {staff.length === 0 && (
                 <tr>
-                  <td colSpan={admin ? 6 : 5} className="px-4 py-6 text-center text-gray-400">
+                  <td colSpan={admin ? 6 : 5} className="px-4 py-6 text-center text-fg-faint">
                     {t("No staff found.")}
                   </td>
                 </tr>

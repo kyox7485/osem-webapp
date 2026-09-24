@@ -37,7 +37,7 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
 
   if (assessments.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">
+      <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
         {t("No physiotherapy assessments yet.")}
       </div>
     );
@@ -51,27 +51,27 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
           <div
             key={a.id}
             onClick={() => setExpandedId(isExpanded ? null : a.id)}
-            className="cursor-pointer rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-colors hover:border-indigo-200"
+            className="cursor-pointer rounded-md border border-line bg-surface p-4 shadow-sm transition-colors hover:border-indigo-200 dark:hover:border-indigo-700"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-faint">
               <span>{formatDateTime(a.entry_timestamp)}</span>
-              {a.patient_name && <span className="font-bold text-gray-900 dark:text-gray-100">{a.patient_name}</span>}
+              {a.patient_name && <span className="font-bold text-fg">{a.patient_name}</span>}
               <span>{a.treatment_type ?? "--"}</span>
               <span>{t("Documented by")}: {a.documented_by_name}</span>
-              <span className="font-semibold text-indigo-600">{t("Score")}: {a.total_score ?? "--"}</span>
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">{t("Score")}: {a.total_score ?? "--"}</span>
               <PdfDownloadLink href={`/api/reports/physio-assessment?id=${a.id}`} />
             </div>
 
             {isExpanded && (
-              <div className="mt-3 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3 text-sm">
+              <div className="mt-3 space-y-3 border-t border-line-subtle pt-3 text-sm">
                 <ReadRow label={t("Current History")} value={a.current_history} />
                 <ReadRow label={t("Past Medical History")} value={a.past_medical_history} />
                 <ReadRow label={t("Social History")} value={a.social_history} />
 
                 {a.bodyChart.length > 0 && (
                   <div>
-                    <p className="font-medium text-gray-500 dark:text-gray-400">{t("Body Chart Findings")}</p>
-                    <ul className="ml-4 list-disc text-gray-700 dark:text-gray-300">
+                    <p className="font-medium text-fg-subtle">{t("Body Chart Findings")}</p>
+                    <ul className="ml-4 list-disc text-fg-secondary">
                       {a.bodyChart.map((f, i) => (
                         <li key={i}>
                           {f.region}: {f.comment}
@@ -83,15 +83,15 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
 
                 {a.examRows.length > 0 && (
                   <div>
-                    <p className="font-medium text-gray-500 dark:text-gray-400">{t("Physical Examination")}</p>
+                    <p className="font-medium text-fg-subtle">{t("Physical Examination")}</p>
                     <div className="space-y-1">
                       {(Object.keys(EXAM_STRUCTURE) as ExamLimb[]).map((limb) => {
                         const rows = a.examRows.filter((r) => r.limb === limb);
                         if (rows.length === 0) return null;
                         return (
                           <div key={limb}>
-                            <p className="text-xs font-semibold uppercase text-gray-400 dark:text-gray-500">{EXAM_STRUCTURE[limb].label}</p>
-                            <ul className="ml-4 list-disc text-gray-700 dark:text-gray-300">
+                            <p className="text-xs font-semibold uppercase text-fg-faint">{EXAM_STRUCTURE[limb].label}</p>
+                            <ul className="ml-4 list-disc text-fg-secondary">
                               {rows.map((r, i) => (
                                 <li key={i}>
                                   {r.region} {r.movement} ({r.side}): {t("Power")} {r.power ?? "--"}, {t("Tone")} {r.tone ?? "--"},
@@ -122,8 +122,8 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
 function ReadRow({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
-    <p className="text-gray-700 dark:text-gray-300">
-      <span className="font-medium text-gray-500 dark:text-gray-400">{label}: </span>
+    <p className="text-fg-secondary">
+      <span className="font-medium text-fg-subtle">{label}: </span>
       {value}
     </p>
   );
