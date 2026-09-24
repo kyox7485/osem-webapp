@@ -66,13 +66,13 @@ export function flagVital(v: Vital): VitalSeverity {
 }
 
 export function vitalFlagClass(severity: VitalSeverity): string {
-  if (severity === "critical") return "bg-red-50 text-red-700 font-semibold";
-  if (severity === "warning") return "bg-amber-50 text-amber-800 font-medium";
+  if (severity === "critical") return "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold";
+  if (severity === "warning") return "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-medium";
   return "";
 }
 
 export function vitalRowClass(severity: VitalSeverity): string {
-  if (severity === "critical") return "bg-red-50/60 hover:bg-red-50";
-  if (severity === "warning") return "bg-amber-50/60 hover:bg-amber-50";
-  return "hover:bg-gray-50";
+  if (severity === "critical") return "bg-red-50/60 dark:bg-red-950/30 hover:bg-red-50 dark:hover:bg-red-950/60";
+  if (severity === "warning") return "bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-50 dark:hover:bg-amber-950/60";
+  return "hover:bg-hover";
 }

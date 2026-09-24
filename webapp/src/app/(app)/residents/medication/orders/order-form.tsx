@@ -94,9 +94,9 @@ const NO_RESIDENTS: ResidentOption[] = [];
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-gray-50 dark:disabled:bg-gray-800/60 disabled:text-gray-400 dark:disabled:text-gray-500";
+  "w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-surface-muted disabled:text-fg-faint";
 
-const labelCls = "block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1";
+const labelCls = "block text-xs font-medium text-fg-muted mb-1";
 
 function Field({
   label,
@@ -124,7 +124,7 @@ function Field({
 
 function SectionHeading({ title }: { title: string }) {
   return (
-    <h3 className="col-span-full text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mt-2 mb-1 border-b border-gray-100 dark:border-gray-800 pb-1">
+    <h3 className="col-span-full text-xs font-semibold uppercase tracking-wide text-fg-faint mt-2 mb-1 border-b border-line-subtle pb-1">
       {title}
     </h3>
   );
@@ -154,7 +154,7 @@ function ToggleGroup({
           className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50
             ${value === opt
               ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
-              : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+              : "border-line-strong bg-surface text-fg-muted hover:bg-hover"
             }`}
         >
           {t(opt)}
@@ -190,7 +190,7 @@ function ChipSelector({
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40
               ${isSelected
                 ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                : "border-line bg-surface text-fg-muted hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
               }`}
           >
             {t(opt)}
@@ -523,11 +523,11 @@ export function OrderForm(props: Props) {
       {/* Unsaved changes modal */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white dark:bg-gray-900 p-6 shadow-xl">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <div className="w-full max-w-sm rounded-xl bg-elevated p-6 shadow-xl">
+            <h3 className="text-sm font-semibold text-fg">
               {t("Unsaved Changes")}
             </h3>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm text-fg-subtle">
               {t("You have unsaved changes. What would you like to do?")}
             </p>
             <div className="mt-5 flex flex-col gap-2">
@@ -548,13 +548,13 @@ export function OrderForm(props: Props) {
                   setShowCancelModal(false);
                   push("/residents/medication/orders");
                 }}
-                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-fg-secondary hover:bg-hover transition-colors"
               >
                 {t("Exit Without Saving")}
               </button>
               <button
                 onClick={() => setShowCancelModal(false)}
-                className="py-1 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="py-1 text-sm text-fg-faint hover:text-fg-muted transition-colors"
               >
                 {t("Cancel")}
               </button>
@@ -564,7 +564,7 @@ export function OrderForm(props: Props) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+        <div className="rounded-lg border border-line bg-surface shadow-sm">
           <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
 
             {/* ── Resident ────────────────────────────────────────────────────── */}
@@ -597,7 +597,7 @@ export function OrderForm(props: Props) {
                       autoComplete="off"
                     />
                     {residentDropOpen && filteredResidents.length > 0 && (
-                      <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg text-sm">
+                      <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-md border border-line bg-elevated shadow-lg text-sm">
                         {filteredResidents.slice(0, 30).map((r) => (
                           <li
                             key={r.id}
@@ -611,10 +611,10 @@ export function OrderForm(props: Props) {
                             }}
                             className="cursor-pointer px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
                           >
-                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                            <span className="font-medium text-fg">
                               {r.name}
                             </span>
-                            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                            <span className="ml-2 text-xs text-fg-faint">
                               {r.residentTextId}
                             </span>
                           </li>
@@ -627,7 +627,7 @@ export function OrderForm(props: Props) {
             ) : (
               <div className="sm:col-span-2">
                 <p className={labelCls}>{t("Resident")}</p>
-                <p className="rounded-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                <p className="rounded-md border border-line-subtle bg-surface-muted px-3 py-2 text-sm text-fg-secondary">
                   {(props as Extract<Props, { mode: "edit" }>).residentDisplay}
                 </p>
               </div>
@@ -773,12 +773,12 @@ export function OrderForm(props: Props) {
                   t={t}
                   />
                   {frequency === "PRN" && (
-                    <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    <p className="mt-1.5 text-xs text-fg-faint">
                       {t("Not required for PRN frequency.")}
                     </p>
                   )}
                   {!frequency && (
-                    <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    <p className="mt-1.5 text-xs text-fg-faint">
                       {t("Select a frequency first.")}
                     </p>
                   )}
@@ -926,7 +926,7 @@ export function OrderForm(props: Props) {
                 disabled={isCreate && !residentId}
               />
               {isCreate && !residentId && (
-                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                <p className="mt-1 text-xs text-fg-faint">
                   {t("Select a resident first.")}
                 </p>
               )}
@@ -938,7 +938,7 @@ export function OrderForm(props: Props) {
                 <SectionHeading title={t("Reference")} />
                 <div className="sm:col-span-2">
                   <p className={labelCls}>{t("Order ID")}</p>
-                  <p className="font-mono text-sm text-gray-500 dark:text-gray-400">
+                  <p className="font-mono text-sm text-fg-subtle">
                     {(props as Extract<Props, { mode: "edit" }>).rxOrderId}
                   </p>
                 </div>
@@ -947,7 +947,7 @@ export function OrderForm(props: Props) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-5 py-4 rounded-b-lg">
+          <div className="flex items-center justify-between gap-3 border-t border-line-subtle bg-surface-muted px-5 py-4 rounded-b-lg">
             {error && (
               <p className="flex-1 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-600 dark:text-red-300">
                 {error}
@@ -958,7 +958,7 @@ export function OrderForm(props: Props) {
                 type="button"
                 onClick={handleCancel}
                 disabled={isPending}
-                className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50 transition-colors"
+                className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover disabled:opacity-50 transition-colors"
               >
                 {t("Cancel")}
               </button>

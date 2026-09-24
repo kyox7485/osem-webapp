@@ -140,17 +140,17 @@ export function BehaviourChartModule({
       {innerTab === "review" ? (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm space-y-3">
+          <div className="rounded-md border border-line bg-surface p-4 shadow-sm space-y-3">
             {/* Resident picker */}
             <div>
-              <label htmlFor="beh-resident-filter" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="beh-resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("Resident")}
               </label>
               <select
                 id="beh-resident-filter"
                 value={currentResident}
                 onChange={(e) => applyFilters(e.target.value, currentStart || daysAgoMYT(7), currentEnd || todayMYT())}
-                className="w-full max-w-xs rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full max-w-xs rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">{t("Select a resident")}</option>
                 {residents.map((r) => (
@@ -161,7 +161,7 @@ export function BehaviourChartModule({
 
             {/* Range buttons */}
             <div>
-              <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">{t("Range")}</p>
+              <p className="mb-1 text-sm font-medium text-fg-secondary">{t("Range")}</p>
               <div className="flex flex-wrap gap-1">
                 {rangeButtons.map(({ n, label }) => (
                   <button
@@ -171,7 +171,7 @@ export function BehaviourChartModule({
                     className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                       days === n && !isCustom && !showCustom
                         ? "border-indigo-600 bg-indigo-600 text-white"
-                        : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:text-indigo-700"
+                        : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-700 dark:hover:text-indigo-300"
                     }`}
                   >
                     {label}
@@ -183,7 +183,7 @@ export function BehaviourChartModule({
                   className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                     isCustom || showCustom
                       ? "border-indigo-600 bg-indigo-600 text-white"
-                      : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:text-indigo-700"
+                      : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-700 dark:hover:text-indigo-300"
                   }`}
                 >
                   {t("Custom")}
@@ -195,21 +195,21 @@ export function BehaviourChartModule({
             {showCustom && (
               <div className="flex flex-wrap items-end gap-3 pt-1">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("From")}</label>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">{t("From")}</label>
                   <input
                     type="date"
                     value={customFrom}
                     onChange={(e) => setCustomFrom(e.target.value)}
-                    className="rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("To")}</label>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">{t("To")}</label>
                   <input
                     type="date"
                     value={customTo}
                     onChange={(e) => setCustomTo(e.target.value)}
-                    className="rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
                 <button
@@ -229,7 +229,7 @@ export function BehaviourChartModule({
             <button
               type="button"
               onClick={backFromDayView}
-              className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800"
+              className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
             >
               <ChevronLeft className="h-4 w-4" />
               {t("Back to")} {currentPrev} {t("Days")}
@@ -239,11 +239,11 @@ export function BehaviourChartModule({
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {!currentResident ? (
-            <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-              <p className="text-sm text-gray-400 dark:text-gray-500">{t("Select a resident above to view the behaviour timeline.")}</p>
+            <div className="rounded-md border border-dashed border-line-strong p-8 text-center">
+              <p className="text-sm text-fg-faint">{t("Select a resident above to view the behaviour timeline.")}</p>
             </div>
           ) : episodes.length === 0 && entries.length === 0 ? (
-            <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">
+            <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
               {t("No behaviour episodes recorded in this period.")}
             </div>
           ) : (
@@ -259,7 +259,7 @@ export function BehaviourChartModule({
               {/* Legacy summaries (entries with no timed episodes) */}
               {episodes.length === 0 && entries.length > 0 && (
                 <div className="space-y-2 mt-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-fg-faint">
                     {t("Chart summaries (no timed episodes)")}
                   </p>
                   {entries.map((entry) => {
@@ -269,12 +269,12 @@ export function BehaviourChartModule({
                         ? `${entry.disturbance_level} – ${DISTURBANCE_LABELS[entry.disturbance_level]}`
                         : null;
                     return (
-                      <div key={entry.id} className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 shadow-sm text-sm">
-                        <div className="flex justify-between text-gray-500 dark:text-gray-400 text-xs mb-1">
+                      <div key={entry.id} className="rounded-md border border-line bg-surface p-3 shadow-sm text-sm">
+                        <div className="flex justify-between text-fg-subtle text-xs mb-1">
                           <span>{formatDateTime(entry.entry_timestamp)}</span>
                           <span>{enteredBy}</span>
                         </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-gray-700 dark:text-gray-300">
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-fg-secondary">
                           {entry.verbal_behavior && entry.verbal_behavior.length > 0 && (
                             <span>🗣️ {entry.verbal_behavior.join(", ")}</span>
                           )}

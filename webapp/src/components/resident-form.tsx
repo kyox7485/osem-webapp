@@ -450,11 +450,11 @@ export function ResidentForm({
           onClick={() => setShowExitModal(false)}
         >
           <div
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0"
+            className="bg-elevated rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("Unsaved changes")}</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <h2 className="text-base font-semibold text-fg">{t("Unsaved changes")}</h2>
+            <p className="mt-1 text-sm text-fg-subtle">
               {t("You have unsaved changes. What would you like to do?")}
             </p>
             <div className="mt-5 flex flex-col gap-2">
@@ -468,14 +468,14 @@ export function ResidentForm({
               <button
                 type="button"
                 onClick={handleExitWithoutSaving}
-                className="w-full rounded-lg border border-red-300 dark:border-red-900 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                className="w-full rounded-lg border border-red-300 dark:border-red-900 bg-surface px-4 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
               >
                 {t("Exit without saving")}
               </button>
               <button
                 type="button"
                 onClick={() => setShowExitModal(false)}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                className="w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-fg-muted hover:bg-hover transition-colors"
               >
                 {t("Continue editing")}
               </button>
@@ -495,7 +495,7 @@ export function ResidentForm({
           <button
             type="button"
             onClick={handleBackClick}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-fg-subtle hover:text-fg transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M10 12.5L5.5 8l4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -540,7 +540,7 @@ export function ResidentForm({
               </select>
             ) : (
               <>
-                <div className={`${inputCls} bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400`}>
+                <div className={`${inputCls} bg-surface-muted text-fg-subtle`}>
                   {branches.find((b) => String(b.id) === branchId)?.label ?? t("--")}
                 </div>
                 <input type="hidden" name="branch_id" value={branchId} />
@@ -753,19 +753,19 @@ export function ResidentForm({
                     className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
                       checked
                         ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300"
-                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                        : "border-line bg-surface text-fg-secondary hover:border-line-strong hover:bg-hover"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleDiagnosis(opt.id)}
-                      className="mt-0.5 rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                      className="mt-0.5 rounded border-line-strong text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 shrink-0"
                     />
                     <span className="text-sm leading-tight">
                       {opt.name_en}
                       {opt.name_ms && opt.name_ms !== opt.name_en && (
-                        <span className="block text-xs text-gray-400 dark:text-gray-500">{opt.name_ms}</span>
+                        <span className="block text-xs text-fg-faint">{opt.name_ms}</span>
                       )}
                     </span>
                   </label>
@@ -786,7 +786,7 @@ export function ResidentForm({
               <button
                 type="button"
                 onClick={() => setInfectiousExpanded((v) => !v)}
-                className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-semibold text-fg-secondary hover:text-fg transition-colors"
               >
                 <svg
                   width="14" height="14" viewBox="0 0 16 16" fill="none"
@@ -806,19 +806,19 @@ export function ResidentForm({
                         className={`flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
                           checked
                             ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300"
-                            : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                            : "border-line bg-surface text-fg-secondary hover:border-line-strong hover:bg-hover"
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleDiagnosis(opt.id)}
-                          className="mt-0.5 rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                          className="mt-0.5 rounded border-line-strong text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 shrink-0"
                         />
                         <span className="text-sm leading-tight">
                           {opt.name_en}
                           {opt.name_ms && opt.name_ms !== opt.name_en && (
-                            <span className="block text-xs text-gray-400 dark:text-gray-500">{opt.name_ms}</span>
+                            <span className="block text-xs text-fg-faint">{opt.name_ms}</span>
                           )}
                         </span>
                       </label>
@@ -849,7 +849,7 @@ export function ResidentForm({
                   <button
                     type="button"
                     onClick={() => setAssessmentExpanded((v) => !v)}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                    className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
                   >
                     {assessmentExpanded ? t("Collapse") : t("Expand")}
                   </button>
@@ -882,7 +882,7 @@ export function ResidentForm({
                               className={`px-3 py-1.5 text-sm rounded-lg border font-medium transition-colors cursor-pointer ${
                                 assessmentQ.modeOfArrival === mode
                                   ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300"
-                                  : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                                  : "border-line-strong bg-surface text-fg-muted hover:border-fg-faint hover:bg-hover"
                               }`}
                             >
                               {t(mode)}
@@ -1058,8 +1058,8 @@ export function ResidentForm({
               <input type="hidden" name="arrival_dxt_remark" value={arrivalDxtRemark} />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("Systolic BP")} <span className="text-gray-400 dark:text-gray-500">(mmHg)</span>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    {t("Systolic BP")} <span className="text-fg-faint">(mmHg)</span>
                   </label>
                   <input
                     type="number"
@@ -1072,8 +1072,8 @@ export function ResidentForm({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("Diastolic BP")} <span className="text-gray-400 dark:text-gray-500">(mmHg)</span>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    {t("Diastolic BP")} <span className="text-fg-faint">(mmHg)</span>
                   </label>
                   <input
                     type="number"
@@ -1086,8 +1086,8 @@ export function ResidentForm({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("HR")} <span className="text-gray-400 dark:text-gray-500">(bpm)</span>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    {t("HR")} <span className="text-fg-faint">(bpm)</span>
                   </label>
                   <input
                     type="number"
@@ -1100,8 +1100,8 @@ export function ResidentForm({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("Temperature")} <span className="text-gray-400 dark:text-gray-500">(°C)</span>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    {t("Temperature")} <span className="text-fg-faint">(°C)</span>
                   </label>
                   <input
                     type="number"
@@ -1114,8 +1114,8 @@ export function ResidentForm({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("SpO2")} <span className="text-gray-400 dark:text-gray-500">(%)</span>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    {t("SpO2")} <span className="text-fg-faint">(%)</span>
                   </label>
                   <input
                     type="number"
@@ -1134,7 +1134,7 @@ export function ResidentForm({
                 </div>
                 {arrivalSpo2 && (
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">
                       {t("SpO2 Condition")} <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -1150,9 +1150,9 @@ export function ResidentForm({
                   </div>
                 )}
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("DXT")} <span className="text-gray-400 dark:text-gray-500">(mmol/L)</span>
-                    <span className="ml-1 text-gray-400 dark:text-gray-500 font-normal text-xs">{t("optional")}</span>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    {t("DXT")} <span className="text-fg-faint">(mmol/L)</span>
+                    <span className="ml-1 text-fg-faint font-normal text-xs">{t("optional")}</span>
                   </label>
                   <input
                     type="number"
@@ -1170,7 +1170,7 @@ export function ResidentForm({
                 </div>
                 {arrivalDxt && (
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">
                       {t("DXT Remark")} <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -1241,7 +1241,7 @@ export function ResidentForm({
             <button
               type="button"
               onClick={handleBackClick}
-              className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors cursor-pointer"
+              className="rounded-lg border border-line-strong bg-surface px-5 py-2.5 text-sm font-medium text-fg-muted hover:bg-hover transition-colors cursor-pointer"
             >
               {t("Cancel")}
             </button>
@@ -1255,7 +1255,7 @@ export function ResidentForm({
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
 const inputCls =
-  "mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-colors";
+  "mt-1 w-full rounded-lg border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-colors";
 
 function YesNoButtons({
   value,
@@ -1277,8 +1277,8 @@ function YesNoButtons({
             value === opt
               ? opt === "yes"
                 ? "border-green-500 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 shadow-sm"
-                : "border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-sm"
-              : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                : "border-fg-faint bg-surface-strong text-fg-secondary shadow-sm"
+              : "border-line-strong bg-surface text-fg-subtle hover:border-fg-faint hover:bg-hover"
           }`}
         >
           {opt === "yes" ? t("Yes") : t("No")}
@@ -1307,7 +1307,7 @@ function AllergyQuestion({
 }) {
   return (
     <div className="space-y-1">
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
+      <p className="text-sm font-medium text-fg-secondary">{label}</p>
       <YesNoButtons value={yn} onChange={onYN} t={t} />
       {yn === "yes" && (
         <input
@@ -1324,7 +1324,7 @@ function AllergyQuestion({
 
 function QLabel({ children, small }: { children: React.ReactNode; small?: boolean }) {
   return (
-    <p className={`font-medium text-gray-700 dark:text-gray-300 ${small ? "text-xs text-gray-500 dark:text-gray-400" : "text-sm"}`}>
+    <p className={`font-medium text-fg-secondary ${small ? "text-xs text-fg-subtle" : "text-sm"}`}>
       {children}
     </p>
   );
@@ -1333,8 +1333,8 @@ function QLabel({ children, small }: { children: React.ReactNode; small?: boolea
 function QGroupHeader({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-2">
-      <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">{title}</p>
-      <div className="flex-1 h-px bg-indigo-100" />
+      <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">{title}</p>
+      <div className="flex-1 h-px bg-indigo-100 dark:bg-indigo-950/40" />
     </div>
   );
 }
@@ -1344,10 +1344,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div
       role="group"
       aria-label={title}
-      className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden"
+      className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden"
     >
-      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
-        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{title}</p>
+      <div className="px-4 py-3 bg-surface-muted border-b border-line">
+        <p className="text-sm font-bold text-fg">{title}</p>
       </div>
       <div className="p-4 grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2 md:grid-cols-3">
         {children}
@@ -1368,8 +1368,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`text-sm text-gray-700 dark:text-gray-300 ${full ? "sm:col-span-2 md:col-span-3" : ""}`}>
-      <p className="font-semibold text-gray-800 dark:text-gray-200">
+    <div className={`text-sm text-fg-secondary ${full ? "sm:col-span-2 md:col-span-3" : ""}`}>
+      <p className="font-semibold text-fg">
         {label}
         {required && <span className="ml-0.5 text-red-500">*</span>}
       </p>

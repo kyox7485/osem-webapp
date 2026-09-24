@@ -182,7 +182,7 @@ export default async function MedicationOrdersPage() {
       </div>
 
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-fg-subtle">
           {items.length === 0
             ? t("No orders found.")
             : `${items.length} ${items.length === 1 ? t("order") : t("orders")}`}

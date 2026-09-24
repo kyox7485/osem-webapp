@@ -196,10 +196,10 @@ export function MedicationChartsModule({
   }
 
   return (
-    <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+    <div className="rounded-md border border-line bg-surface shadow-sm">
       {/* Mode tabs */}
-      <div className="border-b border-gray-100 dark:border-gray-800 px-5 py-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+      <div className="border-b border-line-subtle px-5 py-4">
+        <h2 className="mb-3 text-sm font-semibold text-fg-secondary">
           Medication Charts
         </h2>
         <TabRow>
@@ -335,7 +335,7 @@ function ResidentChartForm({
     <div className="space-y-5">
       {/* Resident selector */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="mb-1.5 block text-sm font-medium text-fg-secondary">
           Resident
         </label>
         <div className="relative">
@@ -348,8 +348,8 @@ function ResidentChartForm({
               autoComplete="off"
               className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
                 selectedResidentId
-                  ? "border-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500"
-                  : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500"
+                  ? "border-indigo-300 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-fg focus:border-indigo-500 focus:ring-indigo-500"
+                  : "border-line-strong bg-input text-fg focus:border-indigo-500 focus:ring-indigo-500"
               }`}
               onChange={onSearchInput}
               onFocus={onSearchFocus}
@@ -358,7 +358,7 @@ function ResidentChartForm({
             {selectedResidentId && (
               <button
                 type="button"
-                className="absolute right-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-2 text-fg-faint hover:text-fg-muted"
                 onClick={onClearResident}
                 tabIndex={-1}
                 aria-label="Clear selection"
@@ -377,9 +377,9 @@ function ResidentChartForm({
 
           {/* Dropdown */}
           {dropdownOpen && (
-            <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-1 shadow-lg">
+            <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-line bg-elevated py-1 shadow-lg">
               {filteredResidents.length === 0 ? (
-                <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
+                <li className="px-3 py-2 text-sm text-fg-faint">
                   No residents found.
                 </li>
               ) : (
@@ -392,8 +392,8 @@ function ResidentChartForm({
                       onSelectResident(r);
                     }}
                   >
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{r.name}</span>
-                    <span className="ml-3 shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                    <span className="font-medium text-fg">{r.name}</span>
+                    <span className="ml-3 shrink-0 text-xs text-fg-faint">
                       {r.residentId}
                     </span>
                   </li>
@@ -466,18 +466,18 @@ function BranchChartForm({
     <div className="space-y-5">
       {/* Branch selector */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="mb-1.5 block text-sm font-medium text-fg-secondary">
           Branch
         </label>
         {branches.length === 0 ? (
-          <p className="text-sm text-gray-400 dark:text-gray-500">No branches available.</p>
+          <p className="text-sm text-fg-faint">No branches available.</p>
         ) : (
           <select
             value={selectedBranchId}
             onChange={(e) =>
               onBranchChange(e.target.value === "" ? "" : Number(e.target.value))
             }
-            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             {branches.length > 1 && (
               <option value="">Select branch…</option>
@@ -522,7 +522,7 @@ function BranchChartForm({
             <button
               type="button"
               onClick={onCancelConfirm}
-              className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
+              className="rounded-md border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-fg-secondary shadow-sm transition-colors hover:bg-hover"
             >
               Cancel
             </button>
@@ -572,14 +572,14 @@ function ChartPeriodPicker({
 }: PeriodPickerProps) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="mb-1.5 block text-sm font-medium text-fg-secondary">
         Chart Period
       </label>
       <div className="flex gap-2">
         <select
           value={year}
           onChange={(e) => onYearChange(Number(e.target.value))}
-          className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           {yearOptions.map((y) => (
             <option key={y} value={y}>
@@ -590,7 +590,7 @@ function ChartPeriodPicker({
         <select
           value={month}
           onChange={(e) => onMonthChange(Number(e.target.value))}
-          className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           {MONTHS.map((name, i) => (
             <option key={i + 1} value={i + 1}>

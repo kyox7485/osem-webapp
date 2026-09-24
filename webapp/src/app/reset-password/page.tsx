@@ -100,18 +100,18 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-xl font-semibold text-gray-900">{t("Set a new password")}</h1>
+    <div className="flex min-h-screen items-center justify-center bg-app px-4">
+      <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-8 shadow-sm">
+        <h1 className="mb-1 text-xl font-semibold text-fg">{t("Set a new password")}</h1>
 
         {done ? (
-          <p className="text-sm text-green-700">{t("Password updated. Redirecting...")}</p>
+          <p className="text-sm text-green-700 dark:text-green-300">{t("Password updated. Redirecting...")}</p>
         ) : !ready ? (
-          <p className="text-sm text-gray-500">{error ?? t("Checking your reset link...")}</p>
+          <p className="text-sm text-fg-subtle">{error ?? t("Checking your reset link...")}</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-fg-secondary">
                 {t("New password")}
               </label>
               <input
@@ -121,11 +121,11 @@ export default function ResetPasswordPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
             <div>
-              <label htmlFor="confirm" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirm" className="block text-sm font-medium text-fg-secondary">
                 {t("Confirm password")}
               </label>
               <input
@@ -135,11 +135,11 @@ export default function ResetPasswordPage() {
                 minLength={6}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
             <button
               type="submit"

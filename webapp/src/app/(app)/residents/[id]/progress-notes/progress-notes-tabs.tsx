@@ -80,28 +80,28 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
 
           <div className="space-y-3">
             {notes.map((note) => (
-              <div key={note.id} className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-                <div className="mb-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+              <div key={note.id} className="rounded-md border border-line bg-surface p-4 shadow-sm">
+                <div className="mb-2 flex items-center justify-between text-xs text-fg-faint">
                   <span>{formatDateTime(note.entry_timestamp)}</span>
                   <span>{note.authorName}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{note.progress_note}</p>
+                <p className="whitespace-pre-wrap text-sm text-fg">{note.progress_note}</p>
                 {note.medical_plan && (
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-500 dark:text-gray-400">{t("Medical plan")}: </span>
+                  <p className="mt-2 text-sm text-fg-muted">
+                    <span className="font-medium text-fg-subtle">{t("Medical plan")}: </span>
                     {note.medical_plan}
                   </p>
                 )}
                 {note.nursing_plan && (
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-500 dark:text-gray-400">{t("Nursing plan")}: </span>
+                  <p className="mt-1 text-sm text-fg-muted">
+                    <span className="font-medium text-fg-subtle">{t("Nursing plan")}: </span>
                     {note.nursing_plan}
                   </p>
                 )}
               </div>
             ))}
             {notes.length === 0 && (
-              <p className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">
+              <p className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
                 {t("No progress notes yet.")}
               </p>
             )}

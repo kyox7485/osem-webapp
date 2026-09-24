@@ -87,17 +87,17 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
 
       {innerTab === "review" ? (
         <>
-          <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+          <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("Resident")}
                 </label>
                 <select
                   id="resident-filter"
                   value={currentResident}
                   onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">{t("All residents")}</option>
                   {residents.map((r) => (
@@ -109,7 +109,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
               </div>
 
               <div>
-                <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("Start date")}
                 </label>
                 <input
@@ -117,12 +117,12 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                   id="start-date"
                   value={currentStart}
                   onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("End date")}
                 </label>
                 <input
@@ -130,7 +130,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                   id="end-date"
                   value={currentEnd}
                   onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
-                  className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -140,7 +140,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
 
           <div className="space-y-3">
             {entries.length === 0 ? (
-              <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">
+              <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
                 {t("No nursing chart entries yet.")}
               </div>
             ) : (
@@ -151,11 +151,11 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                   <div
                     key={entry.id}
                     onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                    className="cursor-pointer rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-colors hover:border-indigo-200"
+                    className="cursor-pointer rounded-md border border-line bg-surface p-4 shadow-sm transition-colors hover:border-indigo-200 dark:hover:border-indigo-700"
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold text-gray-900 dark:text-gray-100">{entry.resident_name}</span>
-                      <span className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                      <span className="font-bold text-fg">{entry.resident_name}</span>
+                      <span className="flex items-center gap-2 text-xs text-fg-faint">
                         {formatDateTime(entry.entry_timestamp)}
                         <PdfDownloadLink href={`/api/reports/nursing-chart?id=${entry.id}`} />
                         <svg
@@ -163,7 +163,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                           height="14"
                           viewBox="0 0 16 16"
                           fill="none"
-                          className={`text-gray-400 dark:text-gray-500 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          className={`text-fg-faint transition-transform ${isExpanded ? "rotate-90" : ""}`}
                         >
                           <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -171,59 +171,59 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                     </div>
 
                     {!isExpanded && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="text-sm text-fg-secondary">
                         {tagGroups.length > 0 ? (
-                          <span className="text-gray-400 dark:text-gray-500">
+                          <span className="text-fg-faint">
                             {tagGroups.length} {t(tagGroups.length > 1 ? "areas" : "area")} {t("recorded -- click to view")}
                           </span>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500">{t("Click to view")}</span>
+                          <span className="text-fg-faint">{t("Click to view")}</span>
                         )}
                       </p>
                     )}
 
                     {isExpanded && (
-                      <div className="mt-3 space-y-2 border-t border-gray-100 dark:border-gray-800 pt-3">
+                      <div className="mt-3 space-y-2 border-t border-line-subtle pt-3">
                         {entry.tube_feeding && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-500 dark:text-gray-400">{t("Tube feeding")}: </span>
+                          <p className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t("Tube feeding")}: </span>
                             {entry.tube_feeding}
                           </p>
                         )}
                         {tagGroups.map(([key, label]) => (
-                          <p key={key} className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-500 dark:text-gray-400">{t(label)}: </span>
+                          <p key={key} className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t(label)}: </span>
                             {(entry[key] as string[]).join(key === "elimination_labels" ? " | " : ", ")}
                           </p>
                         ))}
                         {(entry.fluid_input !== null || entry.fluid_output !== null) && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-500 dark:text-gray-400">{t("Fluid I/O")}: </span>
+                          <p className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t("Fluid I/O")}: </span>
                             {entry.fluid_input ?? "--"} / {entry.fluid_output ?? "--"} {t("ml")}
                           </p>
                         )}
                         {entry.cbd_drainage && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-500 dark:text-gray-400">{t("CBD drainage")}: </span>
+                          <p className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t("CBD drainage")}: </span>
                             {entry.cbd_drainage}
                           </p>
                         )}
                         {entry.intervention && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-500 dark:text-gray-400">{t("Intervention")}: </span>
+                          <p className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t("Intervention")}: </span>
                             {entry.intervention}
                           </p>
                         )}
                         {entry.doctors_plan && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-medium text-gray-500 dark:text-gray-400">{t("Doctor's plan")}: </span>
+                          <p className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t("Doctor's plan")}: </span>
                             {entry.doctors_plan}
                           </p>
                         )}
                       </div>
                     )}
 
-                    <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">{t("Entered by")}: {entry.entered_by_name}</div>
+                    <div className="mt-2 text-xs text-fg-faint">{t("Entered by")}: {entry.entered_by_name}</div>
                   </div>
                 );
               })

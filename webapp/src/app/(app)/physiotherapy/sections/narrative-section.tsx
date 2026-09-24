@@ -3,7 +3,7 @@
 import { useTranslation } from "@/components/language-provider";
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+  "mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 type Props = {
   impression: string;
@@ -29,8 +29,8 @@ export function NarrativeSection({
   const t = useTranslation();
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">{t("Impression / Analysis")}</h2>
+      <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-bold text-fg">{t("Impression / Analysis")}</h2>
         <textarea
           value={impression}
           onChange={(e) => setImpression(e.target.value)}
@@ -40,8 +40,8 @@ export function NarrativeSection({
         />
       </div>
 
-      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">{t("Plan & Intervention")}</h2>
+      <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-bold text-fg">{t("Plan & Intervention")}</h2>
         <textarea
           value={planIntervention}
           onChange={(e) => setPlanIntervention(e.target.value)}
@@ -50,8 +50,8 @@ export function NarrativeSection({
         />
       </div>
 
-      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900 dark:text-gray-100">{t("Evaluation")}</h2>
+      <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-bold text-fg">{t("Evaluation")}</h2>
         <textarea
           value={evaluation}
           onChange={(e) => setEvaluation(e.target.value)}

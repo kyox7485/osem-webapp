@@ -162,7 +162,7 @@ export default async function PhysioDashboardPage({
           share={null}
           deltaPct={percentChange(grandTotal, totalHours(prevTotals))}
           icon={Clock}
-          tint="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+          tint="bg-surface-strong text-fg-secondary"
           t={t}
         />
         <StatTile
@@ -196,33 +196,33 @@ export default async function PhysioDashboardPage({
 
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Trend */}
-        <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm lg:col-span-2">
+        <div className="rounded-md border border-line bg-surface p-4 shadow-sm lg:col-span-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{t("Credit hours over time")}</h3>
+            <h3 className="text-sm font-bold text-fg">{t("Credit hours over time")}</h3>
             <TypeLegend labels={typeLabels} />
           </div>
           {grandTotal > 0 ? (
             <TrendChart buckets={trendBuckets} labels={typeLabels} />
           ) : (
-            <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{t("No assessments in this period.")}</p>
+            <p className="py-10 text-center text-sm text-fg-subtle">{t("No assessments in this period.")}</p>
           )}
         </div>
 
         {/* Mix donut */}
-        <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">{t("Patient-type mix")}</h3>
+        <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-bold text-fg">{t("Patient-type mix")}</h3>
           <DonutChart totals={totals} t={t} />
         </div>
       </div>
 
       {/* Branch breakdown */}
-      <div className="mb-4 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+      <div className="mb-4 rounded-md border border-line bg-surface p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{t("Credit hours by branch")}</h3>
+          <h3 className="text-sm font-bold text-fg">{t("Credit hours by branch")}</h3>
           <TypeLegend labels={typeLabels} />
         </div>
         {branchAgg.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">{t("No assessments in this period.")}</p>
+          <p className="py-8 text-center text-sm text-fg-subtle">{t("No assessments in this period.")}</p>
         ) : (
           <div className="space-y-3">
             {branchAgg.map((b) => (
@@ -233,9 +233,9 @@ export default async function PhysioDashboardPage({
       </div>
 
       {/* Team vs individual workload */}
-      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+      <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
         <div className="mb-3">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+          <h3 className="text-sm font-bold text-fg">
             {view === "team" ? t("Team workload by branch") : t("Therapist workload & strength")}
           </h3>
         </div>
