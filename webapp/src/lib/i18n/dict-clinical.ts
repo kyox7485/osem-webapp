@@ -190,6 +190,7 @@ export const dictClinical: Record<string, string> = {
   "Actual reading": "Bacaan sebenar",
   "7-day daily avg": "Purata harian 7 hari",
   "Latest 10": "10 terbaru",
+  Latest: "Terbaru",
   "Select vital": "Pilih tanda vital",
   "BP, HR, temperature and SpO2 show a daily average. DXT shows every actual reading.": "BP, HR, suhu dan SpO2 memaparkan purata harian. DXT memaparkan setiap bacaan sebenar.",
   "No readings in this period": "Tiada bacaan dalam tempoh ini",

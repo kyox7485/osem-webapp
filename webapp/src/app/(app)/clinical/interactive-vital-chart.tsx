@@ -34,6 +34,34 @@ export type ChartPoint = {
   remark?: string | null;
 };
 
+/**
+ * Hover is a temporary preview; a tap/click is a commitment. Keeping the two
+ * in separate pieces of state is what lets a desktop user sweep the trend and
+ * still find the latest reading underneath on mouse-out, while a touch user
+ * keeps the point they chose.
+ */
+export type VitalPointSelection = {
+  /** The point under the pointer, or null when the pointer is elsewhere. */
+  hoveredId: string | null;
+  /** The point the user committed to by tapping, clicking or tabbing to. */
+  selectedId: string | null;
+};
+
+/**
+ * The point whose value should be shown: the explicit choice if there is
+ * one, otherwise the newest reading. This is the fallback for both modes --
+ * with no interaction the card shows the latest data, exactly as before.
+ */
+export function resolveActivePointId(
+  points: ChartPoint[],
+  selection: VitalPointSelection
+): string | null {
+  const ids = new Set(points.map((p) => p.id));
+  if (selection.hoveredId && ids.has(selection.hoveredId)) return selection.hoveredId;
+  if (selection.selectedId && ids.has(selection.selectedId)) return selection.selectedId;
+  return points[points.length - 1]?.id ?? null;
+}
+
 export const VITAL_UNITS: Record<VitalKind, string> = {
   BP: "mmHg",
   HR: "bpm",
@@ -61,6 +89,13 @@ type Props = {
   compact?: boolean;
   title?: string;
   emptyText?: string;
+  /**
+   * Lifts selection out of the chart so a parent can render the active
+   * point's value alongside it. Omit it and the chart keeps its own state
+   * and behaves exactly as before -- which is how the history modal uses it.
+   */
+  selection?: VitalPointSelection;
+  onSelectionChange?: (next: VitalPointSelection) => void;
 };
 
 type Size = { width: number; height: number };
@@ -83,18 +118,30 @@ function useElementWidth<T extends HTMLElement>() {
   return [ref, size] as const;
 }
 
-export function InteractiveVitalChart({ kind, points, compact = false, title, emptyText }: Props) {
+export function InteractiveVitalChart({
+  kind,
+  points,
+  compact = false,
+  title,
+  emptyText,
+  selection,
+  onSelectionChange,
+}: Props) {
   const t = useTranslation();
-  // null = "no explicit choice", which renders as the newest point. So a
-  // card always opens showing the latest actual data.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const controlled = selection !== undefined && onSelectionChange !== undefined;
+  // Only used when the parent isn't driving selection (the history modal).
+  const [local, setLocal] = useState<VitalPointSelection>({ hoveredId: null, selectedId: null });
+  const active = controlled ? selection : local;
+  const setActive = useCallback(
+    (next: VitalPointSelection) => (controlled ? onSelectionChange(next) : setLocal(next)),
+    [controlled, onSelectionChange]
+  );
   const [wrapRef, size] = useElementWidth<HTMLDivElement>();
 
   const selected = useMemo(
-    () => points.find((p) => p.id === selectedId) ?? points[points.length - 1] ?? null,
-    [points, selectedId],
+    () => points.find((p) => p.id === resolveActivePointId(points, active)) ?? points[points.length - 1] ?? null,
+    [points, active]
   );
-  const select = useCallback((id: string) => setSelectedId(id), []);
 
   // Value bounds across every plotted number, systolic through diastolic.
   const bounds = useMemo(() => {
@@ -273,15 +320,28 @@ export function InteractiveVitalChart({ kind, points, compact = false, title, em
       {/* One real button per point, sitting directly under its marker. The
           strip is full-width and the buttons divide it evenly, so the tap
           target is always at least MIN_HIT_PX tall no matter how dense the
-          data is. */}
-      <div className="flex" style={{ minHeight: compact ? 16 : MIN_HIT_PX }} role={compact ? undefined : "group"}>
+          data is.
+
+          The strip is the chart's pointer surface, so pointer-out has to
+          clear the hover -- leaving a stale point pinned would keep showing
+          its value once the mouse moved onto the card's own text. A tap
+          (pointer: coarse) has no hover to speak of, so it only commits. */}
+      <div
+        className="flex"
+        style={{ minHeight: compact ? 16 : MIN_HIT_PX }}
+        role={compact ? undefined : "group"}
+        onPointerLeave={() => setActive({ ...active, hoveredId: null })}
+        onPointerCancel={() => setActive({ ...active, hoveredId: null })}
+      >
         {points.map((p) => (
           <button
             key={p.id}
             type="button"
-            onClick={() => select(p.id)}
-            onMouseEnter={() => select(p.id)}
-            onFocus={() => select(p.id)}
+            onClick={() => setActive({ ...active, selectedId: p.id })}
+            onPointerEnter={(e) => {
+              if (e.pointerType === "mouse") setActive({ ...active, hoveredId: p.id });
+            }}
+            onFocus={() => setActive({ ...active, selectedId: p.id })}
             aria-pressed={compact ? undefined : isSelected(p)}
             style={{ width: hitWidth, maxWidth: width }}
             className={`min-w-0 shrink rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${

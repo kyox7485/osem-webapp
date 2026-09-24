@@ -15,8 +15,10 @@ import {
   InteractiveVitalChart,
   VITAL_UNITS,
   formatVitalValue,
+  resolveActivePointId,
   type ChartPoint,
   type VitalKind,
+  type VitalPointSelection,
 } from "./interactive-vital-chart";
 import { VitalsHistoryModal } from "./vitals-history-modal";
 
@@ -172,12 +174,18 @@ export function ResidentDashboard({
 /**
  * One vital card. The value is the loudest thing on it, the sparkline
  * supports it, and the date/remark is quiet -- in that order.
+ *
+ * Point selection is lifted up to the card so the big number and the chart
+ * highlight always agree. The latest reading is the default; hovering a
+ * point previews it, and tapping one keeps it until "Latest" is tapped.
  */
 function VitalCard({ kind, points }: { kind: VitalKind; points: ChartPoint[] }) {
   const t = useTranslation();
-  // The chart itself owns point selection and highlights the selected
-  // value, so the heading value tracks whichever point is active.
-  const latest = points[points.length - 1] ?? null;
+  const [selection, setSelection] = useState<VitalPointSelection>({ hoveredId: null, selectedId: null });
+  const active = points.find((p) => p.id === resolveActivePointId(points, selection)) ?? null;
+  // True only when the user has committed to something other than the newest
+  // point -- that's when the escape hatch to "Latest" is worth showing.
+  const pinned = selection.selectedId !== null && selection.selectedId !== points[points.length - 1]?.id;
 
   return (
     <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3 shadow-sm">
@@ -189,11 +197,29 @@ function VitalCard({ kind, points }: { kind: VitalKind; points: ChartPoint[] }) 
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-2xl font-bold leading-none tabular-nums text-fg">
-          {latest ? formatVitalValue(kind, latest) : "--"}
+          {active ? formatVitalValue(kind, active) : "--"}
         </span>
-        {latest && <span className="text-xs text-fg-muted">{VITAL_UNITS[kind]}</span>}
+        {active && <span className="text-xs text-fg-muted">{VITAL_UNITS[kind]}</span>}
+        {/* Reserved whether or not it is shown, so previewing a point can't
+            reflow the value or push the sparkline down the card. */}
+        {pinned && (
+          <button
+            type="button"
+            onClick={() => setSelection({ hoveredId: null, selectedId: null })}
+            className="ml-auto shrink-0 self-center rounded px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+          >
+            {t("Latest")}
+          </button>
+        )}
       </div>
-      <InteractiveVitalChart kind={kind} points={points} compact title={t(kind)} />
+      <InteractiveVitalChart
+        kind={kind}
+        points={points}
+        compact
+        title={t(kind)}
+        selection={selection}
+        onSelectionChange={setSelection}
+      />
     </div>
   );
 }
