@@ -131,7 +131,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onChangeCapture={markDirty}>
-      <div className="flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl sm:max-h-[90dvh]">
+      <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)]">
         {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6">
           <h2 className="text-lg font-bold text-gray-900 sm:text-xl">{t("Record Vital Signs")}</h2>
@@ -148,7 +148,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="px-4 py-4 sm:px-6 sm:py-6">
             {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
@@ -463,7 +463,7 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
         </div>
 
         {/* Sticky Footer */}
-        <div className="flex-shrink-0 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex-shrink-0 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex justify-end gap-2">
             <button
               type="button"
