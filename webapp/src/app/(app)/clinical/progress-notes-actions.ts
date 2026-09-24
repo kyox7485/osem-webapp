@@ -51,19 +51,51 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
 
   if (!resident) return null;
 
-  const [{ data: notes }, { data: vitals }] = await Promise.all([
+  const [{ data: notes }, { data: vitals }, { data: dxtReadings }] = await Promise.all([
     supabase
       .from("tbl_progress_notes")
       .select("entry_timestamp, progress_note, physical_examination, medical_plan, nursing_plan, feeding_plan, dressing_plan, monitoring_plan, physio_plan")
       .eq("resident_id", residentId)
       .order("entry_timestamp", { ascending: false }),
+    // See residents/[id]/progress-notes/page.tsx: the dashboard needs a
+    // 28-day window for its history modal, not just the latest 10 rows.
     supabase
       .from("tbl_vital")
       .select("entry_timestamp, systolic_bp, diastolic_bp, heart_rate, temperature, spo2, spo2_condition, dxt, dxt_remark")
       .eq("resident_id", residentId)
       .order("entry_timestamp", { ascending: false })
-      .limit(10),
+      .limit(500),
+    // DXT is charted far less often than the other vitals, so the latest 10
+    // DXT readings often sit outside the main window. Ask for them directly.
+    supabase
+      .from("tbl_vital")
+      .select("entry_timestamp, dxt, dxt_remark")
+      .eq("resident_id", residentId)
+      .not("dxt", "is", null)
+      .order("entry_timestamp", { ascending: false })
+      .limit(60),
   ]);
+
+  // Merge the DXT-only rows in, de-duplicated by timestamp -- a row already
+  // present above is the fuller record and wins. These rows carry dxt only;
+  // the other columns are unknown, not absent, so they're null rather than
+  // 0 to keep them out of the BP/HR/Temp/SpO2 daily averages.
+  const allVitals = [
+    ...(vitals ?? []),
+    ...(dxtReadings ?? [])
+      .filter((d) => !(vitals ?? []).some((v) => v.entry_timestamp === d.entry_timestamp))
+      .map((d) => ({
+        entry_timestamp: d.entry_timestamp as string,
+        systolic_bp: null,
+        diastolic_bp: null,
+        heart_rate: null,
+        temperature: null,
+        spo2: null,
+        spo2_condition: null,
+        dxt: d.dxt as number,
+        dxt_remark: (d.dxt_remark ?? null) as string | null,
+      })),
+  ].sort((a, b) => b.entry_timestamp.localeCompare(a.entry_timestamp));
 
   const plans = Object.fromEntries(
     PLAN_FIELDS.map(([key, column]) => {
@@ -81,7 +113,7 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
     tcaNotes: resident.tca_notes,
     latestProgressNote: latestNote?.progress_note ?? null,
     latestPhysicalExamination: latestNote?.physical_examination ?? null,
-    vitals: vitals ?? [],
+    vitals: allVitals,
     plans,
   };
 }

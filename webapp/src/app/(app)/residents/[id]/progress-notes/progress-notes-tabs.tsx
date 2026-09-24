@@ -27,6 +27,8 @@ type Vital = {
   temperature: number | null;
   spo2: number | null;
   spo2_condition: string | null;
+  dxt: number | null;
+  dxt_remark: string | null;
 };
 
 type PlanEntry = { entry_timestamp: string; value: string } | null;

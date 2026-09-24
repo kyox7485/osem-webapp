@@ -1,28 +1,24 @@
 "use client";
 
-import { formatDateTime, formatDate } from "@/lib/format-date";
+import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/format-date";
 import { useTranslation } from "@/components/language-provider";
-import { useMemo } from "react";
-
-// Quick-glance panel for a doctor reviewing this resident: static clinical
-// background (history/medication/allergy/TCA, from tbl_residents) plus the
-// most recent nursing-chart vitals and the last-ordered value of each
-// progress note "plan" field. Plan fields are optional per note -- a
-// doctor only fills in whatever's relevant on a given visit -- so "last
-// dressing plan" means the most recent note where dressing_plan was
-// actually set, not necessarily the most recent note overall.
-
-type Vital = {
-  entry_timestamp: string;
-  systolic_bp: number | null;
-  diastolic_bp: number | null;
-  heart_rate: number | null;
-  temperature: number | null;
-  spo2: number | null;
-  spo2_condition: string | null;
-  dxt: number | null;
-  dxt_remark: string | null;
-};
+import {
+  type Vital,
+  getDailyAverages,
+  getDXTReadings,
+  resolveDateRange,
+  filterVitalsByRange,
+  formatVitalDateTime,
+} from "@/lib/vitals";
+import {
+  InteractiveVitalChart,
+  VITAL_UNITS,
+  formatVitalValue,
+  type ChartPoint,
+  type VitalKind,
+} from "./interactive-vital-chart";
+import { VitalsHistoryModal } from "./vitals-history-modal";
 
 type PlanEntry = { entry_timestamp: string; value: string } | null;
 
@@ -46,6 +42,27 @@ type Props = {
   collapsible?: boolean;
 };
 
+const DXT_CARD_LIMIT = 10;
+
+function dailyPoints(
+  daily: ReturnType<typeof getDailyAverages>,
+  pick: (d: ReturnType<typeof getDailyAverages>[number]) => number | null,
+  secondary?: (d: ReturnType<typeof getDailyAverages>[number]) => number | null,
+  remark?: (d: ReturnType<typeof getDailyAverages>[number]) => string | null
+): ChartPoint[] {
+  return daily
+    .map((d) => ({
+      id: d.dateKey,
+      // Calendar date only -- a daily average didn't happen at a time.
+      label: formatDate(`${d.dateKey}T00:00:00+08:00`),
+      primary: pick(d),
+      secondary: secondary?.(d) ?? null,
+      isDailyAverage: true,
+      remark: remark?.(d) ?? null,
+    }))
+    .filter((p) => p.primary !== null);
+}
+
 export function ResidentDashboard({
   allergy,
   pastMedicalCondition,
@@ -56,8 +73,35 @@ export function ResidentDashboard({
   collapsible = false,
 }: Props) {
   const t = useTranslation();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
-  const sortedVitals = useMemo(() => [...vitals].reverse(), [vitals]);
+  // Main-page default: the latest 7 calendar days of readings, collapsed to
+  // one daily average per day. DXT is the exception -- see below.
+  const daily = useMemo(() => {
+    const range = resolveDateRange(vitals, 7, "", "");
+    return getDailyAverages(filterVitalsByRange(vitals, range));
+  }, [vitals]);
+
+  // DXT is never averaged (some residents are only tested twice a week, so
+  // a daily average would invent readings) -- the card shows the latest 10
+  // actual readings with their real timestamps.
+  const dxt = useMemo(() => getDXTReadings(vitals, DXT_CARD_LIMIT), [vitals]);
+
+  const cards = useMemo(() => {
+    const bp = dailyPoints(daily, (d) => d.systolic_bp, (d) => d.diastolic_bp);
+    const hr = dailyPoints(daily, (d) => d.heart_rate);
+    const temp = dailyPoints(daily, (d) => d.temperature);
+    const spo2 = dailyPoints(daily, (d) => d.spo2, undefined, (d) => d.spo2_condition);
+    const dxtPoints: ChartPoint[] = dxt.map((r) => ({
+      id: r.id,
+      // DXT is an actual reading, so the real time of day belongs here.
+      label: formatVitalDateTime(r.timestamp),
+      primary: r.value,
+      isDailyAverage: false,
+      remark: r.remark,
+    }));
+    return { BP: bp, HR: hr, Temp: temp, SpO2: spo2, DXT: dxtPoints };
+  }, [daily, dxt]);
 
   return (
     <div className="mb-6 space-y-4">
@@ -77,52 +121,39 @@ export function ResidentDashboard({
         <ClampedText value={tcaNotes} />
       </DashCard>
 
-      <DashCard title={t("Recent vitals")}>
+      <DashCard
+        title={t("Recent vitals")}
+        action={
+          vitals.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="-mr-1 flex min-h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+            >
+              {t("View history")}
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          ) : null
+        }
+      >
         {vitals.length === 0 ? (
           <EmptyNote text={t("No vitals recorded yet.")} />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <VitalSparkline
-              title={t("BP")}
-              value={sortedVitals[sortedVitals.length - 1].systolic_bp !== null ? `${sortedVitals[sortedVitals.length - 1].systolic_bp}/${sortedVitals[sortedVitals.length - 1].diastolic_bp}` : "--"}
-              unit="mmHg"
-              data={sortedVitals.map(v => v.systolic_bp ?? 0)}
-              data2={sortedVitals.map(v => v.diastolic_bp ?? 0)}
-              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
-            />
-            <VitalSparkline
-              title={t("HR")}
-              value={sortedVitals[sortedVitals.length - 1].heart_rate?.toString() ?? "--"}
-              unit="bpm"
-              data={sortedVitals.map(v => v.heart_rate ?? 0)}
-              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
-            />
-            <VitalSparkline
-              title={t("Temp")}
-              value={sortedVitals[sortedVitals.length - 1].temperature?.toString() ?? "--"}
-              unit="°C"
-              data={sortedVitals.map(v => v.temperature ?? 0)}
-              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
-            />
-            <VitalSparkline
-              title={t("SpO2")}
-              value={sortedVitals[sortedVitals.length - 1].spo2?.toString() ?? "--"}
-              unit="%"
-              data={sortedVitals.map(v => v.spo2 ?? 0)}
-              remark={sortedVitals[sortedVitals.length - 1].spo2_condition}
-              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
-            />
-            <VitalSparkline
-              title={t("DXT")}
-              value={sortedVitals[sortedVitals.length - 1].dxt?.toString() ?? "--"}
-              unit="mmol/L"
-              data={sortedVitals.map(v => v.dxt ?? 0)}
-              remark={sortedVitals[sortedVitals.length - 1].dxt_remark}
-              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
-            />
+          // 5 cards, no range controls on the page -- the detailed history
+          // lives behind "View history" so this stays scannable on mobile.
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <VitalCard kind="BP" points={cards.BP} />
+            <VitalCard kind="HR" points={cards.HR} />
+            <VitalCard kind="Temp" points={cards.Temp} />
+            <VitalCard kind="SpO2" points={cards.SpO2} />
+            <VitalCard kind="DXT" points={cards.DXT} />
           </div>
         )}
       </DashCard>
+
+      {historyOpen && <VitalsHistoryModal vitals={vitals} onClose={() => setHistoryOpen(false)} />}
 
       <DashCard title={t("Last ordered plans")} collapsible={collapsible}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -138,41 +169,43 @@ export function ResidentDashboard({
   );
 }
 
-function VitalSparkline({ title, value, unit, data, data2, timestamp, remark }: { title: string, value: string, unit: string, data: number[], data2?: number[], timestamp: string, remark?: string | null }) {
+/**
+ * One vital card. The value is the loudest thing on it, the sparkline
+ * supports it, and the date/remark is quiet -- in that order.
+ */
+function VitalCard({ kind, points }: { kind: VitalKind; points: ChartPoint[] }) {
   const t = useTranslation();
-
-  // Minimal SVG sparkline implementation
-  const width = 100;
-  const height = 30;
-  const max = Math.max(...data, ...(data2 ?? [0]));
-  const min = Math.min(...data.filter(v => v > 0), ...(data2?.filter(v => v > 0) ?? [0]));
-  const range = max - min || 1;
-
-  const points = data.map((v, i) => `${(i / (data.length - 1 || 1)) * width},${height - ((v - min) / range) * height}`).join(' ');
-  const points2 = data2?.map((v, i) => `${(i / (data2.length - 1 || 1)) * width},${height - ((v - min) / range) * height}`).join(' ');
+  // The chart itself owns point selection and highlights the selected
+  // value, so the heading value tracks whichever point is active.
+  const latest = points[points.length - 1] ?? null;
 
   return (
-    <div className="rounded border border-line-subtle p-2">
-      <div className="text-xs font-bold text-fg-secondary">{title}</div>
-      <div className="text-lg font-semibold text-fg">
-        {value} <span className="text-xs font-normal text-fg-muted">{unit}</span>
+    <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3 shadow-sm">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-xs font-semibold tracking-wide text-fg-secondary">{t(kind)}</span>
+        <span className="text-[10px] text-fg-faint">
+          {kind === "DXT" ? t("Latest 10") : t("7-day daily avg")}
+        </span>
       </div>
-      <svg width={width} height={height} className="mt-1">
-        <polyline fill="none" stroke="currentColor" strokeWidth="1" points={points} className="text-indigo-500" />
-        {data2 && <polyline fill="none" stroke="currentColor" strokeWidth="1" points={points2} className="text-teal-500" />}
-      </svg>
-      <div className="text-[10px] text-fg-faint">{formatDateTime(timestamp)}</div>
-      {remark && <div className="text-[10px] text-fg-muted italic truncate">{remark}</div>}
+      <div className="flex items-baseline gap-1">
+        <span className="text-2xl font-bold leading-none tabular-nums text-fg">
+          {latest ? formatVitalValue(kind, latest) : "--"}
+        </span>
+        {latest && <span className="text-xs text-fg-muted">{VITAL_UNITS[kind]}</span>}
+      </div>
+      <InteractiveVitalChart kind={kind} points={points} compact title={t(kind)} />
     </div>
   );
 }
 
 function DashCard({
   title,
+  action,
   children,
   collapsible,
 }: {
   title: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   collapsible?: boolean;
 }) {
@@ -180,16 +213,19 @@ function DashCard({
     return (
       <details className="group rounded-md border border-line bg-surface p-4 shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-fg">
-          {title}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="text-fg-faint transition-transform group-open:rotate-90"
-          >
-            <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span>{title}</span>
+          <div className="flex items-center gap-1">
+            {action}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="text-fg-faint transition-transform group-open:rotate-90"
+            >
+              <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
         </summary>
         <div className="mt-3">{children}</div>
       </details>
@@ -198,7 +234,10 @@ function DashCard({
 
   return (
     <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-fg">{title}</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-fg">{title}</h2>
+        {action}
+      </div>
       {children}
     </div>
   );

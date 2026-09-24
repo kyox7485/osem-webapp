@@ -167,7 +167,7 @@ export const dictClinical: Record<string, string> = {
   Attribution: "Pencatatan",
   "Select who's entering this": "Pilih siapa yang memasukkan ini",
 
-  // Resident dashboard
+  // Resident dashboard & Vitals trends
   "Medical / surgical history": "Sejarah perubatan / pembedahan",
   "Current medication list": "Senarai ubat semasa",
   "Known allergy": "Alahan diketahui",
@@ -182,6 +182,21 @@ export const dictClinical: Record<string, string> = {
   "Diet plan": "Pelan diet",
   "None recorded.": "Tiada rekod.",
   "No entry yet": "Belum ada entri",
+  "View history": "Lihat sejarah",
+  "Vital history": "Sejarah tanda vital",
+  "Blood Pressure": "Tekanan darah",
+  "DXT (Blood Glucose)": "DXT (Glukosa darah)",
+  "Daily average": "Purata harian",
+  "Actual reading": "Bacaan sebenar",
+  "7-day daily avg": "Purata harian 7 hari",
+  "Latest 10": "10 terbaru",
+  "Select vital": "Pilih tanda vital",
+  "BP, HR, temperature and SpO2 show a daily average. DXT shows every actual reading.": "BP, HR, suhu dan SpO2 memaparkan purata harian. DXT memaparkan setiap bacaan sebenar.",
+  "No readings in this period": "Tiada bacaan dalam tempoh ini",
+  readings: "bacaan",
+  "days with readings": "hari dengan bacaan",
+  "Start date must be on or before end date.": "Tarikh mula mesti pada atau sebelum tarikh tamat.",
+  "Select a valid date range": "Pilih julat tarikh yang sah",
 
   // Wound Photo module (new-wound-photo-form.tsx, wound-photo-module.tsx,
   // wound-body-diagram.tsx)
