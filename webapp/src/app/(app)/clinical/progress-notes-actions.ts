@@ -30,6 +30,8 @@ export type ResidentDashboardData = {
     temperature: number | null;
     spo2: number | null;
     spo2_condition: string | null;
+    dxt: number | null;
+    dxt_remark: string | null;
   }[];
   plans: Record<(typeof PLAN_FIELDS)[number][0], PlanEntry>;
 };
@@ -57,7 +59,7 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
       .order("entry_timestamp", { ascending: false }),
     supabase
       .from("tbl_vital")
-      .select("entry_timestamp, systolic_bp, diastolic_bp, heart_rate, temperature, spo2, spo2_condition")
+      .select("entry_timestamp, systolic_bp, diastolic_bp, heart_rate, temperature, spo2, spo2_condition, dxt, dxt_remark")
       .eq("resident_id", residentId)
       .order("entry_timestamp", { ascending: false })
       .limit(10),

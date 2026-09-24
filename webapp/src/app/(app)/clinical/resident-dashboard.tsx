@@ -2,6 +2,7 @@
 
 import { formatDateTime, formatDate } from "@/lib/format-date";
 import { useTranslation } from "@/components/language-provider";
+import { useMemo } from "react";
 
 // Quick-glance panel for a doctor reviewing this resident: static clinical
 // background (history/medication/allergy/TCA, from tbl_residents) plus the
@@ -19,6 +20,8 @@ type Vital = {
   temperature: number | null;
   spo2: number | null;
   spo2_condition: string | null;
+  dxt: number | null;
+  dxt_remark: string | null;
 };
 
 type PlanEntry = { entry_timestamp: string; value: string } | null;
@@ -53,6 +56,9 @@ export function ResidentDashboard({
   collapsible = false,
 }: Props) {
   const t = useTranslation();
+
+  const sortedVitals = useMemo(() => [...vitals].reverse(), [vitals]);
+
   return (
     <div className="mb-6 space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -75,34 +81,45 @@ export function ResidentDashboard({
         {vitals.length === 0 ? (
           <EmptyNote text={t("No vitals recorded yet.")} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
-                <tr>
-                  <th className="py-1 pr-3">{t("Date")}</th>
-                  <th className="py-1 pr-3">{t("BP")}</th>
-                  <th className="py-1 pr-3">{t("HR")}</th>
-                  <th className="py-1 pr-3">{t("Temp")}</th>
-                  <th className="py-1 pr-3">{t("SpO2")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line-subtle">
-                {vitals.map((v, i) => (
-                  <tr key={i}>
-                    <td className="py-1 pr-3 text-fg-subtle">{formatDateTime(v.entry_timestamp)}</td>
-                    <td className="py-1 pr-3 text-fg">
-                      {v.systolic_bp ?? "--"}/{v.diastolic_bp ?? "--"}
-                    </td>
-                    <td className="py-1 pr-3 text-fg">{v.heart_rate ?? "--"}</td>
-                    <td className="py-1 pr-3 text-fg">{v.temperature ?? "--"}</td>
-                    <td className="py-1 pr-3 text-fg">
-                      {v.spo2 ?? "--"}
-                      {v.spo2_condition ? ` (${v.spo2_condition})` : ""}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <VitalSparkline
+              title={t("BP")}
+              value={sortedVitals[sortedVitals.length - 1].systolic_bp !== null ? `${sortedVitals[sortedVitals.length - 1].systolic_bp}/${sortedVitals[sortedVitals.length - 1].diastolic_bp}` : "--"}
+              unit="mmHg"
+              data={sortedVitals.map(v => v.systolic_bp ?? 0)}
+              data2={sortedVitals.map(v => v.diastolic_bp ?? 0)}
+              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
+            />
+            <VitalSparkline
+              title={t("HR")}
+              value={sortedVitals[sortedVitals.length - 1].heart_rate?.toString() ?? "--"}
+              unit="bpm"
+              data={sortedVitals.map(v => v.heart_rate ?? 0)}
+              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
+            />
+            <VitalSparkline
+              title={t("Temp")}
+              value={sortedVitals[sortedVitals.length - 1].temperature?.toString() ?? "--"}
+              unit="°C"
+              data={sortedVitals.map(v => v.temperature ?? 0)}
+              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
+            />
+            <VitalSparkline
+              title={t("SpO2")}
+              value={sortedVitals[sortedVitals.length - 1].spo2?.toString() ?? "--"}
+              unit="%"
+              data={sortedVitals.map(v => v.spo2 ?? 0)}
+              remark={sortedVitals[sortedVitals.length - 1].spo2_condition}
+              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
+            />
+            <VitalSparkline
+              title={t("DXT")}
+              value={sortedVitals[sortedVitals.length - 1].dxt?.toString() ?? "--"}
+              unit="mmol/L"
+              data={sortedVitals.map(v => v.dxt ?? 0)}
+              remark={sortedVitals[sortedVitals.length - 1].dxt_remark}
+              timestamp={sortedVitals[sortedVitals.length - 1].entry_timestamp}
+            />
           </div>
         )}
       </DashCard>
@@ -117,6 +134,35 @@ export function ResidentDashboard({
           <PlanRow label={t("Physio plan")} entry={plans.physio} />
         </div>
       </DashCard>
+    </div>
+  );
+}
+
+function VitalSparkline({ title, value, unit, data, data2, timestamp, remark }: { title: string, value: string, unit: string, data: number[], data2?: number[], timestamp: string, remark?: string | null }) {
+  const t = useTranslation();
+
+  // Minimal SVG sparkline implementation
+  const width = 100;
+  const height = 30;
+  const max = Math.max(...data, ...(data2 ?? [0]));
+  const min = Math.min(...data.filter(v => v > 0), ...(data2?.filter(v => v > 0) ?? [0]));
+  const range = max - min || 1;
+
+  const points = data.map((v, i) => `${(i / (data.length - 1 || 1)) * width},${height - ((v - min) / range) * height}`).join(' ');
+  const points2 = data2?.map((v, i) => `${(i / (data2.length - 1 || 1)) * width},${height - ((v - min) / range) * height}`).join(' ');
+
+  return (
+    <div className="rounded border border-line-subtle p-2">
+      <div className="text-xs font-bold text-fg-secondary">{title}</div>
+      <div className="text-lg font-semibold text-fg">
+        {value} <span className="text-xs font-normal text-fg-muted">{unit}</span>
+      </div>
+      <svg width={width} height={height} className="mt-1">
+        <polyline fill="none" stroke="currentColor" strokeWidth="1" points={points} className="text-indigo-500" />
+        {data2 && <polyline fill="none" stroke="currentColor" strokeWidth="1" points={points2} className="text-teal-500" />}
+      </svg>
+      <div className="text-[10px] text-fg-faint">{formatDateTime(timestamp)}</div>
+      {remark && <div className="text-[10px] text-fg-muted italic truncate">{remark}</div>}
     </div>
   );
 }
