@@ -17,6 +17,8 @@ import {
   ACCOMPANIED_BY_OPTIONS,
   MOBILITY_OPTIONS,
   HYGIENE_OPTIONS,
+  SPO2_CONDITION_OPTIONS,
+  DXT_REMARK_OPTIONS,
 } from "@/lib/types";
 import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
 import { useTranslation } from "@/components/language-provider";
@@ -353,7 +355,9 @@ export function ResidentForm({
   const [arrivalHr, setArrivalHr] = useState("");
   const [arrivalTemp, setArrivalTemp] = useState("");
   const [arrivalSpo2, setArrivalSpo2] = useState("");
+  const [arrivalSpo2Condition, setArrivalSpo2Condition] = useState("");
   const [arrivalDxt, setArrivalDxt] = useState("");
+  const [arrivalDxtRemark, setArrivalDxtRemark] = useState("");
 
   // Auto-derive age from Malaysian IC
   useEffect(() => {
@@ -1049,7 +1053,9 @@ export function ResidentForm({
               <input type="hidden" name="arrival_heart_rate" value={arrivalHr} />
               <input type="hidden" name="arrival_temperature" value={arrivalTemp} />
               <input type="hidden" name="arrival_spo2" value={arrivalSpo2} />
+              <input type="hidden" name="arrival_spo2_condition" value={arrivalSpo2Condition} />
               <input type="hidden" name="arrival_dxt" value={arrivalDxt} />
+              <input type="hidden" name="arrival_dxt_remark" value={arrivalDxtRemark} />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600">
@@ -1114,7 +1120,11 @@ export function ResidentForm({
                   <input
                     type="number"
                     value={arrivalSpo2}
-                    onChange={(e) => { markDirty(); setArrivalSpo2(e.target.value); }}
+                    onChange={(e) => {
+                      markDirty();
+                      setArrivalSpo2(e.target.value);
+                      if (!e.target.value) setArrivalSpo2Condition("");
+                    }}
                     step="1"
                     min="0"
                     max="100"
@@ -1122,6 +1132,23 @@ export function ResidentForm({
                     className={inputCls}
                   />
                 </div>
+                {arrivalSpo2 && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">
+                      {t("SpO2 Condition")} <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={arrivalSpo2Condition}
+                      onChange={(e) => { markDirty(); setArrivalSpo2Condition(e.target.value); }}
+                      className={inputCls}
+                    >
+                      <option value="">{t("Select condition")}</option>
+                      {SPO2_CONDITION_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{t(opt)}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600">
                     {t("DXT")} <span className="text-gray-400">(mmol/L)</span>
@@ -1130,13 +1157,34 @@ export function ResidentForm({
                   <input
                     type="number"
                     value={arrivalDxt}
-                    onChange={(e) => { markDirty(); setArrivalDxt(e.target.value); }}
+                    onChange={(e) => {
+                      markDirty();
+                      setArrivalDxt(e.target.value);
+                      if (!e.target.value) setArrivalDxtRemark("");
+                    }}
                     step="0.1"
                     min="0"
                     placeholder="e.g. 5.5"
                     className={inputCls}
                   />
                 </div>
+                {arrivalDxt && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">
+                      {t("DXT Remark")} <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={arrivalDxtRemark}
+                      onChange={(e) => { markDirty(); setArrivalDxtRemark(e.target.value); }}
+                      className={inputCls}
+                    >
+                      <option value="">{t("Select remark")}</option>
+                      {DXT_REMARK_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{t(opt)}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </Field>
           )}

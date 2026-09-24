@@ -113,7 +113,16 @@ export async function createResident(formData: FormData) {
   const arrivalHr = optionalFloat(formData.get("arrival_heart_rate"));
   const arrivalTemp = optionalFloat(formData.get("arrival_temperature"));
   const arrivalSpo2 = optionalFloat(formData.get("arrival_spo2"));
+  const arrivalSpo2Condition = optional(formData.get("arrival_spo2_condition"));
   const arrivalDxt = optionalFloat(formData.get("arrival_dxt"));
+  const arrivalDxtRemark = optional(formData.get("arrival_dxt_remark"));
+
+  if (arrivalSpo2 !== null && !arrivalSpo2Condition) {
+    return { error: "SpO2 condition is required when SpO2 is recorded" };
+  }
+  if (arrivalDxt !== null && !arrivalDxtRemark) {
+    return { error: "DXT remark is required when DXT is recorded" };
+  }
 
   if (arrivalSystolic !== null || arrivalDiastolic !== null || arrivalHr !== null || arrivalTemp !== null || arrivalSpo2 !== null || arrivalDxt !== null) {
     await supabase.from("tbl_vital").insert({
@@ -124,7 +133,9 @@ export async function createResident(formData: FormData) {
       heart_rate: arrivalHr,
       temperature: arrivalTemp,
       spo2: arrivalSpo2,
+      spo2_condition: arrivalSpo2Condition,
       dxt: arrivalDxt,
+      dxt_remark: arrivalDxtRemark,
       reviewed_by: payload.reviewed_by ?? null,
       reviewed_by_other: payload.reviewed_by_other ?? null,
     });
