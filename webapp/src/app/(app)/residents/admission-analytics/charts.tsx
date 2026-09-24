@@ -1,16 +1,21 @@
 // Pure rendering components for the Admission Analytics dashboard.
-// No hooks — safe to render from server components.
+// No hooks — receives `t` as a plain prop instead, so it's still safe to
+// render from server components (page.tsx already has `t` from
+// getServerTranslator()).
 
 import type { TrendPoint, AgeGenderRow, LOSBucket, CategoryRow } from "./data";
+import type { TranslateParams } from "@/lib/i18n/translate";
+
+type T = (text: string, params?: TranslateParams) => string;
 
 // ─── Occupancy trend chart ────────────────────────────────────────────────────
 
 // SVG line + area chart with improved hover interaction.
 // One data point per month-end snapshot.
-export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
+export function OccupancyTrendChart({ points, t }: { points: TrendPoint[]; t: T }) {
   if (points.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">No occupancy data for this period.</p>
+      <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">{t("No occupancy data for this period.")}</p>
     );
   }
 
@@ -48,7 +53,7 @@ export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
-        aria-label="Occupancy trend chart"
+        aria-label={t("Occupancy trend chart")}
         role="img"
         className="block overflow-visible"
       >
@@ -109,7 +114,7 @@ export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
               stroke="white"
               strokeWidth="1.5"
             />
-            <title>{`${p.label}\nOccupancy: ${p.occupied} residents`}</title>
+            <title>{t("{point}\nOccupancy: {count} residents", { point: p.label, count: p.occupied })}</title>
           </g>
         ))}
 
@@ -133,14 +138,14 @@ export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
           );
         })}
       </svg>
-      <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">Hover over data points to see details</p>
+      <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">{t("Hover over data points to see details")}</p>
     </div>
   );
 }
 
 // ─── Age × Gender table ───────────────────────────────────────────────────────
 
-export function AgeGenderTable({ rows }: { rows: AgeGenderRow[] }) {
+export function AgeGenderTable({ rows, t }: { rows: AgeGenderRow[]; t: T }) {
   const totals = rows.reduce(
     (acc, r) => ({
       male: acc.male + r.male,
@@ -158,13 +163,13 @@ export function AgeGenderTable({ rows }: { rows: AgeGenderRow[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th className="py-1.5 pr-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Age</th>
-            <th className="px-2 py-1.5 text-right text-xs font-medium text-blue-600 dark:text-blue-400">Male</th>
-            <th className="px-2 py-1.5 text-right text-xs font-medium text-rose-500 dark:text-rose-400">Female</th>
+            <th className="py-1.5 pr-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{t("Age")}</th>
+            <th className="px-2 py-1.5 text-right text-xs font-medium text-blue-600 dark:text-blue-400">{t("Male")}</th>
+            <th className="px-2 py-1.5 text-right text-xs font-medium text-rose-500 dark:text-rose-400">{t("Female")}</th>
             {hasUnknown && (
               <th className="px-2 py-1.5 text-right text-xs font-medium text-gray-400 dark:text-gray-500">–</th>
             )}
-            <th className="py-1.5 pl-2 text-right text-xs font-medium text-gray-700 dark:text-gray-300">Total</th>
+            <th className="py-1.5 pl-2 text-right text-xs font-medium text-gray-700 dark:text-gray-300">{t("Total")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
@@ -182,7 +187,7 @@ export function AgeGenderTable({ rows }: { rows: AgeGenderRow[] }) {
         </tbody>
         <tfoot>
           <tr className="border-t border-gray-200 dark:border-gray-800">
-            <td className="py-2 pr-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total</td>
+            <td className="py-2 pr-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t("Total")}</td>
             <td className="px-2 py-2 text-right font-bold tabular-nums text-blue-700 dark:text-blue-300">{totals.male}</td>
             <td className="px-2 py-2 text-right font-bold tabular-nums text-rose-600 dark:text-rose-400">{totals.female}</td>
             {hasUnknown && (
@@ -213,25 +218,31 @@ export function HorizontalBar({
   pct,
   colorClass,
   maxCount,
+  t,
 }: {
   label: string;
   count: number;
   pct: number;
   colorClass?: string;
   maxCount: number;
+  t: T;
 }) {
   const barWidth = maxCount > 0 ? (count / maxCount) * 100 : 0;
   const color = colorClass ?? "bg-indigo-400";
+  // `label` is a stored domain value (e.g. resident.mobility = "Wheelchair",
+  // or a fixed LOS bucket label) that doubles as its own translation key --
+  // same convention as the resident-form dropdowns it's sourced from.
+  const translatedLabel = t(label);
   return (
     <div className="flex items-center gap-2">
-      <div className="w-32 shrink-0 truncate text-right text-xs text-gray-600 dark:text-gray-400" title={label}>
-        {label}
+      <div className="w-32 shrink-0 truncate text-right text-xs text-gray-600 dark:text-gray-400" title={translatedLabel}>
+        {translatedLabel}
       </div>
       <div className="relative flex h-4 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
         <div
           className={`h-4 rounded-full transition-all ${color}`}
           style={{ width: `${barWidth}%` }}
-          title={`${count} residents (${pct}%)`}
+          title={t("{count} residents ({pct}%)", { count, pct })}
         />
       </div>
       <div className="w-14 shrink-0 text-right text-xs tabular-nums text-gray-700 dark:text-gray-300">
@@ -242,9 +253,9 @@ export function HorizontalBar({
   );
 }
 
-export function CategoryBars({ rows, emptyLabel = "No data." }: { rows: CategoryRow[]; emptyLabel?: string }) {
+export function CategoryBars({ rows, emptyLabel, t }: { rows: CategoryRow[]; emptyLabel?: string; t: T }) {
   if (rows.length === 0) {
-    return <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">{emptyLabel}</p>;
+    return <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">{emptyLabel ?? t("No data.")}</p>;
   }
   const maxCount = Math.max(...rows.map((r) => r.count), 1);
   return (
@@ -257,6 +268,7 @@ export function CategoryBars({ rows, emptyLabel = "No data." }: { rows: Category
           pct={r.pct}
           colorClass={BAR_COLORS[Math.min(i, BAR_COLORS.length - 1)]}
           maxCount={maxCount}
+          t={t}
         />
       ))}
     </div>
@@ -267,13 +279,13 @@ export function CategoryBars({ rows, emptyLabel = "No data." }: { rows: Category
 
 const LOS_COLORS = ["bg-emerald-500", "bg-emerald-400", "bg-emerald-300", "bg-emerald-200"];
 
-export function LOSBars({ buckets, avgDays }: { buckets: LOSBucket[]; avgDays: number | null }) {
+export function LOSBars({ buckets, avgDays, t }: { buckets: LOSBucket[]; avgDays: number | null; t: T }) {
   const maxCount = Math.max(...buckets.map((b) => b.count), 1);
   return (
     <div className="space-y-2">
       {buckets.map((b, i) => (
         <div key={b.label} className="flex items-center gap-2">
-          <div className="w-24 shrink-0 text-right text-xs text-gray-600 dark:text-gray-400">{b.label}</div>
+          <div className="w-24 shrink-0 text-right text-xs text-gray-600 dark:text-gray-400">{t(b.label)}</div>
           <div className="relative flex h-4 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
             <div
               className={`h-4 rounded-full ${LOS_COLORS[Math.min(i, LOS_COLORS.length - 1)]}`}
@@ -288,9 +300,9 @@ export function LOSBars({ buckets, avgDays }: { buckets: LOSBucket[]; avgDays: n
       {avgDays !== null && (
         <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Average LOS</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t("Average LOS")}</span>
             <span className="text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
-              {avgDays} <span className="text-sm font-normal text-gray-400 dark:text-gray-500">days</span>
+              {avgDays} <span className="text-sm font-normal text-gray-400 dark:text-gray-500">{t("days")}</span>
             </span>
           </div>
         </div>
@@ -309,6 +321,7 @@ export function KpiCard({
   icon,
   delta,
   clickable,
+  t,
 }: {
   label: string;
   value: React.ReactNode;
@@ -317,6 +330,7 @@ export function KpiCard({
   icon: React.ReactNode;
   delta?: { value: number; positive: boolean } | null;
   clickable?: boolean;
+  t: T;
 }) {
   return (
     <div className={`rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm ${clickable ? "cursor-pointer transition-all hover:border-indigo-300 hover:shadow-md" : ""}`}>
@@ -344,7 +358,7 @@ export function KpiCard({
       <p className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-gray-900 dark:text-gray-100">{value}</p>
       <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{label}</p>
       {sub && <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">{sub}</p>}
-      {clickable && <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">Click for details</p>}
+      {clickable && <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">{t("Click for details")}</p>}
     </div>
   );
 }

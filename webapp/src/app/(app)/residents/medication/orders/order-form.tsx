@@ -135,11 +135,13 @@ function ToggleGroup({
   value,
   onChange,
   disabled,
+  t,
 }: {
   options: string[];
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
+  t: (text: string) => string;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -155,7 +157,7 @@ function ToggleGroup({
               : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60"
             }`}
         >
-          {opt}
+          {t(opt)}
         </button>
       ))}
     </div>
@@ -167,11 +169,13 @@ function ChipSelector({
   selected,
   onToggle,
   disabled,
+  t,
 }: {
   options: string[];
   selected: string[];
   onToggle: (v: string) => void;
   disabled?: boolean;
+  t: (text: string) => string;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -189,7 +193,7 @@ function ChipSelector({
                 : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
               }`}
           >
-            {opt}
+            {t(opt)}
           </button>
         );
       })}
@@ -766,6 +770,7 @@ export function OrderForm(props: Props) {
                     selected={adminTimes}
                     onToggle={toggleAdminTime}
                     disabled={!frequency}
+                  t={t}
                   />
                   {frequency === "PRN" && (
                     <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
@@ -789,6 +794,7 @@ export function OrderForm(props: Props) {
                       options={DAY_OPTIONS}
                       selected={dosingDays}
                       onToggle={toggleDosingDay}
+                    t={t}
                     />
                   </div>
                 </Field>
@@ -839,6 +845,7 @@ export function OrderForm(props: Props) {
                       setDurationType(v);
                       mark();
                     }}
+                    t={t}
                   />
                 </div>
               </Field>
@@ -883,6 +890,7 @@ export function OrderForm(props: Props) {
                     setOrderedBy(v);
                     mark();
                   }}
+                  t={t}
                 />
               </div>
             </Field>
@@ -896,6 +904,7 @@ export function OrderForm(props: Props) {
                     setSuppliedBy(v);
                     mark();
                   }}
+                  t={t}
                 />
               </div>
             </Field>

@@ -122,7 +122,10 @@ export const dictMedication: Record<string, string> = {
   "Create Order": "Cipta Pesanan",
   "Save Changes": "Simpan Perubahan",
   "Save and Exit": "Simpan dan Keluar",
-  "Exit Without Saving": "Keluar Tanpa Simpan",
+  // "Exit Without Saving" (exact case) is the global unsaved-changes-dialog's
+  // key, owned by dict-common.ts -- don't redefine it here with different
+  // wording, or whichever dict-*.ts spreads last in translations.ts wins
+  // silently for the whole app, not just this module.
   "Unsaved Changes": "Perubahan Belum Disimpan",
   "You have unsaved changes. What would you like to do?":
     "Anda mempunyai perubahan yang belum disimpan. Apakah yang ingin anda lakukan?",

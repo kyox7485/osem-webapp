@@ -76,7 +76,7 @@ export function StaffForm({ staff, positions, branches, isAdmin, action }: Props
           <select name="role" defaultValue={staff?.role ?? ""} required className={inputCls}>
             <option value="" disabled>{t("Select a role")}</option>
             {STAFF_ROLE_OPTIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>{t(r)}</option>
             ))}
           </select>
         </label>
@@ -89,7 +89,7 @@ export function StaffForm({ staff, positions, branches, isAdmin, action }: Props
         <select name="department" defaultValue={staff?.department ?? ""} required className={inputCls}>
           <option value="" disabled>{t("Select a department")}</option>
           {DEPARTMENT_OPTIONS.map((d) => (
-            <option key={d} value={d}>{d}</option>
+            <option key={d} value={d}>{t(d)}</option>
           ))}
         </select>
       </label>
@@ -98,7 +98,7 @@ export function StaffForm({ staff, positions, branches, isAdmin, action }: Props
         {t("Status")}
         <select name="status" defaultValue={staff?.status ?? "ACTIVE"} className={inputCls}>
           {STAFF_STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>{t(s)}</option>
           ))}
         </select>
       </label>

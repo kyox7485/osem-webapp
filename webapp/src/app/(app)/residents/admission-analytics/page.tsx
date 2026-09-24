@@ -193,7 +193,7 @@ export default async function AdmissionAnalyticsPage({
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{t("Occupancy Trend")}</h3>
           <span className="text-xs text-gray-400 dark:text-gray-500">{t("Residents occupying a bed at month-end")}</span>
         </div>
-        <OccupancyTrendChart points={trendPoints} />
+        <OccupancyTrendChart points={trendPoints} t={t} />
       </div>
 
       {/* ── Age × Gender + LOS side by side ────────────────────────────────── */}
@@ -207,7 +207,7 @@ export default async function AdmissionAnalyticsPage({
           {currentOccupancy === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">{t("No active residents.")}</p>
           ) : (
-            <AgeGenderTable rows={ageGenderRows} />
+            <AgeGenderTable rows={ageGenderRows} t={t} />
           )}
           {/* Unknown-age note */}
           {(() => {
@@ -233,7 +233,7 @@ export default async function AdmissionAnalyticsPage({
               {t("No residents with admission date.")}
             </p>
           ) : (
-            <LOSBars buckets={losDistrib} avgDays={avgLos} />
+            <LOSBars buckets={losDistrib} avgDays={avgLos} t={t} />
           )}
         </div>
       </div>
@@ -254,7 +254,7 @@ export default async function AdmissionAnalyticsPage({
             {mobilityRows.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500">{t("No data.")}</p>
             ) : (
-              <CategoryBars rows={mobilityRows} />
+              <CategoryBars rows={mobilityRows} t={t} />
             )}
           </div>
 
@@ -266,7 +266,7 @@ export default async function AdmissionAnalyticsPage({
             {feedingRows.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500">{t("No data.")}</p>
             ) : (
-              <CategoryBars rows={feedingRows} />
+              <CategoryBars rows={feedingRows} t={t} />
             )}
           </div>
 
@@ -278,7 +278,7 @@ export default async function AdmissionAnalyticsPage({
             {hygieneRows.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500">{t("No data.")}</p>
             ) : (
-              <CategoryBars rows={hygieneRows} />
+              <CategoryBars rows={hygieneRows} t={t} />
             )}
           </div>
         </div>

@@ -38,8 +38,8 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
 
       <div className="max-w-md rounded-md border border-gray-200 bg-white p-4 shadow-sm">
         <dl className="space-y-2 text-sm">
-          <Row label={t("Rights")} value={account.rights ?? t("--")} />
-          <Row label={t("Status")} value={account.status ?? t("--")} />
+          <Row label={t("Rights")} value={account.rights ? t(account.rights) : t("--")} />
+          <Row label={t("Status")} value={account.status ? t(account.status) : t("--")} />
         </dl>
       </div>
     </div>
