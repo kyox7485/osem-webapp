@@ -4,6 +4,8 @@ import { LanguageProvider } from "@/components/language-provider";
 import { NavigationGuard } from "@/components/navigation-guard";
 import { UnsavedChangesDialog } from "@/components/unsaved-changes-dialog";
 import { DirtyFormProvider } from "@/lib/dirty-form-context";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeClassScript } from "@/components/theme-script";
 import { getServerLanguage } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -30,13 +32,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang={language === "ms" ? "ms" : "en"}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <ThemeClassScript />
+      </head>
       <body className="min-h-full flex flex-col">
         <DirtyFormProvider>
-          <LanguageProvider initialLanguage={language}>
-            {children}
-            <NavigationGuard />
-            <UnsavedChangesDialog />
-          </LanguageProvider>
+          <ThemeProvider initialTheme="system">
+            <LanguageProvider initialLanguage={language}>
+              {children}
+              <NavigationGuard />
+              <UnsavedChangesDialog />
+            </LanguageProvider>
+          </ThemeProvider>
         </DirtyFormProvider>
       </body>
     </html>

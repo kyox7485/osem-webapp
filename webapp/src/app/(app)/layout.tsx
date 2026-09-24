@@ -55,11 +55,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <NavLoadingProvider>
       <PageHeaderProvider>
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
           <Sidebar items={navItems} homeLabel={t("OSEM home")} footer={footer} />
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur">
+            <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 dark:border-gray-800 dark:bg-[#0a0a0a]/90 shadow-sm backdrop-blur">
               <div className="flex items-center gap-3 px-6 py-3.5">
                 <PageHeaderSlot />
                 <LanguageSwitcher />

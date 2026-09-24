@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
+import { useTheme } from "@/components/theme-provider";
 
 const ICONS = { Users, Stethoscope, Activity, IdCard, ShieldCheck, Link2 } satisfies Record<string, LucideIcon>;
 
@@ -37,6 +38,25 @@ export type SidebarFooterInfo = {
 };
 
 const STORAGE_KEY = "osem_sidebar_collapsed";
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const labels = { light: "Light", dark: "Dark", system: "System" };
+  const cycle = () => {
+    setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
+  };
+  return (
+    <button
+      type="button"
+      onClick={cycle}
+      aria-label="Toggle theme"
+      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+    >
+      <span className="inline-block h-2 w-2 rounded-full bg-indigo-500" />
+      <span>{labels[theme]}</span>
+    </button>
+  );
+}
 
 export function Sidebar({
   items,
@@ -77,7 +97,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-gray-200 bg-white transition-[width] duration-200 ${
+      className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-gray-200 bg-white transition-[width] duration-200 dark:border-gray-800 dark:bg-[#0a0a0a] ${
         collapsed ? "w-[68px]" : "w-64"
       }`}
     >
@@ -150,6 +170,9 @@ export function Sidebar({
               </div>
               <div className="mt-2">
                 <SignOutButton />
+              </div>
+              <div className="mt-3">
+                <ThemeToggle />
               </div>
             </>
           )}
