@@ -32,7 +32,9 @@ osem-webapp/
   `msDictionary`) and `translate.ts` (the `t()` helper). `t("English text")`
   looks the string up; a missing key just falls back to English — not a
   build error. New UI text doesn't need a translation to compile, but
-  should get one in the relevant `dict-*.ts`.
+  should get one in the relevant `dict-*.ts`. Full architecture (the
+  dropdown/option rule, interpolation, `npm run check:i18n`, known gaps)
+  is in `docs/i18n.md`.
 - Env vars: see `webapp/.env.local.example`. Supabase URL/anon key are
   public; `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_APPS_SCRIPT_*`, and
   `OMNIROUTE_*` are server-only, never `NEXT_PUBLIC_`.

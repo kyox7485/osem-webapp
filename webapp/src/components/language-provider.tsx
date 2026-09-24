@@ -2,12 +2,12 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { useRouter } from "next/navigation";
-import { translate, LANGUAGE_COOKIE, type Language } from "@/lib/i18n/translate";
+import { translate, LANGUAGE_COOKIE, type Language, type TranslateParams } from "@/lib/i18n/translate";
 
 type LanguageContextValue = {
   language: Language;
   setLanguage: (language: Language) => void;
-  t: (text: string) => string;
+  t: (text: string, params?: TranslateParams) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -29,7 +29,7 @@ export function LanguageProvider({ initialLanguage, children }: { initialLanguag
     [router]
   );
 
-  const t = useCallback((text: string) => translate(text, language), [language]);
+  const t = useCallback((text: string, params?: TranslateParams) => translate(text, language, params), [language]);
 
   return <LanguageContext.Provider value={{ language, setLanguage, t }}>{children}</LanguageContext.Provider>;
 }
@@ -41,6 +41,6 @@ export function useLanguage(): LanguageContextValue {
 }
 
 // Convenience for components that only need to translate, not switch.
-export function useTranslation(): (text: string) => string {
+export function useTranslation(): (text: string, params?: TranslateParams) => string {
   return useLanguage().t;
 }

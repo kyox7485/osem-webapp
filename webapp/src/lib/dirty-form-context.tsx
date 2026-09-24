@@ -1,6 +1,17 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { translate, LANGUAGE_COOKIE } from "@/lib/i18n/translate";
+
+// DirtyFormProvider is mounted above LanguageProvider in the root layout
+// (its dialog must be able to guard navigation everywhere LanguageProvider
+// itself renders), so it can't call useTranslation(). Reads the language
+// cookie directly instead -- same cookie LanguageProvider's setLanguage()
+// writes, so it stays in sync without a shared ancestor.
+function tFallback(text: string): string {
+  const language = typeof document !== "undefined" && document.cookie.includes(`${LANGUAGE_COOKIE}=ms`) ? "ms" : "en";
+  return translate(text, language);
+}
 
 export type SaveResult = { success: boolean; error?: string };
 export type UnsavedChangesAction = "save" | "discard" | "cancel";
@@ -92,7 +103,7 @@ export function DirtyFormProvider({ children }: { children: ReactNode }) {
       const currentId = dirtyFormId;
       const formRef = currentId ? formRefsRef.current.get(currentId) : undefined;
       if (!formRef?.onSaveAndExit) {
-        setDialogError("This form can't be saved automatically.");
+        setDialogError(tFallback("This form can't be saved automatically."));
         return;
       }
 
@@ -103,7 +114,7 @@ export function DirtyFormProvider({ children }: { children: ReactNode }) {
         .then((result) => {
           setDialogSaving(false);
           if (!result.success) {
-            setDialogError(result.error || "Save failed. Please try again.");
+            setDialogError(result.error || tFallback("Save failed. Please try again."));
             return;
           }
           if (currentId) unregisterDirtyForm(currentId);
@@ -114,7 +125,7 @@ export function DirtyFormProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {
           setDialogSaving(false);
-          setDialogError("Save failed. Please try again.");
+          setDialogError(tFallback("Save failed. Please try again."));
         });
     },
     [dirtyFormId, unregisterDirtyForm]

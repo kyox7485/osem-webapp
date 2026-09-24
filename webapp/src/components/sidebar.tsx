@@ -41,7 +41,8 @@ const STORAGE_KEY = "osem_sidebar_collapsed";
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const labels = { light: "Light", dark: "Dark", system: "System" };
+  const t = useTranslation();
+  const labels = { light: t("Light"), dark: t("Dark"), system: t("System") };
   const cycle = () => {
     setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
   };
@@ -49,7 +50,7 @@ function ThemeToggle() {
     <button
       type="button"
       onClick={cycle}
-      aria-label="Toggle theme"
+      aria-label={t("Toggle theme")}
       className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
     >
       <span className="inline-block h-2 w-2 rounded-full bg-indigo-500" />
@@ -113,7 +114,7 @@ export function Sidebar({
           className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
             collapsed ? "" : "absolute right-2 top-3"
           }`}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
         >
           {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>

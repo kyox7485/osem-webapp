@@ -185,6 +185,16 @@ export const dictClinical: Record<string, string> = {
 
   // Wound Photo module (new-wound-photo-form.tsx, wound-photo-module.tsx,
   // wound-body-diagram.tsx)
+  // Body-part hotspot labels -- Head/Neck/Shoulder/Chest/Abdomen/Right Hand/
+  // Left Hand already covered by dict-physio.ts's body-chart section (one
+  // merged dictionary, see translations.ts). "Back" alone is deliberately
+  // NOT added here: it would collide with dict-common.ts's "Back" (nav
+  // button, -> "Kembali") and mistranslate the anatomical region as "go
+  // back" -- see wound-body-diagram.tsx's translateBodyPartLabel().
+  "Back (body part)": "Belakang",
+  Sacrum: "Sakrum",
+  "Right Leg": "Kaki Kanan",
+  "Left Leg": "Kaki Kiri",
   "Wound Photo History": "Sejarah Gambar Luka",
   "No wound photo sessions yet.": "Belum ada sesi gambar luka.",
   "Uploaded by": "Dimuat naik oleh",

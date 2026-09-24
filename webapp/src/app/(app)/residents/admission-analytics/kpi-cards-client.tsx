@@ -126,6 +126,7 @@ export function KpiCardsClient({
             sub={t("in selected period")}
             tint="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
             icon={<Users className="h-4 w-4" strokeWidth={2} />}
+            t={t}
             clickable
           />
         </div>
@@ -137,6 +138,7 @@ export function KpiCardsClient({
             sub={t("in selected period")}
             tint="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
             icon={<DoorOpen className="h-4 w-4" strokeWidth={2} />}
+            t={t}
             clickable
           />
         </div>
@@ -149,6 +151,7 @@ export function KpiCardsClient({
               sub={t("current occupancy")}
               tint="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
               icon={<BedDouble className="h-4 w-4" strokeWidth={2} />}
+              t={t}
               clickable
             />
           </div>
@@ -174,6 +177,7 @@ export function KpiCardsClient({
                 <Minus className="h-4 w-4" strokeWidth={2} />
               )
             }
+            t={t}
             clickable
           />
         </div>
@@ -185,6 +189,7 @@ export function KpiCardsClient({
             sub={`${allResidentsWithAdmission} ${t("residents")}`}
             tint="bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400"
             icon={<Clock className="h-4 w-4" strokeWidth={2} />}
+            t={t}
             clickable
           />
         </div>
@@ -197,6 +202,7 @@ export function KpiCardsClient({
               sub={`${currentOccupancy}/${totalBedCapacity} beds`}
               tint="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
               icon={<BarChart3 className="h-4 w-4" strokeWidth={2} />}
+              t={t}
               clickable
             />
           </div>
