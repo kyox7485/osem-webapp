@@ -98,13 +98,13 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
     <>
       <div className="flex items-center gap-2">
         {isUnderObservation && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{t("Under Observation")}</span>
+          <span className="rounded-full bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">{t("Under Observation")}</span>
         )}
         <button
           type="button"
           onClick={openModal}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            isUnderObservation ? "bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-800" : "bg-gray-100 text-gray-600 hover:bg-indigo-100 hover:text-indigo-800"
+            isUnderObservation ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-950/40 hover:text-red-800 dark:hover:text-red-300" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 hover:text-indigo-800 dark:hover:text-indigo-300"
           }`}
         >
           {isUnderObservation ? t("End Observation") : t("Start Observation")}
@@ -116,19 +116,19 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={closeModal}
         >
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0" onClick={(e) => e.stopPropagation()}>
             {isUnderObservation ? (
               <>
-                <h2 className="text-base font-semibold text-gray-900">{t("End observation")}</h2>
-                <p className="mt-1 text-sm text-gray-500">{t("Record why observation is ending.")}</p>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("End observation")}</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("Record why observation is ending.")}</p>
 
                 <div className="mt-5 space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{t("Reason")}</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t("Reason")}</label>
                     <select
                       value={endReason}
                       onChange={(e) => setEndReason(e.target.value)}
-                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     >
                       <option value="" disabled>{t("Select reason")}</option>
                       {END_REASONS.map((r) => (
@@ -142,13 +142,13 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
                         value={endReasonOther}
                         onChange={(e) => setEndReasonOther(e.target.value)}
                         placeholder={t("Specify reason...")}
-                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        className="mt-2 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{t("Ended by")}</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t("Ended by")}</label>
                     <StaffPickerWithOther
                       value={staffValue}
                       otherName={staffOther}
@@ -158,7 +158,7 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
                     />
                   </div>
 
-                  {error && <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>}
+                  {error && <p className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-600 dark:text-red-300">{error}</p>}
 
                   <div className="flex gap-2 pt-1">
                     <button
@@ -173,7 +173,7 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
                       type="button"
                       onClick={closeModal}
                       disabled={isPending}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                      className="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50 transition-colors"
                     >
                       {t("Cancel")}
                     </button>
@@ -182,12 +182,12 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
               </>
             ) : (
               <>
-                <h2 className="text-base font-semibold text-gray-900">{t("Start observation")}</h2>
-                <p className="mt-1 text-sm text-gray-500">{t("This resident will appear in the Observation Chart until observation ends.")}</p>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("Start observation")}</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("This resident will appear in the Observation Chart until observation ends.")}</p>
 
                 <div className="mt-5 space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{t("Started by")}</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t("Started by")}</label>
                     <StaffPickerWithOther
                       value={staffValue}
                       otherName={staffOther}
@@ -197,7 +197,7 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
                     />
                   </div>
 
-                  {error && <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>}
+                  {error && <p className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-600 dark:text-red-300">{error}</p>}
 
                   <div className="flex gap-2 pt-1">
                     <button
@@ -212,7 +212,7 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
                       type="button"
                       onClick={closeModal}
                       disabled={isPending}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                      className="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50 transition-colors"
                     >
                       {t("Cancel")}
                     </button>

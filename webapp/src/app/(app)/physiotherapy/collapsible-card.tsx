@@ -31,26 +31,26 @@ export function CollapsibleCard({ title, badge, children }: Props) {
       // this card's own state (e.g. collapsing a body part would also
       // collapse the whole Physical Examination card above it).
       onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
-      className="group rounded-md border border-gray-200 bg-white shadow-sm"
+      className="group rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 hover:bg-gray-50">
-        <span className="text-sm font-bold text-gray-900">{title}</span>
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{title}</span>
         <span className="flex items-center gap-2">
           {badge && (
-            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{badge}</span>
+            <span className="rounded-full bg-indigo-100 dark:bg-indigo-950/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{badge}</span>
           )}
           <svg
             width="14"
             height="14"
             viewBox="0 0 16 16"
             fill="none"
-            className="text-gray-400 transition-transform group-open:rotate-90"
+            className="text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-90"
           >
             <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
       </summary>
-      <div className="border-t border-gray-100 p-4">{children}</div>
+      <div className="border-t border-gray-100 dark:border-gray-800 p-4">{children}</div>
     </details>
   );
 }

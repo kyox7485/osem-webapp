@@ -10,7 +10,7 @@ import type { TrendPoint, AgeGenderRow, LOSBucket, CategoryRow } from "./data";
 export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
   if (points.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-gray-400">No occupancy data for this period.</p>
+      <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">No occupancy data for this period.</p>
     );
   }
 
@@ -133,7 +133,7 @@ export function OccupancyTrendChart({ points }: { points: TrendPoint[] }) {
           );
         })}
       </svg>
-      <p className="mt-2 text-center text-xs text-gray-400">Hover over data points to see details</p>
+      <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">Hover over data points to see details</p>
     </div>
   );
 }
@@ -157,38 +157,38 @@ export function AgeGenderTable({ rows }: { rows: AgeGenderRow[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-100">
-            <th className="py-1.5 pr-3 text-left text-xs font-medium text-gray-500">Age</th>
-            <th className="px-2 py-1.5 text-right text-xs font-medium text-blue-600">Male</th>
-            <th className="px-2 py-1.5 text-right text-xs font-medium text-rose-500">Female</th>
+          <tr className="border-b border-gray-100 dark:border-gray-800">
+            <th className="py-1.5 pr-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Age</th>
+            <th className="px-2 py-1.5 text-right text-xs font-medium text-blue-600 dark:text-blue-400">Male</th>
+            <th className="px-2 py-1.5 text-right text-xs font-medium text-rose-500 dark:text-rose-400">Female</th>
             {hasUnknown && (
-              <th className="px-2 py-1.5 text-right text-xs font-medium text-gray-400">–</th>
+              <th className="px-2 py-1.5 text-right text-xs font-medium text-gray-400 dark:text-gray-500">–</th>
             )}
-            <th className="py-1.5 pl-2 text-right text-xs font-medium text-gray-700">Total</th>
+            <th className="py-1.5 pl-2 text-right text-xs font-medium text-gray-700 dark:text-gray-300">Total</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50">
+        <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
           {rows.map((r) => (
             <tr key={r.group}>
-              <td className="py-2 pr-3 font-medium text-gray-800 tabular-nums">{r.group}</td>
-              <td className="px-2 py-2 text-right tabular-nums text-blue-700">{r.male}</td>
-              <td className="px-2 py-2 text-right tabular-nums text-rose-600">{r.female}</td>
+              <td className="py-2 pr-3 font-medium text-gray-800 dark:text-gray-200 tabular-nums">{r.group}</td>
+              <td className="px-2 py-2 text-right tabular-nums text-blue-700 dark:text-blue-300">{r.male}</td>
+              <td className="px-2 py-2 text-right tabular-nums text-rose-600 dark:text-rose-400">{r.female}</td>
               {hasUnknown && (
-                <td className="px-2 py-2 text-right tabular-nums text-gray-400">{r.unknown}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-gray-400 dark:text-gray-500">{r.unknown}</td>
               )}
-              <td className="py-2 pl-2 text-right font-semibold tabular-nums text-gray-900">{r.total}</td>
+              <td className="py-2 pl-2 text-right font-semibold tabular-nums text-gray-900 dark:text-gray-100">{r.total}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr className="border-t border-gray-200">
-            <td className="py-2 pr-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</td>
-            <td className="px-2 py-2 text-right font-bold tabular-nums text-blue-700">{totals.male}</td>
-            <td className="px-2 py-2 text-right font-bold tabular-nums text-rose-600">{totals.female}</td>
+          <tr className="border-t border-gray-200 dark:border-gray-800">
+            <td className="py-2 pr-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total</td>
+            <td className="px-2 py-2 text-right font-bold tabular-nums text-blue-700 dark:text-blue-300">{totals.male}</td>
+            <td className="px-2 py-2 text-right font-bold tabular-nums text-rose-600 dark:text-rose-400">{totals.female}</td>
             {hasUnknown && (
-              <td className="px-2 py-2 text-right font-bold tabular-nums text-gray-400">{totals.unknown}</td>
+              <td className="px-2 py-2 text-right font-bold tabular-nums text-gray-400 dark:text-gray-500">{totals.unknown}</td>
             )}
-            <td className="py-2 pl-2 text-right font-bold tabular-nums text-gray-900">{totals.total}</td>
+            <td className="py-2 pl-2 text-right font-bold tabular-nums text-gray-900 dark:text-gray-100">{totals.total}</td>
           </tr>
         </tfoot>
       </table>
@@ -224,19 +224,19 @@ export function HorizontalBar({
   const color = colorClass ?? "bg-indigo-400";
   return (
     <div className="flex items-center gap-2">
-      <div className="w-32 shrink-0 truncate text-right text-xs text-gray-600" title={label}>
+      <div className="w-32 shrink-0 truncate text-right text-xs text-gray-600 dark:text-gray-400" title={label}>
         {label}
       </div>
-      <div className="relative flex h-4 flex-1 overflow-hidden rounded-full bg-gray-100">
+      <div className="relative flex h-4 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
         <div
           className={`h-4 rounded-full transition-all ${color}`}
           style={{ width: `${barWidth}%` }}
           title={`${count} residents (${pct}%)`}
         />
       </div>
-      <div className="w-14 shrink-0 text-right text-xs tabular-nums text-gray-700">
+      <div className="w-14 shrink-0 text-right text-xs tabular-nums text-gray-700 dark:text-gray-300">
         <span className="font-medium">{count}</span>
-        <span className="text-gray-400"> ({pct}%)</span>
+        <span className="text-gray-400 dark:text-gray-500"> ({pct}%)</span>
       </div>
     </div>
   );
@@ -244,7 +244,7 @@ export function HorizontalBar({
 
 export function CategoryBars({ rows, emptyLabel = "No data." }: { rows: CategoryRow[]; emptyLabel?: string }) {
   if (rows.length === 0) {
-    return <p className="py-4 text-center text-sm text-gray-400">{emptyLabel}</p>;
+    return <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">{emptyLabel}</p>;
   }
   const maxCount = Math.max(...rows.map((r) => r.count), 1);
   return (
@@ -273,24 +273,24 @@ export function LOSBars({ buckets, avgDays }: { buckets: LOSBucket[]; avgDays: n
     <div className="space-y-2">
       {buckets.map((b, i) => (
         <div key={b.label} className="flex items-center gap-2">
-          <div className="w-24 shrink-0 text-right text-xs text-gray-600">{b.label}</div>
-          <div className="relative flex h-4 flex-1 overflow-hidden rounded-full bg-gray-100">
+          <div className="w-24 shrink-0 text-right text-xs text-gray-600 dark:text-gray-400">{b.label}</div>
+          <div className="relative flex h-4 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
             <div
               className={`h-4 rounded-full ${LOS_COLORS[Math.min(i, LOS_COLORS.length - 1)]}`}
               style={{ width: `${maxCount > 0 ? (b.count / maxCount) * 100 : 0}%` }}
             />
           </div>
-          <div className="w-8 shrink-0 text-right text-xs font-medium tabular-nums text-gray-700">
+          <div className="w-8 shrink-0 text-right text-xs font-medium tabular-nums text-gray-700 dark:text-gray-300">
             {b.count}
           </div>
         </div>
       ))}
       {avgDays !== null && (
-        <div className="mt-3 border-t border-gray-100 pt-3">
+        <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-gray-500">Average LOS</span>
-            <span className="text-xl font-bold tabular-nums text-gray-900">
-              {avgDays} <span className="text-sm font-normal text-gray-400">days</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Average LOS</span>
+            <span className="text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+              {avgDays} <span className="text-sm font-normal text-gray-400 dark:text-gray-500">days</span>
             </span>
           </div>
         </div>
@@ -319,13 +319,13 @@ export function KpiCard({
   clickable?: boolean;
 }) {
   return (
-    <div className={`rounded-md border border-gray-200 bg-white p-4 shadow-sm ${clickable ? "cursor-pointer transition-all hover:border-indigo-300 hover:shadow-md" : ""}`}>
+    <div className={`rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm ${clickable ? "cursor-pointer transition-all hover:border-indigo-300 hover:shadow-md" : ""}`}>
       <div className="flex items-start justify-between">
         <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tint}`}>{icon}</span>
         {delta !== undefined && delta !== null && (
           <span
             className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
-              delta.positive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+              delta.positive ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300" : "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400"
             }`}
           >
             {delta.positive ? (
@@ -341,10 +341,10 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <p className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-gray-900">{value}</p>
-      <p className="mt-0.5 text-xs text-gray-500">{label}</p>
-      {sub && <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>}
-      {clickable && <p className="mt-2 text-[10px] text-gray-400">Click for details</p>}
+      <p className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-gray-900 dark:text-gray-100">{value}</p>
+      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">{sub}</p>}
+      {clickable && <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">Click for details</p>}
     </div>
   );
 }

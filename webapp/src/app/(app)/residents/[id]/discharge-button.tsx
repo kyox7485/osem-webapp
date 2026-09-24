@@ -30,7 +30,7 @@ export function DischargeButton({
   }
 
   const inputCls =
-    "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+    "w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
   return (
     <>
@@ -48,15 +48,15 @@ export function DischargeButton({
           onClick={() => !isPending && setOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0"
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 mb-4 sm:mb-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-semibold text-gray-900">{t("Discharge resident")}</h2>
-            <p className="mt-1 text-sm text-gray-500">{t("Complete the details below to record the discharge.")}</p>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("Discharge resident")}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("Complete the details below to record the discharge.")}</p>
 
             <form action={handleSubmit} className="mt-5 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t("Status")}</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t("Status")}</label>
                 <select name="status" defaultValue="DISCHARGED" className={inputCls}>
                   <option value="DISCHARGED">{t("DISCHARGED")}</option>
                   <option value="DECEASED">{t("DECEASED")}</option>
@@ -64,7 +64,7 @@ export function DischargeButton({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                   {t("Discharge date")} <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -76,7 +76,7 @@ export function DischargeButton({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                   {t("Recorded by")} <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -104,7 +104,7 @@ export function DischargeButton({
               </div>
 
               {error && (
-                <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">
+                <p className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-600 dark:text-red-300">
                   {error}
                 </p>
               )}
@@ -129,7 +129,7 @@ export function DischargeButton({
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={isPending}
-                  className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  className="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50 transition-colors"
                 >
                   {t("Cancel")}
                 </button>

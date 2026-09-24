@@ -101,8 +101,8 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">{title}</h2>
+    <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">{title}</h2>
       <dl className="space-y-2">{children}</dl>
     </div>
   );
@@ -121,8 +121,8 @@ function Row({
 }) {
   return (
     <div>
-      <dt className="text-xs text-gray-400">{label}</dt>
-      <dd className={`text-sm text-gray-800 ${multiline ? "whitespace-pre-wrap" : ""}`}>
+      <dt className="text-xs text-gray-400 dark:text-gray-500">{label}</dt>
+      <dd className={`text-sm text-gray-800 dark:text-gray-200 ${multiline ? "whitespace-pre-wrap" : ""}`}>
         {value !== null && value !== undefined && value !== "" ? value : (empty ?? "--")}
       </dd>
     </div>

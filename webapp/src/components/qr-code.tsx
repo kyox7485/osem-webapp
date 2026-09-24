@@ -13,7 +13,7 @@ export function QrCode({ value, label, size = 104 }: QrCodeProps) {
     <div
       role="img"
       aria-label={label}
-      className="shrink-0 rounded-lg border border-gray-200 bg-white p-2"
+      className="shrink-0 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2"
     >
       <QRCodeSVG value={value} size={size} />
     </div>

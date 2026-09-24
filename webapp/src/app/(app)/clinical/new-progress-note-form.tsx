@@ -124,7 +124,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
   return (
     <div className="space-y-4" onChangeCapture={markDirty}>
       <div>
-        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t("Resident")} <span className="text-red-500">*</span>
         </label>
         <select
@@ -136,7 +136,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             setCreatedByOtherName("");
           }}
           required
-          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-full max-w-md rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option value="">{t("Select resident")}</option>
           {residents.map((r) => (
@@ -148,16 +148,16 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       </div>
 
       {residentId && dashboardLoading && (
-        <p className="text-sm text-gray-400">{t("Loading resident background...")}</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">{t("Loading resident background...")}</p>
       )}
 
       {residentId && dashboard && <ResidentDashboard {...dashboard} collapsible />}
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800">{error}</div>}
 
         <div>
-          <label htmlFor="progress-note" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="progress-note" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             {t("Progress Note")} <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -167,13 +167,13 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             required
             rows={4}
             placeholder={t("Patient progress, observations, and clinical notes...")}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4">
           <div>
-            <label htmlFor="physical-examination" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="physical-examination" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Physical Examination")}
             </label>
             <textarea
@@ -181,12 +181,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={physicalExamination}
               onChange={(e) => setPhysicalExamination(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="medical-plan" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="medical-plan" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Medical / Treatment Plan")}
             </label>
             <textarea
@@ -194,12 +194,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={medicalPlan}
               onChange={(e) => setMedicalPlan(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="nursing-plan" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="nursing-plan" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Nursing Plan")}
             </label>
             <textarea
@@ -207,12 +207,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={nursingPlan}
               onChange={(e) => setNursingPlan(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="feeding-plan" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="feeding-plan" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Feeding / Diet Plan")}
             </label>
             <textarea
@@ -220,12 +220,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={feedingPlan}
               onChange={(e) => setFeedingPlan(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="monitoring-plan" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="monitoring-plan" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Monitoring Plan")}
             </label>
             <textarea
@@ -233,12 +233,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={monitoringPlan}
               onChange={(e) => setMonitoringPlan(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="dressing-plan" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="dressing-plan" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Dressing Plan")}
             </label>
             <textarea
@@ -246,12 +246,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={dressingPlan}
               onChange={(e) => setDressingPlan(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="physio-plan" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="physio-plan" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Physio Plan")}
             </label>
             <textarea
@@ -259,12 +259,12 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
               value={physioPlan}
               onChange={(e) => setPhysioPlan(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="created-by" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="created-by" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Entered By")} <span className="text-red-500">*</span>
             </label>
             <StaffPickerWithOther
@@ -285,7 +285,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
             type="button"
             onClick={resetForm}
             disabled={isSaving}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {t("Clear")}
           </button>

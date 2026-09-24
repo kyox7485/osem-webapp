@@ -46,13 +46,13 @@ function ExamGroup({
       // own state (e.g. collapsing Hip would also collapse Lower Limb and
       // Physical Examination above it).
       onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
-      className="group/exam rounded-md border border-gray-200"
+      className="group/exam rounded-md border border-gray-200 dark:border-gray-800"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 hover:bg-gray-50">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/60">
         <span className={labelClassName}>{t(label)}</span>
         <span className="flex items-center gap-2">
           {assessedCount > 0 && (
-            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+            <span className="rounded-full bg-indigo-100 dark:bg-indigo-950/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
               {assessedCount} {t("assessed")}
             </span>
           )}
@@ -61,13 +61,13 @@ function ExamGroup({
             height="14"
             viewBox="0 0 16 16"
             fill="none"
-            className="text-gray-400 transition-transform group-open/exam:rotate-90"
+            className="text-gray-400 dark:text-gray-500 transition-transform group-open/exam:rotate-90"
           >
             <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
       </summary>
-      <div className="space-y-2 border-t border-gray-100 p-3">{children}</div>
+      <div className="space-y-2 border-t border-gray-100 dark:border-gray-800 p-3">{children}</div>
     </details>
   );
 }
@@ -112,7 +112,7 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
 
   return (
     <CollapsibleCard title={t("Physical Examination")} badge={assessedTotal > 0 ? `${assessedTotal} ${t("assessed")}` : null}>
-      <p className="mb-3 text-xs text-gray-400">
+      <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">
         {t('Power, Tone, ROM and Reflexes -- leave any field "Not assessed" where not applicable. Tap a body part to record it.')}
       </p>
 
@@ -122,24 +122,24 @@ export function ExaminationSection({ examRows, setExamRows }: Props) {
             key={limb}
             label={EXAM_STRUCTURE[limb].label}
             rows={limbRows(limb)}
-            labelClassName="text-sm font-semibold text-gray-800"
+            labelClassName="text-sm font-semibold text-gray-800 dark:text-gray-200"
           >
             {Object.entries(EXAM_STRUCTURE[limb].regions as Record<string, readonly string[]>).map(([region, movements]) => (
               <ExamGroup
                 key={region}
                 label={region}
                 rows={regionRows(limb, region)}
-                labelClassName="text-xs font-semibold uppercase tracking-wide text-gray-500"
+                labelClassName="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
               >
                 {movements.map((movement) => (
-                  <div key={movement} className="rounded-md border border-gray-100 p-2">
-                    <p className="mb-1.5 text-sm font-medium text-gray-700">{t(movement)}</p>
+                  <div key={movement} className="rounded-md border border-gray-100 dark:border-gray-800 p-2">
+                    <p className="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">{t(movement)}</p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {(["R", "L"] as const).map((side) => {
                         const cell = findCell(limb, region, movement, side);
                         return (
-                          <div key={side} className="rounded-md bg-gray-50 p-2">
-                            <p className="mb-1 text-xs font-semibold text-gray-500">{side === "R" ? t("Right") : t("Left")}</p>
+                          <div key={side} className="rounded-md bg-gray-50 dark:bg-gray-800/60 p-2">
+                            <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{side === "R" ? t("Right") : t("Left")}</p>
                             <div className="grid grid-cols-2 gap-2">
                               <ScoreSelect
                                 label={t("Power")}

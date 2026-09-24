@@ -230,7 +230,7 @@ async function AllPatientsReview({
 
   return (
     <>
-      {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
+      {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error.message}</p>}
       <PhysioAssessmentTabs
         residentId={null}
         residentName={null}
@@ -285,7 +285,7 @@ async function PhysiotherapyContent({
 
   if (!resident) {
     return (
-      <p className="text-sm text-red-600">
+      <p className="text-sm text-red-600 dark:text-red-400">
         {careSetting === "OP" ? t("Patient") : t("Resident")} {t("not found.")}
       </p>
     );
@@ -294,7 +294,7 @@ async function PhysiotherapyContent({
   if (account.rights !== "ADMIN") {
     const allowedBranchIds = careSetting === "OP" ? [account.branch_id] : await getPhysioIpBranchIds(account);
     if (!allowedBranchIds.includes(resident.branch_id)) {
-      return <p className="text-sm text-red-600">{t("Access denied.")}</p>;
+      return <p className="text-sm text-red-600 dark:text-red-400">{t("Access denied.")}</p>;
     }
   }
 
@@ -384,7 +384,7 @@ async function PhysiotherapyContent({
 
   return (
     <>
-      {assessmentsError && <p className="mb-4 text-sm text-red-600">{assessmentsError.message}</p>}
+      {assessmentsError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{assessmentsError.message}</p>}
 
       <PhysioAssessmentTabs
         residentId={resident.id}

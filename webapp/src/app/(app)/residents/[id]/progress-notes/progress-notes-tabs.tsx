@@ -76,32 +76,32 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
         <>
           <ResidentDashboard {...dashboard} />
 
-          {notesError && <p className="mb-4 text-sm text-red-600">{notesError}</p>}
+          {notesError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{notesError}</p>}
 
           <div className="space-y-3">
             {notes.map((note) => (
-              <div key={note.id} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
+              <div key={note.id} className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+                <div className="mb-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                   <span>{formatDateTime(note.entry_timestamp)}</span>
                   <span>{note.authorName}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-gray-800">{note.progress_note}</p>
+                <p className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{note.progress_note}</p>
                 {note.medical_plan && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    <span className="font-medium text-gray-500">{t("Medical plan")}: </span>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium text-gray-500 dark:text-gray-400">{t("Medical plan")}: </span>
                     {note.medical_plan}
                   </p>
                 )}
                 {note.nursing_plan && (
-                  <p className="mt-1 text-sm text-gray-600">
-                    <span className="font-medium text-gray-500">{t("Nursing plan")}: </span>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium text-gray-500 dark:text-gray-400">{t("Nursing plan")}: </span>
                     {note.nursing_plan}
                   </p>
                 )}
               </div>
             ))}
             {notes.length === 0 && (
-              <p className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+              <p className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">
                 {t("No progress notes yet.")}
               </p>
             )}

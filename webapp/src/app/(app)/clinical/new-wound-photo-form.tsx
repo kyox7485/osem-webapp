@@ -303,7 +303,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   // Resident and Uploaded By are stacked in the same left-aligned column at
   // a matched width, rather than one full-width and one auto-width, so the
   // two dropdowns visually line up as one field group.
-  const fieldClass = "w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 sm:max-w-xs";
+  const fieldClass = "w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm disabled:bg-gray-100 sm:max-w-xs";
   // Both bottom-of-page CTAs share this size/weight so they read as an
   // equally prominent pair (≥44px tall touch target either way) -- "Finish
   // Session" is filled/primary since it's the action that actually closes
@@ -312,7 +312,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   const finishButtonClass =
     "flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50";
   const uploadMoreButtonClass =
-    "flex items-center justify-center gap-2 rounded-lg border-2 border-indigo-600 bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50";
+    "flex items-center justify-center gap-2 rounded-lg border-2 border-indigo-600 bg-white dark:bg-gray-900 px-6 py-3.5 text-base font-semibold text-indigo-700 dark:text-indigo-300 shadow-sm hover:bg-indigo-50";
 
   function goToDiagram() {
     if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
@@ -326,7 +326,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t("Resident")} <span className="text-red-500">*</span>
         </label>
         <select value={residentId} disabled={residentLocked} onChange={(e) => setResidentId(e.target.value)} className={fieldClass}>
@@ -340,7 +340,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t("Uploaded by")} <span className="text-red-500">*</span>
         </label>
         <div className="sm:max-w-xs">
@@ -356,10 +356,10 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {!residentId ? (
-        <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+        <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">
           {t("Select a resident to start a wound photo session.")}
         </div>
       ) : view === "diagram" ? (
@@ -384,7 +384,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
                     setDescription("");
                     setView("part");
                   }}
-                  className="rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:border-indigo-400"
+                  className="rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:border-indigo-400"
                 >
                   {t(part.label)}
                   {photoCountByLabel[part.label] ? ` (${photoCountByLabel[part.label]})` : ""}
@@ -394,7 +394,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
           )}
 
           {photos.length > 0 && (
-            <div className="flex justify-center border-t border-gray-100 pt-4">
+            <div className="flex justify-center border-t border-gray-100 dark:border-gray-800 pt-4">
               <button type="button" onClick={handleFinish} disabled={finishBusy} className={finishButtonClass}>
                 {waitingForUploads && <Loader2 size={20} className="animate-spin" />}
                 {waitingForUploads ? t("Waiting for uploads to finish...") : finishing ? t("Finishing...") : t("Finish Session")}
@@ -404,7 +404,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         </div>
       ) : (
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-gray-900">{t(activePart!.label)}</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t(activePart!.label)}</h3>
 
           <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
 
@@ -412,7 +412,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
             <button
               type="button"
               onClick={openCamera}
-              className="flex w-full items-center justify-center gap-2 rounded-md border-2 border-dashed border-indigo-300 bg-indigo-50 py-8 text-indigo-700 hover:bg-indigo-100"
+              className="flex w-full items-center justify-center gap-2 rounded-md border-2 border-dashed border-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 py-8 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100"
             >
               <Camera size={20} /> {photosForActivePart.length > 0 ? t("Add another photo") : t("Take Photo")}
             </button>
@@ -421,9 +421,9 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
           {stage === "previewing" && rawPreviewUrl && (
             <div className="space-y-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={rawPreviewUrl} alt={t("Photo preview")} className="mx-auto max-h-96 rounded-md border border-gray-200" />
+              <img src={rawPreviewUrl} alt={t("Photo preview")} className="mx-auto max-h-96 rounded-md border border-gray-200 dark:border-gray-800" />
               <div className="flex justify-center gap-3">
-                <button type="button" onClick={handleRetake} className="flex items-center gap-1 rounded-md border border-gray-300 px-4 py-2 text-sm">
+                <button type="button" onClick={handleRetake} className="flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm">
                   <RotateCcw size={16} /> {t("Retake")}
                 </button>
                 <button type="button" onClick={handleUsePhoto} className="flex items-center gap-1 rounded-md bg-indigo-600 px-4 py-2 text-sm text-white">
@@ -433,26 +433,26 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
             </div>
           )}
 
-          {stage === "compressing" && <p className="text-center text-sm text-gray-400">{t("Processing photo...")}</p>}
+          {stage === "compressing" && <p className="text-center text-sm text-gray-400 dark:text-gray-500">{t("Processing photo...")}</p>}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {t("Description")} <span className="text-gray-400">({t("optional")})</span>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t("Description")} <span className="text-gray-400 dark:text-gray-500">({t("optional")})</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm"
               placeholder={t("e.g. 3 x 2 cm, mild redness")}
             />
-            <p className="mt-1 text-xs text-gray-400">{t("Applies to the next photo you take here.")}</p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{t("Applies to the next photo you take here.")}</p>
           </div>
 
           {photosForActivePart.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 dark:border-gray-800 pt-4 sm:grid-cols-3">
               {photosForActivePart.map((p) => (
-                <div key={p.clientId} className="relative overflow-hidden rounded-md border border-gray-200">
+                <div key={p.clientId} className="relative overflow-hidden rounded-md border border-gray-200 dark:border-gray-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.previewUrl} alt={p.bodyPartLabel} className="h-32 w-full object-cover" />
                   {p.status === "saved" && (
@@ -489,7 +489,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
             </div>
           )}
 
-          <div className="flex flex-col items-center justify-center gap-3 border-t border-gray-100 pt-6 sm:flex-row">
+          <div className="flex flex-col items-center justify-center gap-3 border-t border-gray-100 dark:border-gray-800 pt-6 sm:flex-row">
             <button type="button" onClick={goToDiagram} className={uploadMoreButtonClass}>
               <ChevronLeft size={20} /> {t("Upload More Body Parts...")}
             </button>

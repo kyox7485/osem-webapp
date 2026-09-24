@@ -30,12 +30,12 @@ type Props = {
 };
 
 const fieldCls =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 // Selects get a bit more left padding than plain text inputs -- the native
 // dropdown arrow eats into the right side visually, so the option text
 // needs its own breathing room from the left border to read cleanly.
 const selectCls =
-  "w-full rounded-md border border-gray-300 pl-4 pr-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "w-full rounded-md border border-gray-300 dark:border-gray-700 pl-4 pr-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 const emptyMeal: Meal = {
   mealTypeId: "",
   mealTypeOther: "",
@@ -231,7 +231,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   return (
     <div className="space-y-4" onChangeCapture={markDirty}>
       <div>
-        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t("Resident")} <span className="text-red-500">*</span>
         </label>
         <select
@@ -255,10 +255,10 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+        {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800">{error}</div>}
 
         <Section title={t("Entry")}>
-          <label className="block text-sm text-gray-700">
+          <label className="block text-sm text-gray-700 dark:text-gray-300">
             {t("Date & time")}
             <input
               type="datetime-local"
@@ -272,7 +272,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         <Section title={t("Feeding")}>
           <div>
-            <label className="mb-1 block text-sm text-gray-700">{t("Type")}</label>
+            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">{t("Type")}</label>
             <select
               value={tubeFeeding}
               onChange={(e) => setTubeFeeding(e.target.value as typeof tubeFeeding)}
@@ -285,7 +285,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           </div>
 
           <div className="mt-3 space-y-2">
-            <p className="text-sm font-medium text-gray-700">{t("Meals")}</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("Meals")}</p>
             {meals.map((meal, i) => (
               <div key={i} className="flex flex-wrap items-start gap-2">
                 {tubeFeeding === "Tube Feeding" ? (
@@ -372,7 +372,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                   <button
                     type="button"
                     onClick={() => setMeals((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="mt-2 text-xs text-gray-400 hover:text-red-600"
+                    className="mt-2 text-xs text-gray-400 dark:text-gray-500 hover:text-red-600"
                   >
                     {t("Remove")}
                   </button>
@@ -382,7 +382,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             <button
               type="button"
               onClick={() => setMeals((prev) => [...prev, { ...emptyMeal, feedingVolume: defaultFeedingVolume ?? "" }])}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800"
             >
               + {t("Add meal")}
             </button>
@@ -404,7 +404,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
           <Section title={t("Elimination")}>
             <div className="space-y-3">
               {eliminationEpisodes.map((episode, i) => (
-                <div key={i} className="rounded-md border border-gray-200 p-3">
+                <div key={i} className="rounded-md border border-gray-200 dark:border-gray-800 p-3">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <CheckboxGroup
                       label={t("Bowel output")}
@@ -414,7 +414,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                       exclusiveByGroup
                       clearAllOptionId={noneBowelOutputId !== undefined ? Number(noneBowelOutputId) : undefined}
                     />
-                    <label className="block text-sm text-gray-700">
+                    <label className="block text-sm text-gray-700 dark:text-gray-300">
                       {t("Pass urine")}
                       <select
                         value={episode.passUrineId}
@@ -434,7 +434,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                     <button
                       type="button"
                       onClick={() => setEliminationEpisodes((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="mt-2 text-xs text-gray-400 hover:text-red-600"
+                      className="mt-2 text-xs text-gray-400 dark:text-gray-500 hover:text-red-600"
                     >
                       {t("Remove")}
                     </button>
@@ -444,21 +444,21 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
               <button
                 type="button"
                 onClick={() => setEliminationEpisodes((prev) => [...prev, { ...emptyEliminationEpisode }])}
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800"
               >
                 + {t("Add diaper check")}
               </button>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <label className="block text-sm text-gray-700">
+              <label className="block text-sm text-gray-700 dark:text-gray-300">
                 {t("Fluid input (ml)")}
                 <input type="number" step="1" value={fluidInput} onChange={(e) => setFluidInput(e.target.value)} className={`mt-1 ${fieldCls}`} />
               </label>
-              <label className="block text-sm text-gray-700">
+              <label className="block text-sm text-gray-700 dark:text-gray-300">
                 {t("Fluid output (ml)")}
                 <input type="number" step="1" value={fluidOutput} onChange={(e) => setFluidOutput(e.target.value)} className={`mt-1 ${fieldCls}`} />
               </label>
-              <label className="block text-sm text-gray-700">
+              <label className="block text-sm text-gray-700 dark:text-gray-300">
                 {t("CBD drainage")}
                 <input type="text" value={cbdDrainage} onChange={(e) => setCbdDrainage(e.target.value)} className={`mt-1 ${fieldCls}`} />
               </label>
@@ -511,7 +511,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
                 />
               )}
             </div>
-            <label className="block text-sm text-gray-700">
+            <label className="block text-sm text-gray-700 dark:text-gray-300">
               <span className="font-bold">{t("Disturbance level")}</span>
               <select value={disturbanceLevelId} onChange={(e) => setDisturbanceLevelId(e.target.value)} className={`mt-2 max-w-xs ${selectCls}`}>
                 <option value="">--</option>
@@ -527,11 +527,11 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         <Section title={t("Notes")} collapsible>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block text-sm text-gray-700">
+            <label className="block text-sm text-gray-700 dark:text-gray-300">
               {t("Intervention")}
               <textarea value={intervention} onChange={(e) => setIntervention(e.target.value)} rows={3} className={`mt-1 ${fieldCls}`} />
             </label>
-            <label className="block text-sm text-gray-700">
+            <label className="block text-sm text-gray-700 dark:text-gray-300">
               {t("Doctor's plan")}
               <textarea value={doctorsPlan} onChange={(e) => setDoctorsPlan(e.target.value)} rows={3} className={`mt-1 ${fieldCls}`} />
             </label>
@@ -540,7 +540,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
         <Section title={t("Attribution")}>
           <div className="max-w-md">
-            <label className="mb-1 block text-sm text-gray-700">
+            <label className="mb-1 block text-sm text-gray-700 dark:text-gray-300">
               {t("Entered by")} <span className="text-red-500">*</span>
             </label>
             <StaffPickerWithOther
@@ -560,7 +560,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
             type="button"
             onClick={resetForm}
             disabled={isSaving}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50"
           >
             {t("Clear")}
           </button>
@@ -582,26 +582,26 @@ function Section({ title, collapsible, children }: { title: string; collapsible?
 
   if (!collapsible) {
     return (
-      <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-bold text-gray-900">{title}</h3>
+      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">{title}</h3>
         {children}
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-1.5 text-left">
         <svg
           width="14"
           height="14"
           viewBox="0 0 16 16"
           fill="none"
-          className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`text-gray-400 dark:text-gray-500 transition-transform ${open ? "rotate-90" : ""}`}
         >
           <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{title}</h3>
       </button>
       {open && <div className="mt-3">{children}</div>}
     </div>
@@ -615,14 +615,14 @@ function CollapsibleGroup({ title, children }: { title: string; children: React.
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-indigo-700"
+        className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700"
       >
         <svg
           width="12"
           height="12"
           viewBox="0 0 16 16"
           fill="none"
-          className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`text-gray-400 dark:text-gray-500 transition-transform ${open ? "rotate-90" : ""}`}
         >
           <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -680,17 +680,17 @@ function CheckboxGroup({
 
   return (
     <div>
-      {label && <p className={`mb-1 text-sm text-gray-700 ${boldLabel ? "font-bold" : "font-medium"}`}>{label}</p>}
+      {label && <p className={`mb-1 text-sm text-gray-700 dark:text-gray-300 ${boldLabel ? "font-bold" : "font-medium"}`}>{label}</p>}
       <div className="flex flex-wrap gap-x-3 gap-y-1">
         {options.map((o) => {
           const id = Number(o.id);
           return (
-            <label key={o.id} className="flex items-center gap-1.5 text-sm text-gray-700">
+            <label key={o.id} className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={value.includes(id)}
                 onChange={() => toggle(id)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-700 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
               />
               {o.label}
             </label>

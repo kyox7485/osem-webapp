@@ -83,17 +83,17 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <div>
-            <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Resident")}
             </label>
             <select
               id="resident-filter"
               value={currentResident}
               onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               <option value="">{t("All residents")}</option>
               {residents.map((r) => (
@@ -105,7 +105,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
           </div>
 
           <div>
-            <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("Start date")}
             </label>
             <input
@@ -113,12 +113,12 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
               id="start-date"
               value={currentStart}
               onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t("End date")}
             </label>
             <input
@@ -126,7 +126,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
               id="end-date"
               value={currentEnd}
               onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
@@ -143,14 +143,14 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                 href={`/api/reports/vital-signs?${pdfParams.toString()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="flex w-full items-center justify-center rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
               >
                 {t("Download PDF")}
               </a>
             ) : (
               <span
                 title={t("Select a resident to download the PDF report")}
-                className="flex w-full cursor-not-allowed items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400"
+                className="flex w-full cursor-not-allowed items-center justify-center rounded-md border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2 text-sm font-medium text-gray-400 dark:text-gray-500"
               >
                 {t("Download PDF")}
               </span>
@@ -160,9 +160,9 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
       </div>
 
       {/* Error */}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <div className="flex items-center gap-4 text-xs text-gray-500">
+      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span className="flex items-center gap-1">
           <span className="inline-block h-3 w-3 rounded-sm bg-red-100" /> {t("Critical reading")}
         </span>
@@ -172,29 +172,29 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50">
+            <thead className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-900"></th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Date/Time")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Resident")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Systolic BP")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Diastolic BP")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Heart Rate")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Temp (°C)")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("SpO2")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("DXT")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Insulin Adj.")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Advanced Obs.")}</th>
-                <th className="px-4 py-3 font-medium text-gray-900">{t("Reviewed By")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100"></th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Date/Time")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Resident")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Systolic BP")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Diastolic BP")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Heart Rate")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Temp (°C)")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("SpO2")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("DXT")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Insulin Adj.")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Advanced Obs.")}</th>
+                <th className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{t("Reviewed By")}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {vitals.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={12} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     {t("No vital signs recorded yet.")}
                   </td>
                 </tr>
@@ -207,8 +207,8 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                         {rowSeverity === "critical" && <span aria-label="critical">🔴</span>}
                         {rowSeverity === "warning" && <span aria-label="warning">🟠</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-900">{formatDateTime(v.entry_timestamp)}</td>
-                      <td className="px-4 py-3 text-gray-900">{v.tbl_residents?.resident_name || "--"}</td>
+                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{formatDateTime(v.entry_timestamp)}</td>
+                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{v.tbl_residents?.resident_name || "--"}</td>
                       <td className={`px-4 py-3 ${vitalFlagClass(flagSystolic(v.systolic_bp))}`}>
                         {v.systolic_bp ?? "--"}
                       </td>
@@ -224,21 +224,21 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                       <td className={`px-4 py-3 ${vitalFlagClass(flagSpo2(v.spo2))}`}>
                         {v.spo2 ?? "--"}
                         {v.spo2_condition && (
-                          <span className="ml-1 text-xs text-gray-500">({v.spo2_condition})</span>
+                          <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({v.spo2_condition})</span>
                         )}
                       </td>
                       <td className={`px-4 py-3 ${vitalFlagClass(flagDxt(v.dxt))}`}>
                         {v.dxt ?? "--"}
-                        {v.dxt_remark && <span className="ml-1 text-xs text-gray-500">({v.dxt_remark})</span>}
+                        {v.dxt_remark && <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({v.dxt_remark})</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-800">{v.insulin_adjustment || "--"}</td>
-                      <td className="px-4 py-3 text-gray-800">
+                      <td className="px-4 py-3 text-gray-800 dark:text-gray-200">{v.insulin_adjustment || "--"}</td>
+                      <td className="px-4 py-3 text-gray-800 dark:text-gray-200">
                         {v.respiration_rate !== null && <span className="mr-1">RR{v.respiration_rate}</span>}
                         {v.gcs_label && <span className="mr-1">{v.gcs_label}</span>}
                         {v.avpu_label && <span>{v.avpu_label}</span>}
                         {v.respiration_rate === null && !v.gcs_label && !v.avpu_label && "--"}
                       </td>
-                      <td className="px-4 py-3 text-gray-800">{v.tbl_staff?.staff_name || v.reviewed_by_other || "--"}</td>
+                      <td className="px-4 py-3 text-gray-800 dark:text-gray-200">{v.tbl_staff?.staff_name || v.reviewed_by_other || "--"}</td>
                     </tr>
                   );
                 })
