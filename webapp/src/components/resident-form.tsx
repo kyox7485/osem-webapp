@@ -347,6 +347,14 @@ export function ResidentForm({
     parsedAssessment ?? EMPTY_ASSESSMENT,
   );
 
+  // Arrival vital signs (new-resident mode only — not shown on edit)
+  const [arrivalSystolic, setArrivalSystolic] = useState("");
+  const [arrivalDiastolic, setArrivalDiastolic] = useState("");
+  const [arrivalHr, setArrivalHr] = useState("");
+  const [arrivalTemp, setArrivalTemp] = useState("");
+  const [arrivalSpo2, setArrivalSpo2] = useState("");
+  const [arrivalDxt, setArrivalDxt] = useState("");
+
   // Auto-derive age from Malaysian IC
   useEffect(() => {
     if (malaysiaId === undefined || String(malaysiaId) !== nationalityId) return;
@@ -1032,6 +1040,106 @@ export function ResidentForm({
               </>
             )}
           </Field>
+
+          {/* Arrival Vital Signs — new-resident only */}
+          {!resident && (
+            <Field label={t("Arrival Vital Signs")} full>
+              <input type="hidden" name="arrival_systolic_bp" value={arrivalSystolic} />
+              <input type="hidden" name="arrival_diastolic_bp" value={arrivalDiastolic} />
+              <input type="hidden" name="arrival_heart_rate" value={arrivalHr} />
+              <input type="hidden" name="arrival_temperature" value={arrivalTemp} />
+              <input type="hidden" name="arrival_spo2" value={arrivalSpo2} />
+              <input type="hidden" name="arrival_dxt" value={arrivalDxt} />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    {t("Systolic BP")} <span className="text-gray-400">(mmHg)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={arrivalSystolic}
+                    onChange={(e) => { markDirty(); setArrivalSystolic(e.target.value); }}
+                    step="1"
+                    min="0"
+                    placeholder="e.g. 120"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    {t("Diastolic BP")} <span className="text-gray-400">(mmHg)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={arrivalDiastolic}
+                    onChange={(e) => { markDirty(); setArrivalDiastolic(e.target.value); }}
+                    step="1"
+                    min="0"
+                    placeholder="e.g. 80"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    {t("HR")} <span className="text-gray-400">(bpm)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={arrivalHr}
+                    onChange={(e) => { markDirty(); setArrivalHr(e.target.value); }}
+                    step="1"
+                    min="0"
+                    placeholder="e.g. 72"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    {t("Temperature")} <span className="text-gray-400">(°C)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={arrivalTemp}
+                    onChange={(e) => { markDirty(); setArrivalTemp(e.target.value); }}
+                    step="0.1"
+                    min="0"
+                    placeholder="e.g. 36.8"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    {t("SpO2")} <span className="text-gray-400">(%)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={arrivalSpo2}
+                    onChange={(e) => { markDirty(); setArrivalSpo2(e.target.value); }}
+                    step="1"
+                    min="0"
+                    max="100"
+                    placeholder="e.g. 98"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    {t("DXT")} <span className="text-gray-400">(mmol/L)</span>
+                    <span className="ml-1 text-gray-400 font-normal text-xs">{t("optional")}</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={arrivalDxt}
+                    onChange={(e) => { markDirty(); setArrivalDxt(e.target.value); }}
+                    step="0.1"
+                    min="0"
+                    placeholder="e.g. 5.5"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            </Field>
+          )}
 
           {/* TCA notes */}
           <Field label={t("TCA notes")} full>

@@ -16,6 +16,11 @@ function optionalInt(value: FormDataEntryValue | null): number | null {
   return s ? parseInt(s, 10) : null;
 }
 
+function optionalFloat(value: FormDataEntryValue | null): number | null {
+  const s = optional(value);
+  return s ? parseFloat(s) : null;
+}
+
 function buildResidentPayload(formData: FormData) {
   return {
     branch_id: optionalInt(formData.get("branch_id")),
@@ -100,6 +105,29 @@ export async function createResident(formData: FormData) {
       remark: diagnosis_option_id === othersId ? othersRemark ?? null : null,
     }));
     await supabase.from("tbl_resident_diagnoses").insert(diagnosisRows);
+  }
+
+  // Insert arrival vital signs if any field was provided
+  const arrivalSystolic = optionalFloat(formData.get("arrival_systolic_bp"));
+  const arrivalDiastolic = optionalFloat(formData.get("arrival_diastolic_bp"));
+  const arrivalHr = optionalFloat(formData.get("arrival_heart_rate"));
+  const arrivalTemp = optionalFloat(formData.get("arrival_temperature"));
+  const arrivalSpo2 = optionalFloat(formData.get("arrival_spo2"));
+  const arrivalDxt = optionalFloat(formData.get("arrival_dxt"));
+
+  if (arrivalSystolic !== null || arrivalDiastolic !== null || arrivalHr !== null || arrivalTemp !== null || arrivalSpo2 !== null || arrivalDxt !== null) {
+    await supabase.from("tbl_vital").insert({
+      branch_id: payload.branch_id,
+      resident_id: data.id,
+      systolic_bp: arrivalSystolic,
+      diastolic_bp: arrivalDiastolic,
+      heart_rate: arrivalHr,
+      temperature: arrivalTemp,
+      spo2: arrivalSpo2,
+      dxt: arrivalDxt,
+      reviewed_by: payload.reviewed_by ?? null,
+      reviewed_by_other: payload.reviewed_by_other ?? null,
+    });
   }
 
   // Send Telegram notification
