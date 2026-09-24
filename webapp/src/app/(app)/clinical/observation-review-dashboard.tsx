@@ -131,15 +131,15 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
   return (
     <div className="space-y-4">
       {/* Date filter */}
-      <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+      <div className="rounded-md border border-line bg-surface p-4 shadow-sm space-y-3">
         <div>
-          <p className="mb-1 text-sm font-medium text-gray-700">{t("Period")}</p>
+          <p className="mb-1 text-sm font-medium text-fg-secondary">{t("Period")}</p>
           <div className="flex flex-wrap gap-1">
             <button
               type="button"
               onClick={() => applyRange(3)}
               className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                days === 3 && !isCustom && !showCustom ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
+                days === 3 && !isCustom && !showCustom ? "border-indigo-600 bg-indigo-600 text-white" : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-700 dark:hover:text-indigo-300"
               }`}
             >
               3 {t("Days")}
@@ -148,7 +148,7 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
               type="button"
               onClick={() => applyRange(7)}
               className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                days === 7 && !isCustom && !showCustom ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
+                days === 7 && !isCustom && !showCustom ? "border-indigo-600 bg-indigo-600 text-white" : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-700 dark:hover:text-indigo-300"
               }`}
             >
               7 {t("Days")}
@@ -161,7 +161,7 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
                 setCustomTo(currentEnd || todayMYT());
               }}
               className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                isCustom || showCustom ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
+                isCustom || showCustom ? "border-indigo-600 bg-indigo-600 text-white" : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-700 dark:hover:text-indigo-300"
               }`}
             >
               {t("Custom")}
@@ -172,12 +172,12 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
         {showCustom && (
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">{t("From")}</label>
-              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              <label className="mb-1 block text-xs font-medium text-fg-muted">{t("From")}</label>
+              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">{t("To")}</label>
-              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              <label className="mb-1 block text-xs font-medium text-fg-muted">{t("To")}</label>
+              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
             <button
               type="button"
@@ -191,14 +191,14 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <div className="rounded-md border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-900">
+      <div className="rounded-md border border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/40 px-4 py-3 text-sm font-medium text-indigo-900 dark:text-indigo-200">
         {activeEpisodes.length} {t("residents currently under observation")}
       </div>
 
       {activeEpisodes.length === 0 ? (
-        <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+        <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
           {t("No residents are currently under observation.")}
         </div>
       ) : (
@@ -224,25 +224,25 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
             }
 
             return (
-              <div key={episode.id} className="rounded-md border border-gray-200 bg-white shadow-sm">
+              <div key={episode.id} className="rounded-md border border-line bg-surface shadow-sm">
                 <div className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="font-bold text-gray-900">{residentName}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-bold text-fg">{residentName}</p>
+                      <p className="text-xs text-fg-subtle">
                         {t("Under observation for")} {formatDuration(episode.started_at, t)} · {t("started by")} {startedBy}
                       </p>
                     </div>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        hasReportToday ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                        hasReportToday ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
                       }`}
                     >
                       {hasReportToday ? t("Today's report done") : t("No report today yet")}
                     </span>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-subtle">
                     <span>{residentEntries.length} {t("reports in period")}</span>
                     {latest && (
                       <span>
@@ -252,19 +252,19 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
                   </div>
 
                   {!latest ? (
-                    <p className="mt-3 text-sm text-gray-400">{t("No observation chart entries in this period.")}</p>
+                    <p className="mt-3 text-sm text-fg-faint">{t("No observation chart entries in this period.")}</p>
                   ) : (
-                    <div className="mt-3 space-y-1 border-t border-gray-100 pt-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <div className="mt-3 space-y-1 border-t border-line-subtle pt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-fg-faint">
                         {previous ? t("Latest vs previous entry") : t("Latest entry")}
                       </p>
-                      <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-sm text-gray-700 sm:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-sm text-fg-secondary sm:grid-cols-2">
                         {comparisonRows.map((row) => (
                           <div key={row.label} className="flex justify-between gap-2">
-                            <span className="text-gray-400">{t(row.label)}</span>
+                            <span className="text-fg-faint">{t(row.label)}</span>
                             <span>
                               {row.previous != null && row.previous !== row.latest && (
-                                <span className="text-gray-400 line-through decoration-gray-300">{row.previous}</span>
+                                <span className="text-fg-faint line-through decoration-line-strong">{row.previous}</span>
                               )}{" "}
                               <span className="font-medium">{row.latest}</span>
                             </span>
@@ -278,7 +278,7 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
                     <button
                       type="button"
                       onClick={() => setExpandedResidentId(isExpanded ? null : episode.resident_id)}
-                      className="mt-3 flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800"
+                      className="mt-3 flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                     >
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       {t("Timeline")}
@@ -287,19 +287,19 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
                 </div>
 
                 {isExpanded && (
-                  <div className="space-y-3 border-t border-gray-100 bg-gray-50 p-4">
+                  <div className="space-y-3 border-t border-line-subtle bg-surface-muted p-4">
                     {[...timelineByDate.entries()].map(([dateKey, dayEntries]) => (
                       <div key={dateKey}>
-                        <p className="mb-1 text-xs font-semibold text-gray-500">{formatDate(dayEntries[0].entry_timestamp)}</p>
+                        <p className="mb-1 text-xs font-semibold text-fg-subtle">{formatDate(dayEntries[0].entry_timestamp)}</p>
                         <div className="space-y-2">
                           {dayEntries.map((e) => (
-                            <div key={e.id} className="rounded-md border border-gray-200 bg-white p-3 text-sm shadow-sm">
-                              <div className="mb-1 flex justify-between text-xs text-gray-400">
+                            <div key={e.id} className="rounded-md border border-line bg-surface p-3 text-sm shadow-sm">
+                              <div className="mb-1 flex justify-between text-xs text-fg-faint">
                                 <span>{formatDateTime(e.entry_timestamp)}</span>
                                 <span>{e.tbl_staff?.staff_name ?? e.created_by_other ?? "--"}</span>
                               </div>
-                              {e.active_issue && <p className="mb-1 text-sm font-medium text-amber-700">⚠️ {e.active_issue}</p>}
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-gray-700 sm:grid-cols-3">
+                              {e.active_issue && <p className="mb-1 text-sm font-medium text-amber-700 dark:text-amber-300">⚠️ {e.active_issue}</p>}
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-fg-secondary sm:grid-cols-3">
                                 <span>BP: {val(e.systolic_bp) ?? "--"}/{val(e.diastolic_bp) ?? "--"}</span>
                                 <span>HR: {val(e.heart_rate) ?? "--"}</span>
                                 <span>Temp: {val(e.temperature) ?? "--"}°C</span>
@@ -321,29 +321,29 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
       )}
 
       {/* Completed observations */}
-      <div className="rounded-md border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-md border border-line bg-surface shadow-sm">
         <button
           type="button"
           onClick={() => setShowCompleted((v) => !v)}
-          className="flex w-full items-center gap-1 px-4 py-3 text-sm font-medium text-gray-700"
+          className="flex w-full items-center gap-1 px-4 py-3 text-sm font-medium text-fg-secondary"
         >
           {showCompleted ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           {t("Completed Observations")} ({completedEpisodes.length})
         </button>
         {showCompleted && (
-          <div className="space-y-2 border-t border-gray-100 p-4">
+          <div className="space-y-2 border-t border-line-subtle p-4">
             {completedEpisodes.length === 0 ? (
-              <p className="text-sm text-gray-400">{t("No completed observation episodes.")}</p>
+              <p className="text-sm text-fg-faint">{t("No completed observation episodes.")}</p>
             ) : (
               completedEpisodes.map((ep) => (
-                <div key={ep.id} className="rounded-md border border-gray-200 p-3 text-sm">
+                <div key={ep.id} className="rounded-md border border-line p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium text-gray-900">{ep.tbl_residents?.resident_name ?? "--"}</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="font-medium text-fg">{ep.tbl_residents?.resident_name ?? "--"}</span>
+                    <span className="text-xs text-fg-subtle">
                       {formatDate(ep.started_at)} → {ep.ended_at ? formatDate(ep.ended_at) : "--"}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-fg-subtle">
                     {t("Ended reason")}: {ep.end_reason ?? "--"} · {t("ended by")} {ep.ender?.staff_name ?? ep.ended_by_other ?? "--"}
                   </p>
                 </div>

@@ -93,12 +93,12 @@ export default async function ResidentsPage({
         </NavButton>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error.message}</p>}
+      {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error.message}</p>}
 
       <FilterPendingProvider>
-        <div className="overflow-x-auto rounded-md border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+            <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
               <tr>
                 <th className="px-4 py-2">
                   <ColumnFilter type="text" label={t("Name")} paramName="q" placeholder={t("Search by name...")} />
@@ -129,14 +129,14 @@ export default async function ResidentsPage({
                 <th className="px-4 py-2 text-right">{t("Observation")}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-line-subtle">
               {residents.map((r) => {
                 const branch = Array.isArray(r.tbl_branches) ? r.tbl_branches[0] : r.tbl_branches;
                 return (
-                  <ClickableRow key={r.id} href={`/residents/${r.id}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-900">{r.resident_name}</td>
-                    <td className="px-4 py-2 text-gray-600">{r.ic_number ?? "--"}</td>
-                    {admin && <td className="px-4 py-2 text-gray-600">{formatBranch(branch)}</td>}
+                  <ClickableRow key={r.id} href={`/residents/${r.id}`} className="hover:bg-hover">
+                    <td className="px-4 py-2 font-medium text-fg">{r.resident_name}</td>
+                    <td className="px-4 py-2 text-fg-muted">{r.ic_number ?? "--"}</td>
+                    {admin && <td className="px-4 py-2 text-fg-muted">{formatBranch(branch)}</td>}
                     <td className="px-4 py-2">
                       <StatusBadge status={r.status} label={t(r.status)} />
                     </td>
@@ -155,7 +155,7 @@ export default async function ResidentsPage({
               })}
               {residents.length === 0 && (
                 <tr>
-                  <td colSpan={admin ? 5 : 4} className="px-4 py-6 text-center text-gray-400">
+                  <td colSpan={admin ? 5 : 4} className="px-4 py-6 text-center text-fg-faint">
                     {t("No residents found.")}
                   </td>
                 </tr>
@@ -170,13 +170,13 @@ export default async function ResidentsPage({
 
 function StatusBadge({ status, label }: { status: string; label: string }) {
   const colors: Record<string, string> = {
-    ACTIVE: "bg-green-100 text-green-800",
-    DISCHARGED: "bg-gray-100 text-gray-700",
-    DECEASED: "bg-red-100 text-red-800",
-    "TRANSFERRED OUT": "bg-yellow-100 text-yellow-800",
+    ACTIVE: "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300",
+    DISCHARGED: "bg-surface-strong text-fg-secondary",
+    DECEASED: "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300",
+    "TRANSFERRED OUT": "bg-yellow-100 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300",
   };
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}>
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-surface-strong text-fg-secondary"}`}>
       {label}
     </span>
   );

@@ -6,7 +6,7 @@ import type { LookupOption } from "@/lib/types";
 export const OTHERS_SENTINEL = "__others__";
 
 const BASE_CLS =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100";
+  "w-full rounded-md border border-line-strong bg-input text-fg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong";
 
 type Props = {
   id?: string;

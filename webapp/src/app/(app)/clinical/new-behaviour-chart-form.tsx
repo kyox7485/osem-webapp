@@ -35,9 +35,9 @@ type Props = {
 };
 
 const inputCls =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100";
-const labelCls = "mb-1 block text-sm font-medium text-gray-700";
-const sectionCls = "rounded-md border border-gray-200 bg-white p-4 shadow-sm space-y-3";
+  "w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong";
+const labelCls = "mb-1 block text-sm font-medium text-fg-secondary";
+const sectionCls = "rounded-md border border-line bg-surface p-4 shadow-sm space-y-3";
 
 let uidCounter = 0;
 function newUid() { return `occ-${++uidCounter}`; }
@@ -62,7 +62,7 @@ function MultiChips({
           className={`rounded-full border px-3 py-1 text-sm transition-colors ${
             selected.includes(opt)
               ? "border-indigo-600 bg-indigo-600 text-white"
-              : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300"
+              : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700"
           }`}
         >
           {opt}
@@ -84,41 +84,41 @@ function OccurrenceRow({
   t: (s: string) => string;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-2 rounded bg-white border border-gray-200 px-3 py-2">
+    <div className="flex flex-wrap items-end gap-2 rounded bg-surface border border-line px-3 py-2">
       <div className="flex items-end gap-2 flex-1 min-w-0 flex-wrap">
         <div>
-          <label className="mb-0.5 block text-xs text-gray-500">{t("From")}</label>
+          <label className="mb-0.5 block text-xs text-fg-subtle">{t("From")}</label>
           <input
             type="time"
             value={occ.startTime}
             onChange={(e) => onChange("startTime", e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="rounded border border-line-strong px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-xs text-gray-500">{t("To")}</label>
+          <label className="mb-0.5 block text-xs text-fg-subtle">{t("To")}</label>
           <input
             type="time"
             value={occ.endTime}
             onChange={(e) => onChange("endTime", e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="rounded border border-line-strong px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
         <div className="flex-1 min-w-[120px]">
-          <label className="mb-0.5 block text-xs text-gray-500">{t("Note")} <span className="text-gray-400">({t("optional")})</span></label>
+          <label className="mb-0.5 block text-xs text-fg-subtle">{t("Note")} <span className="text-fg-faint">({t("optional")})</span></label>
           <input
             type="text"
             value={occ.note}
             onChange={(e) => onChange("note", e.target.value)}
             placeholder={t("Any note for this period")}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded border border-line-strong px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
       </div>
       <button
         type="button"
         onClick={onRemove}
-        className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+        className="rounded p-1 text-fg-faint hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
         aria-label="Remove this period"
       >
         <Trash2 className="h-4 w-4" />
@@ -148,13 +148,13 @@ function BehaviourTimingSection({
       {selected.map((behaviour) => {
         const occs = times[behaviour] ?? [];
         return (
-          <div key={behaviour} className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-2">
+          <div key={behaviour} className="rounded-md bg-surface-muted border border-line p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-              <span className="text-xs font-semibold text-gray-700">{behaviour}</span>
+              <Clock className="h-3.5 w-3.5 text-fg-faint shrink-0" />
+              <span className="text-xs font-semibold text-fg-secondary">{behaviour}</span>
             </div>
             {occs.length === 0 && (
-              <p className="text-xs text-gray-400 pl-5">{t("Time not specified")} — {t("add a period to record exact time")}</p>
+              <p className="text-xs text-fg-faint pl-5">{t("Time not specified")} — {t("add a period to record exact time")}</p>
             )}
             {occs.map((occ) => (
               <OccurrenceRow
@@ -168,7 +168,7 @@ function BehaviourTimingSection({
             <button
               type="button"
               onClick={() => onAddOccurrence(behaviour)}
-              className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 pl-5"
+              className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 pl-5"
             >
               <Plus className="h-3.5 w-3.5" />
               {occs.length === 0 ? t("Add a period") : t("Add another period")}
@@ -395,7 +395,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" onChangeCapture={markDirty}>
-      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300">{error}</div>}
 
       {/* Patient + Timestamp */}
       <div className={sectionCls}>
@@ -429,7 +429,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
       {/* Verbal Behavior */}
       <div className={sectionCls}>
-        <h3 className="text-sm font-bold text-gray-900">🗣️ {t("Verbal Behavior")}</h3>
+        <h3 className="text-sm font-bold text-fg">🗣️ {t("Verbal Behavior")}</h3>
         <div>
           <label className={labelCls}>{t("Select all that apply")}</label>
           <MultiChips
@@ -460,7 +460,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
       {/* Physical Behavior */}
       <div className={sectionCls}>
-        <h3 className="text-sm font-bold text-gray-900">✋ {t("Physical Behavior")}</h3>
+        <h3 className="text-sm font-bold text-fg">✋ {t("Physical Behavior")}</h3>
         <div>
           <label className={labelCls}>{t("Select all that apply")}</label>
           <MultiChips
@@ -481,7 +481,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
       {/* Emotion / Mood */}
       <div className={sectionCls}>
-        <h3 className="text-sm font-bold text-gray-900">😌 {t("Emotion / Mood")}</h3>
+        <h3 className="text-sm font-bold text-fg">😌 {t("Emotion / Mood")}</h3>
         <div>
           <label className={labelCls}>{t("Select all that apply")}</label>
           <MultiChips
@@ -502,7 +502,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
       {/* Rest & Restraint (observation-level, no timing) */}
       <div className={sectionCls}>
-        <h3 className="text-sm font-bold text-gray-900">🛌 {t("Rest & Restraint")}</h3>
+        <h3 className="text-sm font-bold text-fg">🛌 {t("Rest & Restraint")}</h3>
         <div>
           <label className={labelCls}>{t("Sleep / Nap")}</label>
           <div className="flex items-center gap-3">
@@ -510,20 +510,20 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
               type="time"
               value={sleepFrom}
               onChange={(e) => setSleepFrom(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
-            <span className="text-sm text-gray-500">{t("to")}</span>
+            <span className="text-sm text-fg-subtle">{t("to")}</span>
             <input
               type="time"
               value={sleepTo}
               onChange={(e) => setSleepTo(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
         </div>
         <div>
           <label className={labelCls}>
-            {t("Restraint")} <span className="text-xs font-normal text-gray-500">({t("select all that apply")})</span>
+            {t("Restraint")} <span className="text-xs font-normal text-fg-subtle">({t("select all that apply")})</span>
           </label>
           <MultiChips
             options={RESTRAINT_OPTIONS}
@@ -535,7 +535,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
 
       {/* Level of Disturbance (observation-level) */}
       <div className={sectionCls}>
-        <h3 className="text-sm font-bold text-gray-900">🤯 {t("Level of Disturbance")}</h3>
+        <h3 className="text-sm font-bold text-fg">🤯 {t("Level of Disturbance")}</h3>
         <select value={disturbanceLevel} onChange={(e) => setDisturbanceLevel(e.target.value)} className={inputCls}>
           <option value="">{t("Select level")}</option>
           {DISTURBANCE_OPTIONS.map((o) => (
@@ -569,7 +569,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
           type="button"
           onClick={resetForm}
           disabled={isPending}
-          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="rounded-md border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-fg-secondary hover:bg-hover disabled:opacity-50"
         >
           {t("Clear")}
         </button>

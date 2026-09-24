@@ -72,7 +72,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
     <div>
       <PageTitle title={t("Medical Progress Notes")} description={resident.resident_name} />
       <div className="mb-4">
-        <Link href={`/residents/${resident.id}`} className="text-sm text-gray-500 hover:underline">
+        <Link href={`/residents/${resident.id}`} className="text-sm text-fg-subtle hover:underline">
           &larr; {resident.resident_name}
         </Link>
       </div>

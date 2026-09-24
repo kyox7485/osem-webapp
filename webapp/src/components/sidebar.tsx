@@ -17,7 +17,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
-import { useTheme } from "@/components/theme-provider";
 
 const ICONS = { Users, Stethoscope, Activity, IdCard, ShieldCheck, Link2 } satisfies Record<string, LucideIcon>;
 
@@ -38,25 +37,6 @@ export type SidebarFooterInfo = {
 };
 
 const STORAGE_KEY = "osem_sidebar_collapsed";
-
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const labels = { light: "Light", dark: "Dark", system: "System" };
-  const cycle = () => {
-    setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
-  };
-  return (
-    <button
-      type="button"
-      onClick={cycle}
-      aria-label="Toggle theme"
-      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-    >
-      <span className="inline-block h-2 w-2 rounded-full bg-indigo-500" />
-      <span>{labels[theme]}</span>
-    </button>
-  );
-}
 
 export function Sidebar({
   items,
@@ -97,23 +77,27 @@ export function Sidebar({
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-gray-200 bg-white transition-[width] duration-200 dark:border-gray-800 dark:bg-[#0a0a0a] ${
+      className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 ${
         collapsed ? "w-[68px]" : "w-64"
       }`}
     >
       <div className={`relative flex flex-col items-center px-3 pt-4 pb-2 ${collapsed ? "gap-2" : ""}`}>
         {!collapsed && (
+          // logo-dark.png is logo.png with only the black wordmark inverted to
+          // white (brand colours untouched). Swapped in CSS, not JS, so the
+          // right one shows on first paint with no hydration flash.
           <Link href="/" aria-label={homeLabel} className="shrink-0">
-            <Image src="/logo.png" alt="" width={80} height={50} className="h-[70px] w-auto" priority />
+            <Image src="/logo.png" alt="" width={80} height={50} className="h-[70px] w-auto dark:hidden" priority />
+            <Image src="/logo-dark.png" alt="" width={80} height={50} className="hidden h-[70px] w-auto dark:block" />
           </Link>
         )}
         <button
           type="button"
           onClick={toggle}
-          className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
+          className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-fg-faint transition-colors hover:bg-surface-strong hover:text-fg-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
             collapsed ? "" : "absolute right-2 top-3"
           }`}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
         >
           {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
@@ -131,7 +115,7 @@ export function Sidebar({
               aria-label={item.label}
               className={`flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
                 collapsed ? "justify-center px-0" : "justify-start px-2.5"
-              } ${active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+              } ${active ? "bg-selected text-selected-fg" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
             >
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.tint}`}>
                 <Icon className="h-4 w-4" strokeWidth={2} />
@@ -144,7 +128,7 @@ export function Sidebar({
 
       {footer && (
         <div
-          className="border-t border-gray-200 px-3 py-3"
+          className="border-t border-line px-3 py-3"
           title={collapsed ? `${footer.username} · ${t(footer.rights)} · ${footer.branchName}` : undefined}
         >
           {collapsed ? (
@@ -156,23 +140,20 @@ export function Sidebar({
             </div>
           ) : (
             <>
-              <div className="truncate text-xs text-gray-500">{footer.branchName}</div>
+              <div className="truncate text-xs text-fg-subtle">{footer.branchName}</div>
               <div className="flex items-center justify-between pt-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
                     {footer.initial}
                   </span>
-                  <span className="truncate text-sm font-medium text-gray-700">{footer.username}</span>
+                  <span className="truncate text-sm font-medium text-fg-secondary">{footer.username}</span>
                 </div>
-                <span className="inline-flex shrink-0 items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                <span className="inline-flex shrink-0 items-center rounded-full bg-surface-strong px-2 py-0.5 text-xs font-medium text-fg-secondary">
                   {t(footer.rights)}
                 </span>
               </div>
               <div className="mt-2">
                 <SignOutButton />
-              </div>
-              <div className="mt-3">
-                <ThemeToggle />
               </div>
             </>
           )}

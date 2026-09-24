@@ -61,14 +61,14 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
         <WoundProgressionDashboard residents={residents} bodyParts={bodyParts} presetResidentId={currentResident || undefined} />
       ) : innerTab === "review" ? (
         <>
-          <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{t("Resident")}</label>
+                <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Resident")}</label>
                 <select
                   value={currentResident}
                   onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
                 >
                   <option value="">{t("All residents")}</option>
                   {residents.map((r) => (
@@ -79,51 +79,51 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{t("Start date")}</label>
+                <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Start date")}</label>
                 <input
                   type="date"
                   value={currentStart}
                   onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{t("End date")}</label>
+                <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("End date")}</label>
                 <input
                   type="date"
                   value={currentEnd}
                   onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
                 />
               </div>
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           <div className="space-y-3">
             {sessions.length === 0 ? (
-              <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+              <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
                 {t("No wound photo sessions yet.")}
               </div>
             ) : (
               sessions.map((session) => (
-                <div key={session.id} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+                <div key={session.id} className="rounded-md border border-line bg-surface p-4 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="font-bold text-gray-900">{session.tbl_residents?.resident_name}</span>
-                    <span className="text-xs text-gray-400">{formatDateTime(session.session_started_at)}</span>
+                    <span className="font-bold text-fg">{session.tbl_residents?.resident_name}</span>
+                    <span className="text-xs text-fg-faint">{formatDateTime(session.session_started_at)}</span>
                   </div>
-                  <div className="mb-3 text-xs text-gray-400">
+                  <div className="mb-3 text-xs text-fg-faint">
                     {t("Uploaded by")}: {session.uploader?.staff_name || session.uploaded_by_other || "--"}
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {session.photos.map((photo) => (
-                      <div key={photo.id} className="overflow-hidden rounded-md border border-gray-200">
+                      <div key={photo.id} className="overflow-hidden rounded-md border border-line">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`/api/wound-photos/${photo.id}`} alt={photo.body_part_label} className="h-32 w-full object-cover" loading="lazy" />
                         <div className="p-2">
-                          <p className="text-xs font-medium text-gray-900">{t(photo.body_part_label)}</p>
-                          {photo.description && <p className="text-xs text-gray-500">{photo.description}</p>}
+                          <p className="text-xs font-medium text-fg">{t(photo.body_part_label)}</p>
+                          {photo.description && <p className="text-xs text-fg-subtle">{photo.description}</p>}
                         </div>
                       </div>
                     ))}

@@ -138,4 +138,26 @@ export const dictResidents: Record<string, string> = {
   // too stiff for a plain filter-apply button. "Guna" alone is the
   // everyday word Malaysian apps use here.
   Apply: "Guna",
+
+  // Admission Analytics (admission-analytics/charts.tsx, page.tsx). Category
+  // bar labels (mobility/hygiene) reuse the Care section's Walking
+  // Independent/Wheelchair/etc. keys above -- not repeated here.
+  "Not Recorded": "Tidak Direkodkan",
+  "No occupancy data for this period.": "Tiada data penghunian untuk tempoh ini.",
+  "Occupancy trend chart": "Carta trend penghunian",
+  "{point}\nOccupancy: {count} residents": "{point}\nPenghunian: {count} penghuni",
+  "Hover over data points to see details": "Tuding pada titik data untuk lihat butiran",
+  // Age already covered above (resident-form's Age field).
+  Male: "Lelaki",
+  Female: "Perempuan",
+  Total: "Jumlah",
+  "{count} residents ({pct}%)": "{count} penghuni ({pct}%)",
+  "No data.": "Tiada data.",
+  "Average LOS": "Purata Tempoh Tinggal",
+  days: "hari",
+  "Click for details": "Klik untuk butiran",
+  "0–30 days": "0–30 hari",
+  "31–90 days": "31–90 hari",
+  "91–180 days": "91–180 hari",
+  ">180 days": ">180 hari",
 };

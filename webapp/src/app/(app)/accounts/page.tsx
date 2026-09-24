@@ -30,7 +30,7 @@ export default async function AccountsPage() {
         </Link>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>}
 
       <AccountsTable accounts={accounts ?? []} />
     </div>

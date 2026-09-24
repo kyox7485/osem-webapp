@@ -102,7 +102,7 @@ export default async function NewMedicationOrderPage() {
       </div>
 
       <div className="mb-4 flex items-center gap-2">
-        <h2 className="text-base font-semibold text-gray-800">
+        <h2 className="text-base font-semibold text-fg">
           {t("New Medication Order")}
         </h2>
       </div>

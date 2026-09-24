@@ -82,6 +82,22 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   data.
 - Google-Drive-synced folders can misbehave with some tools — verify file
   existence before assuming a path is wrong.
+- **All user-visible text must go through the i18n system** (`t()` /
+  `getServerTranslator()` — see `docs/i18n.md`). All user-visible option
+  labels (`<select>`, custom dropdowns, filter menus, status badges) must
+  be translated while the **stored value stays language-neutral** — never
+  translate what gets saved to the database. Every new module adds its own
+  `dict-<module>.ts` and uses the `{value, label}` + `t(label)` dropdown
+  pattern from day one. Run `npm run check:i18n` before calling i18n-facing
+  work done — it flags missing MS dictionary entries, duplicate keys with
+  conflicting translations, and likely-untranslated dropdown options.
+
+- **All new UI must support Light and Dark themes.** Prefer semantic theme
+  tokens (`bg-surface`, `text-fg`, `border-line`, … — see
+  `docs/theming.md`) for shared surfaces/text/borders instead of
+  hard-coded light-only colours (`bg-white`, `text-gray-*`,
+  `border-gray-*`); coloured status classes get the documented `dark:`
+  partner. New modules must be tested in Light, Dark and System modes.
 
 ## Domain-specific detail (read only when relevant)
 
@@ -100,8 +116,14 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
 - `docs/deployment.md` — canonical, current deployment reference (Vercel,
   Supabase schema changes, Apps Script redeploy). Supersedes the
   historical root-level `DEPLOYMENT_INSTRUCTIONS.md`.
-- `docs/architecture.md` — repo layout, `webapp/` internals, i18n, env
-  vars, `migration/` scripts, `schema/001_init.sql`.
+- `docs/theming.md` — Light/Dark/System architecture, token cheat-sheet,
+  coloured-status `dark:` convention, testing checklist.
+- `docs/architecture.md` — repo layout, `webapp/` internals, env vars,
+  `migration/` scripts, `schema/001_init.sql`.
+- `docs/i18n.md` — full i18n architecture: dictionary-key convention,
+  interpolation, the dropdown/option rule, DB-driven lookup tables' known
+  exception, `npm run check:i18n`, and current known gaps (Server Action
+  error messages, PDF reports, physio score labels aren't translated yet).
 
 Root-level `COMPLETION_SUMMARY.md` / `IMPLEMENTATION_SUMMARY.md` /
 `DEPLOYMENT_INSTRUCTIONS.md` are **historical snapshots of one past

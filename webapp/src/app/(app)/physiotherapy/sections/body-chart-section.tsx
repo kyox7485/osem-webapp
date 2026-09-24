@@ -51,23 +51,23 @@ export function BodyChartSection({ findings, setFindings }: Props) {
             markedRegionNames={markedRegionNames}
             pendingRegionName={pendingRegion?.name}
           />
-          <p className="mt-2 text-center text-xs text-gray-400">{t("Tap a point on the diagram to add a finding")}</p>
+          <p className="mt-2 text-center text-xs text-fg-faint">{t("Tap a point on the diagram to add a finding")}</p>
 
           {pendingRegion && (
-            <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50 p-3">
-              <p className="mb-1 text-sm font-medium text-indigo-900">{t(pendingRegion.name)}</p>
+            <div className="mt-3 rounded-md border border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/40 p-3">
+              <p className="mb-1 text-sm font-medium text-indigo-900 dark:text-indigo-300">{t(pendingRegion.name)}</p>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={2}
                 placeholder={t("Finding / comment...")}
-                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               <div className="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setPendingRegion(null)}
-                  className="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                  className="rounded-md px-2 py-1 text-xs text-fg-subtle hover:bg-surface-strong"
                 >
                   {t("Cancel")}
                 </button>
@@ -85,21 +85,21 @@ export function BodyChartSection({ findings, setFindings }: Props) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">{t("Recorded findings")}</h3>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-fg-subtle">{t("Recorded findings")}</h3>
           {findings.length === 0 ? (
-            <p className="text-sm text-gray-400">{t("No findings recorded yet.")}</p>
+            <p className="text-sm text-fg-faint">{t("No findings recorded yet.")}</p>
           ) : (
             <ul className="space-y-2">
               {findings.map((f, i) => (
-                <li key={i} className="flex items-start justify-between gap-2 rounded-md border border-gray-200 p-2 text-sm">
+                <li key={i} className="flex items-start justify-between gap-2 rounded-md border border-line p-2 text-sm">
                   <div>
-                    <span className="font-medium text-gray-800">{t(f.region)}</span>
-                    <p className="text-gray-600">{f.comment}</p>
+                    <span className="font-medium text-fg">{t(f.region)}</span>
+                    <p className="text-fg-muted">{f.comment}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => removeFinding(i)}
-                    className="shrink-0 text-xs text-gray-400 hover:text-red-600"
+                    className="shrink-0 text-xs text-fg-faint hover:text-red-600 dark:hover:text-red-300"
                   >
                     {t("Remove")}
                   </button>

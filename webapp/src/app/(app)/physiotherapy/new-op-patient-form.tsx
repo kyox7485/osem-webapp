@@ -8,7 +8,7 @@ import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 
 const fieldCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "mt-1 w-full rounded-md border border-line-strong bg-input text-fg px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
 // Quick-register modal for a walk-in outpatient, opened from the
 // Outpatient tab next to the patient picker -- a physiotherapist
@@ -103,7 +103,7 @@ export function NewOpPatientForm() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+        className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
       >
         + {t("New patient")}
       </button>
@@ -115,18 +115,18 @@ export function NewOpPatientForm() {
             if (e.target === e.currentTarget) requestClose();
           }}
         >
-          <div role="dialog" aria-modal="true" aria-labelledby="new-op-patient-title" className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-            <h3 id="new-op-patient-title" className="mb-4 text-sm font-bold text-gray-900">
+          <div role="dialog" aria-modal="true" aria-labelledby="new-op-patient-title" className="w-full max-w-lg rounded-lg bg-elevated p-6 shadow-xl">
+            <h3 id="new-op-patient-title" className="mb-4 text-sm font-bold text-fg">
               {t("Register new outpatient")}
             </h3>
 
             <form onSubmit={handleSubmit} onChangeCapture={markDirty}>
-              {error && <div className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-800">{error}</div>}
+              {error && <div className="mb-3 rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-sm text-red-800 dark:text-red-300">{error}</div>}
 
               {/* Every field the same width, one per row -- easier to scan
                   and consistent regardless of how long a label is. */}
               <div className="space-y-3">
-                <label className="block text-sm text-gray-700">
+                <label className="block text-sm text-fg-secondary">
                   {t("Patient name")}
                   <input
                     ref={nameInputRef}
@@ -138,12 +138,12 @@ export function NewOpPatientForm() {
                   />
                 </label>
 
-                <label className="block text-sm text-gray-700">
+                <label className="block text-sm text-fg-secondary">
                   {t("IC No. / Passport No.")}
                   <input type="text" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} className={fieldCls} />
                 </label>
 
-                <label className="block text-sm text-gray-700">
+                <label className="block text-sm text-fg-secondary">
                   {t("Age")}
                   <input
                     type="number"
@@ -154,7 +154,7 @@ export function NewOpPatientForm() {
                   />
                 </label>
 
-                <label className="block text-sm text-gray-700">
+                <label className="block text-sm text-fg-secondary">
                   {t("Gender")}
                   <select value={gender} onChange={(e) => setGender(e.target.value as "" | "M" | "F")} className={fieldCls}>
                     <option value="">--</option>
@@ -163,7 +163,7 @@ export function NewOpPatientForm() {
                   </select>
                 </label>
 
-                <label className="block text-sm text-gray-700">
+                <label className="block text-sm text-fg-secondary">
                   {t("Contact")}
                   <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} className={fieldCls} />
                 </label>
@@ -174,7 +174,7 @@ export function NewOpPatientForm() {
                   type="button"
                   onClick={requestClose}
                   disabled={saving}
-                  className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                  className="rounded-md px-3 py-1.5 text-sm text-fg-muted hover:bg-surface-strong disabled:opacity-50"
                 >
                   {t("Cancel")}
                 </button>

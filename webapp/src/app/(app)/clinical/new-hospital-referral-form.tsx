@@ -186,7 +186,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
   return (
     <div className="space-y-4" onChangeCapture={markDirty}>
       <div>
-        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-gray-700">
+        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-fg-secondary">
           {t("Resident")} <span className="text-red-500">*</span>
         </label>
         <select
@@ -198,7 +198,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
             setReviewedByOtherName("");
           }}
           required
-          className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-full max-w-md rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option value="">{t("Select resident")}</option>
           {residents.map((r) => (
@@ -210,19 +210,19 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
       </div>
 
       {residentId && particularsLoading && (
-        <p className="text-sm text-gray-400">{t("Loading resident particulars...")}</p>
+        <p className="text-sm text-fg-faint">{t("Loading resident particulars...")}</p>
       )}
 
       {residentId && particulars && (
-        <details className="group rounded-md border border-gray-200 bg-white p-4 shadow-sm" open>
-          <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-gray-900">
+        <details className="group rounded-md border border-line bg-surface p-4 shadow-sm" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-fg">
             {t("Resident's Particulars")}
             <svg
               width="14"
               height="14"
               viewBox="0 0 16 16"
               fill="none"
-              className="text-gray-400 transition-transform group-open:rotate-90"
+              className="text-fg-faint transition-transform group-open:rotate-90"
             >
               <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -241,11 +241,11 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
         </details>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-md border border-line bg-surface p-4 shadow-sm">
+        {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300">{error}</div>}
 
         <div>
-          <label htmlFor="chief-complaints" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="chief-complaints" className="mb-1 block text-sm font-medium text-fg-secondary">
             {t("Chief Complaints")} <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -255,15 +255,15 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
             required
             rows={4}
             placeholder={t("Sudden onset chest pain, SpO2 drop, impression...")}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-gray-800">{t("Vital Signs")}</h3>
+          <h3 className="mb-2 text-sm font-semibold text-fg">{t("Vital Signs")}</h3>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <div>
-              <label htmlFor="systolic-bp" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="systolic-bp" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("BP Systolic")}
               </label>
               <input
@@ -273,11 +273,11 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 onChange={(e) => setSystolicBp(e.target.value)}
                 step="0.1"
                 placeholder={t("e.g. 146")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label htmlFor="diastolic-bp" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="diastolic-bp" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("BP Diastolic")}
               </label>
               <input
@@ -287,11 +287,11 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 onChange={(e) => setDiastolicBp(e.target.value)}
                 step="0.1"
                 placeholder={t("e.g. 71")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label htmlFor="heart-rate" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="heart-rate" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("HR")}
               </label>
               <input
@@ -301,11 +301,11 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 onChange={(e) => setHeartRate(e.target.value)}
                 step="0.1"
                 placeholder={t("e.g. 102")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label htmlFor="temperature" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="temperature" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("Temp (°C)")}
               </label>
               <input
@@ -315,11 +315,11 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 onChange={(e) => setTemperature(e.target.value)}
                 step="0.1"
                 placeholder={t("e.g. 36.2")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label htmlFor="spo2" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="spo2" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("SpO2 (%)")}
               </label>
               <input
@@ -329,12 +329,12 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 onChange={(e) => setSpo2(e.target.value)}
                 step="0.1"
                 placeholder={t("e.g. 92")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             {spo2 && (
               <div>
-                <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="spo2-condition" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("SpO2 Condition")} <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -342,7 +342,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                   value={spo2Condition}
                   onChange={(e) => setSpo2Condition(e.target.value)}
                   required
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">{t("Select condition")}</option>
                   {SPO2_CONDITION_OPTIONS.map((opt) => (
@@ -354,7 +354,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
               </div>
             )}
             <div>
-              <label htmlFor="dxt" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="dxt" className="mb-1 block text-sm font-medium text-fg-secondary">
                 {t("DXT (mmol/L)")}
               </label>
               <input
@@ -364,12 +364,12 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 onChange={(e) => setDxt(e.target.value)}
                 step="0.1"
                 placeholder={t("e.g. 11.1")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             {dxt && (
               <div>
-                <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="dxt-remark" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("DXT Remark")} <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -377,7 +377,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                   value={dxtRemark}
                   onChange={(e) => setDxtRemark(e.target.value)}
                   required
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">{t("Select remark")}</option>
                   {DXT_REMARK_OPTIONS.map((opt) => (
@@ -401,16 +401,16 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 height="14"
                 viewBox="0 0 16 16"
                 fill="none"
-                className={`text-gray-400 transition-transform ${advancedObsOpen ? "rotate-90" : ""}`}
+                className={`text-fg-faint transition-transform ${advancedObsOpen ? "rotate-90" : ""}`}
               >
                 <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <h3 className="text-sm font-semibold text-gray-800">{t("Advanced Observation")}</h3>
+              <h3 className="text-sm font-semibold text-fg">{t("Advanced Observation")}</h3>
             </button>
             {advancedObsOpen && (
               <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="respiration-rate" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label htmlFor="respiration-rate" className="mb-1 block text-sm font-medium text-fg-secondary">
                     {t("Respiration Rate (breaths/min)")}
                   </label>
                   <input
@@ -420,19 +420,19 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                     onChange={(e) => setRespirationRate(e.target.value)}
                     step="0.1"
                     placeholder={t("e.g. 16")}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="avpu" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label htmlFor="avpu" className="mb-1 block text-sm font-medium text-fg-secondary">
                     {t("AVPU")}
                   </label>
                   <select
                     id="avpu"
                     value={avpuId}
                     onChange={(e) => setAvpuId(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="">{t("Select AVPU")}</option>
                     {lookups.avpuOptions.map((o) => (
@@ -444,14 +444,14 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 </div>
 
                 <div>
-                  <label htmlFor="gcs-eye" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label htmlFor="gcs-eye" className="mb-1 block text-sm font-medium text-fg-secondary">
                     {t("GCS Eye")}
                   </label>
                   <select
                     id="gcs-eye"
                     value={gcsEyeId}
                     onChange={(e) => setGcsEyeId(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="">{t("Select response")}</option>
                     {lookups.gcsEyeResponses.map((o) => (
@@ -463,14 +463,14 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 </div>
 
                 <div>
-                  <label htmlFor="gcs-verbal" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label htmlFor="gcs-verbal" className="mb-1 block text-sm font-medium text-fg-secondary">
                     {t("GCS Verbal")}
                   </label>
                   <select
                     id="gcs-verbal"
                     value={gcsVerbalId}
                     onChange={(e) => setGcsVerbalId(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="">{t("Select response")}</option>
                     {lookups.gcsVerbalResponses.map((o) => (
@@ -482,14 +482,14 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
                 </div>
 
                 <div>
-                  <label htmlFor="gcs-motor" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label htmlFor="gcs-motor" className="mb-1 block text-sm font-medium text-fg-secondary">
                     {t("GCS Motor")}
                   </label>
                   <select
                     id="gcs-motor"
                     value={gcsMotorId}
                     onChange={(e) => setGcsMotorId(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="">{t("Select response")}</option>
                     {lookups.gcsMotorResponses.map((o) => (
@@ -506,7 +506,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label htmlFor="mobility" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="mobility" className="mb-1 block text-sm font-medium text-fg-secondary">
               {t("Mobility")}
             </label>
             <select
@@ -514,7 +514,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
               value={mobility}
               onChange={(e) => setMobility(e.target.value)}
               disabled={!residentId}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+              className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong"
             >
               <option value="">{t("Select mobility")}</option>
               {MOBILITY_OPTIONS.map((opt) => (
@@ -525,7 +525,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
             </select>
           </div>
           <div>
-            <label htmlFor="feeding" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="feeding" className="mb-1 block text-sm font-medium text-fg-secondary">
               {t("Feeding")}
             </label>
             <select
@@ -533,7 +533,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
               value={feeding}
               onChange={(e) => setFeeding(e.target.value)}
               disabled={!residentId}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+              className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong"
             >
               <option value="">{t("Select feeding")}</option>
               {feedingTypes.map((ft) => (
@@ -544,7 +544,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
             </select>
           </div>
           <div>
-            <label htmlFor="hygiene" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="hygiene" className="mb-1 block text-sm font-medium text-fg-secondary">
               {t("Hygiene")}
             </label>
             <select
@@ -552,7 +552,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
               value={hygiene}
               onChange={(e) => setHygiene(e.target.value)}
               disabled={!residentId}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
+              className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong"
             >
               <option value="">{t("Select hygiene")}</option>
               {HYGIENE_OPTIONS.map((opt) => (
@@ -565,7 +565,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
         </div>
 
         <div>
-          <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="reviewed-by" className="mb-1 block text-sm font-medium text-fg-secondary">
             {t("Reported By")} <span className="text-red-500">*</span>
           </label>
           <div className="max-w-md">
@@ -587,7 +587,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
             type="button"
             onClick={resetForm}
             disabled={isSaving}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            className="rounded-md border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-fg-secondary hover:bg-hover focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {t("Clear")}
           </button>
@@ -608,8 +608,8 @@ function ParticularField({ label, value, multiline }: { label: string; value: st
   const t = useTranslation();
   return (
     <div>
-      <dt className="text-xs font-medium text-gray-500">{label}</dt>
-      <dd className={`text-sm text-gray-800 ${multiline ? "whitespace-pre-wrap" : ""}`}>{value || t("None recorded.")}</dd>
+      <dt className="text-xs font-medium text-fg-subtle">{label}</dt>
+      <dd className={`text-sm text-fg ${multiline ? "whitespace-pre-wrap" : ""}`}>{value || t("None recorded.")}</dd>
     </div>
   );
 }

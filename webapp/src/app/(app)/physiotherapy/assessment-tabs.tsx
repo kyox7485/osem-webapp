@@ -80,7 +80,7 @@ export function PhysioAssessmentTabs({
           onSaved={() => setTab("review")}
         />
       ) : (
-        <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+        <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
           {t("Select a")} {careSetting === "OP" ? t("patient") : t("resident")} {t("above to add a new entry.")}
         </div>
       )}

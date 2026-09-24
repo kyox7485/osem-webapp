@@ -146,11 +146,11 @@ export default async function PhysioDashboardPage({
         therapists={therapists.map((th) => ({ id: String(th.id), label: th.label }))}
       />
 
-      {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
+      {loadError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
 
       {isIndividualViewWithoutTherapist && (
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-800">{t("Select a therapist to view individual analytics.")}</p>
+        <div className="mb-4 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-4">
+          <p className="text-sm text-amber-800 dark:text-amber-300">{t("Select a therapist to view individual analytics.")}</p>
         </div>
       )}
 
@@ -162,7 +162,7 @@ export default async function PhysioDashboardPage({
           share={null}
           deltaPct={percentChange(grandTotal, totalHours(prevTotals))}
           icon={Clock}
-          tint="bg-gray-100 text-gray-700"
+          tint="bg-surface-strong text-fg-secondary"
           t={t}
         />
         <StatTile
@@ -171,7 +171,7 @@ export default async function PhysioDashboardPage({
           share={share(totals.inpatient)}
           deltaPct={percentChange(totals.inpatient, prevTotals.inpatient)}
           icon={BedDouble}
-          tint="bg-emerald-50 text-emerald-600"
+          tint="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
           t={t}
         />
         <StatTile
@@ -180,7 +180,7 @@ export default async function PhysioDashboardPage({
           share={share(totals.outpatient)}
           deltaPct={percentChange(totals.outpatient, prevTotals.outpatient)}
           icon={DoorOpen}
-          tint="bg-blue-50 text-blue-600"
+          tint="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
           t={t}
         />
         <StatTile
@@ -189,40 +189,40 @@ export default async function PhysioDashboardPage({
           share={share(totals.housecall)}
           deltaPct={percentChange(totals.housecall, prevTotals.housecall)}
           icon={Home}
-          tint="bg-amber-50 text-amber-600"
+          tint="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
           t={t}
         />
       </div>
 
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Trend */}
-        <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm lg:col-span-2">
+        <div className="rounded-md border border-line bg-surface p-4 shadow-sm lg:col-span-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">{t("Credit hours over time")}</h3>
+            <h3 className="text-sm font-bold text-fg">{t("Credit hours over time")}</h3>
             <TypeLegend labels={typeLabels} />
           </div>
           {grandTotal > 0 ? (
             <TrendChart buckets={trendBuckets} labels={typeLabels} />
           ) : (
-            <p className="py-10 text-center text-sm text-gray-500">{t("No assessments in this period.")}</p>
+            <p className="py-10 text-center text-sm text-fg-subtle">{t("No assessments in this period.")}</p>
           )}
         </div>
 
         {/* Mix donut */}
-        <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-bold text-gray-900">{t("Patient-type mix")}</h3>
+        <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-bold text-fg">{t("Patient-type mix")}</h3>
           <DonutChart totals={totals} t={t} />
         </div>
       </div>
 
       {/* Branch breakdown */}
-      <div className="mb-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 rounded-md border border-line bg-surface p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-gray-900">{t("Credit hours by branch")}</h3>
+          <h3 className="text-sm font-bold text-fg">{t("Credit hours by branch")}</h3>
           <TypeLegend labels={typeLabels} />
         </div>
         {branchAgg.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-500">{t("No assessments in this period.")}</p>
+          <p className="py-8 text-center text-sm text-fg-subtle">{t("No assessments in this period.")}</p>
         ) : (
           <div className="space-y-3">
             {branchAgg.map((b) => (
@@ -233,9 +233,9 @@ export default async function PhysioDashboardPage({
       </div>
 
       {/* Team vs individual workload */}
-      <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
         <div className="mb-3">
-          <h3 className="text-sm font-bold text-gray-900">
+          <h3 className="text-sm font-bold text-fg">
             {view === "team" ? t("Team workload by branch") : t("Therapist workload & strength")}
           </h3>
         </div>

@@ -43,7 +43,7 @@ function YesNoToggle({
   const t = useTranslation();
   const base = "rounded-md px-4 py-2 text-sm font-medium border transition-colors";
   const active = "bg-indigo-600 border-indigo-600 text-white";
-  const inactive = "bg-white border-gray-300 text-gray-700 hover:bg-gray-50";
+  const inactive = "bg-surface border-line-strong text-fg-secondary hover:bg-hover";
   return (
     <div className="flex gap-2">
       <button type="button" className={`${base} ${value === true ? active : inactive}`} onClick={() => onChange(value === true ? null : true)}>
@@ -57,9 +57,9 @@ function YesNoToggle({
 }
 
 const inputCls =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100";
-const labelCls = "mb-1 block text-sm font-medium text-gray-700";
-const sectionCls = "rounded-md border border-gray-200 bg-white p-4 shadow-sm space-y-4";
+  "w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong";
+const labelCls = "mb-1 block text-sm font-medium text-fg-secondary";
+const sectionCls = "rounded-md border border-line bg-surface p-4 shadow-sm space-y-4";
 
 export function NewObservationChartForm({ residents, allStaff, presetResidentId, onSaved }: Props) {
   const t = useTranslation();
@@ -249,7 +249,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
         </div>
 
         <div>
-          <label className={labelCls}>{t("Active Issue")} <span className="text-xs font-normal text-gray-500">({t("why is this resident being monitored?")})</span></label>
+          <label className={labelCls}>{t("Active Issue")} <span className="text-xs font-normal text-fg-subtle">({t("why is this resident being monitored?")})</span></label>
           <textarea
             value={activeIssue}
             onChange={(e) => setActiveIssue(e.target.value)}
@@ -262,10 +262,10 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
 
       {/* Nursing Assessment */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+        {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300">{error}</div>}
 
         <div className={sectionCls}>
-          <h3 className="text-sm font-bold text-gray-900">{t("Nursing Assessment")}</h3>
+          <h3 className="text-sm font-bold text-fg">{t("Nursing Assessment")}</h3>
 
           {/* SOB / Cough */}
           <div>
@@ -338,7 +338,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
 
           {/* Behavior */}
           <div>
-            <label className={labelCls}>🧠 {t("Behavior")} <span className="text-xs font-normal text-gray-500">({t("select all that apply")})</span></label>
+            <label className={labelCls}>🧠 {t("Behavior")} <span className="text-xs font-normal text-fg-subtle">({t("select all that apply")})</span></label>
             <div className="flex flex-wrap gap-2">
               {BEHAVIOR_OPTIONS.map((opt) => (
                 <button
@@ -348,7 +348,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
                   className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                     behavior.includes(opt)
                       ? "border-indigo-600 bg-indigo-600 text-white"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300"
+                      : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700"
                   }`}
                 >
                   {t(opt)}
@@ -360,7 +360,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
                 className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                   behavior.includes("Others")
                     ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300"
+                    : "border-line-strong bg-surface text-fg-secondary hover:border-indigo-300 dark:hover:border-indigo-700"
                 }`}
               >
                 {t("Others")}
@@ -381,10 +381,10 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
         {/* Vital Signs */}
         <div className={sectionCls}>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-gray-900">{t("Vital Signs")}</h3>
-            {vitalsLoading && <span className="text-xs text-gray-400">{t("Loading latest vitals...")}</span>}
+            <h3 className="text-sm font-bold text-fg">{t("Vital Signs")}</h3>
+            {vitalsLoading && <span className="text-xs text-fg-faint">{t("Loading latest vitals...")}</span>}
             {!vitalsLoading && residentId && (
-              <span className="text-xs text-gray-400">{t("Pre-filled from latest record — edit if different")}</span>
+              <span className="text-xs text-fg-faint">{t("Pre-filled from latest record — edit if different")}</span>
             )}
           </div>
 
@@ -455,7 +455,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
             type="button"
             onClick={resetForm}
             disabled={isSaving}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-md border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-fg-secondary hover:bg-hover disabled:opacity-50"
           >
             {t("Clear")}
           </button>

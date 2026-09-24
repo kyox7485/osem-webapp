@@ -3,7 +3,7 @@
 import { useTranslation } from "@/components/language-provider";
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+  "mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 type Props = {
   chiefComplaint: string;
@@ -30,10 +30,10 @@ export function SubjectiveSection({
 }: Props) {
   const t = useTranslation();
   return (
-    <div className="space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-bold text-gray-900">{t("Subjective Assessment")}</h2>
+    <div className="space-y-3 rounded-md border border-line bg-surface p-4 shadow-sm">
+      <h2 className="text-sm font-bold text-fg">{t("Subjective Assessment")}</h2>
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Chief Complaint")}
         <textarea
           value={chiefComplaint}
@@ -43,7 +43,7 @@ export function SubjectiveSection({
         />
       </label>
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Current History")}
         <textarea
           value={currentHistory}
@@ -53,12 +53,12 @@ export function SubjectiveSection({
         />
       </label>
 
-      <label className="block text-sm text-gray-700">
-        {t("Past Medical History")} <span className="font-normal text-gray-400">({t("from resident record")})</span>
-        <textarea value={pastMedicalHistory} readOnly rows={2} className={`${inputCls} bg-gray-50 text-gray-600`} />
+      <label className="block text-sm text-fg-secondary">
+        {t("Past Medical History")} <span className="font-normal text-fg-faint">({t("from resident record")})</span>
+        <textarea value={pastMedicalHistory} readOnly rows={2} className={`${inputCls} bg-surface-muted text-fg-muted`} />
       </label>
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Social History")}
         <textarea
           value={socialHistory}

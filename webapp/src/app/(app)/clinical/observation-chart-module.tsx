@@ -60,7 +60,7 @@ export function ObservationChartModule({ entries, activeEpisodes, completedEpiso
           error={error}
         />
       ) : activeResidents.length === 0 ? (
-        <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+        <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
           {t("No residents are currently under observation. Start observation from the Resident List first.")}
         </div>
       ) : (

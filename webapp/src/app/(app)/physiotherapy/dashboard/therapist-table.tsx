@@ -18,14 +18,14 @@ type Props = {
 // currently overtime or under baseline).
 export function TherapistTable({ therapists, weeks, emptyLabel, columnLabels, t, labels }: Props) {
   if (therapists.length === 0) {
-    return <p className="py-8 text-center text-sm text-gray-500">{emptyLabel}</p>;
+    return <p className="py-8 text-center text-sm text-fg-subtle">{emptyLabel}</p>;
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead>
-          <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+          <tr className="border-b border-line text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
             <th className="py-2 pr-3">{columnLabels.therapist}</th>
             <th className="py-2 pr-3">{columnLabels.mix}</th>
             <th className="w-48 py-2 pr-3">{columnLabels.workload}</th>
@@ -37,10 +37,10 @@ export function TherapistTable({ therapists, weeks, emptyLabel, columnLabels, t,
             const total = totalHours(th.totals);
             const avgWeekly = total / weeks;
             return (
-              <tr key={th.id} className="border-b border-gray-100 last:border-0">
+              <tr key={th.id} className="border-b border-line-subtle last:border-0">
                 <td className="py-3 pr-3 align-top">
-                  <p className="font-medium text-gray-900">{th.name}</p>
-                  {th.branches.length > 0 && <p className="text-xs text-gray-500">{th.branches.join(", ")}</p>}
+                  <p className="font-medium text-fg">{th.name}</p>
+                  {th.branches.length > 0 && <p className="text-xs text-fg-subtle">{th.branches.join(", ")}</p>}
                 </td>
                 <td className="w-56 py-3 pr-3 align-top">
                   {/* The first row has nothing above it to pop the tooltip
@@ -51,7 +51,7 @@ export function TherapistTable({ therapists, weeks, emptyLabel, columnLabels, t,
                 <td className="py-3 pr-3 align-top">
                   <WorkloadBar avgWeeklyHours={avgWeekly} baseline={th.baselineHours} t={t} />
                 </td>
-                <td className="py-3 pl-3 text-right align-top font-semibold text-gray-900">{formatHours(total)}</td>
+                <td className="py-3 pl-3 text-right align-top font-semibold text-fg">{formatHours(total)}</td>
               </tr>
             );
           })}

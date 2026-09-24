@@ -21,8 +21,8 @@ export function PageHeaderSlot() {
     <div className="min-w-0 flex-1">
       {content && (
         <>
-          <h1 className="truncate text-lg font-bold tracking-tight text-gray-900">{content.title}</h1>
-          {content.description && <p className="mt-0.5 truncate text-xs text-gray-500">{content.description}</p>}
+          <h1 className="truncate text-lg font-bold tracking-tight text-fg">{content.title}</h1>
+          {content.description && <p className="mt-0.5 truncate text-xs text-fg-subtle">{content.description}</p>}
         </>
       )}
     </div>

@@ -32,8 +32,8 @@ export function NavLoadingProvider({ children }: { children: React.ReactNode }) 
     <NavLoadingContext.Provider value={{ isPending, push }}>
       {children}
       {isPending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-200 border-t-indigo-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/50 backdrop-blur-[1px]">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-line border-t-indigo-600" />
         </div>
       )}
     </NavLoadingContext.Provider>

@@ -1,25 +1,160 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  /* Use CSS variables for theme colours so that we can swap them based on .dark class */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-}
+/*
+ * Class-based dark mode. ThemeClassScript (before hydration) and
+ * ThemeProvider (on toggle / OS change) put exactly one of .light / .dark on
+ * <html>; that class -- not the OS prefers-color-scheme media query -- is
+ * what activates `dark:` utilities. Without this line Tailwind v4 falls back
+ * to the media query, so an explicit Light choice can't override a dark OS.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * ---------------------------------------------------------------------------
+ * Semantic theme tokens -- the ONLY place light/dark neutral colours live.
+ * ---------------------------------------------------------------------------
+ * Use these utilities for every neutral surface/text/border instead of
+ * hard-coded gray/white classes, so new UI supports both themes for free
+ * (see docs/theming.md for the full usage table):
+ *
+ *   bg-app              page background behind the content column
+ *   bg-surface          cards, panels, table bodies, secondary buttons
+ *   bg-surface-muted    table headers, subtle inset panels
+ *   bg-surface-strong   chips/neutral badges, tab tracks, disabled fields
+ *   bg-elevated         modals, popovers, dropdown menus
+ *   bg-input            form-control fill
+ *   bg-hover            hover state for rows / list items / ghost buttons
+ *   bg-selected         selected / active item (+ text-selected-fg)
+ *   text-fg             primary text, headings, table cell values
+ *   text-fg-secondary   body text, form labels
+ *   text-fg-muted       secondary text, meta columns
+ *   text-fg-subtle      captions, helper text, table header text
+ *   text-fg-faint       placeholders, icons, empty-state text
+ *   border-line-subtle  row dividers, inner separators
+ *   border-line         card / section borders
+ *   border-line-strong  form-control borders, emphasized borders
+ *
+ * Light values are exactly the Tailwind gray/white shades the app used
+ * before tokens existed, so Light mode is unchanged. Dark values are a
+ * lifted slate palette (not near-black) with a clear surface hierarchy.
+ */
 :root {
+  color-scheme: light;
+
   --background: #ffffff;
   --foreground: #171717;
+
+  --app-bg: oklch(98.5% 0.002 247.839); /* gray-50 */
+  --surface: #ffffff;
+  --surface-muted: oklch(98.5% 0.002 247.839); /* gray-50 */
+  --surface-strong: oklch(96.7% 0.003 264.542); /* gray-100 */
+  --elevated: #ffffff;
+  --input: #ffffff;
+  --hover: oklch(98.5% 0.002 247.839); /* gray-50 */
+  --selected: oklch(96.2% 0.018 272.314); /* indigo-50 */
+  --selected-fg: oklch(45.7% 0.24 277.023); /* indigo-700 */
+
+  --fg: oklch(21% 0.034 264.665); /* gray-900 */
+  --fg-secondary: oklch(37.3% 0.034 259.733); /* gray-700 */
+  --fg-muted: oklch(44.6% 0.03 256.802); /* gray-600 */
+  --fg-subtle: oklch(55.1% 0.027 264.364); /* gray-500 */
+  --fg-faint: oklch(70.7% 0.022 261.325); /* gray-400 */
+
+  --line-subtle: oklch(96.7% 0.003 264.542); /* gray-100 */
+  --line: oklch(92.8% 0.006 264.531); /* gray-200 */
+  --line-strong: oklch(87.2% 0.01 258.338); /* gray-300 */
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  color-scheme: dark;
+
+  --background: #151a21;
+  --foreground: #e6e9ee;
+
+  --app-bg: #151a21;
+  --surface: #1d232c;
+  --surface-muted: #232a34;
+  --surface-strong: #2b323d;
+  --elevated: #242b35;
+  --input: #181d25;
+  --hover: #262d38;
+  --selected: rgb(99 102 241 / 0.2);
+  --selected-fg: #c7d2fe;
+
+  --fg: #e6e9ee;
+  --fg-secondary: #c9cfd8;
+  --fg-muted: #aab2bd;
+  --fg-subtle: #8f98a5;
+  --fg-faint: #6f7987;
+
+  --line-subtle: #29303a;
+  --line: #333b47;
+  --line-strong: #454f5d;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-app: var(--app-bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-strong: var(--surface-strong);
+  --color-elevated: var(--elevated);
+  --color-input: var(--input);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-selected-fg: var(--selected-fg);
+
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-faint: var(--fg-faint);
+
+  --color-line-subtle: var(--line-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  /*
+   * Form controls. Tailwind's preflight makes inputs transparent with
+   * inherited text colour; `color-scheme` above already switches native
+   * chrome (date/time pickers, number spinners, scrollbars, <select> popups,
+   * checkboxes) to match the theme. In dark mode we also give controls a
+   * recessed fill so fields read as fields on dark cards. Any explicit
+   * bg-* utility on a control still wins (utilities layer > base layer).
+   */
+  .dark
+    :where(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"]),
+      textarea,
+      select
+    ) {
+    background-color: var(--input);
+  }
+
+  /* <option>/<optgroup> popups on Windows/Linux Chrome & Firefox render with
+     the element's own colours -- keep them readable on the dark popup. */
+  .dark :where(option, optgroup) {
+    background-color: var(--elevated);
+    color: var(--fg);
+  }
+
+  /* Chrome autofill paints a light-blue fill that ignores color-scheme. */
+  .dark :where(input, textarea, select):-webkit-autofill {
+    -webkit-text-fill-color: var(--fg);
+    box-shadow: 0 0 0 1000px var(--input) inset;
+    caret-color: var(--fg);
+  }
 }

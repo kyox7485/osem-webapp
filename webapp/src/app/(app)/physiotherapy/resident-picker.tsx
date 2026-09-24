@@ -87,15 +87,15 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
   }
 
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <label htmlFor="resident-picker" className="mb-1 block text-sm font-medium text-gray-700">
+    <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
+      <label htmlFor="resident-picker" className="mb-1 block text-sm font-medium text-fg-secondary">
         {resolvedLabel}
       </label>
       <select
         id="resident-picker"
         value={displayValue}
         onChange={(e) => handleChange(e.target.value)}
-        className="w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        className="w-full max-w-md rounded-md border border-line-strong bg-input text-fg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       >
         <option value="">{t("Select")} {resolvedLabel.toLowerCase()}</option>
         {residents.map((r) => (
@@ -107,18 +107,18 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
 
       {pendingResident !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-sm font-bold text-gray-900">{t("Unsaved changes")}</h3>
-            <p className="mb-4 text-sm text-gray-600">
+          <div className="w-full max-w-sm rounded-lg bg-elevated p-6 shadow-xl">
+            <h3 className="mb-2 text-sm font-bold text-fg">{t("Unsaved changes")}</h3>
+            <p className="mb-4 text-sm text-fg-muted">
               {t("This assessment has unsaved changes. Save it before switching")} {resolvedLabel.toLowerCase()}?
             </p>
-            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={cancelSwitch}
                 disabled={saving}
-                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-md border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg-secondary hover:bg-hover disabled:opacity-50"
               >
                 {t("Cancel")}
               </button>
@@ -126,7 +126,7 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
                 type="button"
                 onClick={discardAndSwitch}
                 disabled={saving}
-                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="rounded-md border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-50"
               >
                 {t("Discard changes")}
               </button>

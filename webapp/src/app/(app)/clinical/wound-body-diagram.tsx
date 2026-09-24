@@ -85,6 +85,17 @@ const DOT_VISIBLE_SIZE = { empty: 22, withPhotos: 30 };
 
 export type WoundBodyPart = { id: number | string; label: string };
 
+// tbl_wound_body_parts.label is stored/displayed as its own translation key
+// (same convention as every other DB-driven option label), but a bare
+// "Back" would collide with dict-common.ts's "Back" (the nav button, ->
+// "Kembali") and render as "go back" instead of the anatomical region.
+// Disambiguated here rather than in the dictionary, since the stored label
+// itself must stay "Back" for existing wound photo records.
+function translateBodyPartLabel(label: string, t: (text: string) => string): string {
+  if (label === "Back") return t("Back (body part)");
+  return t(label);
+}
+
 type Props = {
   bodyParts: WoundBodyPart[];
   photoCountByLabel: Record<string, number>;
@@ -120,8 +131,8 @@ export function WoundBodyDiagram({ bodyParts, photoCountByLabel, onSelectPart }:
                 key={key}
                 type="button"
                 onClick={() => onSelectPart(part)}
-                title={t(part.label)}
-                aria-label={t(part.label)}
+                title={translateBodyPartLabel(part.label, t)}
+                aria-label={translateBodyPartLabel(part.label, t)}
                 className="group absolute flex items-center justify-center rounded-full"
                 style={{
                   left: `${spot.x}%`,
@@ -155,8 +166,8 @@ export function WoundBodyDiagram({ bodyParts, photoCountByLabel, onSelectPart }:
               key={key}
               type="button"
               onClick={() => onSelectPart(part)}
-              title={t(part.label)}
-              aria-label={t(part.label)}
+              title={translateBodyPartLabel(part.label, t)}
+              aria-label={translateBodyPartLabel(part.label, t)}
               className="group absolute"
               style={{
                 left: `${spot.x1}%`,

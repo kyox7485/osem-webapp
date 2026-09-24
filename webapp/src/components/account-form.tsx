@@ -13,7 +13,7 @@ type Props = {
 };
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+  "mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 export function AccountForm({ account, branches, action }: Props) {
   const t = useTranslation();
@@ -47,26 +47,26 @@ export function AccountForm({ account, branches, action }: Props) {
   }
 
   return (
-    <form id={formId} action={(fd) => { void handleSubmit(fd); }} onChangeCapture={markDirty} className="max-w-lg space-y-4 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+    <form id={formId} action={(fd) => { void handleSubmit(fd); }} onChangeCapture={markDirty} className="max-w-lg space-y-4 rounded-md border border-line bg-surface p-4 shadow-sm">
+      {error && <p className="rounded-md bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {!account && (
-        <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+        <p className="rounded-md bg-blue-50 dark:bg-blue-950/40 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
           {t("Creating this sends an email invite so the person sets their own password.")}
         </p>
       )}
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Email")} <span className="text-red-500">*</span>
         <input name="email" type="email" defaultValue={account?.email} required className={inputCls} />
       </label>
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Username")} <span className="text-red-500">*</span>
         <input name="username" defaultValue={account?.username} required className={inputCls} />
       </label>
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Branch")} <span className="text-red-500">*</span>
         <select name="branch_id" defaultValue={account?.branch_id ?? ""} required className={inputCls}>
           <option value="" disabled>{t("Select a branch")}</option>
@@ -76,7 +76,7 @@ export function AccountForm({ account, branches, action }: Props) {
         </select>
       </label>
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-fg-secondary">
         {t("Rights")} <span className="text-red-500">*</span>
         <select name="rights" defaultValue={account?.rights ?? ""} required className={inputCls}>
           <option value="" disabled>{t("Select rights")}</option>
@@ -87,7 +87,7 @@ export function AccountForm({ account, branches, action }: Props) {
       </label>
 
       {account && (
-        <label className="block text-sm text-gray-700">
+        <label className="block text-sm text-fg-secondary">
           {t("Status")}
           <select name="status" defaultValue={account.status} className={inputCls}>
             {STAFF_STATUS_OPTIONS.map((s) => (

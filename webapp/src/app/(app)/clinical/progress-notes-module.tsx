@@ -98,17 +98,17 @@ export function ProgressNotesModule({
       {innerTab === "review" ? (
         <>
           {/* Filters */}
-          <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("Resident")}
                 </label>
                 <select
                   id="resident-filter"
                   value={currentResident}
                   onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">{t("All residents")}</option>
                   {residents.map((r) => (
@@ -120,7 +120,7 @@ export function ProgressNotesModule({
               </div>
 
               <div>
-                <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("Start date")}
                 </label>
                 <input
@@ -128,12 +128,12 @@ export function ProgressNotesModule({
                   id="start-date"
                   value={currentStart}
                   onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-gray-700">
+                <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("End date")}
                 </label>
                 <input
@@ -141,19 +141,19 @@ export function ProgressNotesModule({
                   id="end-date"
                   value={currentEnd}
                   onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Error */}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {/* Notes List */}
           <div className="space-y-3">
             {notes.length === 0 ? (
-              <div className="rounded-md border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+              <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
                 {t("No progress notes yet.")}
               </div>
             ) : (
@@ -165,11 +165,11 @@ export function ProgressNotesModule({
                   <div
                     key={note.id}
                     onClick={() => setExpandedId(isExpanded ? null : note.id)}
-                    className="cursor-pointer rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-indigo-200"
+                    className="cursor-pointer rounded-md border border-line bg-surface p-4 shadow-sm transition-colors hover:border-indigo-200 dark:hover:border-indigo-700"
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold text-gray-900">{note.tbl_residents?.resident_name}</span>
-                      <span className="flex items-center gap-2 text-xs text-gray-400">
+                      <span className="font-bold text-fg">{note.tbl_residents?.resident_name}</span>
+                      <span className="flex items-center gap-2 text-xs text-fg-faint">
                         {formatDateTime(note.entry_timestamp)}
                         <PdfDownloadLink href={`/api/reports/progress-note?id=${note.id}`} />
                         <svg
@@ -177,7 +177,7 @@ export function ProgressNotesModule({
                           height="14"
                           viewBox="0 0 16 16"
                           fill="none"
-                          className={`text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          className={`text-fg-faint transition-transform ${isExpanded ? "rotate-90" : ""}`}
                         >
                           <path
                             d="M6 3.5L10.5 8L6 12.5"
@@ -190,36 +190,36 @@ export function ProgressNotesModule({
                       </span>
                     </div>
                     {!isExpanded && (
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-fg-secondary">
                         {recordedCount > 0 ? (
-                          <span className="text-gray-400">
+                          <span className="text-fg-faint">
                             {recordedCount} {t(recordedCount > 1 ? "fields" : "field")} {t("recorded -- click to view")}
                           </span>
                         ) : (
-                          <span className="text-gray-400">{t("Click to view")}</span>
+                          <span className="text-fg-faint">{t("Click to view")}</span>
                         )}
                       </p>
                     )}
 
                     {isExpanded && (
-                      <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                      <div className="mt-3 space-y-2 border-t border-line-subtle pt-3">
                         {note.progress_note && (
-                          <p className="whitespace-pre-wrap text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">{t("Progress note")}: </span>
+                          <p className="whitespace-pre-wrap text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t("Progress note")}: </span>
                             {note.progress_note}
                           </p>
                         )}
                         {details.map(([key, label]) => (
-                          <p key={key} className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-500">{t(label)}: </span>
+                          <p key={key} className="text-sm text-fg-muted">
+                            <span className="font-medium text-fg-subtle">{t(label)}: </span>
                             {note[key] as string}
                           </p>
                         ))}
-                        {recordedCount === 0 && <p className="text-sm text-gray-400">{t("No fields recorded.")}</p>}
+                        {recordedCount === 0 && <p className="text-sm text-fg-faint">{t("No fields recorded.")}</p>}
                       </div>
                     )}
 
-                    <div className="mt-2 text-xs text-gray-400">
+                    <div className="mt-2 text-xs text-fg-faint">
                       {t("Reviewed by")}: {note.reviewer?.staff_name || note.reviewed_by_other || note.author?.staff_name || note.created_by_other || "--"}
                     </div>
                   </div>
