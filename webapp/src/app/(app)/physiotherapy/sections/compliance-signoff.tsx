@@ -26,15 +26,15 @@ export function ComplianceSignoff({
 }: Props) {
   const t = useTranslation();
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">{t("Treatment Compliance & Documentation")}</h2>
+    <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">{t("Treatment Compliance & Documentation")}</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="block text-sm text-gray-700">
+        <label className="block text-sm text-gray-700 dark:text-gray-300">
           {t("Treatment Compliance & Completion")}
           <select
             value={treatmentCompliance}
             onChange={(e) => setTreatmentCompliance(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="">{t("Select compliance")}</option>
             {PHYSIO_COMPLIANCE_OPTIONS.map((opt) => (
@@ -45,7 +45,7 @@ export function ComplianceSignoff({
           </select>
         </label>
 
-        <div className="block text-sm text-gray-700">
+        <div className="block text-sm text-gray-700 dark:text-gray-300">
           {t("Documented By")} <span className="text-red-500">*</span>
           <div className="mt-1">
             <StaffPickerWithOther

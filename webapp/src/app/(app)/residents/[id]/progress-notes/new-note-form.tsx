@@ -8,7 +8,7 @@ import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 
 const inputCls =
-  "mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+  "mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 export function NewNoteForm({
   residentId,
@@ -56,35 +56,35 @@ export function NewNoteForm({
   }
 
   return (
-    <form id="new-note-form" action={handleSubmit} onChangeCapture={markDirty} className="space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+    <form id="new-note-form" action={handleSubmit} onChangeCapture={markDirty} className="space-y-3 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+      {error && <p className="rounded-md bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-600 dark:text-red-300">{error}</p>}
 
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Progress note")} <span className="text-red-500">*</span>
         <textarea name="progress_note" required rows={3} className={inputCls} />
       </label>
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Physical examination")}
         <textarea name="physical_examination" rows={2} className={inputCls} />
       </label>
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Medical plan")}
         <textarea name="medical_plan" rows={2} className={inputCls} />
       </label>
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Nursing plan")}
         <textarea name="nursing_plan" rows={2} className={inputCls} />
       </label>
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Feeding plan")}
         <textarea name="feeding_plan" rows={2} className={inputCls} />
       </label>
-      <label className="block text-sm text-gray-700">
+      <label className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Monitoring plan")}
         <textarea name="monitoring_plan" rows={2} className={inputCls} />
       </label>
 
-      <div className="block text-sm text-gray-700">
+      <div className="block text-sm text-gray-700 dark:text-gray-300">
         {t("Entered by")} <span className="text-red-500">*</span>
         <input type="hidden" name="staff_id" value={staffId} />
         <input type="hidden" name="staff_id_other" value={staffIdOther} />

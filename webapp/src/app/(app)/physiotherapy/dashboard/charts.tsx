@@ -26,7 +26,7 @@ export function TypeLegend({ labels }: { labels: Record<PatientTypeKey, string> 
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1.5">
       {TYPE_ORDER.map((k) => (
-        <div key={k} className="flex items-center gap-1.5 text-xs text-gray-600">
+        <div key={k} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
           <span className={`h-2.5 w-2.5 rounded-full ${TYPE_COLOR[k].dot}`} />
           {labels[k]}
         </div>
@@ -57,9 +57,9 @@ function BreakdownTooltip({
   return (
     <div
       role="tooltip"
-      className={`pointer-events-none absolute z-10 w-44 rounded-md border border-gray-200 bg-white p-2.5 text-left opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 ${placement}`}
+      className={`pointer-events-none absolute z-10 w-44 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2.5 text-left opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 ${placement}`}
     >
-      <p className="mb-1.5 flex items-baseline justify-between text-xs font-bold text-gray-900">
+      <p className="mb-1.5 flex items-baseline justify-between text-xs font-bold text-gray-900 dark:text-gray-100">
         <span>{formatHours(total)}</span>
       </p>
       <div className="space-y-1">
@@ -68,12 +68,12 @@ function BreakdownTooltip({
           const pct = total > 0 ? (v / total) * 100 : 0;
           return (
             <div key={k} className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="flex min-w-0 items-center gap-1.5 text-gray-600">
+              <span className="flex min-w-0 items-center gap-1.5 text-gray-600 dark:text-gray-400">
                 <span className={`h-2 w-2 shrink-0 rounded-full ${TYPE_COLOR[k].dot}`} />
                 <span className="truncate">{labels[k]}</span>
               </span>
-              <span className="shrink-0 font-medium text-gray-800">
-                {formatHours(v)} <span className="text-gray-400">({pct.toFixed(0)}%)</span>
+              <span className="shrink-0 font-medium text-gray-800 dark:text-gray-200">
+                {formatHours(v)} <span className="text-gray-400 dark:text-gray-500">({pct.toFixed(0)}%)</span>
               </span>
             </div>
           );
@@ -106,13 +106,13 @@ export function StackedBar({
   return (
     <div className="group relative" tabIndex={total > 0 ? 0 : undefined}>
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-medium text-gray-800">{label}</span>
-        <span className="shrink-0 text-xs text-gray-500">
+        <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">{label}</span>
+        <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
           {formatHours(total)}
           {sublabel}
         </span>
       </div>
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-gray-100">
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
         {total === 0
           ? null
           : TYPE_ORDER.map((k) => {
@@ -159,7 +159,7 @@ export function TrendChart({
             className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
             tabIndex={total > 0 ? 0 : undefined}
           >
-            <div className="flex h-32 w-full items-end overflow-hidden rounded-t-sm bg-gray-50">
+            <div className="flex h-32 w-full items-end overflow-hidden rounded-t-sm bg-gray-50 dark:bg-gray-800/60">
               <div className="flex w-full flex-col justify-end" style={{ height: `${heightPct}%` }}>
                 {[...TYPE_ORDER].reverse().map((k) => {
                   const v = b.totals[k];
@@ -169,7 +169,7 @@ export function TrendChart({
                 })}
               </div>
             </div>
-            <span className="truncate text-[10px] text-gray-500">{b.label}</span>
+            <span className="truncate text-[10px] text-gray-500 dark:text-gray-400">{b.label}</span>
             {total > 0 && <BreakdownTooltip totals={b.totals} labels={labels} position={edgePosition} />}
           </div>
         );
@@ -225,8 +225,8 @@ export function DonutChart({
           })}
       </svg>
       <div className="min-w-0 flex-1">
-        <p className="text-2xl font-bold tracking-tight text-gray-900">{formatHours(total)}</p>
-        <p className="mb-2 text-xs text-gray-500">{t("total credit hours")}</p>
+        <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{formatHours(total)}</p>
+        <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">{t("total credit hours")}</p>
         <div className="space-y-1">
           {TYPE_ORDER.map((k) => {
             const v = totals[k];
@@ -234,8 +234,8 @@ export function DonutChart({
             return (
               <div key={k} className="flex items-center gap-1.5 text-xs">
                 <span className={`h-2 w-2 shrink-0 rounded-full ${TYPE_COLOR[k].dot}`} />
-                <span className="text-gray-600">{formatHours(v)}</span>
-                <span className="text-gray-400">({pct.toFixed(0)}%)</span>
+                <span className="text-gray-600 dark:text-gray-400">{formatHours(v)}</span>
+                <span className="text-gray-400 dark:text-gray-500">({pct.toFixed(0)}%)</span>
               </div>
             );
           })}
@@ -265,7 +265,7 @@ export function WorkloadBar({
 
   return (
     <div className="w-full">
-      <div className="relative h-2.5 w-full rounded-full bg-gray-100">
+      <div className="relative h-2.5 w-full rounded-full bg-gray-100 dark:bg-gray-800">
         <div
           className={`h-2.5 rounded-full ${delta >= 0 ? "bg-emerald-600" : "bg-emerald-400"}`}
           style={{ width: `${barPct}%` }}
@@ -278,13 +278,13 @@ export function WorkloadBar({
           title={`${baseline}h/week baseline`}
         />
       </div>
-      <p className="mt-1 text-[11px] text-gray-500">
+      <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
         {t("{h}h/wk avg").replace("{h}", avgWeeklyHours.toFixed(1))}
         {" · "}
         {delta >= 0 ? (
-          <span className="font-medium text-emerald-700">{t("+{h}h overtime").replace("{h}", delta.toFixed(1))}</span>
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">{t("+{h}h overtime").replace("{h}", delta.toFixed(1))}</span>
         ) : (
-          <span className="text-gray-500">{t("{h}h below baseline").replace("{h}", Math.abs(delta).toFixed(1))}</span>
+          <span className="text-gray-500 dark:text-gray-400">{t("{h}h below baseline").replace("{h}", Math.abs(delta).toFixed(1))}</span>
         )}
       </p>
     </div>

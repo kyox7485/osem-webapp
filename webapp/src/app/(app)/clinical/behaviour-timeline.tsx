@@ -231,7 +231,7 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
       {/* Concern level legend */}
       <div className="flex flex-wrap gap-4 px-1">
         {(["neutral", "mild", "abnormal", "high"] as Severity[]).map((sev) => (
-          <div key={sev} className="flex items-center gap-1.5 text-xs text-gray-600">
+          <div key={sev} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
             <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: SEVERITY_COLOR[sev].dot }} />
             {t(SEVERITY_LABEL[sev])}
           </div>
@@ -239,16 +239,16 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
       </div>
 
       {/* Timeline */}
-      <div className="overflow-x-auto rounded-md border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
         {/* Hour axis header (day view) */}
         {isDayView && (
-          <div className="flex border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
-            <div style={{ width: dateLabelW, minWidth: dateLabelW }} className="border-r border-gray-100" />
+          <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 sticky top-0 z-10">
+            <div style={{ width: dateLabelW, minWidth: dateLabelW }} className="border-r border-gray-100 dark:border-gray-800" />
             <div className="relative flex-1 h-5">
               {HOUR_MARKS_AXIS.map((h) => (
                 <span
                   key={h}
-                  className="absolute bottom-0 text-[9px] text-gray-400"
+                  className="absolute bottom-0 text-[9px] text-gray-400 dark:text-gray-500"
                   style={{
                     left: `${(h / 24) * 100}%`,
                     transform: h === 0 ? "none" : h === 24 ? "translateX(-100%)" : "translateX(-50%)",
@@ -283,22 +283,22 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
           return (
             <div
               key={dateStr}
-              className={`flex border-b border-gray-100 last:border-b-0 ${drillable ? "cursor-pointer hover:bg-blue-50 transition-colors" : ""}`}
+              className={`flex border-b border-gray-100 dark:border-gray-800 last:border-b-0 ${drillable ? "cursor-pointer hover:bg-blue-50 transition-colors" : ""}`}
               style={{ minHeight: rowMinH }}
               onClick={drillable ? () => onDrillDown!(dateStr) : undefined}
               title={drillable ? t("Click to view this day in detail") : undefined}
             >
               {/* Date label */}
               <div
-                className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-r border-gray-100 px-2 py-2"
+                className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-r border-gray-100 dark:border-gray-800 px-2 py-2"
                 style={{ width: dateLabelW, minWidth: dateLabelW }}
               >
                 <div className="text-center leading-none">
-                  <div className="text-xs text-gray-400">{label.weekday}</div>
-                  <div className={`font-bold text-gray-800 ${isDayView ? "text-lg" : days <= 7 ? "text-base" : "text-sm"}`}>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{label.weekday}</div>
+                  <div className={`font-bold text-gray-800 dark:text-gray-200 ${isDayView ? "text-lg" : days <= 7 ? "text-base" : "text-sm"}`}>
                     {label.day}
                   </div>
-                  <div className="text-xs text-gray-400">{label.month}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{label.month}</div>
                 </div>
                 {distLevel != null && (
                   <div
@@ -409,7 +409,7 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
         <div className="flex overflow-hidden" style={{ marginLeft: dateLabelW }}>
           {HOUR_MARKS_AXIS.map((h, i, arr) =>
             i === arr.length - 1 ? null : (
-              <div key={h} className="flex-1 text-[9px] text-gray-400" style={{ flexBasis: `${(1 / (arr.length - 1)) * 100}%` }}>
+              <div key={h} className="flex-1 text-[9px] text-gray-400 dark:text-gray-500" style={{ flexBasis: `${(1 / (arr.length - 1)) * 100}%` }}>
                 {String(h).padStart(2, "0")}
               </div>
             )
@@ -419,11 +419,11 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
 
       {/* Disturbance legend (day view only) */}
       {isDayView && (
-        <div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{t("Disturbance Level")}</p>
+        <div className="rounded-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{t("Disturbance Level")}</p>
           <div className="flex flex-wrap gap-2">
             {[0, 1, 2, 3, 4].map((l) => (
-              <div key={l} className="flex items-center gap-1.5 text-xs text-gray-600">
+              <div key={l} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                 <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: DISTURBANCE_COLOR[l] }} />
                 L{l} — {DISTURBANCE_LABELS[l]}
               </div>
@@ -434,7 +434,7 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
 
       {/* Drill-down hint for multi-day */}
       {!isDayView && onDrillDown && (
-        <p className="text-[10px] text-gray-400 px-1">{t("Tap a day to view its detailed 24-hour timeline")}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">{t("Tap a day to view its detailed 24-hour timeline")}</p>
       )}
 
       {/* Episode detail popup */}
@@ -444,7 +444,7 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
           onClick={() => setActive(null)}
         >
           <div
-            className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl p-5 space-y-3"
+            className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-900 shadow-2xl p-5 space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
@@ -453,7 +453,7 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
                   className="inline-block h-3 w-3 rounded-full shrink-0"
                   style={{ backgroundColor: SEVERITY_COLOR[getSeverity(active.behaviour)].dot }}
                 />
-                <span className="font-semibold text-gray-900">{active.behaviour}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{active.behaviour}</span>
                 <span
                   className="rounded-full px-2 py-0.5 text-xs font-medium"
                   style={{
@@ -463,12 +463,12 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
                 >
                   {t(SEVERITY_LABEL[getSeverity(active.behaviour)])}
                 </span>
-                <span className="text-xs text-gray-400">{active.category}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{active.category}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setActive(null)}
-                className="shrink-0 rounded-full p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                className="shrink-0 rounded-full p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Close"
               >
                 <svg viewBox="0 0 16 16" width="16" height="16" fill="none">
@@ -479,43 +479,43 @@ export function BehaviourTimeline({ episodes, charts, days, endDate, onDrillDown
 
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <div>
-                <dt className="text-xs text-gray-400">{t("Date")}</dt>
-                <dd className="font-medium text-gray-800">
+                <dt className="text-xs text-gray-400 dark:text-gray-500">{t("Date")}</dt>
+                <dd className="font-medium text-gray-800 dark:text-gray-200">
                   {active.started_at ? formatMYTDate(active.started_at) : "—"}
                 </dd>
               </div>
               {active.started_at && active.ended_at ? (
                 <>
                   <div>
-                    <dt className="text-xs text-gray-400">{t("Duration")}</dt>
-                    <dd className="font-medium text-gray-800">{durationLabel(active.started_at, active.ended_at)}</dd>
+                    <dt className="text-xs text-gray-400 dark:text-gray-500">{t("Duration")}</dt>
+                    <dd className="font-medium text-gray-800 dark:text-gray-200">{durationLabel(active.started_at, active.ended_at)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-400">{t("Start time")}</dt>
-                    <dd className="font-medium text-gray-800">{formatMYTTime(active.started_at)}</dd>
+                    <dt className="text-xs text-gray-400 dark:text-gray-500">{t("Start time")}</dt>
+                    <dd className="font-medium text-gray-800 dark:text-gray-200">{formatMYTTime(active.started_at)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-400">{t("End time")}</dt>
-                    <dd className="font-medium text-gray-800">{formatMYTTime(active.ended_at)}</dd>
+                    <dt className="text-xs text-gray-400 dark:text-gray-500">{t("End time")}</dt>
+                    <dd className="font-medium text-gray-800 dark:text-gray-200">{formatMYTTime(active.ended_at)}</dd>
                   </div>
                 </>
               ) : (
                 <div>
-                  <dt className="text-xs text-gray-400">{t("Time")}</dt>
-                  <dd className="text-gray-500 italic text-sm">{t("Not specified")}</dd>
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">{t("Time")}</dt>
+                  <dd className="text-gray-500 dark:text-gray-400 italic text-sm">{t("Not specified")}</dd>
                 </div>
               )}
             </dl>
 
             {active.note && (
-              <div className="rounded-md bg-gray-50 p-2.5 text-sm text-gray-700">
-                <span className="text-xs font-medium text-gray-400 block mb-0.5">{t("Note")}</span>
+              <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 p-2.5 text-sm text-gray-700 dark:text-gray-300">
+                <span className="text-xs font-medium text-gray-400 dark:text-gray-500 block mb-0.5">{t("Note")}</span>
                 {active.note}
               </div>
             )}
             {active.staffName && (
-              <div className="text-xs text-gray-400">
-                {t("Entered by")}: <span className="text-gray-600">{active.staffName}</span>
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                {t("Entered by")}: <span className="text-gray-600 dark:text-gray-400">{active.staffName}</span>
               </div>
             )}
           </div>

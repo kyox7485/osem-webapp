@@ -124,7 +124,7 @@ export function KpiCardsClient({
             label={t("Admissions")}
             value={admissions}
             sub={t("in selected period")}
-            tint="bg-blue-50 text-blue-600"
+            tint="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
             icon={<Users className="h-4 w-4" strokeWidth={2} />}
             clickable
           />
@@ -135,7 +135,7 @@ export function KpiCardsClient({
             label={t("Discharges")}
             value={discharges}
             sub={t("in selected period")}
-            tint="bg-amber-50 text-amber-600"
+            tint="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
             icon={<DoorOpen className="h-4 w-4" strokeWidth={2} />}
             clickable
           />
@@ -147,7 +147,7 @@ export function KpiCardsClient({
               label={t("Active Residents")}
               value={currentOccupancy}
               sub={t("current occupancy")}
-              tint="bg-emerald-50 text-emerald-600"
+              tint="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
               icon={<BedDouble className="h-4 w-4" strokeWidth={2} />}
               clickable
             />
@@ -158,13 +158,13 @@ export function KpiCardsClient({
           <KpiCard
             label={t("Net Bed Change")}
             value={
-              <span className={netGrowth > 0 ? "text-emerald-700" : netGrowth < 0 ? "text-red-600" : "text-gray-900"}>
+              <span className={netGrowth > 0 ? "text-emerald-700 dark:text-emerald-400" : netGrowth < 0 ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-gray-100"}>
                 {netGrowth > 0 ? "+" : ""}
                 {netGrowth}
               </span>
             }
             sub={t("admissions − discharges")}
-            tint={netGrowth > 0 ? "bg-emerald-50 text-emerald-600" : netGrowth < 0 ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}
+            tint={netGrowth > 0 ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400" : netGrowth < 0 ? "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}
             icon={
               netGrowth > 0 ? (
                 <TrendingUp className="h-4 w-4" strokeWidth={2} />
@@ -183,7 +183,7 @@ export function KpiCardsClient({
             label={t("Avg Length of Stay")}
             value={avgLos !== null ? `${avgLos}d` : "–"}
             sub={`${allResidentsWithAdmission} ${t("residents")}`}
-            tint="bg-violet-50 text-violet-600"
+            tint="bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400"
             icon={<Clock className="h-4 w-4" strokeWidth={2} />}
             clickable
           />
@@ -195,7 +195,7 @@ export function KpiCardsClient({
               label={t("Occupancy %")}
               value={`${occupancyPercentage}%`}
               sub={`${currentOccupancy}/${totalBedCapacity} beds`}
-              tint="bg-indigo-50 text-indigo-600"
+              tint="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
               icon={<BarChart3 className="h-4 w-4" strokeWidth={2} />}
               clickable
             />

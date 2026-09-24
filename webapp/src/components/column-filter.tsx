@@ -148,7 +148,7 @@ export function ColumnFilter(props: Props) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={`${t("Filter")} ${props.label}`}
-        className={`rounded p-0.5 transition-colors hover:bg-gray-200 ${isActive ? "text-indigo-600" : "text-gray-400"}`}
+        className={`rounded p-0.5 transition-colors hover:bg-gray-200 dark:hover:bg-gray-800 ${isActive ? "text-indigo-600" : "text-gray-400 dark:text-gray-500"}`}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M2 3h8M3.5 6h5M5 9h2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -160,7 +160,7 @@ export function ColumnFilter(props: Props) {
           <div
             ref={popoverRef}
             style={{ position: "fixed", top: coords.top, left: coords.left }}
-            className="z-50 w-56 rounded-md border border-gray-200 bg-white p-3 text-left font-normal normal-case tracking-normal text-gray-900 shadow-lg"
+            className="z-50 w-56 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-left font-normal normal-case tracking-normal text-gray-900 dark:text-gray-100 shadow-lg"
           >
             {props.type === "text" ? (
               <input
@@ -170,17 +170,17 @@ export function ColumnFilter(props: Props) {
                 onChange={(e) => setTextDraft(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleApply()}
                 placeholder={props.placeholder}
-                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             ) : (
               <div className="max-h-48 space-y-1 overflow-y-auto">
                 {props.options.map((o) => (
-                  <label key={o.value} className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-gray-50">
+                  <label key={o.value} className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-800/60">
                     <input
                       type="checkbox"
                       checked={selectedDraft.includes(o.value)}
                       onChange={() => toggleOption(o.value)}
-                      className="h-3.5 w-3.5 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/40"
+                      className="h-3.5 w-3.5 shrink-0 rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500/40"
                     />
                     <span className="break-words">{o.label}</span>
                   </label>
@@ -192,7 +192,7 @@ export function ColumnFilter(props: Props) {
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 {t("Clear")}
               </button>

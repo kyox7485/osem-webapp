@@ -77,7 +77,7 @@ export function ResidentDashboard({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              <thead className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <tr>
                   <th className="py-1 pr-3">{t("Date")}</th>
                   <th className="py-1 pr-3">{t("BP")}</th>
@@ -86,16 +86,16 @@ export function ResidentDashboard({
                   <th className="py-1 pr-3">{t("SpO2")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {vitals.map((v, i) => (
                   <tr key={i}>
-                    <td className="py-1 pr-3 text-gray-500">{formatDateTime(v.entry_timestamp)}</td>
-                    <td className="py-1 pr-3 text-gray-800">
+                    <td className="py-1 pr-3 text-gray-500 dark:text-gray-400">{formatDateTime(v.entry_timestamp)}</td>
+                    <td className="py-1 pr-3 text-gray-800 dark:text-gray-200">
                       {v.systolic_bp ?? "--"}/{v.diastolic_bp ?? "--"}
                     </td>
-                    <td className="py-1 pr-3 text-gray-800">{v.heart_rate ?? "--"}</td>
-                    <td className="py-1 pr-3 text-gray-800">{v.temperature ?? "--"}</td>
-                    <td className="py-1 pr-3 text-gray-800">
+                    <td className="py-1 pr-3 text-gray-800 dark:text-gray-200">{v.heart_rate ?? "--"}</td>
+                    <td className="py-1 pr-3 text-gray-800 dark:text-gray-200">{v.temperature ?? "--"}</td>
+                    <td className="py-1 pr-3 text-gray-800 dark:text-gray-200">
                       {v.spo2 ?? "--"}
                       {v.spo2_condition ? ` (${v.spo2_condition})` : ""}
                     </td>
@@ -132,15 +132,15 @@ function DashCard({
 }) {
   if (collapsible) {
     return (
-      <details className="group rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-gray-900">
+      <details className="group rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold text-gray-900 dark:text-gray-100">
           {title}
           <svg
             width="14"
             height="14"
             viewBox="0 0 16 16"
             fill="none"
-            className="text-gray-400 transition-transform group-open:rotate-90"
+            className="text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-90"
           >
             <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -151,8 +151,8 @@ function DashCard({
   }
 
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-bold text-gray-900">{title}</h2>
+    <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">{title}</h2>
       {children}
     </div>
   );
@@ -161,26 +161,26 @@ function DashCard({
 function ClampedText({ value }: { value: string | null }) {
   const t = useTranslation();
   if (!value) return <EmptyNote text={t("None recorded.")} />;
-  return <p className="whitespace-pre-wrap text-sm text-gray-800">{value}</p>;
+  return <p className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{value}</p>;
 }
 
 function PlanRow({ label, entry }: { label: string; entry: PlanEntry }) {
   const t = useTranslation();
   return (
     <div>
-      <dt className="text-xs font-medium text-gray-500">{label}</dt>
+      <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</dt>
       {entry ? (
-        <dd className="text-sm text-gray-800">
+        <dd className="text-sm text-gray-800 dark:text-gray-200">
           {entry.value}
-          <span className="block text-xs text-gray-400">{formatDate(entry.entry_timestamp)}</span>
+          <span className="block text-xs text-gray-400 dark:text-gray-500">{formatDate(entry.entry_timestamp)}</span>
         </dd>
       ) : (
-        <dd className="text-sm text-gray-400">{t("No entry yet")}</dd>
+        <dd className="text-sm text-gray-400 dark:text-gray-500">{t("No entry yet")}</dd>
       )}
     </div>
   );
 }
 
 function EmptyNote({ text }: { text: string }) {
-  return <p className="text-sm text-gray-400">{text}</p>;
+  return <p className="text-sm text-gray-400 dark:text-gray-500">{text}</p>;
 }

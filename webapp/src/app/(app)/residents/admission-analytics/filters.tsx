@@ -40,7 +40,7 @@ export function AnalyticsFilters({ period, from, to, branch, branches }: Props) 
   const isCustom = period === "custom";
 
   return (
-    <div className="mb-4 space-y-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="mb-4 space-y-3 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
         <TabRow>
           {PERIODS.map((p) => (
@@ -55,32 +55,32 @@ export function AnalyticsFilters({ period, from, to, branch, branches }: Props) 
         {isCustom && (
           <>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">{t("From date")}</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("From date")}</label>
               <input
                 type="date"
                 value={from}
                 onChange={(e) => navigate({ from: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">{t("To date")}</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("To date")}</label>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => navigate({ to: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
           </>
         )}
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">{t("Branch")}</label>
+          <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">{t("Branch")}</label>
           <select
             value={branch}
             onChange={(e) => navigate({ branch: e.target.value })}
-            className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             <option value="">{t("All branches")}</option>
             {branches.map((b) => (
