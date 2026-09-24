@@ -56,6 +56,21 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       .finally(() => setDashboardLoading(false));
   }, [residentId]);
 
+  useEffect(() => {
+    if (dashboard) {
+      setProgressNote(dashboard.latestProgressNote ?? "");
+      setPhysicalExamination(dashboard.latestPhysicalExamination ?? "");
+      setMedicalPlan(dashboard.plans.medical?.value ?? "");
+      setNursingPlan(dashboard.plans.nursing?.value ?? "");
+      setFeedingPlan(dashboard.plans.diet?.value ?? "");
+      setDressingPlan(dashboard.plans.dressing?.value ?? "");
+      setMonitoringPlan(dashboard.plans.monitoring?.value ?? "");
+      setPhysioPlan(dashboard.plans.physio?.value ?? "");
+    } else {
+      resetForm();
+    }
+  }, [dashboard]);
+
   function resetForm() {
     setProgressNote("");
     setPhysicalExamination("");

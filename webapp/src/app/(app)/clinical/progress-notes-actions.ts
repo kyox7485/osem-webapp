@@ -20,6 +20,8 @@ export type ResidentDashboardData = {
   pastMedicalCondition: string | null;
   currentMedicationList: string | null;
   tcaNotes: string | null;
+  latestProgressNote: string | null;
+  latestPhysicalExamination: string | null;
   vitals: {
     entry_timestamp: string;
     systolic_bp: number | null;
@@ -50,7 +52,7 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
   const [{ data: notes }, { data: vitals }] = await Promise.all([
     supabase
       .from("tbl_progress_notes")
-      .select("entry_timestamp, medical_plan, nursing_plan, feeding_plan, dressing_plan, monitoring_plan, physio_plan")
+      .select("entry_timestamp, progress_note, physical_examination, medical_plan, nursing_plan, feeding_plan, dressing_plan, monitoring_plan, physio_plan")
       .eq("resident_id", residentId)
       .order("entry_timestamp", { ascending: false }),
     supabase
@@ -68,11 +70,15 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
     })
   ) as Record<(typeof PLAN_FIELDS)[number][0], PlanEntry>;
 
+  const latestNote = notes && notes.length > 0 ? notes[0] : null;
+
   return {
     allergy: resident.allergy,
     pastMedicalCondition: resident.past_medical_condition,
     currentMedicationList: resident.current_medication_list,
     tcaNotes: resident.tca_notes,
+    latestProgressNote: latestNote?.progress_note ?? null,
+    latestPhysicalExamination: latestNote?.physical_examination ?? null,
     vitals: vitals ?? [],
     plans,
   };
