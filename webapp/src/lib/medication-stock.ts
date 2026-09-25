@@ -250,18 +250,18 @@ function forecastBalance(event: StockEvent, order: StockOrder, usage: number, to
 }
 
 export type StockOutlook = {
-  /** Days from today to the last covered dose (0 = nothing left after today); null = not forecast / outlasts the order. */
+  /** Balance ÷ Daily Usage rounded down to the nearest 0.5 (0 = nothing left after today); null = not forecast / outlasts the order. */
   daysRemaining: number | null;
   lastDoseDate: string | null;
   lastsUntilOrderEnd: string | null;
 };
 
 /**
- * Walks the schedule from tomorrow, deducting the per-dosing-day usage, to
- * find the last dose the balance can still cover. Days Remaining is the
- * number of days from today to that dose — so 9 tablets of 1 Tablet EOD is
- * 18 days, and a Mon/Wed/Fri order counts its gaps, not balance ÷ usage.
- * If the order's End Date comes first the supply outlasts the order.
+ * Days Remaining = balance ÷ Daily Usage (the displayed average, so users can
+ * check it), always rounded DOWN to the nearest 0.5 day: 19 ÷ 0.43 = 44.19
+ * → 44; 44.7 → 44.5. The last dose date comes from walking the actual
+ * schedule from tomorrow, deducting the per-dosing-day usage. If the order's
+ * End Date comes first the supply outlasts the order.
  */
 export function stockOutlook(balance: number, order: StockOrder, stockUnit: string, todayIso: string): StockOutlook {
   const none: StockOutlook = { daysRemaining: null, lastDoseDate: null, lastsUntilOrderEnd: null };
@@ -281,8 +281,9 @@ export function stockOutlook(balance: number, order: StockOrder, stockUnit: stri
       lastDose = day;
     }
   }
+  const avg = dailyUsage(order, stockUnit) || usage * dosingDayFraction(order);
   return {
-    daysRemaining: lastDose === null ? 0 : lastDose - start,
+    daysRemaining: lastDose === null ? 0 : floorToHalf(balance / avg),
     lastDoseDate: lastDose === null ? null : isoFromDayNumber(lastDose),
     lastsUntilOrderEnd: null,
   };
@@ -316,6 +317,11 @@ export function computeStockStatus(latest: StockEvent | null, order: StockOrder,
     dailyUsage: dailyUsage(order, latest.unit),
     ...stockOutlook(balance, order, latest.unit, today),
   };
+}
+
+// 1e-9 absorbs float error so an exact 18 doesn't become 17.5.
+function floorToHalf(n: number): number {
+  return Math.floor(n * 2 + 1e-9) / 2;
 }
 
 export function round2(n: number): number {

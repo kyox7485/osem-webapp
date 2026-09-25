@@ -195,10 +195,11 @@ function getLiveStockForecast_(stock, medication, trackingMethods){
         );
 
     //------------------------------------------------
-    // Days remaining: walk the schedule from tomorrow to find the last dose
-    // the balance still covers; Days Remaining = days from today to that
-    // dose (9 tablets of 1 Tablet EOD = 18). If the order's End Date passes
-    // first, the supply outlasts the order, so "" (no refill needed).
+    // Days Remaining = balance / Daily Usage (the displayed average),
+    // rounded DOWN to the nearest 0.5 day (19 / 0.43 = 44.19 -> 44). 0 when
+    // the schedule walk finds no dose the balance still covers. If the
+    // order's End Date passes first, the supply outlasts the order, so ""
+    // (no refill needed).
     //------------------------------------------------
 
     const end =
@@ -230,13 +231,21 @@ function getLiveStockForecast_(stock, medication, trackingMethods){
 
     }
 
+    // Shown as Daily Usage: average per calendar day (EOD = half).
+    const averageUsage =
+        Math.round(usage * stockDosingDayFraction_(medication) * 100) / 100 ||
+        usage * stockDosingDayFraction_(medication);
+
     const daysRemaining =
-        outlastsOrder ? "" : lastDose;
+        outlastsOrder
+            ? ""
+            : lastDose === 0
+                ? 0
+                : Math.floor(balance / averageUsage * 2 + 1e-9) / 2;
 
     result.balance = balance;
-    // Shown as Daily Usage: average per calendar day (EOD = half).
     result.dailyUsage =
-        Math.round(usage * stockDosingDayFraction_(medication) * 100) / 100;
+        Math.round(averageUsage * 100) / 100;
     result.daysRemaining = daysRemaining;
     result.forecast = true;
 
@@ -437,7 +446,7 @@ function buildStockStatus(stock){
     if(days < 7){
 
         return "🔴 " +
-            Math.round(days) +
+            days +
             " Days Left";
 
     }
@@ -445,13 +454,13 @@ function buildStockStatus(stock){
     if(days < 14){
 
         return "🟠 " +
-            Math.round(days) +
+            days +
             " Days Left";
 
     }
 
     return "🟢 " +
-        Math.round(days) +
+        days +
         " Days Left";
 
 }

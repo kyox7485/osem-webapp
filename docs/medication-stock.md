@@ -158,10 +158,11 @@ Implemented twice and **must stay identical**:
   value. Floored at 0.
 - Walk the schedule from tomorrow, deducting usage per dosing day, to find
   the **last dose the balance still covers** (`lastDoseDate`).
-  **Days Remaining = lastDoseDate − today** (0 = no doses left after today).
-  Example: 9 tablets, 1 Tablet EOD, today 25/09 → last dose Tue 13/10,
-  18 days. Walking the real schedule (rather than balance ÷ daily usage)
-  keeps Mon/Wed/Fri and EOD phase exact.
+  **Days Remaining = balance ÷ Daily Usage (the displayed, 2-dp average),
+  always rounded DOWN to the nearest 0.5 day** — 19 ÷ 0.43 = 44.19 → 44;
+  44.7 → 44.5; 9 ÷ 0.5 → 18. 0 when the walk finds no dose left after today.
+  Because it's an average, the last dose date can be a day or two past
+  today + Days Remaining (e.g. 44 days vs last dose Mon 09/11 = 45 days out).
 - If End Date comes first → Days Remaining "—" (supply outlasts the order;
   the screen shows "Enough until order ends" + the end date).
 - The Stock screen shows the badge ("18 days left") with "Last dose

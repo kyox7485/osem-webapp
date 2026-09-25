@@ -289,10 +289,9 @@ function getResidentCompleteMedicationList(residentID){
                     !isNaN(rawDays)
                 ){
 
+                    // Already rounded down to the nearest 0.5 (Stock.gs).
                     daysRemaining =
-                        Math.floor(
-                            rawDays
-                        );
+                        rawDays;
 
                 }
 
