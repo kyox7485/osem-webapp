@@ -79,3 +79,17 @@ must match Vercel's `MEDICATION_ORDER_SCRIPT_SECRET`).
   run once each) for "the sync must not fail" to actually hold. A sync
   failure is also written to the visible `tbl_MedicationSyncLog` sheet,
   not just the Apps Script execution transcript.
+- **Status changes go through the Sheet too.** `discontinueOrderAction`
+  and `autoExpireOrdersAction` call Apps Script `setOrderStatus`
+  (`medication-orders.gs`), which sets `Status` on the Sheet row and then
+  runs the same targeted sync + summary rebuild. They used to write
+  `tbl_medication_orders.status` straight into Supabase, which never reached
+  the Sheet/AppSheet and was reverted by the next Sheet→Supabase sync. An id
+  missing from the Sheet falls back to a direct Supabase update. Rule: any
+  webapp change to a medication order must be written Sheet-first.
+
+## Medication Stock (`/residents/medication/stock`)
+
+Stock forecast + audit trail and the Family Medication Reminder PDF are
+documented in full in `docs/medication-stock.md` (data flow, file map, unit
+rules, forecast algorithm, deployment checklist, open items).

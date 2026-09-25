@@ -1,6 +1,6 @@
 import { ResidentForm } from "@/components/resident-form";
 import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch, getDiagnosisOptions, getDemoBranchIds } from "@/lib/lookups";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { createResident } from "../actions";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -23,7 +23,7 @@ export default async function NewResidentPage({ searchParams }: { searchParams: 
   ]);
 
   const isDemoUser = demoBranchIds.includes(currentUser?.branch_id ?? -1);
-  const effectiveIsAdmin = isAdmin(currentUser) && !isDemoUser;
+  const effectiveIsAdmin = canAccessAllBranches(currentUser) && !isDemoUser;
 
   // Readmit: fetch source resident + their diagnoses to pre-fill the form
   let prefill: Partial<Resident> | undefined;

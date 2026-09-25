@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getReportBranchInfo } from "@/lib/pdf/branch-info";
 import { getLogoPath } from "@/lib/pdf/logo-path";
 import { ProgressNoteDocument, type ProgressNoteReportData } from "@/lib/pdf/documents/progress-note-document";
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   const reviewer = Array.isArray(note.reviewer) ? note.reviewer[0] : note.reviewer;
   const author = Array.isArray(note.author) ? note.author[0] : note.author;
 
-  if (account.rights !== "ADMIN" && note.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && note.branch_id !== account.branch_id) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 

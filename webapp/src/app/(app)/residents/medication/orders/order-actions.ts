@@ -2,13 +2,15 @@
 
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getDemoBranchIds } from "@/lib/lookups";
 import { revalidatePath } from "next/cache";
 import {
   createMedicationOrder,
   updateMedicationOrder,
+  setMedicationOrderStatus,
 } from "@/lib/medication-orders-script";
+import { recordOrderChangedStock } from "@/lib/medication-stock-server";
 
 async function generateRxOrderId(
   supabase: Awaited<ReturnType<typeof createClient>>
@@ -81,8 +83,29 @@ function validateOrderFields(
   return null;
 }
 
-// Discontinue a single order in Supabase (status → Discontinued).
-// The Apps Script's heartbeat/reconciliation will sync this to the Sheet.
+// Sheet-first status change (medication-orders.gs setOrderStatus): the Sheet
+// is updated, then the same request syncs the row to Supabase and rebuilds
+// current_medication_list. Writing Supabase alone never reached the Sheet
+// (sync only runs Sheet → Supabase), so the next sync reverted it.
+// Ids the Sheet doesn't have fall back to the old direct Supabase update so
+// they don't stay Active forever.
+async function discontinueOrders(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rxOrderIds: string[]
+): Promise<void> {
+  const result = await setMedicationOrderStatus(rxOrderIds, "Discontinued");
+  const notFound = result.notFound ?? [];
+  if (notFound.length > 0) {
+    console.error("Orders not found in the Google Sheet; updating Supabase only:", notFound);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from("tbl_medication_orders")
+      .update({ status: "Discontinued" })
+      .in("external_ref_id", notFound);
+  }
+}
+
+// Discontinue a single order (status → Discontinued), Sheet first.
 export async function discontinueOrderAction(
   rxOrderId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -102,7 +125,7 @@ export async function discontinueOrderAction(
   if (existingOrder.status !== "Active")
     return { success: false, error: "Order is not active" };
 
-  const admin = isAdmin(account);
+  const admin = canAccessAllBranches(account);
   if (!admin && existingOrder.branch_id !== account.branch_id)
     return { success: false, error: "Access denied" };
 
@@ -113,20 +136,24 @@ export async function discontinueOrderAction(
       return { success: false, error: "Access denied" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from("tbl_medication_orders")
-    .update({ status: "Discontinued" })
-    .eq("external_ref_id", rxOrderId);
-
-  if (error) return { success: false, error: error.message };
+  try {
+    await discontinueOrders(supabase, [rxOrderId]);
+  } catch (err) {
+    console.error("discontinueOrderAction — Apps Script error:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to discontinue order",
+    };
+  }
 
   revalidatePath("/residents/medication/orders");
+  revalidatePath("/residents/medication/stock");
   return { success: true };
 }
 
 // Auto-expire active orders whose end_date has passed.
-// Called at page load; updates Supabase status only (Sheet syncs via heartbeat).
+// Called at page load. Only calls Apps Script when something has actually
+// expired (usually nothing), then discontinues them Sheet first.
 export async function autoExpireOrdersAction(branchId: number, adminUser: boolean, excludedBranchIds: number[]): Promise<void> {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
@@ -134,9 +161,10 @@ export async function autoExpireOrdersAction(branchId: number, adminUser: boolea
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q: any = (supabase as any)
     .from("tbl_medication_orders")
-    .update({ status: "Discontinued" })
+    .select("external_ref_id")
     .lt("end_date", today)
-    .eq("status", "Active");
+    .eq("status", "Active")
+    .not("external_ref_id", "is", null);
 
   if (!adminUser) {
     q = q.eq("branch_id", branchId);
@@ -144,7 +172,11 @@ export async function autoExpireOrdersAction(branchId: number, adminUser: boolea
     q = q.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
   }
 
-  await q;
+  const { data } = await q;
+  const expiredIds = ((data ?? []) as { external_ref_id: string }[]).map((r) => r.external_ref_id);
+  if (expiredIds.length === 0) return;
+
+  await discontinueOrders(supabase, expiredIds);
 }
 
 export async function createOrderAction(
@@ -176,7 +208,7 @@ export async function createOrderAction(
       error: "Resident has no ResidentID — cannot submit order",
     };
 
-  const admin = isAdmin(account);
+  const admin = canAccessAllBranches(account);
 
   if (!admin && resident.branch_id !== account.branch_id) {
     return { success: false, error: "Access denied" };
@@ -262,7 +294,7 @@ export async function updateOrderAction(
 
   if (!existingOrder) return { success: false, error: "Order not found" };
 
-  const admin = isAdmin(account);
+  const admin = canAccessAllBranches(account);
 
   if (!admin && existingOrder.branch_id !== account.branch_id) {
     return { success: false, error: "Access denied" };
@@ -333,6 +365,26 @@ export async function updateOrderAction(
       error: err instanceof Error ? err.message : "Failed to update order",
     };
   }
+
+  // Carry the stock balance onto the new RxOrderID as "Order Changed".
+  // Best-effort: never fails the order edit (it only logs).
+  await recordOrderChangedStock({
+    supabase,
+    oldRxOrderId: rxOrderId,
+    newRxOrderId,
+    residentTextId: resident.ResidentID,
+    newOrder: {
+      dose: parseFloat(values.dose),
+      unit: values.unit,
+      frequency: values.frequency,
+      administration_times: values.administrationTimes || null,
+      dosing_days: values.dosingDays || null,
+      start_date: values.startDate,
+      end_date: values.endDate || null,
+    },
+    notedBy: values.notedBy || "",
+  });
+  revalidatePath("/residents/medication/stock");
 
   return { success: true, newRxOrderId };
 }

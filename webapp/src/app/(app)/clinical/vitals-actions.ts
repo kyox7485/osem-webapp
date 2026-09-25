@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
 type CreateVitalInput = {
@@ -48,7 +48,7 @@ export async function createVital(input: CreateVitalInput): Promise<{ success: b
   }
 
   // Non-admin users can only add vitals for their own branch residents
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && resident.branch_id !== account.branch_id) {
     return { success: false, error: "Access denied" };
   }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getReportBranchInfo } from "@/lib/pdf/branch-info";
 import { getLogoPath } from "@/lib/pdf/logo-path";
 import { ResidentDocument, type ResidentReportData } from "@/lib/pdf/documents/resident-document";
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
   if (error || !resident) return NextResponse.json({ error: "Resident not found" }, { status: 404 });
 
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && resident.branch_id !== account.branch_id) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 

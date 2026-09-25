@@ -133,3 +133,38 @@ export async function updateMedicationOrder(
 ): Promise<MedicationScriptResponse> {
   return callScript({ action: "update", rxOrderId, order });
 }
+
+// Changes only the Status of existing rows, Sheet first (medication-orders.gs
+// setOrderStatus), then the normal targeted Supabase sync + summary rebuild.
+// Used by Discontinue and end-date auto-expiry so the Sheet/AppSheet never
+// disagree with Supabase. `notFound` lists ids that are not in the Sheet.
+export async function setMedicationOrderStatus(
+  rxOrderIds: string[],
+  status: "Active" | "Discontinued"
+): Promise<MedicationScriptResponse & { updated?: string[]; notFound?: string[] }> {
+  return callScript({ action: "setOrderStatus", rxOrderIds, status }) as Promise<
+    MedicationScriptResponse & { updated?: string[]; notFound?: string[] }
+  >;
+}
+
+// One row of the Google Sheet tab tbl_MedicationStock — exact column names.
+export type MedicationStockSheetFields = {
+  StockID: string;
+  ResidentID: string; // Google-format ResidentID, e.g. BMN-0002
+  RxOrderID: string; // the EXACT order revision
+  Balance: number; // resulting balance after the event
+  Unit: string;
+  "Daily Usage": number; // snapshot at event time; 0 = not applicable
+  "Days Remaining": number; // snapshot at event time; 0 = not applicable
+  StockDate: string; // DD/MM/YYYY HH:mm:ss, Asia/Kuala_Lumpur
+  RegisteredBy: string; // tbl_staff.StaffID
+  EntryType: "Stock Count" | "Stock Received" | "Order Changed";
+};
+
+// Appends one stock event (MedicationStock.gs createStockEntry). Idempotent
+// on StockID, so callScript's HTTP retries cannot create duplicates.
+export async function createMedicationStockEntry(
+  entry: MedicationStockSheetFields
+): Promise<MedicationScriptResponse> {
+  return callScript({ action: "stockCreate", entry });
+}

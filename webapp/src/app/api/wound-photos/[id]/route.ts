@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { readWoundPhotoFromDrive, deleteWoundPhotoFromDrive } from "@/lib/google-drive";
 
 // Photos are never served from a public/"anyone with the link" Drive URL.
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .single();
 
   if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (account.rights !== "ADMIN" && photo.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && photo.branch_id !== account.branch_id) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
@@ -55,7 +55,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     .single();
 
   if (!photo) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
-  if (account.rights !== "ADMIN" && photo.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && photo.branch_id !== account.branch_id) {
     return NextResponse.json({ success: false, error: "Access denied" }, { status: 403 });
   }
 

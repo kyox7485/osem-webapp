@@ -1,3 +1,4 @@
+import { canAccessAllBranches } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { CurrentUser } from "@/lib/current-user";
 
@@ -115,18 +116,20 @@ export async function getPhysioRelevantBranches(): Promise<{ id: number; label: 
   });
 }
 
-// Mirrors the access model used elsewhere in the physio module
-// (getPhysioIpBranchIds): a physio-hub account covers every nursing branch
-// plus its own hub; a nursing-branch account sees only itself; ADMIN sees
-// everything. Applied here across both IP and OP data (the existing helper
-// is IP-only), since the dashboard reports on both.
+// Branches this account may report on, or null = unrestricted (every branch).
+//
+// Delegates to the app-wide rule in canAccessAllBranches: ADMIN, plus any
+// account based at a Function = 'HQ' or 'PHY' branch, sees everything. A
+// NUR-branch account (however high its rights tier) sees only its own.
+//
+// Previously this re-implemented the rule locally with its own PHY branch,
+// which was a third copy of the same logic. Returning null for a physio hub
+// is equivalent -- the hub's branch list was "every NUR branch plus itself",
+// and DEMO exclusion is applied downstream by the caller
+// (dashboard/page.tsx builds excludedBranchIds and passes it to
+// fetchAssessments), so a null scope still cannot surface demo data.
 export async function getAllowedBranchIds(account: CurrentUser): Promise<number[] | null> {
-  if (account.rights === "ADMIN") return null; // null = unrestricted
-  if (account.branch_function === "PHY") {
-    const nur = await getPhysioRelevantBranches();
-    const ids = nur.filter((b) => b.function === "NUR").map((b) => b.id);
-    return [...new Set([...ids, account.branch_id])];
-  }
+  if (canAccessAllBranches(account)) return null;
   return [account.branch_id];
 }
 

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ResidentForm } from "@/components/resident-form";
 import { getNationalities, getDietTypes, getFeedingTypes, getBranches, getAllStaffWithBranch, getDiagnosisOptions, getResidentDiagnoses, getDemoBranchIds } from "@/lib/lookups";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import type { Resident } from "@/lib/types";
 import { updateResident } from "../../actions";
@@ -29,7 +29,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
   if (!resident) notFound();
 
   const isDemoUser = demoBranchIds.includes(currentUser?.branch_id ?? -1);
-  const effectiveIsAdmin = isAdmin(currentUser) && !isDemoUser;
+  const effectiveIsAdmin = canAccessAllBranches(currentUser) && !isDemoUser;
   const boundAction = updateResident.bind(null, resident.id);
 
   return (

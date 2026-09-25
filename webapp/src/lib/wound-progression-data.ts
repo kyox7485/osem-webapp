@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getWoundBodyParts } from "@/lib/lookups";
 
 // Same convention as format-date.ts -- pinned so bucketing/labels never
@@ -157,7 +157,7 @@ export async function getWoundProgressionData(params: {
     .single();
 
   if (!resident) return { data: null, error: "Resident not found" };
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && resident.branch_id !== account.branch_id) {
     return { data: null, error: "Access denied" };
   }
 

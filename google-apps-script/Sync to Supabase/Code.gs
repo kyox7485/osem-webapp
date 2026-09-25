@@ -28,7 +28,15 @@ function doPost(e) {
     // global doPost per project, so whichever file loaded last silently
     // discarded the other's routes. Consolidated here as the single entry
     // point; medication-orders.gs now only exports createOrder/updateOrder.
-    if (request.action === "create" || request.action === "update") {
+    // stockCreate (MedicationStock.gs) and setOrderStatus
+    // (medication-orders.gs) are webapp writes too, so they share the same
+    // SHARED_SECRET gate.
+    if (
+      request.action === "create" ||
+      request.action === "update" ||
+      request.action === "setOrderStatus" ||
+      request.action === "stockCreate"
+    ) {
       if (request.secret !== SHARED_SECRET) {
         return ContentService
           .createTextOutput(
@@ -37,10 +45,16 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      const result =
-        request.action === "create"
-          ? createOrder(request.order)
-          : updateOrder(request.rxOrderId, request.order);
+      let result;
+      if (request.action === "create") {
+        result = createOrder(request.order);
+      } else if (request.action === "update") {
+        result = updateOrder(request.rxOrderId, request.order);
+      } else if (request.action === "setOrderStatus") {
+        result = setOrderStatus(request.rxOrderIds, request.status);
+      } else {
+        result = createStockEntry(request.entry);
+      }
 
       return ContentService
         .createTextOutput(JSON.stringify(result))

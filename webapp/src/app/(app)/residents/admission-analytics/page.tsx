@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { getBranchesWithCapacity, getDemoBranchIds } from "@/lib/lookups";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -55,7 +55,7 @@ export default async function AdmissionAnalyticsPage({
   const range = resolveDateRange(period, from, to);
 
   // ── Branches (for filter dropdown) ─────────────────────────────────────────
-  const admin = isAdmin(account);
+  const admin = canAccessAllBranches(account);
   const [allNurBranches, demoBranchIds] = await Promise.all([
     getBranchesWithCapacity("NUR"),
     getDemoBranchIds(),

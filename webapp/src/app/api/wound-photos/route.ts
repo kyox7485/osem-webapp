@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { uploadWoundPhotoToDrive, DriveNotConfiguredError } from "@/lib/google-drive";
 
 // Binary upload endpoint -- deliberately a Route Handler taking multipart
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!resident) return NextResponse.json({ success: false, error: "Resident not found" }, { status: 404 });
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && resident.branch_id !== account.branch_id) {
     return NextResponse.json({ success: false, error: "Access denied" }, { status: 403 });
   }
 

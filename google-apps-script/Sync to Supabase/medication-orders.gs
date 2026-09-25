@@ -227,6 +227,77 @@ function updateOrder(rxOrderId, order) {
   };
 }
 
+// Changes only the Status cell of one or more existing rows (webapp
+// "Discontinue" button and end-date auto-expiry). Previously the webapp
+// wrote tbl_medication_orders.status straight into Supabase, which never
+// reached the Sheet — and the next sheet→Supabase sync silently reverted it
+// to the Sheet's "Active". Writing the Sheet first and then running the
+// normal targeted sync keeps the Sheet (and AppSheet) authoritative and
+// also rebuilds current_medication_list.
+//
+// Returns per-id results; ids not present in the Sheet are reported in
+// `notFound` so the caller can decide what to do with them.
+const SETTABLE_ORDER_STATUSES = ["Active", "Discontinued"];
+
+function setOrderStatus(rxOrderIds, status) {
+  if (SETTABLE_ORDER_STATUSES.indexOf(status) === -1) {
+    return { success: false, error: "Invalid status: " + status };
+  }
+  if (!Array.isArray(rxOrderIds) || rxOrderIds.length === 0) {
+    return { success: false, error: "rxOrderIds is required" };
+  }
+
+  const sheet = getSheet();
+  if (!sheet) {
+    return { success: false, error: "Sheet '" + CONFIG.SHEETS.MEDICATION_ORDER + "' not found in spreadsheet" };
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 2) {
+    return { success: true, updated: [], notFound: rxOrderIds, syncResults: {} };
+  }
+
+  const data = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const colMap = buildColumnMap(data[0]);
+  const rxCol = colMap["RxOrderID"];
+  const statusCol = colMap["Status"];
+  const residentCol = colMap["ResidentID"];
+
+  if (rxCol === undefined || statusCol === undefined) {
+    return { success: false, error: "RxOrderID/Status column not found in sheet header" };
+  }
+
+  const wanted = {};
+  rxOrderIds.forEach(function(id) { wanted[String(id)] = true; });
+
+  const updated = [];
+  const residentById = {};
+
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][rxCol]);
+    if (!wanted[id]) continue;
+    if (String(data[i][statusCol]) !== status) {
+      sheet.getRange(i + 1, statusCol + 1).setValue(status);
+    }
+    updated.push(id);
+    residentById[id] = residentCol === undefined ? "" : String(data[i][residentCol] || "");
+    delete wanted[id];
+  }
+
+  const syncResults = {};
+  updated.forEach(function(id) {
+    syncResults[id] = syncOrderAndSummary_(id, residentById[id]).supabaseSync;
+  });
+
+  return {
+    success: true,
+    updated: updated,
+    notFound: Object.keys(wanted),
+    syncResults: syncResults
+  };
+}
+
 // ─── Supabase sync + resident summary rebuild ─────────────────────────────────
 //
 // syncMedicationOrderAndSummaryNow (MedicationSummary.gs, same project) is the

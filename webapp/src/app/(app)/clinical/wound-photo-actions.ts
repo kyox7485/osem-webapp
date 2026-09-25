@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
 export type WoundPhoto = {
@@ -48,7 +48,7 @@ export async function getWoundSessionHistory(filters: {
     )
     .order("session_started_at", { ascending: false });
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     query = query.eq("branch_id", account.branch_id);
   } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);

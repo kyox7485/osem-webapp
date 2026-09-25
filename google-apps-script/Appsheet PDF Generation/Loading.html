@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <meta charset="UTF-8">
+
+  <title>OSEM Report</title>
+
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    body {
+
+      margin: 0;
+
+      min-height: 100vh;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      background: #f4f7fb;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+      color: #222;
+
+    }
+
+
+    .card {
+
+      width: 515px;
+
+      max-width: 90%;
+
+      background: #ffffff;
+
+      border-radius: 18px;
+
+      padding: 45px 42px;
+
+      box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.10);
+
+      text-align: center;
+
+    }
+
+
+    .brand {
+
+      font-size: 27px;
+
+      font-weight: 700;
+
+      margin-bottom: 8px;
+
+      color: #111;
+
+    }
+
+
+    .title {
+
+      font-size: 19px;
+
+      font-weight: 600;
+
+      line-height: 1.4;
+
+      margin-bottom: 18px;
+
+      color: #444;
+
+    }
+
+
+    .resident {
+
+      font-size: 14px;
+
+      color: #777;
+
+      min-height: 20px;
+
+      margin-bottom: 25px;
+
+    }
+
+
+    /* ========================================= */
+    /* SPINNER */
+    /* ========================================= */
+
+    .spinner {
+
+      width: 48px;
+
+      height: 48px;
+
+      margin: 0 auto 22px;
+
+      border: 5px solid #eeeeee;
+
+      border-top: 5px solid #e53935;
+
+      border-radius: 50%;
+
+      animation:
+        spin 0.9s linear infinite;
+
+    }
+
+
+    @keyframes spin {
+
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+
+    }
+
+
+    /* ========================================= */
+    /* STATUS */
+    /* ========================================= */
+
+    .status {
+
+      font-size: 16px;
+
+      font-weight: 600;
+
+      margin-bottom: 14px;
+
+      color: #333;
+
+      min-height: 22px;
+
+    }
+
+
+    /* ========================================= */
+    /* PROGRESS BAR */
+    /* ========================================= */
+
+    .progress-container {
+
+      width: 100%;
+
+      height: 10px;
+
+      background: #eeeeee;
+
+      border-radius: 10px;
+
+      overflow: hidden;
+
+      margin-top: 12px;
+
+    }
+
+
+    .progress {
+
+      width: 0%;
+
+      height: 100%;
+
+      background:
+        linear-gradient(
+          90deg,
+          #e53935,
+          #ff8c00
+        );
+
+      border-radius: 10px;
+
+      transition:
+        width 0.4s ease;
+
+    }
+
+
+    .percentage {
+
+      font-size: 13px;
+
+      color: #777;
+
+      margin-top: 9px;
+
+    }
+
+
+    /* ========================================= */
+    /* MESSAGE */
+    /* ========================================= */
+
+    .message {
+
+      margin-top: 27px;
+
+      font-size: 13px;
+
+      line-height: 1.6;
+
+      color: #888;
+
+    }
+
+
+    /* ========================================= */
+    /* READY SCREEN */
+    /* ========================================= */
+
+    .ready {
+
+      display: none;
+
+    }
+
+
+    .ready-icon {
+
+      width: 58px;
+
+      height: 58px;
+
+      margin: 10px auto 18px;
+
+      border-radius: 50%;
+
+      background: #e8f5e9;
+
+      color: #2e7d32;
+
+      font-size: 35px;
+
+      line-height: 58px;
+
+      font-weight: bold;
+
+    }
+
+
+    /* ========================================= */
+    /* OPEN PDF BUTTON */
+    /* ========================================= */
+
+    .open-button {
+
+      display: inline-block;
+
+      margin-top: 24px;
+
+      padding: 13px 30px;
+
+      background: #e53935;
+
+      color: white;
+
+      text-decoration: none;
+
+      border-radius: 8px;
+
+      font-size: 15px;
+
+      font-weight: 600;
+
+      cursor: pointer;
+
+    }
+
+
+    .open-button:hover {
+
+      background: #c62828;
+
+    }
+
+
+    /* ========================================= */
+    /* ERROR */
+    /* ========================================= */
+
+    .error {
+
+      display: none;
+
+      margin-top: 20px;
+
+      padding: 15px;
+
+      background: #fff1f2;
+
+      border-radius: 10px;
+
+      color: #c62828;
+
+      text-align: left;
+
+      font-size: 13px;
+
+      line-height: 1.5;
+
+      word-break: break-word;
+
+    }
+
+
+    .retry {
+
+      display: none;
+
+      margin-top: 18px;
+
+      padding: 10px 22px;
+
+      border: none;
+
+      border-radius: 8px;
+
+      background: #333;
+
+      color: white;
+
+      cursor: pointer;
+
+      font-size: 14px;
+
+    }
+
+
+    .retry:hover {
+
+      background: #555;
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+<div class="card">
+
+
+  <!-- ========================================= -->
+  <!-- GENERATING SCREEN -->
+  <!-- ========================================= -->
+
+  <div id="generating">
+
+
+    <div class="brand">
+
+      OSEM
+
+    </div>
+
+
+    <div
+      class="title"
+      id="reportTitle">
+
+      Report
+
+    </div>
+
+
+    <div
+      class="resident"
+      id="residentText">
+
+    </div>
+
+
+    <div
+      class="spinner"
+      id="spinner">
+    </div>
+
+
+    <div
+      class="status"
+      id="status">
+
+      Starting...
+
+    </div>
+
+
+    <div class="progress-container">
+
+      <div
+        class="progress"
+        id="progress">
+      </div>
+
+    </div>
+
+
+    <div
+      class="percentage"
+      id="percentage">
+
+      5%
+
+    </div>
+
+
+    <div
+      class="message"
+      id="generatingMessage">
+
+      Please wait while the report is being prepared.
+
+    </div>
+
+
+  </div>
+
+
+  <!-- ========================================= -->
+  <!-- READY SCREEN -->
+  <!-- ========================================= -->
+
+  <div
+    id="ready"
+    class="ready">
+
+
+    <div class="brand">
+
+      OSEM
+
+    </div>
+
+
+    <div
+      class="title"
+      id="readyTitle">
+
+      Report
+
+    </div>
+
+
+    <div
+      class="resident"
+      id="readyResident">
+
+    </div>
+
+
+    <div class="ready-icon">
+
+      ✓
+
+    </div>
+
+
+    <div class="status">
+
+      PDF Ready
+
+    </div>
+
+
+    <div class="progress-container">
+
+      <div
+        class="progress"
+        style="width:100%">
+      </div>
+
+    </div>
+
+
+    <div class="percentage">
+
+      100%
+
+    </div>
+
+
+    <div
+      class="message"
+      id="readyMessage">
+
+      Your report has been generated successfully.
+
+      <br>
+
+      Click below to open the PDF.
+
+    </div>
+
+
+    <a
+      id="openPdf"
+      class="open-button"
+      href="#"
+      target="_blank">
+
+      OPEN PDF
+
+    </a>
+
+
+  </div>
+
+
+  <!-- ========================================= -->
+  <!-- ERROR MESSAGE -->
+  <!-- ========================================= -->
+
+  <div
+    id="errorBox"
+    class="error">
+  </div>
+
+
+  <button
+    id="retryButton"
+    class="retry"
+    onclick="retryGeneration()">
+
+    Try Again
+
+  </button>
+
+
+</div>
+
+
+<script>
+
+
+//====================================================
+// PARAMETERS PASSED FROM doGet()
+//====================================================
+
+const residentID =
+  "<?= residentID ?>";
+
+
+const year =
+  "<?= year ?>";
+
+
+const month =
+  "<?= month ?>";
+
+
+const executionId =
+  "<?= executionId ?>";
+
+
+const action =
+  "<?= action ?>";
+
+
+const branch =
+  "<?= branch ?>";
+
+
+// IMPORTANT:
+// This title comes directly from Apps Script
+// getReportTitle(action).
+
+const serverReportTitle =
+  "<?= reportTitle ?>";
+
+
+//====================================================
+// REPORT CONFIGURATION
+//====================================================
+
+const REPORT_CONFIG = {
+
+  chart: {
+
+    title:
+      "Medication Preparation Chart",
+
+    generating:
+      "Preparing medication chart...",
+
+    waiting:
+      "Please wait while the medication chart is being prepared.",
+
+    success:
+      "Your medication chart has been generated successfully."
+
+  },
+
+
+  purchase: {
+
+    title:
+      "Medication Purchase List",
+
+    generating:
+      "Preparing medication purchase list...",
+
+    waiting:
+      "Please wait while the medication purchase list is being prepared.",
+
+    success:
+      "Your medication purchase list has been generated successfully."
+
+  },
+
+
+  family: {
+
+    title:
+      "Family Medication Reminder",
+
+    generating:
+      "Preparing family medication reminder...",
+
+    waiting:
+      "Please wait while the family medication reminder is being prepared.",
+
+    success:
+      "Your family medication reminder has been generated successfully."
+
+  },
+
+
+  familyrequest: {
+
+    title:
+      "Family Medication Reminder",
+
+    generating:
+      "Preparing family medication reminder...",
+
+    waiting:
+      "Please wait while the family medication reminder is being prepared.",
+
+    success:
+      "Your family medication reminder has been generated successfully."
+
+  },
+
+
+  branchchart: {
+
+    title:
+      "Branch Medication Preparation Chart",
+
+    generating:
+      "Preparing branch medication charts...",
+
+    waiting:
+      "Please wait while the branch medication charts are being prepared.",
+
+    success:
+      "Your branch medication charts have been generated successfully."
+
+  },
+
+
+  familyconsumable: {
+
+    title:
+      "Family Consumable Reminder",
+
+    generating:
+      "Preparing family consumable reminder...",
+
+    waiting:
+      "Please wait while the family consumable reminder is being prepared.",
+
+    success:
+      "Your family consumable reminder has been generated successfully."
+
+  },
+
+
+  medsummary: {
+
+    title:
+      "Resident Medication Stock Summary List",
+
+    generating:
+      "Preparing resident medication stock summary...",
+
+    waiting:
+      "Please wait while the medication stock summary is being prepared.",
+
+    success:
+      "Your medication stock summary has been generated successfully."
+
+  }
+
+};
+
+
+//====================================================
+// FALLBACK CONFIG
+//====================================================
+
+const reportConfig =
+  REPORT_CONFIG[action] ||
+  {
+
+    title:
+      serverReportTitle ||
+      "Report",
+
+    generating:
+      "Preparing report...",
+
+    waiting:
+      "Please wait while the report is being prepared.",
+
+    success:
+      "Your report has been generated successfully."
+
+  };
+
+
+//====================================================
+// INITIALISE PAGE
+//====================================================
+
+function initialiseUI(){
+
+
+  //--------------------------------------------------
+  // REPORT TITLE
+  //
+  // Use the title supplied by doGet().
+  //--------------------------------------------------
+
+  const title =
+    serverReportTitle ||
+    reportConfig.title ||
+    "Report";
+
+
+  document
+    .getElementById("reportTitle")
+    .innerText =
+      title;
+
+
+  document
+    .getElementById("readyTitle")
+    .innerText =
+      title;
+
+
+  //--------------------------------------------------
+  // INITIAL STATUS
+  //--------------------------------------------------
+
+  document
+    .getElementById("status")
+    .innerText =
+      reportConfig.generating;
+
+
+  //--------------------------------------------------
+  // INITIAL DESCRIPTION
+  //--------------------------------------------------
+
+  document
+    .getElementById("generatingMessage")
+    .innerText =
+      reportConfig.waiting;
+
+
+  //--------------------------------------------------
+  // NO RESIDENT TEXT YET
+  //--------------------------------------------------
+
+  document
+    .getElementById("residentText")
+    .innerText =
+      "";
+
+}
+
+
+//====================================================
+// CLIENT-SIDE GENERATION STATE
+//====================================================
+//
+// The PDF generation request and the progress polling request are
+// independent Apps Script executions.
+//
+// IMPORTANT:
+// 1. CacheService is used for live progress during generation.
+// 2. The generateReportForWeb() SUCCESS response is the authoritative
+//    completion signal.
+// 3. Once generateReportForWeb() returns a successful PDF URL,
+//    polling stops immediately.
+// 4. Polling errors do NOT cause an endless loop by themselves.
+// 5. Only one progress poll is scheduled at a time.
+//
+
+let pollTimer = null;
+
+let generationFinished = false;
+
+let generationFailed = false;
+
+let generationRequestStarted = false;
+
+
+//====================================================
+// STOP PROGRESS POLLING
+//====================================================
+
+function stopProgressPolling(){
+
+  if(
+    pollTimer !== null
+  ){
+
+    clearTimeout(
+      pollTimer
+    );
+
+    pollTimer =
+      null;
+
+  }
+
+}
+
+
+//====================================================
+// START GENERATION
+//====================================================
+
+function startGeneration(){
+
+  //--------------------------------------------------
+  // Prevent accidental duplicate generation requests
+  //--------------------------------------------------
+
+  if(
+    generationRequestStarted
+  ){
+
+    return;
+
+  }
+
+
+  generationRequestStarted =
+    true;
+
+
+  generationFinished =
+    false;
+
+
+  generationFailed =
+    false;
+
+
+  //--------------------------------------------------
+  // Start progress polling
+  //
+  // Start this immediately so the user gets progress
+  // even while generateReportForWeb() is still running.
+  //--------------------------------------------------
+
+  pollProgress();
+
+
+  //--------------------------------------------------
+  // Start the actual report generation
+  //--------------------------------------------------
+
+  google.script.run
+
+    .withSuccessHandler(
+
+      function(result){
+
+        console.log(
+          "Generation completed:",
+          result
+        );
+
+
+        //------------------------------------------------
+        // The actual generation request has returned.
+        //
+        // This is the authoritative completion signal.
+        //------------------------------------------------
+
+        if(
+          result &&
+          result.success === true &&
+          result.pdfUrl
+        ){
+
+          generationFinished =
+            true;
+
+
+          stopProgressPolling();
+
+
+          //------------------------------------------------
+          // Build a final progress object.
+          //
+          // Do not depend on another CacheService request.
+          //------------------------------------------------
+
+          const finalProgress = {
+
+            status:
+              "completed",
+
+            percent:
+              100,
+
+            pdfUrl:
+              result.pdfUrl,
+
+            residentName:
+              result.residentName ||
+              "",
+
+            residentNumber:
+              result.residentNumber ||
+              0,
+
+            totalResidents:
+              result.totalResidents ||
+              0
+
+          };
+
+
+          //------------------------------------------------
+          // Show the PDF-ready screen immediately.
+          //------------------------------------------------
+
+          showReady(
+            finalProgress
+          );
+
+
+          return;
+
+        }
+
+
+        //------------------------------------------------
+        // The Apps Script function returned, but did not
+        // provide a usable successful PDF result.
+        //------------------------------------------------
+
+        generationFailed =
+          true;
+
+
+        stopProgressPolling();
+
+
+        showError(
+
+          result &&
+          result.message
+
+            ? result.message
+
+            : "The report generation completed without returning a PDF."
+
+        );
+
+      }
+
+    )
+
+    .withFailureHandler(
+
+      function(error){
+
+        console.error(
+          "Generation error:",
+          error
+        );
+
+
+        generationFailed =
+          true;
+
+
+        stopProgressPolling();
+
+
+        showError(
+
+          error &&
+          error.message
+
+            ? error.message
+
+            : String(error)
+
+        );
+
+      }
+
+    )
+
+    .generateReportForWeb(
+
+      action,
+
+      residentID,
+
+      branch,
+
+      Number(year),
+
+      Number(month),
+
+      executionId
+
+    );
+
+}
+
+
+//====================================================
+// POLL PROGRESS
+//====================================================
+
+function pollProgress(){
+
+  //--------------------------------------------------
+  // Do not poll after the main generation request has
+  // already finished.
+  //--------------------------------------------------
+
+  if(
+    generationFinished ||
+    generationFailed
+  ){
+
+    return;
+
+  }
+
+
+  //--------------------------------------------------
+  // No execution ID means there is nothing to poll.
+  // The main generation request can still continue.
+  //--------------------------------------------------
+
+  if(
+    !executionId
+  ){
+
+    scheduleNextPoll();
+
+    return;
+
+  }
+
+
+  google.script.run
+
+    .withSuccessHandler(
+
+      function(progress){
+
+        //------------------------------------------------
+        // The main generation request may have completed
+        // while this polling request was in flight.
+        //------------------------------------------------
+
+        if(
+          generationFinished ||
+          generationFailed
+        ){
+
+          return;
+
+        }
+
+
+        console.log(
+          "Progress:",
+          progress
+        );
+
+
+        //------------------------------------------------
+        // No progress object yet.
+        //------------------------------------------------
+
+        if(
+          !progress
+        ){
+
+          scheduleNextPoll();
+
+          return;
+
+        }
+
+
+        //------------------------------------------------
+        // UPDATE CONTEXT
+        //------------------------------------------------
+
+        updateProgressContext(
+          progress
+        );
+
+
+        //------------------------------------------------
+        // UPDATE PERCENTAGE
+        //------------------------------------------------
+
+        if(
+          typeof progress.percent ===
+          "number"
+        ){
+
+          const safePercent =
+            Math.round(
+
+              Math.max(
+                0,
+                Math.min(
+                  100,
+                  progress.percent
+                )
+              )
+
+            );
+
+
+          document
+            .getElementById("progress")
+            .style.width =
+              safePercent + "%";
+
+
+          document
+            .getElementById("percentage")
+            .innerText =
+              safePercent + "%";
+
+        }
+
+
+        //------------------------------------------------
+        // UPDATE STATUS MESSAGE
+        //------------------------------------------------
+
+        if(
+          progress.message
+        ){
+
+          document
+            .getElementById("status")
+            .innerText =
+              progress.message;
+
+        }
+
+
+        //------------------------------------------------
+        // COMPLETED FROM CACHE
+        //
+        // This remains as a secondary completion path.
+        // Normally generateReportForWeb() will return its
+        // PDF result at approximately the same time.
+        //------------------------------------------------
+
+        if(
+          progress.status ===
+          "completed"
+        ){
+
+          //------------------------------------------------
+          // If the cache already contains a PDF URL,
+          // we can safely show the ready screen.
+          //------------------------------------------------
+
+          if(
+            progress.pdfUrl
+          ){
+
+            generationFinished =
+              true;
+
+
+            stopProgressPolling();
+
+
+            showReady(
+              progress
+            );
+
+
+            return;
+
+          }
+
+
+          //------------------------------------------------
+          // Cache says completed but PDF URL is not yet
+          // available. Do NOT enter an error state.
+          //
+          // The main generation request may still be
+          // returning its final result.
+          //------------------------------------------------
+
+          scheduleNextPoll();
+
+          return;
+
+        }
+
+
+        //------------------------------------------------
+        // ERROR FROM CACHE
+        //------------------------------------------------
+
+        if(
+          progress.status ===
+          "error"
+        ){
+
+          generationFailed =
+            true;
+
+
+          stopProgressPolling();
+
+
+          showError(
+            progress.message
+          );
+
+
+          return;
+
+        }
+
+
+        //------------------------------------------------
+        // CONTINUE
+        //------------------------------------------------
+
+        scheduleNextPoll();
+
+      }
+
+    )
+
+    .withFailureHandler(
+
+      function(error){
+
+        //------------------------------------------------
+        // A progress-poll failure is NOT treated as a
+        // generation failure.
+        //
+        // The actual generateReportForWeb() request is
+        // still running independently.
+        //------------------------------------------------
+
+        console.warn(
+          "Progress polling temporarily failed:",
+          error
+        );
+
+
+        if(
+          !generationFinished &&
+          !generationFailed
+        ){
+
+          scheduleNextPoll();
+
+        }
+
+      }
+
+    )
+
+    .getGenerationProgress(
+      executionId
+    );
+
+}
+
+
+//====================================================
+// SCHEDULE NEXT PROGRESS POLL
+//====================================================
+//
+// 3 seconds is intentional.
+//
+// The report generation can take many seconds/minutes,
+// while progress changes only at meaningful processing
+// stages. Polling every 3 seconds gives the user a
+// responsive display without creating unnecessary
+// getGenerationProgress() executions.
+//
+
+function scheduleNextPoll(){
+
+  //--------------------------------------------------
+  // Always clear the previous timer first.
+  //--------------------------------------------------
+
+  if(
+    pollTimer !== null
+  ){
+
+    clearTimeout(
+      pollTimer
+    );
+
+  }
+
+
+  //--------------------------------------------------
+  // Never schedule another poll after completion/error.
+  //--------------------------------------------------
+
+  if(
+    generationFinished ||
+    generationFailed
+  ){
+
+    pollTimer =
+      null;
+
+    return;
+
+  }
+
+
+  //--------------------------------------------------
+  // Schedule one and only one future poll.
+  //--------------------------------------------------
+
+  pollTimer =
+    setTimeout(
+
+      function(){
+
+        pollTimer =
+          null;
+
+
+        pollProgress();
+
+      },
+
+      3000
+
+    );
+
+}
+
+
+//====================================================
+// UPDATE PROGRESS CONTEXT
+//====================================================
+
+function updateProgressContext(
+  progress
+){
+
+  const residentText =
+    document.getElementById(
+      "residentText"
+    );
+
+
+  //==================================================
+  // BRANCH CHART
+  //==================================================
+
+  if(
+    action ===
+    "branchchart"
+  ){
+
+    const residentNumber =
+      Number(
+        progress.residentNumber
+      );
+
+
+    const totalResidents =
+      Number(
+        progress.totalResidents
+      );
+
+
+    if(
+      residentNumber > 0 &&
+      totalResidents > 0
+    ){
+
+      residentText.innerText =
+
+        "Resident " +
+        residentNumber +
+        " of " +
+        totalResidents;
+
+    }
+    else{
+
+      residentText.innerText =
+        "";
+
+    }
+
+
+    return;
+
+  }
+
+
+  //==================================================
+  // RESIDENT-SPECIFIC REPORTS
+  //==================================================
+
+  if(
+    progress.residentName
+  ){
+
+    residentText.innerText =
+      progress.residentName;
+
+    return;
+
+  }
+
+
+  //==================================================
+  // OTHER REPORTS
+  //==================================================
+
+  residentText.innerText =
+    "";
+
+}
+
+
+//====================================================
+// SHOW READY SCREEN
+//====================================================
+
+function showReady(
+  progress
+){
+
+  //--------------------------------------------------
+  // Make completion final.
+  //--------------------------------------------------
+
+  generationFinished =
+    true;
+
+
+  generationFailed =
+    false;
+
+
+  stopProgressPolling();
+
+
+  //--------------------------------------------------
+  // Force progress to 100%
+  //--------------------------------------------------
+
+  document
+    .getElementById("progress")
+    .style.width =
+      "100%";
+
+
+  document
+    .getElementById("percentage")
+    .innerText =
+      "100%";
+
+
+  //--------------------------------------------------
+  // Hide generating
+  //--------------------------------------------------
+
+  document
+    .getElementById("generating")
+    .style.display =
+      "none";
+
+
+  //--------------------------------------------------
+  // Show ready
+  //--------------------------------------------------
+
+  document
+    .getElementById("ready")
+    .style.display =
+      "block";
+
+
+  //--------------------------------------------------
+  // READY TITLE
+  //--------------------------------------------------
+
+  document
+    .getElementById("readyTitle")
+    .innerText =
+      serverReportTitle ||
+      reportConfig.title ||
+      "Report";
+
+
+  //--------------------------------------------------
+  // SUCCESS MESSAGE
+  //--------------------------------------------------
+
+  document
+    .getElementById("readyMessage")
+    .innerHTML =
+
+      reportConfig.success +
+
+      "<br>" +
+
+      "Click below to open the PDF.";
+
+
+  //--------------------------------------------------
+  // RESIDENT INFORMATION
+  //--------------------------------------------------
+
+  const readyResident =
+    document.getElementById(
+      "readyResident"
+    );
+
+
+  //==================================================
+  // BRANCH CHART
+  //==================================================
+
+  if(
+    action ===
+    "branchchart"
+  ){
+
+    readyResident.innerText =
+      "Branch Medication Chart";
+
+  }
+
+
+  //==================================================
+  // RESIDENT-SPECIFIC REPORT
+  //==================================================
+
+  else if(
+    progress &&
+    progress.residentName
+  ){
+
+    readyResident.innerText =
+      progress.residentName;
+
+  }
+
+
+  //==================================================
+  // GENERIC REPORT
+  //==================================================
+
+  else{
+
+    readyResident.innerText =
+      "";
+
+  }
+
+
+  //--------------------------------------------------
+  // PDF URL
+  //--------------------------------------------------
+
+  const pdfButton =
+    document.getElementById(
+      "openPdf"
+    );
+
+
+  if(
+    progress &&
+    progress.pdfUrl
+  ){
+
+    pdfButton.href =
+      progress.pdfUrl;
+
+    pdfButton.style.display =
+      "inline-block";
+
+  }
+  else{
+
+    pdfButton.href =
+      "#";
+
+    pdfButton.style.display =
+      "none";
+
+  }
+
+
+  //--------------------------------------------------
+  // Try opening PDF automatically
+  //--------------------------------------------------
+
+  if(
+    progress &&
+    progress.pdfUrl
+  ){
+
+    setTimeout(
+
+      function(){
+
+        try{
+
+          window.open(
+            progress.pdfUrl,
+            "_blank"
+          );
+
+        }
+
+        catch(err){
+
+          console.log(
+            "Automatic PDF opening blocked."
+          );
+
+        }
+
+      },
+
+      500
+
+    );
+
+  }
+
+}
+
+
+//====================================================
+// SHOW ERROR
+//====================================================
+
+function showError(
+  message
+){
+
+  //--------------------------------------------------
+  // Make sure polling is stopped.
+  //--------------------------------------------------
+
+  generationFailed =
+    true;
+
+
+  generationFinished =
+    false;
+
+
+  stopProgressPolling();
+
+
+  //--------------------------------------------------
+  // Hide spinner
+  //--------------------------------------------------
+
+  document
+    .getElementById("spinner")
+    .style.display =
+      "none";
+
+
+  //--------------------------------------------------
+  // Error status
+  //--------------------------------------------------
+
+  document
+    .getElementById("status")
+    .innerText =
+      "Unable to generate PDF";
+
+
+  //--------------------------------------------------
+  // Error progress
+  //--------------------------------------------------
+
+  document
+    .getElementById("progress")
+    .style.width =
+      "0%";
+
+
+  document
+    .getElementById("percentage")
+    .innerText =
+      "Error";
+
+
+  //--------------------------------------------------
+  // Error box
+  //--------------------------------------------------
+
+  const errorBox =
+    document.getElementById(
+      "errorBox"
+    );
+
+
+  errorBox.innerText =
+    message ||
+    "An unexpected error occurred.";
+
+
+  errorBox.style.display =
+    "block";
+
+
+  //--------------------------------------------------
+  // Retry button
+  //--------------------------------------------------
+
+  document
+    .getElementById("retryButton")
+    .style.display =
+      "inline-block";
+
+}
+
+
+//====================================================
+// RETRY
+//====================================================
+
+function retryGeneration(){
+
+  /*
+    Reload the page.
+
+    This creates a completely new executionId
+    through doGet().
+  */
+
+  window.location.reload();
+
+}
+
+
+//====================================================
+// PAGE LOAD
+//====================================================
+
+window.addEventListener(
+
+  "load",
+
+  function(){
+
+    initialiseUI();
+
+    startGeneration();
+
+  }
+
+);
+
+
+</script>
+
+
+</body>
+
+</html>

@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
 export type ResidentReferralData = {
@@ -80,7 +80,7 @@ export async function createHospitalReferral(input: CreateHospitalReferralInput)
     return { success: false, error: "Resident not found" };
   }
 
-  if (account.rights !== "ADMIN" && resident.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && resident.branch_id !== account.branch_id) {
     return { success: false, error: "Access denied" };
   }
 

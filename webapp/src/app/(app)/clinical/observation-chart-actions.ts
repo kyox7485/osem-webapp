@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { formatDateTime } from "@/lib/format-date";
 
@@ -227,7 +227,7 @@ export async function getObservationChartsForResidents(filters: {
     .in("resident_id", filters.residentIds)
     .order("entry_timestamp", { ascending: false });
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     query = query.eq("branch_id", account.branch_id);
   } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
@@ -274,7 +274,7 @@ export async function getObservationCharts(filters: {
     )
     .order("entry_timestamp", { ascending: false });
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     query = query.eq("branch_id", account.branch_id);
   } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);

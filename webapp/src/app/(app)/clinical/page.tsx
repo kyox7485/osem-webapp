@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds } from "@/lib/lookups";
 import { getObservationChartsForResidents } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
@@ -50,7 +50,7 @@ export default async function ClinicalPage({
     .eq("status", "ACTIVE")
     .order("resident_name");
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     residentQuery = residentQuery.eq("branch_id", account.branch_id);
   } else if (excludedBranchIds.length > 0) {
     residentQuery = residentQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
@@ -109,7 +109,7 @@ export default async function ClinicalPage({
       )
       .order("entry_timestamp", { ascending: false });
 
-    if (account.rights !== "ADMIN") {
+    if (!canAccessAllBranches(account)) {
       vitalsQuery = vitalsQuery.eq("branch_id", account.branch_id);
     } else if (excludedBranchIds.length > 0) {
       vitalsQuery = vitalsQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
@@ -171,7 +171,7 @@ export default async function ClinicalPage({
       )
       .order("entry_timestamp", { ascending: false });
 
-    if (account.rights !== "ADMIN") {
+    if (!canAccessAllBranches(account)) {
       notesQuery = notesQuery.eq("branch_id", account.branch_id);
     } else if (excludedBranchIds.length > 0) {
       notesQuery = notesQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
@@ -220,7 +220,7 @@ export default async function ClinicalPage({
       )
       .order("entry_timestamp", { ascending: false });
 
-    if (account.rights !== "ADMIN") {
+    if (!canAccessAllBranches(account)) {
       chartQuery = chartQuery.eq("branch_id", account.branch_id);
     } else if (excludedBranchIds.length > 0) {
       chartQuery = chartQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
@@ -355,7 +355,7 @@ export default async function ClinicalPage({
       )
       .order("referral_datetime", { ascending: false });
 
-    if (account.rights !== "ADMIN") {
+    if (!canAccessAllBranches(account)) {
       referralsQuery = referralsQuery.eq("branch_id", account.branch_id);
     } else if (excludedBranchIds.length > 0) {
       referralsQuery = referralsQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);

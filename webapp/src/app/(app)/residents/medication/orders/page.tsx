@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getDemoBranchIds } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -15,7 +15,7 @@ export default async function MedicationOrdersPage() {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/");
 
-  const admin = isAdmin(currentUser);
+  const admin = canAccessAllBranches(currentUser);
   const supabase = await createClient();
 
   const demoBranchIds = await getDemoBranchIds();

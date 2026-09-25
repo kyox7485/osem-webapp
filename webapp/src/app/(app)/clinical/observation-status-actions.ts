@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 
 export type ObservationStatusRow = {
   id: number;
@@ -55,7 +55,7 @@ export async function getActiveObservationStatuses(filters: {
     .is("ended_at", null)
     .order("started_at", { ascending: false });
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     query = query.eq("branch_id", account.branch_id);
   } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
@@ -88,7 +88,7 @@ export async function getCompletedObservationEpisodes(filters: {
     .not("ended_at", "is", null)
     .order("ended_at", { ascending: false });
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     query = query.eq("branch_id", account.branch_id);
   } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);

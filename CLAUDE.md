@@ -105,7 +105,12 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
 - `docs/medication.md` — Medication Orders: Google Sheet is the source of
   truth, never write `tbl_medication_orders` directly; `Noted By`
   single-column rule; `DD/MM/YYYY` date handling; edit-never-overwrites
-  audit trail; Apps Script `doPost`/`doGet` single-entry-point rule.
+  audit trail; Apps Script `doPost`/`doGet` single-entry-point rule;
+  every order status change goes Sheet-first.
+- `docs/medication-stock.md` — Medication Stock module + Family Medication
+  Reminder PDF: Sheet-first stock events, Count vs Estimate units, the
+  forecast (implemented twice — `lib/medication-stock.ts` and the PDF
+  project's `Stock.gs` — must stay identical), deployment checklist.
 - `docs/google-apps-script.md` — the Apps Script folder: the two sync
   projects and their **opposite** directions (Supabase→Sheets mirror vs.
   Sheets→Supabase source of truth), all webhook routes, trigger cadences,

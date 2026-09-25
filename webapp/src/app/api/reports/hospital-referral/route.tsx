@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getReportBranchInfo } from "@/lib/pdf/branch-info";
 import { getLogoPath } from "@/lib/pdf/logo-path";
 import { HospitalReferralDocument, type HospitalReferralReportData } from "@/lib/pdf/documents/hospital-referral-document";
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   const resident = Array.isArray(referral.tbl_residents) ? referral.tbl_residents[0] : referral.tbl_residents;
   const reviewer = Array.isArray(referral.reviewer) ? referral.reviewer[0] : referral.reviewer;
 
-  if (account.rights !== "ADMIN" && referral.branch_id !== account.branch_id) {
+  if (!canAccessAllBranches(account) && referral.branch_id !== account.branch_id) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 

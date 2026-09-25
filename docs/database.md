@@ -21,6 +21,38 @@ exclusion checklist, or lookup-table conventions.
 - `tbl_user_accounts` — logins. `rights` is `ADMIN | MODERATOR | STAFF`,
   scoped to one `branch_id` (except `ADMIN`, which sees everything). This
   is what RLS policies check via `auth_role()` / `auth_branch_id()`.
+
+## Branch scope — who sees what
+
+**All-branch access is decided by the branch's `Function` column, not by the
+rights tier.** The single source of truth in the app is
+`canAccessAllBranches()` in `webapp/src/lib/current-user.ts`; the SQL mirror
+is `auth_is_all_branch_account()` in
+`migration/scripts/scope_moderator_to_branch.sql`. **Keep the two in sync.**
+
+| branch `Function` | all-branch access | notes |
+|---|---|---|
+| `HQ` | **yes** | headquarters oversees every branch |
+| `PHY` | **yes** | a physio hub covers every NUR branch for inpatient work — same rule as `getPhysioIpBranchIds()` in `lib/lookups.ts` |
+| `NUR` | no — own branch only | *however* high the rights tier |
+
+`ADMIN` is unrestricted wherever it is based.
+
+So a `MODERATOR` at a NUR branch is scoped to that branch; a `MODERATOR` at
+HQ or a physio hub sees every real branch. Rights and scope are orthogonal:
+`MODERATOR` means "may perform elevated actions", `Function` decides "where".
+
+**`isAdmin()` stays ADMIN-only on purpose.** It gates `/accounts`, staff
+create/edit and branch management — *login* authority, not *data* authority.
+A moderator gets the former's data powers but never the ability to manage
+who can log in. Any new feature that widens MODERATOR's data scope must use
+`canAccessAllBranches()`, never `isAdmin()`.
+
+**The app filter and the RLS policy must agree.** RLS only guards the
+database; every page and Server Action adds its own filter on top. When the
+two disagree the result is a silent failure in one direction or the other —
+which is exactly how the HQ moderator ended up seeing nothing while RLS
+allowed everything. When changing scope, change both.
 - `tbl_staff` — the clinical/audit roster of real people, separate from
   logins. `role` is also `ADMIN | MODERATOR | STAFF` but is a *different*
   enum from `id_rights` on purpose — don't merge them even though the

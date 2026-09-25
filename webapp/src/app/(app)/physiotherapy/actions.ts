@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getPhysioIpBranchIds } from "@/lib/lookups";
 import { revalidatePath } from "next/cache";
 import {
@@ -116,7 +116,7 @@ export async function createPhysioAssessment(
   }
 
   const allowedBranchIds =
-    account.rights === "ADMIN"
+    canAccessAllBranches(account)
       ? null
       : input.careSetting === "OP"
         ? [account.branch_id]

@@ -52,7 +52,8 @@ that same tab. This is a real, load-bearing coupling — see
 | `tbl_RoleMapping`, `tbl_DepartmentMapping` | Roster | lookup, **legacy Access-era paths only** |
 | `tbl_Vital` | Clinical | read-only (`VitalUpdates` GET consumer) |
 | `tbl_MedicationOrder` | Medication | **source of truth** for medication orders |
-| `tbl_MedicationSyncLog` | Medication | auto-created; `Timestamp`, `Row`, `RxOrderID`, `Error` |
+| `tbl_MedicationSyncLog` | Medication | auto-created; `Timestamp`, `Row`, `RxOrderID`, `Error` (stock rows log `Stock <StockID>` in the RxOrderID column) |
+| `tbl_MedicationStock` | Medication (`CONFIG.MEDICATION_STOCK_SPREADSHEET_ID`) | **source of truth** for medication stock events; also written by AppSheet |
 
 ---
 
@@ -159,6 +160,8 @@ only `createOrder`/`updateOrder` and must **never** define
 | `action` | Auth | Does |
 |---|---|---|
 | `create` / `update` | `SHARED_SECRET` constant vs Vercel `MEDICATION_ORDER_SCRIPT_SECRET` | appends a row (see below) |
+| `setOrderStatus` | same `SHARED_SECRET` | sets `Status` on existing order rows (webapp Discontinue / auto-expiry), then targeted sync |
+| `stockCreate` | same `SHARED_SECRET` | `MedicationStock.gs` `createStockEntry` — appends a `tbl_MedicationStock` row (idempotent on StockID), then syncs it to `tbl_medication_stock` |
 | `SyncMedicationOrder` | Script Property `MEDICATION_WEBHOOK_TOKEN` | targeted one-row sync + summary rebuild |
 | `RebuildMedication` | same token | full `current_medication_list` rebuild for a resident |
 
@@ -260,6 +263,8 @@ the sheet's `RxOrderID`.
 | Summary change | `onMedicationSummaryChange` | on change | same |
 | Summary heartbeat | `medicationSummaryHeartbeat` | every **1 minute** | same |
 | Reconciliation | `syncAllMedicationOrdersToSupabase` | every **24 hours** | `setupMedicationReconciliationTrigger()` |
+| Stock heartbeat | `medicationStockHeartbeat` (`MedicationStock.gs`) | every **1 minute**, works only when the stock tab's fingerprint changed | `setupMedicationStockTriggers()` |
+| Stock reconciliation | `syncAllMedicationStockToSupabase` | every **24 hours**; mirrors deletions only after a zero-failure pass | same |
 
 **The 1-minute heartbeat exists because Apps Script `onEdit`/`onChange` do
 not fire for programmatic writes** — bots, AppSheet, and the webapp's own
@@ -391,10 +396,19 @@ global definition.
 | `src/config/medication-chart.ts` | **a chart generator not in this folder** | hard-coded public `/exec` URL, no secret |
 | `src/config/external-links.ts` | 5 unrelated standalone macros | n/a |
 
-The medication-chart script (`?residentID=&year=&month=`, or
-`?action=branchchart&branch=`) has **no source in this repo** — it is opened
-directly in a browser tab and is public. If it is ever modified, there is
-nowhere here to change it.
+The medication-chart script (`?residentID=&year=&month=`,
+`?action=branchchart&branch=`, `?action=familyrequest&residentID=`) is the
+**`Appsheet PDF Generation/`** project (added to this repo as a reference
+copy; same paste-and-redeploy rule). It is opened directly in a browser tab
+and is public (`ANYONE_ANONYMOUS`). `WebApp.gs` `doGet` renders
+`Loading.html`, which calls `generateReportForWeb(action, …)` and polls
+progress; supported actions: `chart`, `branchchart`, `purchase`, `family`,
+`familyrequest`, `familyconsumable`, `medsummary`. It reads spreadsheet IDs
+from its own `Config` sheet (`MedicationModuleID`, `SystemSettingsID`) and
+the stock tab `tbl_MedicationStock` + unit lookup `tbl_StockUnit`. It has
+its own duplicate-global-name hazards (e.g. `writeFamilyReminderRows` and
+`testFamilyReminderList` are defined in both `FamilyReminder.gs` and
+`FamilyReminderResident.gs` with different signatures).
 
 ---
 
@@ -416,8 +430,9 @@ Per project:
 - **Sync to Supabase** — set `MEDICATION_WEBHOOK_TOKEN` and the medication
   Supabase properties (`setMedicationSupabaseProperties`); run
   `setupMedicationSupabaseTrigger()`,
-  `setupMedicationSummaryTrigger()`, and
-  `setupMedicationReconciliationTrigger()`.
+  `setupMedicationSummaryTrigger()`,
+  `setupMedicationReconciliationTrigger()`, and
+  `setupMedicationStockTriggers()`.
 - **wound-photo-drive** — paste as `Code.gs`, replace `SHARED_SECRET`, deploy
   as "Me" / "Anyone".
 

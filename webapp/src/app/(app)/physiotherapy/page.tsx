@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
-import { getCurrentUser, canAccessPhysioOp } from "@/lib/current-user";
+import { getCurrentUser, canAccessPhysioOp, canAccessAllBranches } from "@/lib/current-user";
 import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds, getDemoBranchIds } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
@@ -88,7 +88,7 @@ export default async function PhysiotherapyPage({
       ? supabase.from("tbl_physio_op_patients").select("id, resident_name:patient_name, branch_id").order("patient_name")
       : supabase.from("tbl_residents").select("id, resident_name, branch_id").eq("status", "ACTIVE").order("resident_name");
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     if (careSetting === "OP") {
       patientQuery = patientQuery.eq("branch_id", account.branch_id);
     } else {
@@ -168,7 +168,7 @@ async function AllPatientsReview({
     .eq("care_setting", careSetting)
     .order("entry_timestamp", { ascending: false });
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     const allowedBranchIds = careSetting === "OP"
       ? [account.branch_id]
       : (await getPhysioIpBranchIds(account)).filter((id) => !demoBranchIds.includes(id));
@@ -291,7 +291,7 @@ async function PhysiotherapyContent({
     );
   }
 
-  if (account.rights !== "ADMIN") {
+  if (!canAccessAllBranches(account)) {
     const allowedBranchIds = careSetting === "OP" ? [account.branch_id] : await getPhysioIpBranchIds(account);
     if (!allowedBranchIds.includes(resident.branch_id)) {
       return <p className="text-sm text-red-600 dark:text-red-400">{t("Access denied.")}</p>;

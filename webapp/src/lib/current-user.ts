@@ -59,6 +59,41 @@ export function isAdmin(account: CurrentUser | null): boolean {
   return account?.rights === "ADMIN";
 }
 
+// True when this account may see data across every real branch.
+//
+// The rule is driven by the branch's Function, NOT the rights tier:
+//   Function = 'HQ'  -> all branches (headquarters oversees everything)
+//   Function = 'PHY' -> all branches (a physio hub covers every NUR branch
+//                       for inpatient work -- see getPhysioIpBranchIds in
+//                       lib/lookups.ts, which encodes the same rule)
+//   Function = 'NUR' -> own branch only, however high the rights tier
+// ADMIN is unrestricted wherever it's based.
+//
+// This is deliberately NOT isAdmin(). isAdmin() gates login management
+// (/accounts, staff create/edit) and stays ADMIN-only on purpose -- a
+// moderator gets data authority, not authority over who can log in.
+//
+// A plain STAFF login at an HQ or PHY branch also gets all-branch scope.
+// That is intentional: a physio hub has no residents of its own, and the
+// physiotherapy module already treats a hub login as hub-wide. It is called
+// out here so it stays a decision rather than a surprise.
+//
+// This mirrors the SQL helper auth_is_all_branch_account() in
+// migration/scripts/scope_moderator_to_branch.sql -- keep the two in sync.
+// RLS only guards the DATABASE; this is what the UI and Server Actions use.
+//
+// Takes the structural subset it actually needs, matching the signature of
+// getPhysioIpBranchIds in lib/lookups.ts -- several physio call sites pass a
+// narrow object rather than a full CurrentUser.
+export function canAccessAllBranches(account: {
+  rights: string;
+  branch_function: string | null;
+} | null): boolean {
+  if (!account) return false;
+  if (account.rights === "ADMIN") return true;
+  return account.branch_function === "HQ" || account.branch_function === "PHY";
+}
+
 // True for accounts that may access OP physiotherapy and the Analytics dashboard.
 // Physio-hub accounts (PHY-function branch) and ADMINs only.
 export function canAccessPhysioOp(account: CurrentUser | null): boolean {

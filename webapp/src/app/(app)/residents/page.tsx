@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getBranches, formatBranch, getDemoBranchIds, getNursingStaff } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
@@ -22,7 +22,9 @@ export default async function ResidentsPage({
   const { t } = await getServerTranslator();
   const { q, ic, status, branch_id } = await searchParams;
   const currentUser = await getCurrentUser();
-  const admin = isAdmin(currentUser);
+  // ADMIN, or any account at an HQ/PHY branch (see canAccessAllBranches).
+  // A NUR-branch moderator stays scoped to their own branch.
+  const admin = canAccessAllBranches(currentUser);
 
   const selectedStatuses = status !== undefined ? status.split(",").filter(Boolean) : DEFAULT_STATUSES;
   const selectedBranches = admin && branch_id !== undefined ? branch_id.split(",").filter(Boolean) : null;
@@ -62,7 +64,7 @@ export default async function ResidentsPage({
       if (selectedBranches) query = query.in("branch_id", selectedBranches);
       if (excludedBranchIds.length > 0) query = query.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     } else if (currentUser) {
-      // Non-admin logins (branch emails, possibly shared) never see other
+      // Single-branch accounts (NUR branch, possibly shared) never see other
       // branches here -- there's no filter control for it, this is fixed.
       query = query.eq("branch_id", currentUser.branch_id);
     }

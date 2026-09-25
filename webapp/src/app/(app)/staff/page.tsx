@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { getBranches, getPositions, formatBranch } from "@/lib/lookups";
 import { STAFF_STATUS_OPTIONS, STAFF_ROLE_OPTIONS, DEPARTMENT_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
@@ -26,7 +26,7 @@ export default async function StaffPage({
   const { q, position_id, status, branch_id, role, department } = await searchParams;
   const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
-  const admin = isAdmin(currentUser);
+  const admin = canAccessAllBranches(currentUser);
 
   const [branches, positions] = await Promise.all([admin ? getBranches() : Promise.resolve([]), getPositions()]);
 

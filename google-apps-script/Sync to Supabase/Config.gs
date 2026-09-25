@@ -6,6 +6,11 @@ const CONFIG = {
 
   MEDICATION_SPREADSHEET_ID: "1HXT8HFjjjBakaZiLeU9FggM8cKLZJDBrUjnNqRK3goA",
 
+  // Spreadsheet holding the tbl_MedicationStock tab (MedicationStock.gs).
+  // Assumed to be the medication spreadsheet; if the tab lives elsewhere,
+  // change only this ID.
+  MEDICATION_STOCK_SPREADSHEET_ID: "1HXT8HFjjjBakaZiLeU9FggM8cKLZJDBrUjnNqRK3goA",
+
   SHEETS: {
 
     RESIDENT: "tbl_ResidentList",
@@ -13,6 +18,10 @@ const CONFIG = {
     BRANCH: "tbl_Branch",
 
     MEDICATION_ORDER: "tbl_MedicationOrder",
+
+    // Exact tab name as read by the Appsheet PDF Generation project
+    // (its CONFIG.MEDICATION_STOCK_SHEET).
+    MEDICATION_STOCK: "tbl_MedicationStock",
 
     VITAL: "tbl_Vital"
 
