@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>OSEM Web App — Nursing Chart User Manual / Panduan Pengguna Carta Kejururawatan</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+
+  :root {
+    --ink: #1a1d21;
+    --ink-soft: #4a5260;
+    --ink-faint: #737d8c;
+    --line: #d9dee6;
+    --line-soft: #eceff3;
+    --brand: #4f46e5;
+    --brand-soft: #eef0fe;
+    --accent: #0f766e;
+    --accent-soft: #ecfdf7;
+    --warn-soft: #fff7ed;
+    --warn-line: #fdba74;
+    --card: #ffffff;
+    --page: #f4f5f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+  }
+
+  /* ── Cover ───────────────────────────────────────────────────────── */
+  .cover {
+    background: linear-gradient(155deg, #312e81 0%, #4f46e5 52%, #0f766e 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 40px 38px 34px;
+    margin-bottom: 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    right: -70px; top: -70px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+  }
+  .cover-kicker {
+    font-size: 9pt; letter-spacing: .16em; text-transform: uppercase;
+    color: #c7d2fe; font-weight: 600; margin-bottom: 14px;
+  }
+  .cover h1 { margin: 0 0 4px; font-size: 27pt; line-height: 1.15; font-weight: 700; }
+  .cover h2 { margin: 0 0 20px; font-size: 16pt; font-weight: 500; color: #e0e7ff; }
+  .cover-rule { width: 70px; height: 3px; background: #5eead4; border-radius: 2px; margin: 0 0 20px; }
+  .cover-lede { font-size: 11.5pt; color: #eef2ff; max-width: 44em; margin: 0 0 22px; }
+  .cover-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 9.5pt;
+    color: #f8fafc;
+  }
+
+  /* ── Page structure ─────────────────────────────────────────────── */
+  .page { background: var(--card); border-radius: 12px; padding: 30px 32px; margin-bottom: 22px; }
+
+  h2.sec {
+    font-size: 15pt; margin: 0 0 4px; font-weight: 700; color: var(--ink);
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2.sec .n {
+    background: var(--brand); color: #fff; border-radius: 8px;
+    width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11pt; flex: none;
+  }
+  h3 { font-size: 11.5pt; margin: 22px 0 6px; font-weight: 700; }
+  h4 { font-size: 10.5pt; margin: 16px 0 4px; font-weight: 700; color: var(--ink-soft); }
+  p { margin: 0 0 10px; }
+  .sub { color: var(--ink-soft); margin: 0 0 16px; }
+
+  .ms {
+    color: var(--ink-soft);
+    border-left: 3px solid var(--line);
+    padding-left: 12px;
+    margin: 0 0 12px;
+  }
+  .ms p:last-child { margin-bottom: 0; }
+
+  /* ── Lists ──────────────────────────────────────────────────────── */
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0 0 6px; }
+  ol.steps > li {
+    counter-increment: s; position: relative;
+    padding: 0 0 0 40px; margin-bottom: 14px;
+  }
+  ol.steps > li::before {
+    content: counter(s);
+    position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--brand-soft); color: var(--brand);
+    font-weight: 700; font-size: 10pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps p { margin-bottom: 4px; }
+  ol.steps p:last-child { margin-bottom: 0; }
+
+  ul.bullets { margin: 0 0 10px; padding-left: 18px; }
+  ul.bullets li { margin-bottom: 5px; }
+
+  /* ── Callouts ───────────────────────────────────────────────────── */
+  .tip, .warn, .note {
+    border-radius: 8px; padding: 11px 14px; margin: 0 0 12px; font-size: 10pt;
+  }
+  .tip { background: var(--accent-soft); border: 1px solid #99f6e4; }
+  .warn { background: var(--warn-soft); border: 1px solid var(--warn-line); }
+  .note { background: var(--brand-soft); border: 1px solid #c7d2fe; }
+  .tip strong, .warn strong, .note strong { display: block; margin-bottom: 3px; }
+  .tip strong { color: #0f766e; }
+  .warn strong { color: #b45309; }
+  .note strong { color: #4338ca; }
+  .tip p, .warn p, .note p { margin: 0 0 4px; }
+  .tip p:last-child, .warn p:last-child, .note p:last-child { margin-bottom: 0; }
+
+  /* ── Tables ─────────────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 9.5pt; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th { background: #f8f9fb; color: var(--ink-soft); font-weight: 700; border-bottom: 1px solid var(--line); }
+  th:first-child { border-top-left-radius: 6px; }
+  th:last-child { border-top-right-radius: 6px; }
+  td.field { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  td .ms-inline { color: var(--ink-faint); font-style: italic; }
+
+  /* ── Screen mockups ─────────────────────────────────────────────── */
+  .screen {
+    border: 1px solid var(--line); border-radius: 9px; overflow: hidden;
+    margin: 0 0 14px; box-shadow: 0 1px 2px rgba(16,24,40,.05);
+  }
+  .screen-bar {
+    background: #f1f3f7; border-bottom: 1px solid var(--line);
+    padding: 7px 12px; font-size: 8.5pt; color: var(--ink-faint);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .screen-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd2dd; }
+  .screen-body { padding: 12px 14px; background: #fff; }
+
+  .ui-tabrow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ui-tab {
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 11px; font-size: 8.5pt; color: var(--ink-faint); background: #fff;
+  }
+  .ui-tab.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+
+  .ui-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ui-field {
+    flex: 1 1 110px; border: 1px solid var(--line); border-radius: 6px;
+    padding: 5px 8px; font-size: 8.5pt; background: #fff;
+  }
+  .ui-field b { display: block; font-size: 7.5pt; color: var(--ink-faint); font-weight: 600; margin-bottom: 2px; text-transform: uppercase; letter-spacing: .04em; }
+
+  .ui-card { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; margin-bottom: 7px; }
+  .ui-card .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .ui-card .name { font-weight: 700; font-size: 9.5pt; }
+  .ui-card .meta { font-size: 8pt; color: var(--ink-faint); }
+  .ui-card .hint { font-size: 8.5pt; color: var(--ink-faint); font-style: italic; margin-top: 4px; }
+  .ui-caret { color: var(--ink-faint); }
+
+  .ui-section { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; margin-bottom: 7px; }
+  .ui-section h5 { margin: 0 0 6px; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--brand); }
+  .ui-check { font-size: 8.5pt; color: var(--ink-soft); display: inline-block; margin: 0 10px 4px 0; }
+  .ui-check::before { content: "☐ "; color: var(--ink-faint); }
+  .ui-check.on::before { content: "☑ "; color: var(--brand); }
+  .ui-input { border: 1px dashed var(--line); border-radius: 5px; padding: 4px 8px; font-size: 8.5pt; color: var(--ink-faint); margin-top: 4px; display: inline-block; min-width: 150px; }
+  .ui-btn { display: inline-block; border-radius: 6px; font-size: 8.5pt; padding: 5px 12px; margin-top: 8px; margin-right: 6px; }
+  .ui-btn.primary { background: var(--brand); color: #fff; }
+  .ui-btn.ghost { border: 1px solid var(--line); color: var(--ink-soft); }
+  .ui-required { color: #dc2626; font-weight: 700; }
+
+  .figcap { font-size: 8.5pt; color: var(--ink-faint); font-style: italic; margin: -8px 0 16px; }
+
+  /* ── Footer / toc ───────────────────────────────────────────────── */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; margin: 0 0 4px; padding: 0; list-style: none; }
+  .toc li { font-size: 10pt; display: flex; gap: 9px; align-items: baseline; }
+  .toc .num { color: var(--brand); font-weight: 700; min-width: 22px; }
+
+  .pagebreak { break-before: page; }
+  .keep { break-inside: avoid; }
+  .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+
+  footer.colophon {
+    text-align: center; color: var(--ink-faint); font-size: 8.5pt;
+    padding: 10px 0 26px;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page { border-radius: 0; padding: 0; margin: 0; background: #fff; }
+    .cover { border-radius: 0; }
+    footer.colophon { padding-bottom: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+  <div class="cover-kicker">OSEM Web App &nbsp;·&nbsp; Panduan Pengguna</div>
+  <h1>Nursing Chart</h1>
+  <h2>Carta Kejururawatan</h2>
+  <div class="cover-rule"></div>
+  <p class="cover-lede">
+    A step-by-step guide for nurses recording daily care in the Nursing Chart — finding a
+    resident, filling in an entry, and reading the record back.
+    <br /><br />
+    Panduan langkah demi langkah untuk jururawat yang merekod penjagaan harian dalam Carta
+    Kejururawatan — mencari penghuni, mengisi entri, dan membaca semula rekod.
+  </p>
+  <div class="cover-meta">
+    <span class="pill">English · Bahasa Malaysia</span>
+    <span class="pill">Step-by-step · Langkah demi langkah</span>
+    <span class="pill">Version 1.0</span>
+  </div>
+</div>
+
+<!-- ═══════════════ TOC + ORIENTATION ═══════════════ -->
+<div class="page">
+  <h2 class="sec"><span class="n">☰</span>What&rsquo;s inside <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Kandungan</span></h2>
+  <p class="sub">Read it once end to end, or jump straight to the section you need.<br />Baca sekali dari awal hingga akhir, atau terus ke bahagian yang anda perlukan.</p>
+
+  <ol class="toc">
+    <li><span class="num">1</span> Before you start <span style="color:var(--ink-faint)">&middot; <em>Sebelum anda mula</em></span></li>
+    <li><span class="num">2</span> Finding the Nursing Chart <span style="color:var(--ink-faint)">&middot; <em>Mencari Carta Kejururawatan</em></span></li>
+    <li><span class="num">3</span> Review Notes <span style="color:var(--ink-faint)">&middot; <em>Semak Nota</em></span></li>
+    <li><span class="num">4</span> New Entry <span style="color:var(--ink-faint)">&middot; <em>Entri Baharu</em></span></li>
+    <li><span class="num">5</span> Section-by-section <span style="color:var(--ink-faint)">&middot; <em>Bahagian demi bahagian</em></span></li>
+    <li><span class="num">6</span> Saving the entry <span style="color:var(--ink-faint)">&middot; <em>Menyimpan entri</em></span></li>
+    <li><span class="num">7</span> Unsaved changes <span style="color:var(--ink-faint)">&middot; <em>Perubahan belum disimpan</em></span></li>
+    <li><span class="num">8</span> Download as PDF <span style="color:var(--ink-faint)">&middot; <em>Muat turun sebagai PDF</em></span></li>
+    <li><span class="num">9</span> Good habits &amp; troubleshooting <span style="color:var(--ink-faint)">&middot; <em>Tabiat baik &amp; penyelesaian</em></span></li>
+    <li><span class="num">10</span> Quick reference <span style="color:var(--ink-faint)">&middot; <em>Rujukan pantas</em></span></li>
+  </ol>
+
+  <div class="note avoid-break">
+    <strong>How this guide is laid out</strong>
+    <p>Every step is shown in English first, then in Bahasa Malaysia underneath. You do not need to
+    read both — just use whichever language you are more comfortable with. Words that appear as
+    buttons or headings in the app are shown in <em>bold italics</em> so you can spot them on screen.</p>
+    <p><em>Setiap langkah dipaparkan dalam bahasa Inggeris dahulu, kemudian bahasa Melayu di
+    bawahnya. Anda tidak perlu membaca kedua-duanya — gunakan sahaja bahasa yang anda lebih selesa.
+    Perkataan yang muncul sebagai butang atau tajuk dalam aplikasi ditunjukkan dalam
+    <em>huruf condong tebal</em> supaya mudah dikesan dalam skrin.</em></p>
+  </div>
+
+  <div class="tip avoid-break">
+    <strong>Who this is for</strong>
+    <p>Nurses and nursing assistants who record daily care at OSEM branches. If you only ever read
+    the chart, read sections 1&ndash;3 and 8. If you record it, read the whole guide once.</p>
+    <p><em>Untuk jururawat dan pembantu jururawat yang merekod penjagaan harian di cawangan OSEM.
+    Jika anda hanya membaca carta ini, baca bahagian 1&ndash;3 dan 8. Jika anda merekod, baca
+    keseluruhan panduan ini sekali sahaja.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 1 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">1</span>Before you start <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Sebelum anda mula</span></h2>
+  <p class="sub">Three things worth setting up once. <em>Tiga perkara yang patut disetting sekali sahaja.</em></p>
+
+  <h3>1.1 &nbsp;Sign in <span style="font-weight:400;color:var(--ink-faint)">&middot; <em>Log masuk</em></span></h3>
+  <p>Open the OSEM web app in your browser (Chrome or Edge). Sign in with the username issued to
+  you. You will land on the home screen with a sidebar down the left-hand side.</p>
+  <div class="ms"><p>Buka aplikasi web OSEM dalam pelayar anda (Chrome atau Edge). Log masuk dengan
+  nama pengguna yang diberikan kepada anda. Anda akan ke skrin utama dengan bar sisi di sebelah kiri.</p></div>
+  <p>Your account decides what you see. At the bottom of the sidebar you can check your branch name
+  and your access level (for example <em>ADMIN</em> or <em>USER</em>) — always confirm you are signed
+  in to the right branch before you start charting.</p>
+  <div class="ms"><p>Akaun anda menentukan apa yang anda nampak. Di bahagian bawah bar sisi, anda boleh
+  semak nama cawangan dan tahap akses anda (contoh <em>ADMIN</em> atau <em>USER</em>) — pastikan
+  selalu anda log masuk ke cawangan yang betul sebelum mula merekod.</p></div>
+
+  <h3>1.2 &nbsp;Switch the language to Bahasa Malaysia <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Tukar bahasa kepada Bahasa Malaysia</span></h3>
+  <p>The app speaks both languages, and so does this guide. The language button sits in the top bar,
+  next to the theme (light/dark) button.</p>
+  <div class="ms"><p>Aplikasi ini menyokong dua bahasa, begitu juga panduan ini. Butang bahasa
+  terletak di bar atas, di sebelah butang tema (cerah/gelap).</p></div>
+  <ol class="steps">
+    <li>
+      <p>Click the language pill in the top-right of the screen. It reads <em>🇬🇧 English</em> or <em>🇲🇾 Bahasa Malaysia</em>.</p>
+      <div class="ms"><p>Klik pil bahasa di penjuros kanan atas skrin. Ia tertulis <em>🇬🇧 English</em> atau <em>🇲🇾 Bahasa Malaysia</em>.</p></div>
+    </li>
+    <li>
+      <p>Choose your language. The whole app switches immediately — and so does this guide if you re-open it.</p>
+      <div class="ms"><p>Pilih bahasa anda. Seluruh aplikasi akan bertukar serta-merta — begitu juga panduan ini jika anda buka semula.</p></div>
+    </li>
+  </ol>
+  <div class="tip">
+    <strong>Tip / Tip</strong>
+    <p>Your choice is remembered on this device, so you only need to set it once. <em>Pilihan anda akan diingati pada peranti ini, jadi anda hanya perlu menetapkan sekali sahaja.</em></p>
+  </div>
+
+  <h3>1.3 &nbsp;Choose a comfortable theme <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Pilih tema yang selesa</span></h3>
+  <p>The theme button sits right next to the language button. Pick Light, Dark, or System to match
+  the room you are working in — this is a personal preference and does not change what is recorded.</p>
+  <div class="ms"><p>Butang tema terletak tepat di sebelah butang bahasa. Pilih Light, Dark, atau
+  System mengikut bilik anda bekerja — ini adalah pilihan peribadi dan tidak mengubah apa yang direkodkan.</p></div>
+
+  <h3>1.4 &nbsp;What you actually see in the Nursing Chart <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Apa yang anda nampak dalam Carta Kejururawatan</span></h3>
+  <p>The Nursing Chart lives inside the <em>Clinical</em> module. Inside that module there are seven
+  tabs, and the Nursing Chart is the first one — you land on it automatically.</p>
+  <div class="ms"><p>Carta Kejururawatan berada di dalam modul <em>Clinical</em>. Di dalam modul itu
+  terdapat tujuh tab, dan Carta Kejururawatan ialah yang pertama — anda akan terus ke sana secara automatik.</p></div>
+
+  <div class="screen avoid-break">
+    <div class="screen-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; OSEM &nbsp;/&nbsp; Clinical</div>
+    <div class="screen-body">
+      <div class="ui-tabrow">
+        <span class="ui-tab on">Nursing Chart</span>
+        <span class="ui-tab">Observation Chart</span>
+        <span class="ui-tab">Behaviour Chart</span>
+        <span class="ui-tab">Vital Signs</span>
+        <span class="ui-tab">Wound Photo</span>
+        <span class="ui-tab">Medical Progress Notes</span>
+        <span class="ui-tab">Hospital Referral</span>
+      </div>
+    </div>
+  </div>
+  <p class="figcap">The seven Clinical tabs. The Nursing Chart is selected. &nbsp;/&nbsp; Tujuh tab Clinical. Carta Kejururawatan dipilih.</p>
+
+  <p>The Nursing Chart itself then has just two tabs of its own — <em>Review Notes</em> (to read past
+  entries) and <em>New Entry</em> (to record a fresh one). Those two are the subject of this guide.</p>
+  <div class="ms"><p>Carta Kejururawatan itu sendiri mempunyai dua tab sahaja — <em>Semak Nota</em>
+  (untuk membaca entri terdahulu) dan <em>Entri Baharu</em> (untuk merekod entri baharu).
+  Dua inilah yang menjadi tumpuan panduan ini.</p></div>
+</div>
+
+<!-- ═══════════════ 2 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">2</span>Finding the Nursing Chart <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Mencari Carta Kejururawatan</span></h2>
+  <p class="sub">Four taps from the home screen. <em>Empat ketikan dari skrin utama.</em></p>
+
+  <ol class="steps">
+    <li>
+      <p>Look at the sidebar on the left of the screen.</p>
+      <div class="ms"><p>Lihat bar sisi di sebelah kiri skrin.</p></div>
+    </li>
+    <li>
+      <p>Click <em>Clinical</em>. It is the second item from the top, marked with a stethoscope icon.</p>
+      <div class="ms"><p>Klik <em>Clinical</em>. Ia item kedua dari atas, bertanda dengan ikon stetoskop.</p></div>
+    </li>
+    <li>
+      <p>The page loads and opens on the <em>Nursing Chart</em> tab. If you are on a different tab, click <em>Nursing Chart</em> in the row of tabs at the top of the page.</p>
+      <div class="ms"><p>Halaman akan dimuatkan dan terbuka pada tab <em>Carta Kejururawatan</em>. Jika anda berada pada tab lain, klik <em>Carta Kejururawatan</em> pada baris tab di atas halaman.</p></div>
+    </li>
+    <li>
+      <p>You now see two tabs: <em>Review Notes</em> and <em>New Entry</em>. Everything in this guide happens inside these two.</p>
+      <div class="ms"><p>Sekarang anda nampak dua tab: <em>Semak Nota</em> dan <em>Entri Baharu</em>. Semua yang diterangkan dalam panduan ini berlaku dalam kedua-dua tab ini.</p></div>
+    </li>
+  </ol>
+
+  <div class="note avoid-break">
+    <strong>Which tab should I use?</strong>
+    <p><em>Review Notes</em> is for looking — checking what was recorded earlier, for a handover or
+    for an audit. <em>New Entry</em> is for writing — adding today's care.
+    They never overwrite each other; entries are added to a running history, newest first.</p>
+    <p><em><b>Semak Nota</em> untuk melihat — menyemak apa yang telah direkodkan sebelum ini, untuk
+    serah tugas atau audit. <b>Entri Baharu</b> untuk menulis — menambah penjagaan hari ini.
+    Kedua-duanya tidak pernah menimpa satu another; entri ditambah kepada sejarah yang
+    berterusan, yang terkini di atas.</em></p>
+  </div>
+
+  <div class="warn avoid-break">
+    <strong>Before you type anything &mdash; the golden rule</strong>
+    <p>Always choose the <strong>resident first</strong>. Many parts of the chart (the staff list,
+    the carried-over feeding regime) are different for each resident, and choosing the wrong one
+    means redoing the entry.</p>
+    <p><em>Sentiasa pilih <strong>penghuni</strong> terlebih dahulu. Banyak bahagian carta ini
+    (senarai pegawai, regim suapan yang dibawa ke hadapan) berbeza bagi setiap penghuni, dan memilih
+    penghuni yang salah bermakna anda perlu semula membuat entri tersebut.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 3 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">3</span>Review Notes <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Semak Nota</span></h2>
+  <p class="sub">Find, filter, and read what has already been recorded.<br /><em>Cari, tapis, dan baca apa yang telah direkodkan.</em></p>
+
+  <h3>3.1 &nbsp;Set your filters <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Tetapkan penapis anda</span></h3>
+  <p>Three boxes sit at the top of the tab. Use as many or as few as you need.</p>
+  <div class="ms"><p>Tiga kotak berada di bahagian atas tab. Guna sebanyak yang anda perlukan sahaja.</p></div>
+
+  <div class="screen avoid-break">
+    <div class="screen-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; OSEM &nbsp;/&nbsp; Clinical &nbsp;/&nbsp; Nursing Chart &nbsp;/&nbsp; Review Notes</div>
+    <div class="screen-body">
+      <div class="ui-filter">
+        <div class="ui-field"><b>Resident</b>Aisyah binti Rahman</div>
+        <div class="ui-field"><b>Start date</b>01/09/2026</div>
+        <div class="ui-field"><b>End date</b>25/09/2026</div>
+      </div>
+      <div class="ui-card">
+        <div class="row"><span class="name">Aisyah binti Rahman</span><span class="meta">25/09/2026 14:30 &nbsp;·&nbsp; ⬇ &nbsp;·&nbsp; <span class="ui-caret">›</span></span></div>
+        <div class="hint">4 areas recorded &mdash; click to view</div>
+        <div style="font-size:7.5pt;color:var(--ink-faint);margin-top:6px;border-top:1px solid var(--line-soft);padding-top:5px;">Entered by: Sister Mei Ling</div>
+      </div>
+      <div class="ui-card">
+        <div class="row"><span class="name">Aisyah binti Rahman</span><span class="meta">25/09/2026 08:00 &nbsp;·&nbsp; ⬇ &nbsp;·&nbsp; <span class="ui-caret">›</span></span></div>
+        <div class="hint">6 areas recorded &mdash; click to view</div>
+        <div style="font-size:7.5pt;color:var(--ink-faint);margin-top:6px;border-top:1px solid var(--line-soft);padding-top:5px;">Entered by: Sister Mei Ling</div>
+      </div>
+    </div>
+  </div>
+  <p class="figcap">Two entries for one resident. The collapsed summary and the PDF button sit on the top line. &nbsp;/&nbsp; Dua entri bagi seorang penghuni.</p>
+
+  <table class="avoid-break">
+    <tr><th style="width:26%">Filter <span style="font-weight:400">&middot; <em>Penapis</em></span></th><th>What it does</th></tr>
+    <tr>
+      <td class="field">Resident <span class="ms-inline">Penghuni</span></td>
+      <td>Shows entries for one resident only. Leave it as <strong>All residents</strong> to see everyone's entries — useful for a shift overview. <em>Menunjukkan entri seorang penghuni sahaja. Biarkan sebagai <b>Semua penghuni</b> untuk melihat entri semua orang — berguna untuk gambaran keseluruhan syif.</em></td>
+    </tr>
+    <tr>
+      <td class="field">Start date <span class="ms-inline">Tarikh mula</span></td>
+      <td>Only shows entries from this day onwards. <em>Hanya menunjukkan entri dari hari ini dan seterusnya.</em></td>
+    </tr>
+    <tr>
+      <td class="field">End date <span class="ms-inline">Tarikh akhir</span></td>
+      <td>Only shows entries up to and including this day. <em>Hanya menunjukkan entri sehingga dan termasuk hari ini.</em></td>
+    </tr>
+  </table>
+  <p>The list updates as soon as you change a box — there is no need to press anything.
+  Newest entries appear at the top. Leave a date box empty to leave that end open.</p>
+  <div class="ms"><p>Senarai akan dikemas kini sebaik sahaja anda menukar kotak — tiada perlu menekan apa-apa.
+  Entri terkini muncul di atas. Biarkan kotak tarikh kosong jika anda mahu Macmillan terbuka pada hujung tersebut.</p></div>
+
+  <h3>3.2 &nbsp;Open an entry <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Buka satu entri</span></h3>
+  <ol class="steps">
+    <li>
+      <p>Click anywhere on the entry card. It expands to show the full details. Click it again to collapse.</p>
+      <div class="ms"><p>Klik di mana-mana pada kad entri. Ia akan kembang untuk menunjukkan butiran penuh. Klik sekali lagi untuk mengecutkan.</p></div>
+    </li>
+    <li>
+      <p>Read the entry from top to bottom: tube feeding, then the ticked areas (diaper checks, activity, disturbance level, psycho-social behaviour, active complaint, meals, hygiene care), then fluid in / out, CBD drainage, intervention, and the doctor's plan.</p>
+      <div class="ms"><p>Baca entri dari atas ke bawah: suapan tiub, kemudian kawasan yang ditanda (pemeriksaan lampin, aktiviti, tahap gangguan, tingkah laku psikososial, aduan aktif, hidangan, penjagaan kebersihan), kemudian cecair masuk / keluar, salir CBD, intervensi, dan pelan doktor.</p></div>
+    </li>
+    <li>
+      <p>At the very bottom you will always find <em>Entered by</em> — the staff member whose name was selected when the entry was saved. This is the person who recorded the entry, which may be different from the person reading it now.</p>
+      <div class="ms"><p>Di bahagian paling bawah anda akan sentiasa menemui <em>Dicatat oleh</em> — pegawai yang namanya dipilih semasa entri disimpan. Ini adalah orang yang merekod entri tersebut, yang mungkin berbeza daripada orang yang membacanya sekarang.</p></div>
+    </li>
+  </ol>
+
+  <div class="note avoid-break">
+    <strong>A note on <em>Entered by</em></strong>
+    <p>The Nursing Chart records who documented the care. It does not mean that person carried out
+    the care, and it is not a signature. If care is handed over, record a separate entry under the
+    person who is actually looking after the resident.</p>
+    <p><em>Carta Kejururawatan merekod siapa yang mendokumentasikan penjagaan. Ia tidak bermakna
+    orang tersebut yang melakukan penjagaan, dan ia bukan tandatangan. Jika penjagaan diserah
+    tugas, rekodkan entri berasingan di bawah nama orang yang benar-benar menjaga penghuni itu.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">4</span>New Entry <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Entri Baharu</span></h2>
+  <p class="sub">The form is split into boxed sections, top to bottom. Nothing is submitted until
+  you press <em>Save</em> at the very end.<br />
+  <em>Borang dibahagi kepada seksyen berkotak, dari atas ke bawah. Tiada apa yang dihantar sehingga
+  anda menekan <b>Simpan</b> di bahagian paling akhir.</em></p>
+
+  <ol class="steps">
+    <li>
+      <p>Click the <em>New Entry</em> tab.</p>
+      <div class="ms"><p>Klik tab <em>Entri Baharu</em>.</p></div>
+    </li>
+    <li>
+      <p><strong>Select the resident</strong> from the dropdown at the top. This is the only field outside the boxed sections, and it is the first thing to do. The dropdown lists active residents only — if someone is missing, check with your admin before assuming they are not admitted.</p>
+      <div class="ms"><p><strong>Pilih penghuni</strong> daripada senarai lungsur di atas. Ini satu-satunya medan di luar seksyen berkotak, dan ia adalah perkara pertama yang perlu dibuat. Senarai lungsur hanya memaparkan penghuni aktif — jika seseorang tiada, semak dengan pentadbir anda sebelum menganggap bahawa mereka tidak kemasukan.</p></div>
+    </li>
+    <li>
+      <p>Once a resident is selected, the <em>Entered by</em> picker further down unlocks and shows only staff from that resident's branch. It is cleared automatically whenever you change resident, so check it again.</p>
+      <div class="ms"><p>Sebaik sahaja penghuni dipilih, pemilih <em>Dicatat oleh</em> di bawah akan terbuka dan hanya memaparkan pegawai daripada cawangan penghuni tersebut. Ia dikosongkan secara automatik setiap kali anda menukar penghuni, jadi semak semula.</p></div>
+    </li>
+    <li>
+      <p>Work down the sections in order. The three that are always open are <em>Entry</em>,
+      <em>Feeding</em>, <em>Hygiene care</em> and <em>Attribution</em>; the rest start folded away
+      and open with a single click on their heading.</p>
+      <div class="ms"><p>Kerjakan seksyen mengikut urutan. Tiga seksyen yang sentiasa terbuka ialah
+      <em>Entri</em>, <em>Pemakanan</em>, <em>Penjagaan Kebersihan</em> dan <em>Pencatatan</em>;
+      yang lain bermula terlindung dan boleh dibuka dengan satu klik pada tajuknya.</p></div>
+    </li>
+  </ol>
+
+  <div class="tip avoid-break">
+    <strong>Tip &mdash; you do not have to fill in everything</strong>
+    <p>Every section except the resident and <em>Entered by</em> may be left blank. Tick only what
+    actually happened during your shift. A short, accurate entry is far more useful than a long
+    one padded with defaults.</p>
+    <p><em>Setiap seksyen kecuali penghuni dan <b>Dicatat oleh</b> boleh dibiarkan kosong. Tandakan
+    hanya apa yang benar-benar berlaku semasa syif anda. Entri yang pendek dan tepat jauh lebih
+    berguna daripada entri panjang yang dipenuhi nilai lalai.</em></p>
+  </div>
+
+  <div class="screen avoid-break">
+    <div class="screen-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; OSEM &nbsp;/&nbsp; Clinical &nbsp;/&nbsp; Nursing Chart &nbsp;/&nbsp; New Entry</div>
+    <div class="screen-body">
+      <div style="margin-bottom:10px;">
+        <span style="font-size:8.5pt;color:var(--ink-soft);font-weight:600;">Resident <span class="ui-required">*</span></span>
+        <div class="ui-input">Aisyah binti Rahman</div>
+      </div>
+      <div class="ui-section">
+        <h5>Entry</h5>
+        <div class="ui-input">25/09/2026 14:30</div>
+      </div>
+      <div class="ui-section">
+        <h5>Feeding</h5>
+        <div class="ui-input">Oral Feed</div>
+        <div class="ui-check on">Breakfast</div>
+        <div class="ui-check on">Half</div>
+        <div style="font-size:8.5pt;color:var(--brand);margin-top:2px;">+ Add meal</div>
+      </div>
+      <div class="ui-section">
+        <h5>Hygiene care</h5>
+        <div style="font-size:8.5pt;color:var(--ink-soft);font-weight:600;">› By self</div>
+        <div style="font-size:8.5pt;color:var(--ink-soft);font-weight:600;margin-top:5px;">› With assistance</div>
+      </div>
+      <div class="ui-section">
+        <h5>› Elimination &nbsp;<span style="font-weight:400;color:var(--ink-faint);letter-spacing:0;text-transform:none">(appears after you tick a diaper / catheter / CBD item)</span></h5>
+      </div>
+      <div class="ui-section">
+        <h5>› Active complaint</h5>
+      </div>
+      <div class="ui-section">
+        <h5>› Activity &amp; behaviour</h5>
+      </div>
+      <div class="ui-section">
+        <h5>› Notes</h5>
+      </div>
+      <div class="ui-section">
+        <h5>Attribution</h5>
+        <div style="font-size:8.5pt;color:var(--ink-soft);font-weight:600;">Entered by <span class="ui-required">*</span></div>
+        <div class="ui-input">Sister Mei Ling</div>
+      </div>
+      <span class="ui-btn ghost">Clear</span><span class="ui-btn primary">Save</span>
+    </div>
+  </div>
+  <p class="figcap">The form, mid-entry. Sections with a “›” arrow are folded. &nbsp;/&nbsp; Borang, semasa mengisi.</p>
+</div>
+
+<!-- ═══════════════ 5 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">5</span>Section-by-section <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Bahagian demi bahagian</span></h2>
+  <p class="sub">What each box is for, and what to put in it.<br /><em>Apa kegunaan setiap kotak, dan apa yang perlu dimasukkan.</em></p>
+
+  <h3>5.1 &nbsp;Entry <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Entri</span></h3>
+  <p><strong>Date &amp; time</strong> — the moment the care happened, not the moment you are typing.
+  It is pre-filled with the current time when you open the form; change it if you are writing up
+  something that happened earlier in the shift.</p>
+  <div class="ms"><p><strong>Tarikh &amp; masa</strong> — masa penjagaan berlaku, bukan masa anda menaip.
+  Ia telah diisi dengan masa semasa apabila anda membuka borang; ubah jika anda sedang merekod
+  sesuatu yang berlaku lebih awal dalam syif tersebut.</p></div>
+  <div class="note"><p><strong>Tip / Tip:</strong> Get the date &amp; time right first — it is what
+  every other report and handover is built on. <em>Pastikan tarikh &amp; masa betul dahulu — ia
+  menjadi asas kepada setiap laporan dan serah tugas lain.</em></p></div>
+
+  <h3>5.2 &nbsp;Feeding <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Pemakanan</span></h3>
+  <p>Start with <strong>Type</strong>. What you pick here changes the rest of the section.</p>
+  <div class="ms"><p>Mula dengan <strong>Jenis</strong>. Apa yang anda pilih di sini akan mengubah
+  bahagian lain dalam seksyen ini.</p></div>
+
+  <table class="avoid-break">
+    <tr><th style="width:30%">Type <span style="font-weight:400">&middot; <em>Jenis</em></span></th><th>What you then fill in</th></tr>
+    <tr>
+      <td class="field">Oral Feed <span class="ms-inline">Suapan Oral</span></td>
+      <td>For each meal: <strong>Meal type</strong> and <strong>Portion</strong>. Press <em>+ Add meal</em> for a second or third meal. <em>Bagi setiap hidangan: <b>Jenis hidangan</b> dan <b>Bahagian</b>. Tekan <b>+ Tambah hidangan</b> untuk hidangan kedua atau ketiga.</em></td>
+    </tr>
+    <tr>
+      <td class="field">Tube Feeding <span class="ms-inline">Suapan Tiub</span></td>
+      <td>For each feed: <strong>Time</strong>, <strong>Feeding volume / regime</strong>, and <strong>Aspirate (mL)</strong>. Press <em>+ Add meal</em> for a second or third feed. <em>Bagi setiap suapan: <b>Masa</b>, <b>Jumlah / regim suapan</b>, dan <b>Aspirat (mL)</b>. Tekan <b>+ Tambah hidangan</b> untuk suapan kedua atau ketiga.</em></td>
+    </tr>
+  </table>
+
+  <p><strong>Feeding volume / regime carries over automatically.</strong> As soon as you select a
+  resident, the app looks back at their most recent entry and pre-fills this box with the regime
+  that was last recorded. You can amend it — do that instead of retyping. If nothing appears, type
+  it in and it will be there for next shift.</p>
+  <div class="ms"><p><strong>Jumlah / regim suapan dibawa ke hadapan secara automatik.</strong>
+  Sebaik sahaja anda memilih penghuni, aplikasi akan melihat entri terdahulu yang terkini dan
+  mengisi kotak ini dengan regim yang terakhir direkodkan. Anda boleh mengubahnya — lakukan
+  itu Than menaip semula. Jika tiada apa-apa muncul, taipkan dan ia akan ada untuk syif seterusnya.</p></div>
+
+  <div class="note avoid-break">
+    <strong>Something not in the list? Use <em>Others</em></strong>
+    <p>Several dropdowns include an <em>Others</em> option. Pick it and a small text box appears
+    underneath — type what you need there. The same applies to Activity, Psycho-social behaviour,
+    Active complaint, Meal type and Portion.</p>
+    <p><em>Beberapa senarai lungsur mempunyai pilihan <b>Lain-lain</b>. Pilih ia dan satu kotak teks
+    kecil akan muncul di bawah — taipkan apa yang anda perlukan di situ. Thema yang sama untuk
+    Aktiviti, Tingkah laku psikososial, Aduan aktif, Jenis hidangan dan Bahagian.</em></p>
+  </div>
+  <p>Added meal rows can be removed with the small <em>Remove</em> link beside them.</p>
+  <div class="ms"><p>Baris hidangan yang ditambah boleh dibuang dengan pautan kecil <em>Buang</em> di sebelahnya.</p></div>
+
+  <h3>5.3 &nbsp;Hygiene care <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Penjagaan Kebersihan</span></h3>
+  <p>Two identical checklists side by side: <strong>By self</strong> and <strong>With assistance</strong>.
+  Tick each activity under the column that describes how much help the resident needed. A resident
+  can appear in both columns for different activities.</p>
+  <div class="ms"><p>Dua senarai semak yang serupa bersebelahan: <strong>Sendiri</strong> dan
+  <strong>Dengan bantuan</strong>. Tandakan setiap aktiviti di bawah lajur yang menggambarkan
+  berapa banyak bantuan yang diperlukan penghuni. Seorang penghuni boleh muncul di kedua-dua
+  lajur untuk aktiviti yang berbeza.</p></div>
+  <p>Each column starts folded. Click its heading to open the tick list.</p>
+  <div class="ms"><p>Setiap lajur bermula terlindung. Klik tajuknya untuk membuka senarai tanda.</p></div>
+
+  <h3>5.4 &nbsp;Elimination <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Perkumuhan</span></h3>
+  <div class="note avoid-break">
+    <strong>This section appears on its own</strong>
+    <p>The Elimination box only shows up after you tick <em>Change diapers</em>, <em>In / out catheter</em>
+    or <em>Empty CBD</em> under Hygiene care. That is the app's way of asking "was there output to
+    detail?" — if you did not tick one of those, the section is correctly hidden.</p>
+    <p><em>Seksyen Perkumuhan hanya muncul selepas anda menanda <b>Tukar lampin</b>,
+    <b>Kateter masuk / keluar</b> atau <b>Kosongkan CBD</b> di bawah Penjagaan Kebersihan.
+    Itulah cara aplikasi bertanya "adakah terdapat output yang perlu diperincikan?" — jika anda
+    tidak menandatangan, seksyen ini tersembunyi dengan betul.</em></p>
+  </div>
+  <p>Inside the section, each box is one diaper check, containing:</p>
+  <div class="ms"><p>Dalam seksyen ini, setiap kotak ialah satu pemeriksaan lampin, mengandungi:</p></div>
+  <ul class="bullets">
+    <li><strong>Bowel output</strong> — tick what came out. Options are grouped into
+      <em>Amount</em> and <em>Texture</em>, and you may pick one from each group (for example
+      <em>Small</em> + <em>Soft</em>). Picking a second option in the same group replaces the first.
+      Ticking <em>None</em> clears the others, and ticking anything else clears <em>None</em>.
+      <span class="ms-inline">— Tandakan apa yang keluar. Pilihan dikelompokkan kepada <b>Jumlah</b>
+      dan <b>Tekstur</b>, dan anda boleh pilih satu daripada setiap kumpulan. Menanda <b>Tiada</b>
+      akan membuang pilihan lain.</span></li>
+    <li><strong>Pass urine</strong> — one selection from the dropdown.
+      <span class="ms-inline">— satu pilihan daripada senarai lungsur.</span></li>
+  </ul>
+  <p>Use <em>+ Add diaper check</em> for a second or third check.</p>
+  <div class="ms"><p>Guna <b>+ Tambah pemeriksaan lampin</b> untuk pemeriksaan kedua atau ketiga.</p></div>
+  <p>Below the diaper checks sit three fields that apply to the whole entry:</p>
+  <div class="ms"><p>Di bawah pemeriksaan lampin terdapat tiga medan yang terpakai bagi keseluruhan entri:</p></div>
+  <table class="avoid-break">
+    <tr><th style="width:36%">Field <span style="font-weight:400">&middot; <em>Medan</em></span></th><th>Guidance</th></tr>
+    <tr><td class="field">Fluid input (ml)</td><td>Total fluid taken in, in millilitres. <em>Jumlah cecair yang diambil, dalam mililiter.</em></td></tr>
+    <tr><td class="field">Fluid output (ml)</td><td>Total fluid passed out, in millilitres. <em>Jumlah cecair yang dikeluarkan, dalam mililiter.</em></td></tr>
+    <tr><td class="field">CBD drainage</td><td>Free text — colour, amount, or anything the doctor has asked you to note. <em>Teks bebas — warna, jumlah, atau apa-apa yang diminta doktor untuk dicatatkan.</em></td></tr>
+  </table>
+
+  <h3>5.5 &nbsp;Active complaint <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Aduan Aktif</span></h3>
+  <p>Tick anything the resident is complaining of at the moment of charting — pain, nausea, and so
+  on. More than one may be ticked. <em>Tandakan apa-apa yang sedang dikeluh oleh penghuni semasa
+  merekod — sakit,.loya, dan sebagainya. Lebih daripada satu boleh ditanda.</em></p>
+
+  <h3>5.6 &nbsp;Activity &amp; behaviour <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Aktiviti &amp; Tingkah Laku</span></h3>
+  <ul class="bullets">
+    <li><strong>Activity</strong> — tick everything the resident did. Multiple selections.
+      <em>— tandakan semua aktiviti yang dilakukan penghuni. Pelbagai pilihan.</em></li>
+    <li><strong>Psycho-social behaviour</strong> — tick any behaviour worth recording. Multiple.
+      <em>— tandakan sebarang tingkah laku yang patut direkodkan. Pelbagai.</em></li>
+    <li><strong>Disturbance level</strong> — one selection from a dropdown, not a tick list.
+      <em>— satu pilihan daripada senarai lungsur, bukan senarai tanda.</em></li>
+  </ul>
+
+  <h3>5.7 &nbsp;Notes <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Nota</span></h3>
+  <p>Two free-text boxes. <strong>Intervention</strong> is what you did in response; <strong>Doctor's plan</strong>
+  is the instruction you are working to. <em>Dua kotak teks bebas. <b>Intervensi</b> ialah apa yang
+  anda lakukan sebagai tindak balas; <b>Pelan doktor</b> ialah arahan yang anda ikuti.</em></p>
+
+  <h3>5.8 &nbsp;Attribution <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Pencatatan</span></h3>
+  <p><strong>Entered by</strong> is required. Choose your own name from the list — it is filtered to
+  the resident's branch, so pick the right resident first. If the person doing the charting is not
+  in the list, choose <em>Others</em> and type their name in the box that appears.</p>
+  <div class="ms"><p><strong>Dicatat oleh</strong> diperlukan. Pilih nama anda sendiri daripada senarai
+  — ia ditapis mengikut cawangan penghuni, jadi pilih penghuni yang betul dahulu. Jika orang yang
+  merekod tidak ada dalam senarai, pilih <b>Lain-lain</b> dan taipkan nama mereka dalam kotak yang muncul.</p></div>
+  <div class="note avoid-break">
+    <p><strong>Why is this not filled in automatically from my login?</strong> Because the chart
+    must record the nurse on duty, not the person at the computer. If you are entering on behalf of
+    a colleague, use <em>Others</em> and type their name — do not sign their name in yourself.
+    <span class="ms-inline"><em>Kerana carta ini mesti merekod jururawat yang bertugas, bukan orang
+    yang berada di komputer. Jika anda masukkan bagi rakan sekerja, gunakan <b>Lain-lain</b> dan
+    taipkan nama mereka — jangan tandatangan nama mereka sendiri.</em></span></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 6 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">6</span>Saving the entry <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Menyimpan entri</span></h2>
+  <p class="sub">Two buttons at the bottom-right of the form. <em>Deux butang di bahagian kanan bawah borang.</em></p>
+
+  <ol class="steps">
+    <li>
+      <p>Check the two required fields: <strong>Resident</strong> and <strong>Entered by</strong>. Both are marked with a red asterisk.</p>
+      <div class="ms"><p>Semak dua medan yang diperlukan: <strong>Penghuni</strong> dan <strong>Dicatat oleh</strong>. Kedua-duanya ditandakan dengan asterisk merah.</p></div>
+    </li>
+    <li>
+      <p>Click <em>Save</em>. The button shows <em>Saving...</em> while it works. Do not click twice.</p>
+      <div class="ms"><p>Klik <em>Simpan</em>. Butang akan menunjukkan <em>Menyimpan...</em> semasa ia berfungsi. Jangan klik dua kali.</p></div>
+    </li>
+    <li>
+      <p>On success the app jumps back to <em>Review Notes</em> automatically, the entry appears at
+      the top of the list, and the form is cleared and ready for the next resident.</p>
+      <div class="ms"><p>Jika berjaya, aplikasi akan melantak balik ke <em>Semak Nota</em> secara
+      automatik, entri akan muncul di atas senarai, dan borang dikosongkan serta sedia untuk penghuni seterusnya.</p></div>
+    </li>
+  </ol>
+
+  <p>If something is wrong, the app does not navigate away. A red message appears near the top of
+  the form explaining what was missing — usually <em>Please select a resident</em> or
+  <em>Please select who entered this</em>. Correct it and press <em>Save</em> again. Nothing you
+  typed is lost.</p>
+  <div class="ms"><p>Jika ada sesuatu yang salah, aplikasi tidak akan pergi. Satu mesej merah
+  akan muncul di bahagian atas borang menerangkankan apa yang hilang — biasanya <b>Sila pilih seorang
+  penghuni</b> atau <b>Sila pilih pegawai yang mencatat entri ini</b>. Betulkan dan tekan
+  <b>Simpan</b> semula. Semua yang anda taip tidak hilang.</p></div>
+
+  <h3>Clear <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Kosongkan</span></h3>
+  <p>The <em>Clear</em> button empties the whole form so you can start again from scratch. Only use
+  it when you are abandoning an entry on purpose — everything you have typed is discarded without
+  warning.</p>
+  <div class="ms"><p>Butang <em>Kosongkan</em> mengosongkan keseluruhan borang supaya anda boleh
+  mula semula. Guna hanya apabila anda sengaja abandoning entri — semua yang anda taip akan dibuang
+  tanpa amaran.</p></div>
+
+  <div class="warn avoid-break">
+    <strong>Can I edit an entry after saving it?</strong>
+    <p>No. Entries cannot be edited or deleted from the Nursing Chart — what was recorded stays
+    recorded. This is deliberate: the chart is a legal record, not a working draft. If you make a
+    mistake, record a new entry that puts it right and refer to it in the <em>Notes</em>
+    section.</p>
+    <p><em>Tidak. Entri tidak boleh disunting atau dipadam daripada Carta Kejururawatan — apa yang
+    telah direkodkan kekal direkodkan. Ini adalah pilihan yang sengaja: carta ini ialah rekod
+    undang-undang, bukan draf kerja. Jika anda silap, rekodkan entri baharu yang membetulkan
+    dan rujuknya di seksyen <b>Nota</b>.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 7 ═══════════════ -->
+<div class="page">
+  <h2 class="sec"><span class="n">7</span>Unsaved changes <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Perubahan belum disimpan</span></h2>
+  <p class="sub">The app protects your typing. Here is how.<br /><em>Aplikasi melindungi apa yang anda taip. Begini caranya.</em></p>
+
+  <p>If you have typed something and then try to leave — by clicking another tab, another module in
+  the sidebar, or another record — a pop-up appears instead of navigating away.</p>
+  <div class="ms"><p>Jika anda telah menaip sesuatu dan kemudian cuba pergi — dengan mengklik tab lain,
+  modul lain dalam bar sisi, atau rekod lain — satu pop-up akan muncul dan bukan melakukan
+  navigasi.</p></div>
+
+  <table class="avoid-break">
+    <tr><th style="width:34%">Button <span style="font-weight:400">&middot; <em>Butang</em></span></th><th>What it does</th></tr>
+    <tr><td class="field">Cancel <span class="ms-inline">Batal</span></td><td>Stays on the form, nothing is lost. <em>Kekal pada borang, tiada apa yang hilang.</em></td></tr>
+    <tr><td class="field">Save &amp; Exit <span class="ms-inline">Simpan &amp; Keluar</span></td><td>Saves the entry first, then goes where you asked. <em>Menyimpan entri dahulu, kemudian pergi ke tempat yang anda minta.</em></td></tr>
+    <tr><td class="field">Exit Without Saving <span class="ms-inline">Keluar Tanpa Simpan</span></td><td>Discards your typing. <em>Membuang apa yang anda taip.</em></td></tr>
+  </table>
+
+  <div class="tip avoid-break">
+    <p><strong>Tip / Tip:</strong> The guard covers links you click and tab switches — including the
+    <em>Review Notes</em> / <em>New Entry</em> tabs. If you have a half-finished entry, press
+    <em>Save &amp; Exit</em> rather than <em>Exit Without Saving</em>.
+    <em>Perlindungan ini menutup pautan yang anda klik dan pertukaran tab — termasuk tab
+    <b>Semak Nota</b> / <b>Entri Baharu</b>. Jika anda mempunyai entri separuh siap, tekan
+    <b>Simpan &amp; Keluar</b> dan bukan <b>Keluar Tanpa Simpan</b>.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 8 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">8</span>Download as PDF <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Muat turun sebagai PDF</span></h2>
+  <p class="sub">Any single entry can be exported as a formatted, printable report.<br />
+  <em> Mana-mana entri tunggal boleh dieksport sebagai laporan bercetak yang kemas.</em></p>
+
+  <ol class="steps">
+    <li>
+      <p>Go to <em>Review Notes</em> and locate the entry you want.</p>
+      <div class="ms"><p>Pergi ke <em>Semak Nota</em> dan cari entri yang anda mahu.</p></div>
+    </li>
+    <li>
+      <p>On the entry's top line, next to the date and time, click the small download icon
+      (⬇). You do not need to expand the entry first.</p>
+      <div class="ms"><p>Pada baris teratas entri, di sebelah tarikh dan masa, klik ikon muat turun
+      kecil (⬇). Anda tidak perlu membuka entri itu dahulu.</p></div>
+    </li>
+    <li>
+      <p>The PDF is generated on the spot. Open it, then <em>Print</em> to get a paper copy —
+      choose <em>Save as PDF</em> if you would rather keep a digital one.</p>
+      <div class="ms"><p>PDF akan dijana serta-merta. Bukalah, kemudian tekan <em>Cetak</em> untuk
+      mendapat salinan kertas — pilih <em>Simpan sebagai PDF</em> jika anda mahu menyimpan salinan digital.</p></div>
+    </li>
+  </ol>
+
+  <p>The report carries the branch letterhead and logo, the resident's name and IC number, the full
+  entry in date order, and the <em>Entered by</em> name — a complete standalone record of that
+  single charting event.</p>
+  <div class="ms"><p>Laporan itu membawa suratheaded dan logo cawangan, nama dan nombor IC penghuni,
+  keseluruhan entri mengikut turutan tarikh, serta nama <em>Dicatat oleh</em> — satu rekod lengkap
+  dan mandiri bagi kejadian merekod tersebut.</p></div>
+
+  <div class="note avoid-break">
+    <p>One entry per PDF — the button always exports a single charting event, never a range.
+    For a handover pack covering a whole shift, use the filters in section 3 to review the
+    entries on screen, and download the PDF for any that need to be filed.
+    <em>Satu entri bagi setiap PDF — butang itu sentiasa mengeksport satu kejadian merekod,
+    tidak sekali-kali julat. Untuk paket serah tugas meliputi keseluruhan syif, gunakan penapis
+    di bahagian 3 untuk menyemak entri dalam skrin, dan muat turun PDF bagi mana-mana yang
+    perlu difailkan.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 9 ═══════════════ -->
+<div class="page pagebreak">
+  <h2 class="sec"><span class="n">9</span>Good habits &amp; troubleshooting <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Tabiat baik &amp; penyelesaian masalah</span></h2>
+
+  <h3>9.1 &nbsp;Five habits that make charting faster <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Lima tabiat yang mempercepat kerja anda</span></h3>
+  <ol class="steps">
+    <li><p><strong>Resident first, always.</strong> It unlocks the right staff list and the
+      carried-over feeding regime. <em><b>Penghuni dahulu, sentiasa.</b> Ia membuka senarai pegawai
+      yang betul dan regim suapan yang dibawa ke hadapan.</em></p></li>
+    <li><p><strong>Chart as you go, not at the end of the shift.</strong> Ten minutes each time
+      beats one long reconstruction from memory. <em><b>Merekod secara berterusan, bukan di hujung
+      syif.</b> Sepuluh minit setiap kali lebih baik daripada satu masa penulisan panjang
+      daripada ingatan.</em></p></li>
+    <li><p><strong>Tick only what happened.</strong> Unticked boxes are not gaps; they mean "nothing
+      to report", which is itself useful information. <em><b>Tandakan hanya apa yang berlaku.</b>
+      Kotak yang tidak ditanda bukan jurang; ia bermaksud "tiada apa untuk dilaporkan", yang
+      sendiri merupakan maklumat berguna.</em></p></li>
+    <li><p><strong>Use the Notes boxes for the "why".</strong> If a resident refuses a feed or a
+      dressing, one line in <em>Intervention</em> saves a lot of questions later.
+      <em><b>Gunakan kotak Nota untuk "mengapa".</b> Jika penghuni menolak suapan atauabalutan,
+      satu baris dalam <b>Intervensi</b> menjimatkan banyak soalan kemudian.</em></p></li>
+    <li><p><strong>Download the PDF before you leave the ward.</strong> A filed copy of the day's
+      charting is faster to find than a search six months from now.
+      <em><b>Muat turun PDF sebelum meninggalkan wad.</b> Salinan yang difailkan lebih cepat
+      dijumpai berbanding pencarian enam bulan dari sekarang.</em></p></li>
+  </ol>
+
+  <h3>9.2 &nbsp;If something goes wrong <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Jika ada masalah</span></h3>
+  <table class="avoid-break">
+    <tr><th style="width:36%">What you see <span style="font-weight:400">&middot; <em>Apa yang anda nampak</em></span></th><th>What to do <span style="font-weight:400">&middot; <em>Apa yang perlu dibuat</em></span></th></tr>
+    <tr>
+      <td class="field">"Please select a resident"</td>
+      <td>No resident is chosen yet — scroll up and pick one. <em>Tiada penghuni dipilih lagi — ke atas dan pilih seorang.</em></td>
+    </tr>
+    <tr>
+      <td class="field">"Please select who entered this"</td>
+      <td>You skipped the <em>Entered by</em> picker, or chose <em>Others</em> without typing a name. <em>Anda melangkau pemilih <b>Dicatat oleh</b>, atau memilih <b>Lain-lain</b> tanpa menaip nama.</em></td>
+    </tr>
+    <tr>
+      <td class="field">The Elimination box is missing</td>
+      <td>Tick <em>Change diapers</em>, <em>In / out catheter</em> or <em>Empty CBD</em> under Hygiene care and it will appear. <em>Tandakan <b>Tukar lampin</b>, <b>Kateter masuk / keluar</b> atau <b>Kosongkan CBD</b> di bawah Penjagaan Kebersihan dan ia akan muncul.</em></td>
+    </tr>
+    <tr>
+      <td class="field">The Entered by list is empty</td>
+      <td>You have not chosen a resident yet, or the staff roster has not been set up for that branch. <em>Anda belum memilih penghuni, atau senarai pegawai belum disediakan untuk cawangan tersebut.</em></td>
+    </tr>
+    <tr>
+      <td class="field">A resident is missing from the dropdown</td>
+      <td>Only <em>active</em> residents are listed. If the person has been discharged, that is expected — ask an admin if you believe it is wrong. <em>Hanya penghuni <b>aktif</b> disenaraikan. Jika orang itu telah dilepaskan, itu dijangka — tanya pentadbir jika anda rasa ia salah.</em></td>
+    </tr>
+    <tr>
+      <td class="field">No entries appear</td>
+      <td>Check the filters in section 3 — a date range or resident from earlier will be hiding them. <em>Semak penapis di bahagian 3 — julat tarikh atau penghuni dari tadi mungkin menyembunyikannya.</em></td>
+    </tr>
+    <tr>
+      <td class="field">Nothing happens when you press Save</td>
+      <td>Check your internet connection first, then press <em>Save</em> again — do not refresh the page, as that discards your typing. <em>Semak sambungan internet dahulu, kemudian tekan <b>Simpan</b> semula — jangan muat semula halaman, kerana itu akan membuang apa yang anda taip.</em></td>
+    </tr>
+  </table>
+
+  <div class="note avoid-break">
+    <p><strong>Still stuck? / Masih keliru?</strong> Before asking for help, write down the
+    resident's name, the date and time, and what you saw. That saves a lot of back-and-forth.
+    <em>Sebelum meminta bantuan, catat nama penghuni, tarikh dan masa, serta apa yang anda
+    nampak. Itu menjimatkan banyak perbincangan berulang.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 10 ═══════════════ -->
+<div class="page">
+  <h2 class="sec"><span class="n">10</span>Quick reference <span style="font-weight:400;color:var(--ink-faint);font-size:11pt">&nbsp;/&nbsp; Rujukan pantas</span></h2>
+  <p class="sub">One screen to keep beside you. <em>Satu skrin untuk disimpan di sebelah anda.</em></p>
+
+  <h3>10.1 &nbsp;Screen names at a glance <span style="font-weight:400;color:var(--ink-faint)">&nbsp;/&nbsp; Nama skrin sekali pandang</span></h3>
+  <table class="avoid-break">
+    <tr><th style="width:40%">English</th><th>Bahasa Malaysia</th></tr>
+    <tr><td>Sidebar &rarr; Clinical</td><td>Bar sisi &rarr; Clinical</td></tr>
+    <tr><td>Nursing Chart</td><td>Carta Kejururawatan</td></tr>
+    <tr><td>Review Notes</td><td>Semak Nota</td></tr>
+    <tr><td>New Entry</td><td>Entri Baharu</td></tr>
+    <tr><td>Resident / All residents</td><td>Penghuni / Semua penghuni</td></tr>
+    <tr><td>Start date / End date</td><td>Tarikh mula / Tarikh akhir</td></tr>
+    <tr><td>Entry — Date &amp; time</td><td>Entri — Tarikh &amp; masa</td></tr>
+    <tr><td>Feeding — Type / Oral Feed / Tube Feeding</td><td>Pemakanan — Jenis / Suapan Oral / Suapan Tiub</td></tr>
+    <tr><td>Meal type / Portion / Time</td><td>Jenis hidangan / Bahagian / Masa</td></tr>
+    <tr><td>Feeding volume / regime &nbsp;·&nbsp; Aspirate (mL)</td><td>Jumlah / regim suapan &nbsp;·&nbsp; Aspirat (mL)</td></tr>
+    <tr><td>+ Add meal</td><td>+ Tambah hidangan</td></tr>
+    <tr><td>Hygiene care — By self / With assistance</td><td>Penjagaan Kebersihan — Sendiri / Dengan bantuan</td></tr>
+    <tr><td>Elimination</td><td>Perkumuhan</td></tr>
+    <tr><td>Bowel output / Pass urine</td><td>Output usus / Kencing</td></tr>
+    <tr><td>+ Add diaper check</td><td>+ Tambah pemeriksaan lampin</td></tr>
+    <tr><td>Fluid input (ml) / Fluid output (ml) / CBD drainage</td><td>Pengambilan cecair (ml) / Pengeluaran cecair (ml) / Salir CBD</td></tr>
+    <tr><td>Active complaint</td><td>Aduan Aktif</td></tr>
+    <tr><td>Activity &amp; behaviour — Activity / Psycho-social behaviour / Disturbance level</td><td>Aktiviti &amp; tingkah laku — Aktiviti / Tingkah laku psikososial / Tahap gangguan</td></tr>
+    <tr><td>Notes — Intervention / Doctor's plan</td><td>Nota — Intervensi / Pelan doktor</td></tr>
+    <tr><td>Attribution — Entered by</td><td>Pencatatan — Dicatat oleh</td></tr>
+    <tr><td>Specify / Others</td><td>Nyatakan / Lain-lain</td></tr>
+    <tr><td>Clear / Save / Saving...</td><td>Kosongkan / Simpan / Menyimpan...</td></tr>
+    <tr><td>Unsaved changes — Cancel / Save &amp; Exit / Exit Without Saving</td><td>Perubahan belum disimpan — Batal / Simpan &amp; Keluar / Keluar Tanpa Simpan</td></tr>
+  </table>
+
+  <div class="tip avoid-break">
+    <strong>Remember / Ingat</strong>
+    <p>Resident first. Tick only what happened. <em>Save</em> before you move on.
+    <span class="ms-inline"><em>Penghuni dahulu. Tandakan hanya apa yang berlaku. Tekan
+    <b>Simpan</b> sebelum berpindah.</em></span></p>
+  </div>
+</div>
+
+<footer class="colophon">
+  OSEM Web App &nbsp;·&nbsp; Nursing Chart User Manual &nbsp;·&nbsp; Panduan Pengguna Carta Kejururawatan &nbsp;·&nbsp; Version 1.0
+</footer>
+
+</body>
+</html>
