@@ -102,6 +102,11 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
 ## Domain-specific detail (read only when relevant)
 
 - `docs/database.md` — full core domain model, DEMO exclusion checklist.
+- `docs/medication-chart-dosing-days.md` — which day cells the preparation
+  chart crosses off with `xxxx`: the single
+  `shouldPrepareMedicineOnDay` rule in `CalendarEngine.gs` that the chart,
+  the stock forecast and the family reminder PDF all share, and why
+  `ON` + specific weekdays used to be silently ignored.
 - `docs/medication.md` — Medication Orders: Google Sheet is the source of
   truth, never write `tbl_medication_orders` directly; `Noted By`
   single-column rule; `DD/MM/YYYY` date handling; edit-never-overwrites

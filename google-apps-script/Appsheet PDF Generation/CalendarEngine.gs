@@ -8,6 +8,52 @@ function getDaysInMonth(year, month){
 
 }
 
+const CHART_SPECIFIC_DAYS = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+];
+
+// The Dosing Days column is stored as a comma-separated string
+// ("Monday,Wednesday,Friday"), but AppSheet EnumList values can arrive
+// as an array. Returns only the real weekday names, so the neutral
+// "Everyday" value (used for plain daily frequencies) is ignored.
+function getChartSpecificDosingDays(
+    medication
+){
+
+    const dosingDays =
+        medication["Dosing Days"];
+
+    if(!dosingDays){
+
+        return [];
+
+    }
+
+    const parts =
+        Array.isArray(dosingDays)
+            ? dosingDays
+            : String(dosingDays).split(",");
+
+    return parts
+        .map(function(day){
+
+            return String(day).trim();
+
+        })
+        .filter(function(day){
+
+            return CHART_SPECIFIC_DAYS.indexOf(day) !== -1;
+
+        });
+
+}
+
 function shouldPrepareMedicineOnDay(
     medication,
     year,
@@ -45,6 +91,36 @@ function shouldPrepareMedicineOnDay(
 
     const frequency =
         medication["Frequency"] || "";
+
+    // Specific weekdays must be honoured BEFORE the daily-frequency
+    // shortcut. The webapp order form only reveals the Dosing Days
+    // picker for frequency "Selected Days" / "Others", but it does not
+    // require the user to pick one, so a Mon/Wed/Fri order is routinely
+    // stored as Frequency "ON" + Dosing Days "Monday,Wednesday,Friday".
+    // Without this check "ON" is treated as a plain daily frequency and
+    // every cell of the month stays uncrossed, so the nurse cannot tell
+    // which nights to serve.
+    //
+    // This applies to ANY frequency: whenever specific weekdays are
+    // stored, they describe the real dosing schedule, regardless of the
+    // time-of-day slot the frequency names.
+    const specificDays =
+        getChartSpecificDosingDays(
+            medication
+        );
+
+    if(specificDays.length > 0){
+
+        const weekday =
+            Utilities.formatDate(
+                current,
+                Session.getScriptTimeZone(),
+                "EEEE"
+            );
+
+        return specificDays.indexOf(weekday) !== -1;
+
+    }
 
     // Daily frequencies
     if(
