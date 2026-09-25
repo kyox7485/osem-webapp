@@ -11,5 +11,6 @@ __pycache__/
 *.log
 migration_report_*.md
 new_auth_user.json
+_seed_log.json
 .DS_Store
 Thumbs.db
