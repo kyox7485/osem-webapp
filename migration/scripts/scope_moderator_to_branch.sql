@@ -82,38 +82,35 @@ begin
 end $$;
 
 -- ─── 3. tbl_observation_status (3 named policies, not the branch_scope_ shape)
+-- Postgres rejects WITH CHECK on a SELECT policy (42601), and it is
+-- meaningless on one: a SELECT policy takes USING only. Likewise an INSERT
+-- policy takes WITH CHECK only. Only UPDATE takes both. The predicate text is
+-- identical across the three; only the command and clause differ.
 do $$
-declare p text;
+declare t text; pred text;
 begin
-  foreach p in array array['obs_status_select','obs_status_insert','obs_status_update']
-  loop
-    execute format('drop policy if exists %1$s on tbl_observation_status;', p);
-    execute format(
-      $f$create policy %1$s on tbl_observation_status
-        %2$s
-        using (
-          branch_id = auth_branch_id()
-          or (
-            auth_is_all_branch_account()
-            and not auth_is_demo_account()
-            and not exists (select 1 from tbl_branches b where b."BranchID" = branch_id and b.is_demo)
-          )
-        )
-        with check (
-          branch_id = auth_branch_id()
-          or (
-            auth_is_all_branch_account()
-            and not auth_is_demo_account()
-            and not exists (select 1 from tbl_branches b where b."BranchID" = branch_id and b.is_demo)
-          )
-        );$f$, p,
-      case p
-        when 'obs_status_select' then 'for select'
-        when 'obs_status_insert' then 'for insert'
-        else 'for update'
-      end
-    );
-  end loop;
+  pred :=
+    'branch_id = auth_branch_id()
+     or (
+       auth_is_all_branch_account()
+       and not auth_is_demo_account()
+       and not exists (select 1 from tbl_branches b where b."BranchID" = branch_id and b.is_demo)
+     )';
+
+  -- SELECT: USING only
+  execute 'drop policy if exists obs_status_select on tbl_observation_status;';
+  execute format('create policy obs_status_select on tbl_observation_status
+                    for select using (%s);', pred);
+
+  -- INSERT: WITH CHECK only
+  execute 'drop policy if exists obs_status_insert on tbl_observation_status;';
+  execute format('create policy obs_status_insert on tbl_observation_status
+                    for insert with check (%s);', pred);
+
+  -- UPDATE: both
+  execute 'drop policy if exists obs_status_update on tbl_observation_status;';
+  execute format('create policy obs_status_update on tbl_observation_status
+                    for update using (%s) with check (%s);', pred, pred);
 end $$;
 
 -- ─── 4. tbl_stock_transfers (scopes on from/to branch, not a single branch_id)
@@ -150,19 +147,25 @@ create policy transfers_scope on tbl_stock_transfers
 -- The auth_is_demo_account() exemption is required, not optional: the
 -- `test` account lives in the DEMO branch and must keep seeing (and admins
 -- must keep managing) its staff. See docs/database.md.
-drop policy if exists staff_scope on tbl_staff;
-create policy staff_scope on tbl_staff
+--
+-- Read and write are split into separate policies on purpose. The existing
+-- staff_write is a single permissive ALL policy with an ADMIN-only predicate.
+-- Postgres ORs permissive policies per command, so leaving it as ALL while
+-- adding a broader read policy would let the ALL policy's SELECT side
+-- (auth_role() = 'ADMIN'... actually any admin) OR with the new read rule and
+-- keep staff rows visible exactly as before -- the narrowing would not take.
+-- Re-declaring read as SELECT-only and write as ADMIN-only keeps the two
+-- independent and makes the read scope actually bite.
+drop policy if exists staff_read on tbl_staff;
+drop policy if exists staff_write on tbl_staff;
+drop policy if exists staff_scope_read on tbl_staff;
+drop policy if exists staff_write_admin on tbl_staff;
+
+-- Read: own branch, or any real branch for an ADMIN/HQ/PHY account, with the
+-- demo-account exemption so the `test` account can still read its own roster.
+create policy staff_scope_read on tbl_staff
+  for select
   using (
-    branch_id = auth_branch_id()
-    or (
-      auth_is_all_branch_account()
-      and (
-        auth_is_demo_account()
-        or not exists (select 1 from tbl_branches b where b."BranchID" = branch_id and b.is_demo)
-      )
-    )
-  )
-  with check (
     branch_id = auth_branch_id()
     or (
       auth_is_all_branch_account()
@@ -173,8 +176,12 @@ create policy staff_scope on tbl_staff
     )
   );
 
--- staff_write stays ADMIN-only (login/roster management is not a
--- moderator capability -- mirrors isAdmin() in the app).
+-- Write stays ADMIN-only (roster management is not a moderator capability --
+-- mirrors isAdmin() in the app).
+create policy staff_write_admin on tbl_staff
+  for all
+  using (auth_role() = 'ADMIN')
+  with check (auth_role() = 'ADMIN');
 
 commit;
 
