@@ -20,6 +20,41 @@ treated as standing process — this file supersedes it.
   `next build` does, so run that too before anything that touches
   `lib/lookups.ts`-adjacent imports or new client components.
 
+### `NEXT_PUBLIC_APP_URL` — required for Auth email links
+
+Set this Vercel env var to the app's **production** hostname, no trailing
+slash: `https://osem-webapp.vercel.app`. It is not optional in practice:
+without it, `createAccount()` and the forgot-password page fall back to the
+incoming request's `Origin`/`Host`, so an admin working from a **preview
+deployment** mints invite links off a `*.vercel.app` host that isn't
+allow-listed in Supabase. Those invites are then dead on arrival.
+
+`webapp/.env*` is gitignored; `webapp/.env.local.example` is force-added
+(`git add -f`) so it documents the var, but the real value lives in Vercel.
+
+`/reset-password` must consume the link's own session: admin invites
+arrive as an implicit `#access_token` fragment, which the PKCE-mode
+browser client ignores. Never fall back to whatever session is already in
+the browser there — that once let an invitee's new password overwrite the
+inviting admin's own password.
+
+Two Supabase/Vercel dashboard settings must agree with it, or the invite
+email still bounces the user off to Supabase's own applet (which then asks
+for a phone number):
+
+1. **Supabase → Authentication → URL Configuration**
+   - *Redirect URLs*: must contain the production origin and
+     `.../reset-password`. Add the preview pattern
+     (`https://<project>-*.vercel.app/**`) only if preview invites are
+     wanted.
+   - *Site URL*: set to the production origin too. This is Supabase's
+     silent fallback when a `redirectTo` misses the allow-list, so a
+     correct Site URL turns a total failure into a working link.
+2. **Vercel → Settings → Deployment Protection**: off, or at minimum
+   `/reset-password` and `/login` excluded from the password/OTP gate —
+   otherwise a genuine invitee hits Vercel's challenge screen instead of
+   your password form.
+
 ## Database (Supabase)
 
 - Schema changes are hand-applied: write a numbered SQL file under

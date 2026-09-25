@@ -18,8 +18,12 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     const supabase = createClient();
+    // Pin the app's public origin when it's configured, so a reset requested
+    // from a preview deployment still produces a production link that
+    // matches Supabase's allowed Redirect URLs. See actions.ts for why.
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/+$/, "");
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${appUrl}/reset-password`,
     });
 
     setLoading(false);

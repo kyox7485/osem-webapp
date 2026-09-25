@@ -38,11 +38,20 @@ export async function createAccount(formData: FormData) {
     return { error: "Email, username, branch, and rights are required" };
   }
 
+  // The invite link's redirectTo MUST match an entry in Supabase's
+  // Authentication -> URL Configuration -> Redirect URLs, or Supabase
+  // silently falls back to the Site URL and drops the invitee on
+  // Supabase's own applet (which demands phone-number verification).
+  // So we pin the app's public origin via NEXT_PUBLIC_APP_URL rather than
+  // deriving it from the request: an admin working from a preview
+  // deployment would otherwise mint invite links off a *.vercel.app host
+  // that isn't allow-listed, and every one of those invites would break.
   const headerList = await headers();
-  const origin = headerList.get("origin") ?? `https://${headerList.get("host")}`;
+  const requestOrigin = headerList.get("origin") ?? `https://${headerList.get("host")}`;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? requestOrigin).replace(/\/+$/, "");
   const admin = createAdminClient();
   const { data: authUser, error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${origin}/reset-password`,
+    redirectTo: `${appUrl}/reset-password`,
   });
 
   if (authError || !authUser.user) {
