@@ -18,15 +18,15 @@ import {
   suggestOrderQty,
   summarize,
   type PurchaseList,
-  type PurchaseListOption,
   type PurchaseListRow,
+  type ResidentMedicineOption,
 } from "@/lib/medication-purchase-core";
 
 export type {
   PurchaseList,
   PurchaseListGroup,
-  PurchaseListOption,
   PurchaseListRow,
+  ResidentMedicineOption,
 } from "@/lib/medication-purchase-core";
 export { groupPurchaseRows, summarize, suggestOrderQty, EMPTY_PURCHASE_LIST } from "@/lib/medication-purchase-core";
 
@@ -146,9 +146,22 @@ export async function buildPurchaseList(
   }
 
   const rows: PurchaseListRow[] = [];
+  // Every active OSEM order in the branch (not just the low-stock ones), so
+  // the "add item" picker can offer a resident any medicine they are
+  // currently prescribed -- including ones already on the list.
+  const residentMedicines: Record<number, ResidentMedicineOption[]> = {};
+
   for (const o of orders) {
     const latest = latestByOrder.get(o.id) ?? null;
     const st = computeStockStatus(latest, o, now);
+    const unit = unitFor(o, st.unit);
+
+    (residentMedicines[o.resident_id] ??= []).push({
+      value: o.external_ref_id,
+      label: medicineLabel(o),
+      unit,
+    });
+
     if (!needsRestock(st, latest !== null)) continue;
 
     const countable = st.forecast && st.dailyUsage !== null;
@@ -159,7 +172,7 @@ export async function buildPurchaseList(
       residentTextId: o.ResidentID,
       medicine: medicineLabel(o),
       schedule: scheduleLabel(o),
-      unit: unitFor(o, st.unit),
+      unit,
       balance: st.balance,
       dailyUsage: st.dailyUsage,
       daysRemaining: st.forecast ? st.daysRemaining : null,
@@ -168,40 +181,48 @@ export async function buildPurchaseList(
       reason: reasonFor(st),
     });
   }
+  for (const opts of Object.values(residentMedicines)) {
+    opts.sort((a, b) => a.label.localeCompare(b.label));
+  }
 
   const groups = groupPurchaseRows(rows);
   return {
-    list: { groups, stockOptions: await listStockOptions(supabase, branchId, orders), ...summarize(groups) },
+    list: {
+      groups,
+      residentMedicines,
+      staffOptions: await listStaffOptions(supabase, branchId),
+      ...summarize(groups),
+    },
   };
 }
 
 /**
- * The branch's own stock medicines, for the review screen's "add item"
- * dropdown. Read-only — selecting one never writes to tbl_medication_stock.
+ * ACTIVE staff who may prepare a purchase list: the branch's own staff plus
+ * HQ (HQ staff also register stock — see the Stock screen's "Registered By").
  */
-async function listStockOptions(
+async function listStaffOptions(
   supabase: Supabase,
-  branchId: number,
-  orders?: OrderRaw[]
-): Promise<PurchaseListOption[]> {
+  branchId: number
+): Promise<{ staffId: string; name: string; ownBranch: boolean }[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: stockRaw } = await (supabase as any)
-    .from("tbl_medication_stock")
-    .select("unit, medication_order_id")
-    .eq("branch_id", branchId)
-    .limit(2000);
-  const rows = (stockRaw ?? []) as { unit: string; medication_order_id: number }[];
+  const { data: hqBranches } = await (supabase as any)
+    .from("tbl_branches")
+    .select("BranchID")
+    .eq("Function", "HQ");
+  const staffBranchIds = [
+    branchId,
+    ...((hqBranches ?? []) as { BranchID: number }[]).map((b) => b.BranchID),
+  ];
 
-  const unitByOrder = new Map<number, string>();
-  for (const s of rows) if (!unitByOrder.has(s.medication_order_id)) unitByOrder.set(s.medication_order_id, s.unit);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (supabase as any)
+    .from("tbl_staff")
+    .select("staff_name, branch_id, staffId:StaffID")
+    .in("branch_id", staffBranchIds)
+    .eq("status", "ACTIVE")
+    .order("staff_name");
 
-  // Name each option from its order where we have it; otherwise fall back to
-  // the raw unit so the dropdown is never full of blank entries.
-  const options = new Map<string, PurchaseListOption>();
-  for (const [orderId, unit] of unitByOrder) {
-    const o = orders?.find((x) => x.id === orderId);
-    const label = o ? `${medicineLabel(o)} — ${unit}` : unit;
-    options.set(`${label}|${unit}`, { value: String(orderId), label });
-  }
-  return [...options.values()].sort((a, b) => a.label.localeCompare(b.label));
+  return ((data ?? []) as { staff_name: string; branch_id: number; staffId: string }[])
+    .map((s) => ({ staffId: s.staffId, name: s.staff_name, ownBranch: s.branch_id === branchId }))
+    .sort((a, b) => Number(b.ownBranch) - Number(a.ownBranch) || a.name.localeCompare(b.name));
 }

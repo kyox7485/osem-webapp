@@ -16,12 +16,14 @@ import { useDirtyForm } from "@/lib/dirty-form-context";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { LOW_STOCK_DAYS } from "@/lib/medication-stock";
 import {
+  daysLeftFor,
   groupPurchaseRows,
   suggestOrderQty,
   summarize,
   type PurchaseListGroup,
-  type PurchaseListOption,
   type PurchaseListRow,
+  type PurchaseListStaff,
+  type ResidentMedicineOption,
 } from "@/lib/medication-purchase-core";
 
 type BranchOption = { id: number; name: string };
@@ -31,7 +33,9 @@ type Props = {
   branches: BranchOption[];
   selectedBranchId: number;
   groups: PurchaseListGroup[];
-  stockOptions: PurchaseListOption[];
+  /** Active OSEM medicines per resident — scopes the "add item" picker. */
+  residentMedicines: Record<number, ResidentMedicineOption[]>;
+  staffOptions: PurchaseListStaff[];
   residents: ResidentOption[];
   /** Set when the branch list failed to load — never show "nothing to restock" then. */
   loadError: string | null;
@@ -48,7 +52,15 @@ function signatureOf(rows: PurchaseListRow[]): string {
     .join("~");
 }
 
-export function PurchaseModule({ branches, selectedBranchId, groups, stockOptions, residents, loadError }: Props) {
+export function PurchaseModule({
+  branches,
+  selectedBranchId,
+  groups,
+  residentMedicines,
+  staffOptions,
+  residents,
+  loadError,
+}: Props) {
   const t = useTranslation();
   // push() (not navigateTo) so switching branch shows the app-wide loading
   // overlay — a plain router.push gives the user no feedback while the next
@@ -70,12 +82,14 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
   const [newResidentId, setNewResidentId] = useState<number | "">("");
   const [newOption, setNewOption] = useState<string>("");
   const [customName, setCustomName] = useState("");
+  const [customDose, setCustomDose] = useState("");
+  // Who prepared this list — required before the PDF can be generated.
+  const [preparedBy, setPreparedBy] = useState("");
 
   const residentById = useMemo(
     () => new Map(residents.map((r) => [r.id, r])),
     [residents]
   );
-
   // Group the *edited* rows with the same ordering rule the server used, so
   // the screen and the PDF can never disagree.
   const reviewGroups = useMemo(
@@ -98,7 +112,22 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
   }, [currentSignature, serverSignature, markDirty, markClean]);
 
   function update(key: string, patch: Partial<PurchaseListRow>) {
-    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.key !== key) return r;
+        const next = { ...r, ...patch };
+        // Keep "Days left" honest whenever the balance is edited by hand.
+        if (patch.balance !== undefined) {
+          next.daysRemaining = r.countable ? daysLeftFor(next.balance, r.dailyUsage) : null;
+          next.reason =
+            r.addedManually ? t("Not forecast; Added manually")
+            : next.daysRemaining === null
+              ? (next.balance !== null && next.balance <= 0 ? t("Out of stock") : t("Low quantity"))
+              : (next.daysRemaining === 0 ? t("Out of stock") : t("Balance adjusted"));
+        }
+        return next;
+      })
+    );
     setMessage(null);
   }
 
@@ -116,9 +145,15 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
     setMessage({ text: t("Review reset to the calculated values."), kind: "info" });
   }
 
+  // Only the chosen resident's own active medicines — never another
+  // resident's drug.
+  const availableMedicines: ResidentMedicineOption[] =
+    newResidentId === "" ? [] : residentMedicines[newResidentId] ?? [];
+
   function canAdd(): boolean {
     if (newResidentId === "" || newOption === "") return false;
-    if (newOption === OTHER_VALUE && customName.trim() === "") return false;
+    // "Other…" is free text, so both the name and the dose must be typed in.
+    if (newOption === OTHER_VALUE && (customName.trim() === "" || customDose.trim() === "")) return false;
     return true;
   }
 
@@ -128,22 +163,24 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
     if (!resident) return;
 
     const isOther = newOption === OTHER_VALUE;
-    const selected = stockOptions.find((o) => o.value === newOption);
-    // "Metformin 500mg — Tablet" → name and unit split back out.
-    const [rawName, rawUnit] = selected ? selected.label.split(" — ") : [customName.trim(), "Unit"];
+    const selected = availableMedicines.find((o) => o.value === newOption);
+    const inherited = groups.flatMap((g) => g.rows).find(
+      (r) => r.residentId === resident.id && r.medicine === (selected ? selected.label : customName.trim())
+    ) ?? null;
+    const doseStr = (isOther ? (customDose.trim() || "—") : (inherited?.schedule || "—"));
 
     const row: PurchaseListRow = {
       key: `extra:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
       residentId: resident.id,
       residentName: resident.name,
       residentTextId: resident.residentTextId,
-      medicine: isOther ? customName.trim() : rawName,
-      schedule: "",
-      unit: rawUnit || "Unit",
-      balance: null,
-      dailyUsage: null,
-      daysRemaining: null,
-      countable: false,
+      medicine: isOther ? customName.trim() : selected?.label ?? "—",
+      schedule: doseStr,
+      unit: selected?.unit || "Unit",
+      balance: isOther ? (inherited?.balance ?? null) : (inherited?.balance ?? null),
+      dailyUsage: isOther ? null : (inherited?.dailyUsage ?? null),
+      daysRemaining: isOther ? null : (inherited?.daysRemaining ?? null),
+      countable: isOther ? false : (inherited?.countable ?? false),
       suggestedQty: 1,
       reason: t("Added manually"),
       addedManually: true,
@@ -151,12 +188,17 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
     setRows((prev) => [...prev, row]);
     setNewOption("");
     setCustomName("");
+    setCustomDose("");
     setMessage(null);
   }
 
   function generatePdf() {
     if (rows.length === 0) {
       setMessage({ text: t("There is nothing to generate."), kind: "error" });
+      return;
+    }
+    if (preparedBy === "") {
+      setMessage({ text: t("Please select the staff member who prepared this list."), kind: "error" });
       return;
     }
     startTransition(async () => {
@@ -166,6 +208,7 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             branchId: selectedBranchId,
+            preparedBy,
             rows: rows.map((r) => ({
               key: r.key,
               residentId: r.residentId,
@@ -296,7 +339,14 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
               <select
                 id="purchase-add-resident"
                 value={newResidentId}
-                onChange={(e) => setNewResidentId(e.target.value === "" ? "" : Number(e.target.value))}
+                onChange={(e) => {
+                  setNewResidentId(e.target.value === "" ? "" : Number(e.target.value));
+                  // A medicine chosen for the previous resident is not valid
+                  // for this one — clear it.
+                  setNewOption("");
+                  setCustomName("");
+                  setCustomDose("");
+                }}
                 className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">{t("Select a resident…")}</option>
@@ -320,9 +370,9 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
                 className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{t("Select a medicine…")}</option>
-                {stockOptions.map((o) => (
+                {availableMedicines.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {o.label} — {o.unit}
                   </option>
                 ))}
                 <option value={OTHER_VALUE}>{t("Other…")}</option>
@@ -330,19 +380,36 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
             </div>
 
             {newOption === OTHER_VALUE && (
-              <div className="min-w-[180px] flex-1">
-                <label className="mb-1.5 block text-xs font-medium text-fg-muted" htmlFor="purchase-add-name">
-                  {t("Item name")}
-                </label>
-                <input
-                  id="purchase-add-name"
-                  type="text"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  placeholder={t("Enter the medicine name…")}
-                  className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
+              <>
+                <div className="min-w-[180px] flex-1">
+                  <label className="mb-1.5 block text-xs font-medium text-fg-muted" htmlFor="purchase-add-name">
+                    {t("Item name")}
+                    <span className="ml-0.5 text-red-500">*</span>
+                  </label>
+                  <input
+                    id="purchase-add-name"
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder={t("Enter the medicine name…")}
+                    className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="min-w-[140px] flex-1">
+                  <label className="mb-1.5 block text-xs font-medium text-fg-muted" htmlFor="purchase-add-dose">
+                    {t("Dose")}
+                    <span className="ml-0.5 text-red-500">*</span>
+                  </label>
+                  <input
+                    id="purchase-add-dose"
+                    type="text"
+                    value={customDose}
+                    onChange={(e) => setCustomDose(e.target.value)}
+                    placeholder={t("e.g. 1 Tablet twice daily")}
+                    className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </>
             )}
 
             <button
@@ -368,12 +435,29 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
             <span className="font-semibold text-fg">
               {totals.totalItems} {t("items")}
             </span>
-            {` · ${totals.residentCount} ${t("residents")} · `}
-            <span className="font-semibold text-fg">
-              {totals.totalQty} {t("units to order")}
-            </span>
+            {` · ${totals.residentCount} ${t("residents")}`}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[180px]">
+              <label className="mb-1.5 block text-xs font-medium text-fg-muted" htmlFor="purchase-prepared-by">
+                {t("Prepared By")}
+                <span className="ml-0.5 text-red-500">*</span>
+              </label>
+              <select
+                id="purchase-prepared-by"
+                value={preparedBy}
+                onChange={(e) => setPreparedBy(e.target.value)}
+                className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="">{t("Select staff")}</option>
+                {staffOptions.map((s) => (
+                  <option key={s.staffId} value={s.staffId}>
+                    {s.name}
+                    {s.ownBranch ? "" : ` (${t("HQ")})`}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               onClick={resetAll}
@@ -386,7 +470,7 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
             <button
               type="button"
               onClick={generatePdf}
-              disabled={isPending || rows.length === 0}
+              disabled={isPending || rows.length === 0 || preparedBy === ""}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPending ? (
@@ -456,7 +540,7 @@ function GroupRows({
               {group.residentTextId ? `${group.residentName} (${group.residentTextId})` : group.residentName}
             </span>
             <span className="text-xs text-fg-muted">
-              {`${group.rows.length} ${t("items")} · ${group.subtotalQty} ${t("units")}`}
+              {`${group.rows.length} ${t("items")}`}
             </span>
           </div>
         </td>

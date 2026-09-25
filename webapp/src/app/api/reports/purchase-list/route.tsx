@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   const account = await getCurrentUser();
   if (!account) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  let body: { branchId?: unknown; rows?: unknown };
+  let body: { branchId?: unknown; preparedBy?: unknown; rows?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -69,6 +69,12 @@ export async function POST(request: NextRequest) {
   if (!Array.isArray(body.rows)) return bad("Missing rows");
   if (body.rows.length > MAX_ROWS) return bad("Too many rows");
   const incoming = body.rows as IncomingRow[];
+
+  // Prepared By is required — the list must be attributable to a real person.
+  // It must be a tbl_staff.StaffID, never free text (see CLAUDE.md: accounts
+  // are not staff).
+  const preparedBy = str(body.preparedBy);
+  if (!preparedBy) return bad("Select the staff member who prepared this list");
 
   if (!canAccessAllBranches(account) && branchId !== account.branch_id) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -89,6 +95,31 @@ export async function POST(request: NextRequest) {
 
   // Names come from the DB, not the client, so the grouping can't be spoofed.
   const supabase = await createClient();
+
+  // ── Resolve the preparing staff member ─────────────────────────────────────
+  // Accepts the branch's own staff or HQ staff, matching the Stock screen's
+  // "Registered By" picker. The name is read from tbl_staff, never trusted.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: hqBranches } = await (supabase as any)
+    .from("tbl_branches")
+    .select("BranchID")
+    .eq("Function", "HQ");
+  const allowedStaffBranchIds = [
+    branchId,
+    ...((hqBranches ?? []) as { BranchID: number }[]).map((b) => b.BranchID),
+  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: staffRaw } = await (supabase as any)
+    .from("tbl_staff")
+    .select("staff_name, StaffID, branch_id")
+    .eq("StaffID", preparedBy)
+    .eq("status", "ACTIVE")
+    .maybeSingle();
+  const staff = (staffRaw ?? null) as { staff_name: string; StaffID: string; branch_id: number } | null;
+  if (!staff || !allowedStaffBranchIds.includes(staff.branch_id)) {
+    return bad("Select the staff member who prepared this list");
+  }
+
   const uniqueIds = [...new Set(residentIds as number[])];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: residentsRaw, error: residentsError } = await (supabase as any)
@@ -146,11 +177,11 @@ export async function POST(request: NextRequest) {
   const buffer = await renderToBuffer(
     <PurchaseListDocument
       groups={groups}
-      totalQty={totals.totalQty}
       totalItems={totals.totalItems}
       residentCount={totals.residentCount}
       lowStockDays={LOW_STOCK_DAYS}
       generatedOn={formatDate(now.toISOString())}
+      preparedBy={staff.staff_name}
       branch={branch}
       logoSrc={getLogoPath()}
     />

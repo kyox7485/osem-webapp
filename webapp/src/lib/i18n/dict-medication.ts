@@ -267,6 +267,11 @@ export const dictMedication: Record<string, string> = {
     "Tiada ubat yang perlu ditambah di cawangan ini buat masa ini.",
   "Could not load the purchase list for this branch.":
     "Tidak dapat memuatkan senarai pembelian untuk cawangan ini.",
+  "Please select the staff member who prepared this list.":
+    "Sila pilih petugas yang menyediakan senarai ini.",
+  "Prepared By": "Disediakan Oleh",
+  "e.g. 1 Tablet twice daily": "cth. 1 Tablet dua kali sehari",
+  "Balance adjusted": "Baki diselaraskan",
   "Added manually": "Ditambah secara manual",
   "Reset to calculated": "Set semula kepada nilai kira",
   "Not forecast": "Tiada ramalan",

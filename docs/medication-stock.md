@@ -290,18 +290,41 @@ current balance is deliberately **not** deducted — it is the buffer stock, so
 we order a full cover period on top of it. Uncountable rows suggest `1`.
 
 **Layout** — grouped by resident (name order, one heading per resident with
-its own item count and subtotal), every medicine on its **own line** under
-that resident, and a grand total across the branch. Every line, including
-manually added ones, **must belong to exactly one resident** — there is no
-"unassigned" bucket, so the add-item control requires a resident first and
-the route rejects a row without one.
+its own item count), every medicine on its **own line** under that resident,
+and a grand total of item/resident counts across the branch. Every line,
+including manually added ones, **must belong to exactly one resident** —
+there is no "unassigned" bucket, so the add-item control requires a resident
+first and the route rejects a row without one. The header strip carries
+Branch / Generated On / Prepared By / Residents.
 
 **Review step (session-only)** — the user can edit Balance and Qty per row,
-reset a row or the whole list to the calculated values, and add an item from
-the branch's own stock medicines or as free text ("Other…"). Editing here
-**never writes to `tbl_medication_stock` or any other table**; the draft is
-`useState` only and is discarded on navigation (the app-wide dirty-form guard
-warns first, and the branch switch goes through `navigateTo`).
+reset a row or the whole list to the calculated values, and add an item.
+Editing here **never writes to `tbl_medication_stock` or any other table**;
+the draft is `useState` only and is discarded on navigation (the app-wide
+dirty-form guard warns first, and the branch switch goes through
+`guardedAction`).
+
+- **"Add another item" is scoped to the chosen resident.** Picking a resident
+  filters the medicine dropdown to *that resident's own active OSEM orders*
+  (`residentMedicines`, built in the same query loop as `groups` — it covers
+  every active order, not just the low-stock ones) plus the free-text
+  "Other…" escape. A reviewer therefore cannot attach another resident's drug
+  to this list. Changing the resident clears the selected medicine and the
+  free-text fields, since they belonged to the previous resident.
+- **"Other…" requires both a name and a dose**, both free text and both
+  required before the Add button enables. The dose is stored in the row's
+  `schedule` and prints in the Dosing column.
+- **Editing Balance recomputes Days Left** via `daysLeftFor(balance,
+  dailyUsage)` — the same rounded-down-to-the-nearest-half rule the Stock
+  screen uses. Uncountable rows stay "Not forecast", since they have no rate
+  to project from.
+- **Prepared By is required** before the PDF can be generated: a
+  `tbl_staff.StaffID` from the branch's ACTIVE staff plus HQ (same set as the
+  Stock screen's "Registered By"). The name is resolved from `tbl_staff` in
+  the route, never trusted from the client, and prints in the header strip.
+  This is a real person being named, so free text is not accepted.
+- The list shows **item and resident counts only** — no unit total, on screen
+  or in the PDF.
 
 **PDF hand-off** — unlike every other report route, this one is **POSTed**: the
 reviewed rows are sent to the route, which re-reads resident names from the DB

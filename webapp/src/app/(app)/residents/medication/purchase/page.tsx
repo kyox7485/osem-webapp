@@ -87,7 +87,8 @@ export default async function MedicationPurchasePage({
         branches={branches}
         selectedBranchId={selectedBranch.id}
         groups={list.groups}
-        stockOptions={list.stockOptions}
+        residentMedicines={list.residentMedicines}
+        staffOptions={list.staffOptions}
         residents={residents}
         loadError={loadError}
       />

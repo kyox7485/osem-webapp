@@ -55,10 +55,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
   },
   totalText: { fontSize: 9, fontFamily: branding.fontFamilyBold, color: pdfColors.ink900 },
-  totalQty: { fontSize: 9, fontFamily: branding.fontFamilyBold, color: pdfColors.accent },
 
   empty: { fontSize: 8.5, color: pdfColors.ink400, paddingVertical: 10, paddingHorizontal: 6 },
-  footnote: { fontSize: 7.5, color: pdfColors.ink500, lineHeight: 1.4, marginTop: 6 },
 });
 
 const COLS = [
@@ -73,46 +71,41 @@ function GroupHeading({ group }: { group: PurchaseListGroup }) {
   return (
     <View style={s.groupRow} wrap={false}>
       <Text style={s.groupName}>{group.residentTextId ? `${group.residentName} (${group.residentTextId})` : group.residentName}</Text>
-      <Text style={s.groupMeta}>{`${group.rows.length} item${group.rows.length === 1 ? "" : "s"} · ${group.subtotalQty} units`}</Text>
+      <Text style={s.groupMeta}>{`${group.rows.length} item${group.rows.length === 1 ? "" : "s"}`}</Text>
     </View>
   );
 }
 
 export function PurchaseListDocument({
   groups,
-  totalQty,
   totalItems,
   residentCount,
   lowStockDays,
   generatedOn,
+  preparedBy,
   branch,
   logoSrc,
 }: {
   groups: PurchaseListGroup[];
-  totalQty: number;
   totalItems: number;
   residentCount: number;
   lowStockDays: number;
   generatedOn: string;
+  /** Staff member who prepared/verified the list. */
+  preparedBy: string | null;
   branch: ReportBranchInfo;
   logoSrc: string;
 }) {
   return (
     <Document title="Medication Purchase List">
-      <ReportPage
-        title="Medication Purchase List"
-        subtitle="All OSEM-supplied medicine to restock — internal"
-        branch={branch}
-        logoSrc={logoSrc}
-      >
+      <ReportPage title="Medication Purchase List" branch={branch} logoSrc={logoSrc}>
         <InfoGrid
-          columns={5}
+          columns={4}
           items={[
             { label: "Branch", value: branch.branchName },
             { label: "Generated On", value: generatedOn },
+            { label: "Prepared By", value: preparedBy ?? "--" },
             { label: "Residents", value: String(residentCount) },
-            { label: "Items", value: String(totalItems) },
-            { label: "Total Units to Order", value: String(totalQty) },
           ]}
         />
 
@@ -138,7 +131,7 @@ export function PurchaseListDocument({
                       {row.addedManually && <Text style={s.cellMuted}>Added manually</Text>}
                     </View>
                     <View style={[s.cell, { width: COLS[1].width }]}>
-                      <Text>{row.schedule}</Text>
+                      <Text>{row.schedule || "—"}</Text>
                       <Text style={s.cellMuted}>{row.unit}</Text>
                     </View>
                     <Text style={[s.cell, { width: COLS[2].width }]}>
@@ -176,14 +169,9 @@ export function PurchaseListDocument({
               <Text style={s.totalText}>
                 {`TOTAL — ${totalItems} item${totalItems === 1 ? "" : "s"} across ${residentCount} resident${residentCount === 1 ? "" : "s"}`}
               </Text>
-              <Text style={s.totalQty}>{`${totalQty} units to order`}</Text>
             </View>
           )}
         </View>
-
-        <Text style={s.footnote}>
-          {`Internal document for pharmacy ordering. Countable balances are forecasts from the prescription since the last stock count, not a physical count; items marked "Not forecast" are uncountable (estimated or as-needed) medicine. Quantities shown were reviewed and confirmed before printing.`}
-        </Text>
       </ReportPage>
     </Document>
   );

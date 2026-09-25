@@ -57,11 +57,15 @@ export type PurchaseListRow = {
   unit: string;
   balance: number | null; // live forecast, reviewer-editable
   dailyUsage: number | null;
-  daysRemaining: number | null; // null = uncountable
+  daysRemaining: number | null; // null = uncountable; recomputed when balance is edited
   countable: boolean; // forecastable → daily-usage math applies
   suggestedQty: number; // 30 × dailyUsage (countable) or 1 (uncountable)
   reason: string; // why it qualified, e.g. "8 days left" / "Low quantity"
   addedManually?: boolean; // reviewer-added line (never persisted)
+  /** StaffID of the staff member who prepared this list; null until chosen. */
+  preparedBy?: string | null;
+  /** Display name resolved server-side for `preparedBy`; never from the client. */
+  preparedByName?: string | null;
 };
 
 /** Rows grouped under one resident heading — the unit both the UI and PDF print. */
@@ -73,11 +77,42 @@ export type PurchaseListGroup = {
   subtotalQty: number;
 };
 
-export type PurchaseListOption = { value: string; label: string };
+/**
+ * One medicine a resident is currently prescribed, for the review screen's
+ * "add item" picker. Scoped to that resident's OWN active orders so a
+ * reviewer can only add what this resident is actually taking (plus the free
+ * -text "Other…" escape hatch for anything else).
+ */
+export type ResidentMedicineOption = {
+  /** The order's external_ref_id. */
+  value: string;
+  label: string;
+  unit: string;
+};
+
+/**
+ * Days left for a manually-adjusted balance. Uses the same rounded-down-to-
+ * the-nearest-half rule the Stock screen and PDFs use, so an edited balance
+ * shows a number consistent with the rest of the app.
+ *
+ * Only meaningful when the row is countable AND has a daily usage — an
+ * uncountable row (Estimate unit, PRN) has no rate to project from, so it
+ * stays "Not forecast" however the balance is edited.
+ */
+export function daysLeftFor(balance: number | null, dailyUsage: number | null): number | null {
+  if (balance === null || dailyUsage === null || dailyUsage <= 0) return null;
+  if (!isFinite(balance) || balance < 0) return null;
+  return Math.floor((balance / dailyUsage) * 2 + 1e-9) / 2;
+}
+
+export type PurchaseListStaff = { staffId: string; name: string; ownBranch: boolean };
 
 export type PurchaseList = {
   groups: PurchaseListGroup[];
-  stockOptions: PurchaseListOption[];
+  /** Active OSEM medicines by resident id, for the "add item" picker. */
+  residentMedicines: Record<number, ResidentMedicineOption[]>;
+  /** Staff who may prepare the list (branch + HQ, ACTIVE only). */
+  staffOptions: PurchaseListStaff[];
   totalQty: number; // branch-wide quantity to order
   totalItems: number;
   residentCount: number;
@@ -85,7 +120,8 @@ export type PurchaseList = {
 
 export const EMPTY_PURCHASE_LIST: PurchaseList = {
   groups: [],
-  stockOptions: [],
+  residentMedicines: {},
+  staffOptions: [],
   totalQty: 0,
   totalItems: 0,
   residentCount: 0,
