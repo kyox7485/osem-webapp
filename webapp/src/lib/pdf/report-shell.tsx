@@ -165,7 +165,7 @@ export function ReportPage({
   children,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   branch: ReportBranchInfo;
   logoSrc: string;
   children: React.ReactNode;
@@ -188,7 +188,7 @@ export function ReportPage({
             <Image src={logoSrc} style={styles.logo} />
             <View style={styles.titleBlock}>
               <Text style={styles.reportTitle}>{title}</Text>
-              <Text style={styles.reportSubtitle}>{subtitle}</Text>
+              {subtitle && <Text style={styles.reportSubtitle}>{subtitle}</Text>}
             </View>
           </View>
           <View style={styles.headerRight}>

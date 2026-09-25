@@ -114,6 +114,17 @@ forecast baseline.
 computes `current forecast/known balance + received`. Must use the unit the
 stock is already recorded in (changing unit = a Stock Count).
 
+**Entry Date/Time (back-dating)** — both forms have an editable Entry
+Date/Time (default now) that becomes StockDate. The server calculates
+everything **as of that time**: the Received base balance is the forecast
+from the latest event at or before it (`loadLatestStockEvent(…, asOf)`), and
+the Daily Usage / Days Remaining snapshots use that date. Rejected if in the
+future (5 min clock tolerance) or before the order's Start Date. Later
+events are **not** recalculated (each row is a snapshot); the form warns how
+many later entries exist. The latest-by-StockDate event still drives the
+screen, so a back-dated entry older than the newest one changes history
+only.
+
 **Order Changed** — on order edit (`updateOrderAction` →
 `recordOrderChangedStock`): if the old RxOrderID had stock, write an event on
 the **new** RxOrderID carrying the balance the old order had reached.
@@ -178,7 +189,8 @@ Consumers treat `Days Remaining === ""` as "not forecastable", never 0.
 
 ## 7. Family Medication Reminder PDF
 
-- Button: Stock screen, selected resident header. Opens the chart script URL
+- **No longer linked from the webapp** (replaced by 7b). Was: Stock screen
+  button that opened the chart script URL
   (`webapp/src/config/medication-chart.ts`) in a new tab — same pattern as the
   resident medication chart. Opened without `noopener` (which makes
   `window.open` return null), then `win.opener = null`.
@@ -192,6 +204,76 @@ Consumers treat `Days Remaining === ""` as "not forecastable", never 0.
   medication requiring reminder." (no PDF created).
 - PDFs go to the Drive `TemporaryPdfFolderID`; `cleanupTemporaryPdfs`
   removes them after 24 h.
+
+### 7b. "Family Medicine Reminder (PDF)" — Next.js PDF (current)
+
+The **only** reminder button on the Stock screen since it replaced the Apps
+Script button above (that flow still works via its URL but has no button).
+
+- Route `webapp/src/app/api/reports/family-reminder/route.tsx`
+  (`?resident=<tbl_residents.id>`), document
+  `webapp/src/lib/pdf/documents/family-reminder-document.tsx`, standard
+  `ReportPage` header (logo + branch name/address/tel).
+- **Never stored**: rendered in memory with `renderToBuffer` and streamed
+  inline with `Cache-Control: no-store` — no file on the server, no Drive
+  copy. One-off printable PDF.
+- Same access rules as the other reports + DEMO exclusion.
+- Items: Active + `supplied_by = 'Family'`, live `computeStockStatus`
+  (identical numbers to the Stock screen). Grouping:
+  - **Countable → Restock Needed** (red block): forecast Days Remaining
+    `< LOW_STOCK_DAYS` (14), incl. out of stock. Sorted by days.
+  - **Countable → Sufficient Supply**: ≥ 14 days, or "Enough until order
+    ends". (Unlike the Apps Script flow, these ARE listed.)
+  - **Uncountable → Current Quantity**: Estimate units, PRN, never recorded
+    ("Not recorded yet"), and Count stock in a unit ≠ the dose unit. Always
+    listed.
+- Header: standard shell, no subtitle; identity strip = Resident + Generated
+  On (no Resident ID). Footnote states the date of the newest stock entry
+  behind any countable balance (omitted when there is none).
+- Bilingual English / 中文. Helvetica has no Chinese glyphs, so Chinese Text
+  nodes use the bundled **Noto Sans SC** (`webapp/public/fonts/`, SIL OFL,
+  from Google Fonts, ~10.5 MB each for Regular/Bold), registered by
+  `lib/pdf/cjk-font.ts` `registerCjkFont()`. Only glyphs used are embedded,
+  so a PDF is ~90 KB. Any new Chinese string must be in a Text node styled
+  with `CJK_FONT`, never mixed into a Helvetica Text node.
+- Grouping/forecast logic lives in `webapp/src/lib/medication-stock-report.ts`
+  `buildStockReport(supabase, residentId, suppliedBy, now)`, shared with 7c.
+
+### 7c. "OSEM Medicine Purchase List (PDF)" — internal
+
+Menu item next to 7b. Same route pattern, access rules, never-stored rendering
+and grouping as 7b, but for `supplied_by = 'OSEM'`, and English-only with
+no family notice (internal use: what OSEM must buy for the resident).
+
+- Route `webapp/src/app/api/reports/osem-purchase-list/route.tsx`, document
+  `webapp/src/lib/pdf/documents/osem-purchase-list-document.tsx`, title
+  "Medication Purchase List".
+
+### 7d. "Stock Summary" — every medicine, one table
+
+Route `webapp/src/app/api/reports/stock-summary/route.tsx`, document
+`webapp/src/lib/pdf/documents/stock-summary-document.tsx`, builder
+`buildStockSummary` in `lib/medication-stock-report.ts`. All active orders
+(any supplier), ordered like the Stock screen (regular first, PRN last).
+Columns: Medicine (+ dose · frequency · dosing days), Balance, Daily Usage,
+Days Remaining (cell tinted red = out, amber = `< LOW_STOCK_DAYS`, green =
+≥ that or enough until order ends — same thresholds as the screen badge;
+the text carries the meaning too, for B/W prints), Supplied By, Last Count
+(latest **`Stock Count`** entry only — a `Stock Received` is not a count;
+"Never counted" if none).
+
+### Stock screen: "Print PDF" menu
+
+The three PDFs sit behind one **Print PDF ▾** menu button (in
+`stock-module.tsx`, `PrintPdfMenu`) rather than three long-labelled
+buttons: each item has a short title + one-line description, 44px targets,
+full-width on phones, Escape/outside-click closes, arrow keys move focus.
+
+**Nothing to generate (all three PDFs):** when the resident has no active order
+for that supplier, the Stock screen shows an info notice instead of opening
+a tab (checked client-side from each row's `suppliedBy`). If the route is
+opened anyway (stale page, direct URL) it returns a small translated HTML
+message via `nothingToGenerateResponse`, not an empty PDF.
 
 ## 8. Deployment checklist
 

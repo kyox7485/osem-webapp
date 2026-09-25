@@ -31,7 +31,13 @@ export type StockEntryInput = {
   quantity: number;
   unit: string;
   registeredBy: string; // tbl_staff.StaffID
+  // When the count/delivery actually happened (ISO instant). Defaults to now;
+  // earlier = a back-dated entry. Never in the future.
+  entryDate?: string;
 };
+
+// Clock-skew allowance between the browser and the server.
+const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 export type StockEntryResult = {
   success: boolean;
@@ -88,8 +94,17 @@ export async function recordStockEntryAction(input: StockEntryInput): Promise<St
   if (!(await isKnownStaffId(supabase, input.registeredBy)))
     return { success: false, error: "Registered By must be a staff member from the list" };
 
-  const now = new Date();
-  const latest = await loadLatestStockEvent(supabase, order.id);
+  // Everything below is calculated as of the entry date, so a back-dated
+  // entry builds on the balance as it was then. Later entries are not
+  // recalculated (each row is a snapshot).
+  const now = input.entryDate ? new Date(input.entryDate) : new Date();
+  if (isNaN(now.getTime())) return { success: false, error: "A valid entry date/time is required" };
+  if (now.getTime() > Date.now() + FUTURE_TOLERANCE_MS)
+    return { success: false, error: "Entry date/time cannot be in the future" };
+  if (order.start_date && klDate(now) < String(order.start_date).slice(0, 10))
+    return { success: false, error: "Entry date cannot be before the order's start date" };
+
+  const latest = await loadLatestStockEvent(supabase, order.id, now);
 
   let balance: number;
   if (input.entryType === "Stock Count") {

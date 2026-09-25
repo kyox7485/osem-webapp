@@ -36,15 +36,20 @@ export async function generateStockId(supabase: Supabase): Promise<string> {
   throw new Error("Failed to generate unique StockID after 10 attempts");
 }
 
+// asOf: only events at or before that instant (back-dated entries build on
+// the balance as it was then, not on later events).
 export async function loadLatestStockEvent(
   supabase: Supabase,
-  medicationOrderId: number
+  medicationOrderId: number,
+  asOf?: Date
 ): Promise<StockEvent | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase as any)
+  let query = (supabase as any)
     .from("tbl_medication_stock")
     .select("balance, unit, stock_date")
-    .eq("medication_order_id", medicationOrderId)
+    .eq("medication_order_id", medicationOrderId);
+  if (asOf) query = query.lte("stock_date", asOf.toISOString());
+  const { data } = await query
     .order("stock_date", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)

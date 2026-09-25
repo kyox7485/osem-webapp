@@ -63,7 +63,7 @@ export default async function MedicationStockPage({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: ordersRaw } = await (supabase as any)
       .from("tbl_medication_orders")
-      .select(`${STOCK_ORDER_COLUMNS}, dosage_form, brand_name, active_ingredient`)
+      .select(`${STOCK_ORDER_COLUMNS}, dosage_form, brand_name, active_ingredient, supplied_by`)
       .eq("resident_id", selected.id)
       .eq("status", "Active")
       .not("external_ref_id", "is", null);
@@ -74,6 +74,7 @@ export default async function MedicationStockPage({
       dosage_form: string | null;
       brand_name: string | null;
       active_ingredient: string;
+      supplied_by: string | null;
     };
     const orderRows = (ordersRaw ?? []) as OrderRaw[];
 
@@ -172,6 +173,16 @@ export default async function MedicationStockPage({
           frequency: o.frequency,
           dosingDays: o.dosing_days,
           prn: isPrn(o),
+          suppliedBy: o.supplied_by,
+          schedule: {
+            dose: o.dose,
+            unit: o.unit,
+            frequency: o.frequency,
+            administration_times: o.administration_times,
+            dosing_days: o.dosing_days,
+            start_date: o.start_date,
+            end_date: o.end_date ?? null,
+          },
           status,
           lastStockDate: latest?.stockDate ?? null,
           lastRegisteredBy: latest?.registeredByName ?? null,
