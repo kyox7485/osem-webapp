@@ -5,7 +5,7 @@ import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck,
 import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { useDirtyForm, type SaveResult } from "@/lib/dirty-form-context";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime } from "@/lib/format-date";
 import { MEDICATION_CHART_SCRIPT_URL } from "@/config/medication-chart";
 import {
   LOW_STOCK_DAYS,
@@ -72,13 +72,35 @@ function scheduleLabel(o: StockOrderRow, t: (s: string) => string): string {
   return [dose, o.frequency ? t(o.frequency) : "", days].filter(Boolean).join(" · ");
 }
 
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+// "Tue 13/10/2026" from a YYYY-MM-DD date.
+function dayLabel(isoDate: string, t: (s: string) => string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const weekday = WEEKDAY_NAMES[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `${t(weekday).slice(0, 3)} ${formatDate(isoDate)}`;
+}
+
 const btnFocus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40";
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 
 function DaysBadge({ row }: { row: StockOrderRow }) {
   const t = useTranslation();
-  const days = row.status.daysRemaining;
+  const { daysRemaining: days, lastDoseDate, lastsUntilOrderEnd } = row.status;
+  if (lastsUntilOrderEnd) {
+    return (
+      <div>
+        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900">
+          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+          {t("Enough until order ends")}
+        </span>
+        <div className="mt-1 text-[11px] text-fg-subtle">
+          {t("Order ends {date}", { date: dayLabel(lastsUntilOrderEnd, t) })}
+        </div>
+      </div>
+    );
+  }
   if (days === null) return <span className="text-fg-faint">{DASH}</span>;
 
   const tone =
@@ -89,11 +111,22 @@ function DaysBadge({ row }: { row: StockOrderRow }) {
         : "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900";
   const Icon = days < LOW_STOCK_DAYS ? AlertTriangle : CheckCircle2;
 
-  return (
+  const badge = (
     <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${tone}`}>
       <Icon className="h-3.5 w-3.5" aria-hidden />
       {days === 0 ? t("Out of stock") : t("{days} days left", { days })}
     </span>
+  );
+
+  return (
+    <div>
+      {badge}
+      <div className="mt-1 text-[11px] text-fg-subtle">
+        {lastDoseDate
+          ? t("Last dose {date}", { date: dayLabel(lastDoseDate, t) })
+          : t("No doses left after today")}
+      </div>
+    </div>
   );
 }
 
@@ -108,7 +141,10 @@ function BalanceCell({ row }: { row: StockOrderRow }) {
       <div className="text-sm font-semibold text-fg">
         {fmtQty(s.balance)} {t(s.unit)}
       </div>
-      <div className="text-[11px] text-fg-subtle">
+      <div
+        className="text-[11px] text-fg-subtle"
+        title={s.forecast ? t("Forecast from the medication order since the last stock entry, not a physical count.") : undefined}
+      >
         {s.forecast ? t("Forecast") : trackingFor(s.unit) === "Estimate" ? t("Last counted (estimate)") : t("Last counted")}
       </div>
     </div>
@@ -556,9 +592,6 @@ export function StockModule({ residents, selectedResidentId, orders, history, st
                 {t("Family Medication Reminder")}
               </button>
             </div>
-            <p className="mt-1 text-xs text-fg-subtle">
-              {t("Countable balances are a forecast from the medication order since the last stock entry, not a physical count. Estimate units show the last counted quantity.")}
-            </p>
           </div>
 
           {orders.length === 0 ? (

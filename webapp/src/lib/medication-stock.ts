@@ -98,9 +98,10 @@ function dosesPerDosingDay(order: StockOrder): number | null {
 /**
  * Quantity consumed on each scheduled dosing day, in the stock unit — or
  * null ("—") when it cannot be forecast: Estimate unit, PRN, or the stock is
- * counted in a different unit from the order's dose unit.
+ * counted in a different unit from the order's dose unit. This is the step
+ * the day-by-day forecast deducts; it is not what users see as Daily Usage.
  */
-export function dailyUsage(order: StockOrder, stockUnit: string): number | null {
+export function usagePerDosingDay(order: StockOrder, stockUnit: string): number | null {
   if (trackingFor(stockUnit) !== "Count") return null;
   if (isPrn(order)) return null;
   if (defaultStockUnitForOrderUnit(order.unit) !== stockUnit) return null;
@@ -108,6 +109,28 @@ export function dailyUsage(order: StockOrder, stockUnit: string): number | null 
   const dose = Number(order.dose);
   if (!perDay || !isFinite(dose) || dose <= 0) return null;
   return round2(dose * perDay);
+}
+
+// Share of calendar days that are dosing days: EOD = 1/2, Every 3 Days = 1/3,
+// Mon/Wed/Fri = 3/7 (weekday list and interval combine).
+function dosingDayFraction(order: StockOrder): number {
+  const days = (order.dosing_days ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((d) => WEEKDAYS.includes(d));
+  const weekdayShare = days.length > 0 && !(order.dosing_days ?? "").includes("Everyday") ? days.length / 7 : 1;
+  return weekdayShare / intervalFor(order);
+}
+
+/**
+ * Average quantity used per calendar day (what users see as Daily Usage and
+ * what the sheet's Daily Usage column stores): 1 Tablet EOD = 0.5, 1 Tablet
+ * Mon/Wed/Fri = 0.43. Null ("—") when not forecastable.
+ */
+export function dailyUsage(order: StockOrder, stockUnit: string): number | null {
+  const perDosingDay = usagePerDosingDay(order, stockUnit);
+  if (perDosingDay === null) return null;
+  return round2(perDosingDay * dosingDayFraction(order));
 }
 
 // ── Calendar (KL wall-clock) ──────────────────────────────────────────────────
@@ -169,12 +192,20 @@ function isDosingDay(day: number, order: StockOrder): boolean {
     if (!days.includes(weekday)) return false;
   }
 
-  const interval = order.frequency === "EOD" ? 2 : order.frequency === "Every 3 Days" ? 3 : 1;
+  const interval = intervalFor(order);
   if (interval > 1 && order.start_date) {
     const diff = day - dayNumber(order.start_date);
     if (((diff % interval) + interval) % interval !== 0) return false;
   }
   return true;
+}
+
+function intervalFor(order: StockOrder): number {
+  return order.frequency === "EOD" ? 2 : order.frequency === "Every 3 Days" ? 3 : 1;
+}
+
+function isoFromDayNumber(day: number): string {
+  return new Date(day * 86400000).toISOString().slice(0, 10);
 }
 
 // ── Forecast ──────────────────────────────────────────────────────────────────
@@ -192,8 +223,13 @@ export type StockStatus = {
   balance: number | null;
   /** True when balance is a calculated forecast rather than a recorded value. */
   forecast: boolean;
+  /** Average per calendar day (see dailyUsage). */
   dailyUsage: number | null;
   daysRemaining: number | null;
+  /** YYYY-MM-DD of the last dose the balance still covers; null if none left or not forecast. */
+  lastDoseDate: string | null;
+  /** Order End Date (YYYY-MM-DD) when the balance lasts beyond it — no refill needed. */
+  lastsUntilOrderEnd: string | null;
 };
 
 const MAX_FORECAST_DAYS = 3650;
@@ -213,58 +249,72 @@ function forecastBalance(event: StockEvent, order: StockOrder, usage: number, to
   return Math.max(0, round2(event.balance - consumed));
 }
 
+export type StockOutlook = {
+  /** Days from today to the last covered dose (0 = nothing left after today); null = not forecast / outlasts the order. */
+  daysRemaining: number | null;
+  lastDoseDate: string | null;
+  lastsUntilOrderEnd: string | null;
+};
+
 /**
- * Calendar days, starting tomorrow, that the balance still covers: counts
- * forward until the first dosing day whose dose can no longer be met.
- * Non-dosing days in between count as covered, so a Mon/Wed/Fri order is
- * not simply balance ÷ usage. Null when the order's End Date comes first
- * (the supply outlasts the order, so no refill is needed).
+ * Walks the schedule from tomorrow, deducting the per-dosing-day usage, to
+ * find the last dose the balance can still cover. Days Remaining is the
+ * number of days from today to that dose — so 9 tablets of 1 Tablet EOD is
+ * 18 days, and a Mon/Wed/Fri order counts its gaps, not balance ÷ usage.
+ * If the order's End Date comes first the supply outlasts the order.
  */
-export function daysRemaining(balance: number, order: StockOrder, usage: number | null, todayIso: string): number | null {
-  if (usage === null || usage <= 0) return null;
+export function stockOutlook(balance: number, order: StockOrder, stockUnit: string, todayIso: string): StockOutlook {
+  const none: StockOutlook = { daysRemaining: null, lastDoseDate: null, lastsUntilOrderEnd: null };
+  const usage = usagePerDosingDay(order, stockUnit);
+  if (usage === null || usage <= 0) return none;
   let left = balance;
-  let days = 0;
+  let lastDose: number | null = null;
   const start = dayNumber(todayIso);
   const end = order.end_date ? dayNumber(order.end_date) : null;
   for (let day = start + 1; day <= start + MAX_FORECAST_DAYS; day++) {
-    if (end !== null && day > end) return null;
-    if (isDosingDay(day, order)) {
-      if (left + 1e-9 < usage) return days;
-      left -= usage;
+    if (end !== null && day > end) {
+      return { ...none, lastsUntilOrderEnd: order.end_date!.slice(0, 10) };
     }
-    days++;
+    if (isDosingDay(day, order)) {
+      if (left + 1e-9 < usage) break;
+      left -= usage;
+      lastDose = day;
+    }
   }
-  return days;
+  return {
+    daysRemaining: lastDose === null ? 0 : lastDose - start,
+    lastDoseDate: lastDose === null ? null : isoFromDayNumber(lastDose),
+    lastsUntilOrderEnd: null,
+  };
+}
+
+/** Days Remaining only (the sheet snapshot); see stockOutlook. */
+export function daysRemaining(balance: number, order: StockOrder, stockUnit: string, todayIso: string): number | null {
+  return stockOutlook(balance, order, stockUnit, todayIso).daysRemaining;
 }
 
 export function computeStockStatus(latest: StockEvent | null, order: StockOrder, now: Date = new Date()): StockStatus {
+  const empty = { dailyUsage: null, daysRemaining: null, lastDoseDate: null, lastsUntilOrderEnd: null };
   if (!latest) {
-    return { tracking: null, unit: null, balance: null, forecast: false, dailyUsage: null, daysRemaining: null };
+    return { tracking: null, unit: null, balance: null, forecast: false, ...empty };
   }
 
   const tracking = trackingFor(latest.unit);
-  const usage = dailyUsage(order, latest.unit);
+  const perDosingDay = usagePerDosingDay(order, latest.unit);
   const today = klDate(now);
 
-  if (tracking !== "Count" || usage === null) {
-    return {
-      tracking,
-      unit: latest.unit,
-      balance: Number(latest.balance),
-      forecast: false,
-      dailyUsage: null,
-      daysRemaining: null,
-    };
+  if (tracking !== "Count" || perDosingDay === null) {
+    return { tracking, unit: latest.unit, balance: Number(latest.balance), forecast: false, ...empty };
   }
 
-  const balance = forecastBalance({ ...latest, balance: Number(latest.balance) }, order, usage, today);
+  const balance = forecastBalance({ ...latest, balance: Number(latest.balance) }, order, perDosingDay, today);
   return {
     tracking,
     unit: latest.unit,
     balance,
     forecast: true,
-    dailyUsage: usage,
-    daysRemaining: daysRemaining(balance, order, usage, today),
+    dailyUsage: dailyUsage(order, latest.unit),
+    ...stockOutlook(balance, order, latest.unit, today),
   };
 }
 

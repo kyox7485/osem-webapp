@@ -100,7 +100,7 @@ export async function recordOrderChangedStock(params: {
     const current = computeStockStatus(latest, oldOrder as StockOrder, now);
     const balance = current.balance ?? latest.balance;
     const usage = dailyUsage(newOrder, latest.unit);
-    const remaining = daysRemaining(balance, newOrder, usage, klDate(now));
+    const remaining = daysRemaining(balance, newOrder, latest.unit, klDate(now));
 
     // Noted By is the only person on the order form. It can be a free-text
     // external name; RegisteredBy must be a real StaffID, so leave it blank then.

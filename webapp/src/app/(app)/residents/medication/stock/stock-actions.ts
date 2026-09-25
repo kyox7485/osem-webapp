@@ -107,7 +107,7 @@ export async function recordStockEntryAction(input: StockEntryInput): Promise<St
   }
 
   const usage = dailyUsage(order as StockOrder, input.unit);
-  const remaining = daysRemaining(balance, order as StockOrder, usage, klDate(now));
+  const remaining = daysRemaining(balance, order as StockOrder, input.unit, klDate(now));
 
   let stockId: string;
   try {

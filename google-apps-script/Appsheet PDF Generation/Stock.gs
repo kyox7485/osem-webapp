@@ -157,6 +157,7 @@ function getLiveStockForecast_(stock, medication, trackingMethods){
 
     if(!perDay || !(dose > 0)) return result;
 
+    // Deducted on each dosing day by the forecast below.
     const usage =
         Math.round(dose * perDay * 100) / 100;
 
@@ -194,8 +195,9 @@ function getLiveStockForecast_(stock, medication, trackingMethods){
         );
 
     //------------------------------------------------
-    // Days remaining from tomorrow: calendar days until the first dosing
-    // day whose dose can no longer be met. If the order's End Date passes
+    // Days remaining: walk the schedule from tomorrow to find the last dose
+    // the balance still covers; Days Remaining = days from today to that
+    // dose (9 tablets of 1 Tablet EOD = 18). If the order's End Date passes
     // first, the supply outlasts the order, so "" (no refill needed).
     //------------------------------------------------
 
@@ -205,40 +207,70 @@ function getLiveStockForecast_(stock, medication, trackingMethods){
             : null;
 
     let left = balance;
-    let days = 0;
-    let daysRemaining = "";
+    let lastDose = 0;
+    let outlastsOrder = false;
 
     for(let i = 1; i <= STOCK_FORECAST_MAX_DAYS; i++){
 
         const d = stockAddDays_(today, i);
 
         if(end && !isNaN(end.getTime()) && d > end){
-            daysRemaining = "";
+            outlastsOrder = true;
             break;
         }
 
         if(stockIsDosingDay_(medication, d)){
 
-            if(left + 1e-9 < usage){
-                daysRemaining = days;
-                break;
-            }
+            if(left + 1e-9 < usage) break;
 
             left -= usage;
+            lastDose = i;
 
         }
 
-        days++;
-        daysRemaining = days;
-
     }
 
+    const daysRemaining =
+        outlastsOrder ? "" : lastDose;
+
     result.balance = balance;
-    result.dailyUsage = usage;
+    // Shown as Daily Usage: average per calendar day (EOD = half).
+    result.dailyUsage =
+        Math.round(usage * stockDosingDayFraction_(medication) * 100) / 100;
     result.daysRemaining = daysRemaining;
     result.forecast = true;
 
     return result;
+
+}
+
+// Share of calendar days that are dosing days: EOD = 1/2, Every 3 Days = 1/3,
+// Mon/Wed/Fri = 3/7. Same as dosingDayFraction in medication-stock.ts.
+function stockDosingDayFraction_(medication){
+
+    const weekdays =
+        ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+    const dosingDays =
+        String(medication["Dosing Days"] || "");
+
+    const days =
+        dosingDays.split(",")
+            .map(function(d){ return d.trim(); })
+            .filter(function(d){ return weekdays.indexOf(d) >= 0; });
+
+    const weekdayShare =
+        days.length > 0 && dosingDays.indexOf("Everyday") < 0
+            ? days.length / 7
+            : 1;
+
+    const frequency =
+        medication["Frequency"];
+
+    const interval =
+        frequency == "EOD" ? 2 : frequency == "Every 3 Days" ? 3 : 1;
+
+    return weekdayShare / interval;
 
 }
 

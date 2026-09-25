@@ -132,6 +132,8 @@ misread) — use `medStockNormalizeDateTime_` / `parseStockDate_`.
 
 **Stored Daily Usage / Days Remaining are snapshots at event time**; `0` =
 not applicable (AppSheet convention). Never display them as current values.
+Rows written by `migration/scripts/seed_demo_medication.py` (DEMO seed) have
+0/0 hard-coded — they are not computed; real webapp entries are.
 
 ## 6. Forecast algorithm (both implementations)
 
@@ -141,18 +143,29 @@ Implemented twice and **must stay identical**:
 
 - Not forecast (Daily Usage / Days Remaining = "—"/`""`): Estimate unit, PRN,
   or stock unit ≠ order dose unit (case-insensitive, so `ml` = `mL`).
-- Daily usage = `Dose × number of Administration Times` (fallback by
-  frequency: OD/OM/ON 1, BD 2, TDS 3, QID 4, EOD / Every 3 Days / Selected
-  Days 1) — the quantity used on each **dosing day**.
+- Usage per dosing day = `Dose × number of Administration Times` (fallback
+  by frequency: OD/OM/ON 1, BD 2, TDS 3, QID 4, EOD / Every 3 Days / Selected
+  Days 1). This is what the forecast deducts on each **dosing day**.
+- **Daily Usage** (shown on screen and stored in the sheet) = the **average
+  per calendar day** = usage per dosing day × share of dosing days
+  (EOD ½, Every 3 Days ⅓, N weekdays N/7). 1 Tablet EOD → `0.5`;
+  1 Tablet Mon/Wed/Fri → `0.43`. Display only — never used to deduct.
 - Dosing day = the chart's rule (`CalendarEngine.gs`
   `shouldPrepareMedicineOnDay`): not before Start Date, not after End Date,
   EOD / Every 3 Days counted from Start Date, Selected Days/Others by weekday.
 - Current balance = latest event balance − usage × (dosing days strictly
   after the event date, up to and including today). Event day = recorded
   value. Floored at 0.
-- Days Remaining = calendar days from tomorrow until the first dosing day
-  whose dose can't be met (non-dosing days in between count). If End Date
-  comes first → "—" (supply outlasts the order).
+- Walk the schedule from tomorrow, deducting usage per dosing day, to find
+  the **last dose the balance still covers** (`lastDoseDate`).
+  **Days Remaining = lastDoseDate − today** (0 = no doses left after today).
+  Example: 9 tablets, 1 Tablet EOD, today 25/09 → last dose Tue 13/10,
+  18 days. Walking the real schedule (rather than balance ÷ daily usage)
+  keeps Mon/Wed/Fri and EOD phase exact.
+- If End Date comes first → Days Remaining "—" (supply outlasts the order;
+  the screen shows "Enough until order ends" + the end date).
+- The Stock screen shows the badge ("18 days left") with "Last dose
+  Tue 13/10/2026" under it. The PDF project computes only Days Remaining.
 - Calendar days are Kuala Lumpur dates (webapp) / script timezone
   Asia/Singapore (+08:00, identical) in Apps Script.
 
