@@ -106,6 +106,11 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   truth, never write `tbl_medication_orders` directly; `Noted By`
   single-column rule; `DD/MM/YYYY` date handling; edit-never-overwrites
   audit trail; Apps Script `doPost`/`doGet` single-entry-point rule.
+- `docs/google-apps-script.md` — the Apps Script folder: the two sync
+  projects and their **opposite** directions (Supabase→Sheets mirror vs.
+  Sheets→Supabase source of truth), all webhook routes, trigger cadences,
+  the webapp↔script contract, redeploy requirement, and the known gaps
+  (unauthenticated staff webhook, duplicate function definitions).
 - `docs/integrations.md` — Google Drive (wound photos) and Apps Script
   redeploy mechanics; Telegram per-branch setup.
 - `docs/clinical.md` — modules-at-a-glance, Wound Photo body-chart,

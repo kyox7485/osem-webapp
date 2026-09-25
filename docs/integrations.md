@@ -1,5 +1,9 @@
 # Integrations — detail
 
+> For the full `google-apps-script/` picture — both sync projects, all
+> webhook routes, trigger cadences and their gotchas — see
+> `docs/google-apps-script.md`. This page stays the short entry point.
+
 ## Google Drive (wound photo storage)
 
 Wound photo binaries live in Google Drive, not Supabase Storage, because

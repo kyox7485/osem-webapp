@@ -1,5 +1,9 @@
 # Medication Orders — detail
 
+> For the whole Apps Script side — including the other (Supabase→Sheets)
+> sync project and the roster mirror the medication summary writes back
+> into — see `docs/google-apps-script.md`.
+
 The webapp **never writes directly to `tbl_medication_orders`**. Flow:
 Next.js Server Action → Google Apps Script Web App → Google Sheet
 `tbl_MedicationOrder` (source of truth) → a separate Apps Script sync
@@ -54,16 +58,17 @@ must match Vercel's `MEDICATION_ORDER_SCRIPT_SECRET`).
 - **Editing an order never overwrites the row in place.** It sets the old
   row's `Status` to `"Discontinued"` and appends a brand-new row with a
   new `RxOrderID` and `PreviousRxOrderID` = the old `RxOrderID`, giving a
-  full audit trail. On that new row, `Active Ingredient`, `Dosage Form`,
-  `Dose`, `Unit`, `Frequency`, `Administration Times`, `Dosing Days`,
-  `Indication`, and `Instruction` (the `INHERITED_ON_REVISION` list in
-  `medication-orders.gs`) always come from the **old row on the sheet**,
-  never from the submitted form — deliberate business rule (editing
-  revises administrative details, not drug identity/dosing schedule; a
-  real dosage change means discontinuing and creating a new order). The
-  edit form (`order-form.tsx`) locks those same 9 fields in the UI.
-  `order-actions.ts`'s `updateOrderAction` generates the new `RxOrderID`
-  the same way `createOrderAction` does.
+  full audit trail. `INHERITED_ON_REVISION` in `medication-orders.gs` is
+  now **intentionally empty** — every field, including dosing,
+  indication and instruction, comes from the submitted form, and the edit
+  form (`order-form.tsx`) no longer locks them. The audit trail is carried
+  by the `PreviousRxOrderID` chain alone. (An earlier revision inherited
+  the 9 drug-identity/dosing fields from the old row; that restriction was
+  lifted.) `order-actions.ts`'s `updateOrderAction` generates the new
+  `RxOrderID` the same way `createOrderAction` does. The superseded row is
+  excluded from `current_medication_list` because
+  `medSummaryFilterActiveOrders_` drops any order some other order's
+  `previous_order_id` points at.
 - Both `createOrder`/`updateOrder` call `syncOrderAndSummary_`, which
   retries `syncMedicationOrderAndSummaryNow` (from `MedicationSummary.gs`)
   a couple of times inline, then falls back to two automatic safety nets
