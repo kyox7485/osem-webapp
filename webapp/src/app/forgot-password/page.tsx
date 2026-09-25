@@ -1,37 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { requestPasswordReset } from "./actions";
 import { useTranslation } from "@/components/language-provider";
 
 export default function ForgotPasswordPage() {
   const t = useTranslation();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, startTransition] = useTransition();
   const [sent, setSent] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
-
-    const supabase = createClient();
-    // Pin the app's public origin when it's configured, so a reset requested
-    // from a preview deployment still produces a production link that
-    // matches Supabase's allowed Redirect URLs. See actions.ts for why.
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/+$/, "");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${appUrl}/reset-password`,
+    // Sent server-side so the link works in any browser/device -- see
+    // actions.ts for why the browser client must not send it.
+    startTransition(async () => {
+      const result = await requestPasswordReset(email);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setSent(true);
     });
-
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    setSent(true);
   }
 
   return (

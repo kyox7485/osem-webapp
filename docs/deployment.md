@@ -38,6 +38,11 @@ browser client ignores. Never fall back to whatever session is already in
 the browser there — that once let an invitee's new password overwrite the
 inviting admin's own password.
 
+Password-reset emails are sent **server-side** with an implicit-flow client
+(`app/forgot-password/actions.ts`), never from the PKCE browser client: a
+PKCE link only works in the same browser *and host* that requested it, so a
+reset requested on one hostname (or opened on a phone) always failed.
+
 Two Supabase/Vercel dashboard settings must agree with it, or the invite
 email still bounces the user off to Supabase's own applet (which then asks
 for a phone number):
