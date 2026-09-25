@@ -308,6 +308,27 @@ reviewed rows are sent to the route, which re-reads resident names from the DB
 (so the grouping can't be spoofed) and renders exactly what was approved. It
 is still rendered in memory and streamed, never stored.
 
+**Three traps this tab already hit** (all fixed 2026-09-26; keep them in mind
+before "simplifying" this code):
+
+1. **Never embed `tbl_residents` with a bare `!inner(...)`.** PostgREST has to
+   auto-detect the FK, and when it can't the *whole* query errors — which
+   looked exactly like "no medicine needs restocking". Resident names are
+   fetched in a second query and joined in memory. Every other embed in the
+   codebase carries an explicit hint (`tbl_residents!resident_id(...)`,
+   `tbl_staff!created_by(...)`); an inner join also compounds
+   `tbl_residents`' RLS on top of the orders' own RLS.
+2. **Never let a failed query render as an empty list.** `buildPurchaseList`
+   returns `{ error }` and the page passes `loadError` through to a visible
+   error panel. A silent `?? []` here hides real outages as "nothing to do".
+3. **A `?branch=` switch does not remount the client component.** `useState`'s
+   initialiser only runs on first mount, so switching branch kept showing the
+   *previous* branch's rows while the URL said otherwise. The parent passes
+   `key={selectedBranch.id}` to force a remount per branch — don't "optimise"
+   that away. Branch switching goes through `useNavPush()` so the app-wide
+   loading overlay shows (a bare `router.push` gives no feedback), wrapped in
+   `guardedAction` so a dirty review is confirmed before being discarded.
+
 ### Stock screen: "Print PDF" menu
 
 The three PDFs sit behind one **Print PDF ▾** menu button (in

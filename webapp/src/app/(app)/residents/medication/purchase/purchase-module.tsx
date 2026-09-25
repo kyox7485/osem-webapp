@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useTranslation } from "@/components/language-provider";
+import { useNavPush } from "@/components/nav-loading";
 import { useDirtyForm } from "@/lib/dirty-form-context";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { LOW_STOCK_DAYS } from "@/lib/medication-stock";
@@ -32,6 +33,8 @@ type Props = {
   groups: PurchaseListGroup[];
   stockOptions: PurchaseListOption[];
   residents: ResidentOption[];
+  /** Set when the branch list failed to load — never show "nothing to restock" then. */
+  loadError: string | null;
 };
 
 const OTHER_VALUE = "__other__";
@@ -45,14 +48,21 @@ function signatureOf(rows: PurchaseListRow[]): string {
     .join("~");
 }
 
-export function PurchaseModule({ branches, selectedBranchId, groups, stockOptions, residents }: Props) {
+export function PurchaseModule({ branches, selectedBranchId, groups, stockOptions, residents, loadError }: Props) {
   const t = useTranslation();
-  const { navigateTo } = useSafeNavigation();
+  // push() (not navigateTo) so switching branch shows the app-wide loading
+  // overlay — a plain router.push gives the user no feedback while the next
+  // branch's list is being computed.
+  const push = useNavPush();
+  const { guardedAction } = useSafeNavigation();
   const { markDirty, markClean } = useDirtyForm("medication-purchase-list");
   const [isPending, startTransition] = useTransition();
 
   // Draft rows live here only — nothing is persisted, and leaving the tab
-  // discards every edit (the dirty-form guard warns first).
+  // discards every edit (the dirty-form guard warns first). The parent gives
+  // this component a `key` of the branch id, so switching branch remounts it
+  // and this initialiser re-seeds from the new branch instead of keeping the
+  // previous branch's rows.
   const [rows, setRows] = useState<PurchaseListRow[]>(() => groups.flatMap((g) => g.rows));
   const [message, setMessage] = useState<Message | null>(null);
 
@@ -76,16 +86,16 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
 
   // A signature of the fields the reviewer can change — when it returns to the
   // calculated state the draft is no longer worth warning about.
-  const initialSignature = useMemo(
+  const serverSignature = useMemo(
     () => signatureOf(groups.flatMap((g) => g.rows)),
     [groups]
   );
   const currentSignature = useMemo(() => signatureOf(rows), [rows]);
 
   useEffect(() => {
-    if (currentSignature === initialSignature) markClean();
+    if (currentSignature === serverSignature) markClean();
     else markDirty();
-  }, [currentSignature, initialSignature, markDirty, markClean]);
+  }, [currentSignature, serverSignature, markDirty, markClean]);
 
   function update(key: string, patch: Partial<PurchaseListRow>) {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -222,7 +232,9 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
           ) : (
             <select
               value={selectedBranchId}
-              onChange={(e) => navigateTo(`/residents/medication/purchase?branch=${e.target.value}`)}
+              onChange={(e) =>
+                guardedAction(() => push(`/residents/medication/purchase?branch=${e.target.value}`))
+              }
               className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {branches.map((b) => (
@@ -235,7 +247,15 @@ export function PurchaseModule({ branches, selectedBranchId, groups, stockOption
         </div>
 
         {/* ── Review table ───────────────────────────────────────────────── */}
-        {reviewGroups.length === 0 ? (
+        {loadError ? (
+          <div className="flex items-start gap-2 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">{t("Could not load the purchase list for this branch.")}</p>
+              <p className="mt-0.5 text-xs opacity-80">{loadError}</p>
+            </div>
+          </div>
+        ) : reviewGroups.length === 0 ? (
           <div className="flex items-start gap-2 rounded-md bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
             {t("No medicine needs restocking at this branch right now.")}

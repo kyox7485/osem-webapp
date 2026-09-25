@@ -84,15 +84,16 @@ export async function buildPurchaseList(
   branchId: number,
   now: Date
 ): Promise<{ list: PurchaseList } | { error: string }> {
-  // Orders joined to their resident so the sheet can be grouped without a
-  // second round-trip.
+  // Deliberately NO PostgREST embed of tbl_residents here. A bare
+  // `tbl_residents!inner(...)` needs PostgREST to auto-detect the FK and
+  // fails outright when it cannot, and an inner join also compounds
+  // tbl_residents' RLS on top of the orders' own RLS. Resident names are
+  // fetched separately below and joined in memory — one extra round-trip
+  // is cheaper than a silently empty list.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: ordersRaw, error: ordersError } = await (supabase as any)
     .from("tbl_medication_orders")
-    .select(
-      `${STOCK_ORDER_COLUMNS}, dosage_form, brand_name, active_ingredient, ` +
-        `tbl_residents!inner(resident_name, ResidentID)`
-    )
+    .select(`${STOCK_ORDER_COLUMNS}, dosage_form, brand_name, active_ingredient`)
     .eq("branch_id", branchId)
     .eq("status", "Active")
     .eq("supplied_by", "OSEM")
@@ -100,13 +101,31 @@ export async function buildPurchaseList(
     .order("id");
   if (ordersError) return { error: ordersError.message };
 
-  const orders = (
-    (ordersRaw ?? []) as (OrderRaw & { tbl_residents: { resident_name: string; ResidentID: string | null } })[]
-  ).map((o) => ({
-    ...o,
-    resident_name: o.tbl_residents?.resident_name ?? "Unknown",
-    ResidentID: o.tbl_residents?.ResidentID ?? null,
-  }));
+  const rawOrders = (ordersRaw ?? []) as OrderRaw[];
+
+  // ── Residents of this branch, by id ──────────────────────────────────────
+  const residentById = new Map<number, { resident_name: string; ResidentID: string | null }>();
+  if (rawOrders.length > 0) {
+    const residentIds = [...new Set(rawOrders.map((o) => o.resident_id))];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: residentsRaw, error: residentsError } = await (supabase as any)
+      .from("tbl_residents")
+      .select("id, resident_name, ResidentID")
+      .in("id", residentIds);
+    if (residentsError) return { error: residentsError.message };
+    for (const r of (residentsRaw ?? []) as { id: number; resident_name: string; ResidentID: string | null }[]) {
+      residentById.set(r.id, r);
+    }
+  }
+
+  const orders: OrderRaw[] = rawOrders.map((o) => {
+    const resident = residentById.get(o.resident_id);
+    return {
+      ...o,
+      resident_name: resident?.resident_name ?? "Unknown resident",
+      ResidentID: resident?.ResidentID ?? null,
+    };
+  });
 
   // Latest stock event per order (rows arrive newest first).
   const latestByOrder = new Map<number, { balance: number; unit: string; stock_date: string }>();

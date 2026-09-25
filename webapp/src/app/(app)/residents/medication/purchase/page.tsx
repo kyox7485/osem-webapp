@@ -68,7 +68,9 @@ export default async function MedicationPurchasePage({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const result = await buildPurchaseList(supabase, selectedBranch.id, now);
+  // A failed query must NOT masquerade as "nothing needs restocking" — say so.
   const list = "list" in result ? result.list : EMPTY_PURCHASE_LIST;
+  const loadError = "error" in result ? result.error : null;
 
   return (
     <div>
@@ -81,11 +83,13 @@ export default async function MedicationPurchasePage({
       </div>
 
       <PurchaseModule
+        key={selectedBranch.id}
         branches={branches}
         selectedBranchId={selectedBranch.id}
         groups={list.groups}
         stockOptions={list.stockOptions}
         residents={residents}
+        loadError={loadError}
       />
     </div>
   );

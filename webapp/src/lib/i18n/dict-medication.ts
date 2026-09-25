@@ -265,6 +265,8 @@ export const dictMedication: Record<string, string> = {
   "There is nothing to generate.": "Tiada apa untuk dijana.",
   "No medicine needs restocking at this branch right now.":
     "Tiada ubat yang perlu ditambah di cawangan ini buat masa ini.",
+  "Could not load the purchase list for this branch.":
+    "Tidak dapat memuatkan senarai pembelian untuk cawangan ini.",
   "Added manually": "Ditambah secara manual",
   "Reset to calculated": "Set semula kepada nilai kira",
   "Not forecast": "Tiada ramalan",
