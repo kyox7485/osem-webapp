@@ -243,4 +243,37 @@ export const dictMedication: Record<string, string> = {
   "A valid quantity is required": "Kuantiti yang sah diperlukan",
   "Unit is required": "Unit diperlukan",
   "Registered By is required": "Didaftarkan Oleh diperlukan",
+
+  // Purchase (branch-wide restock order sheet)
+  Purchase: "Pembelian",
+  "Medication Purchase List": "Senarai Pembelian Ubat",
+  "One list for the whole branch: every OSEM-supplied medicine that needs restocking, grouped by resident.":
+    "Satu senarai untuk seluruh cawangan: setiap ubat bekalan OSEM yang perlu ditambah, dikelompokkan mengikut penghuni.",
+  "Add another item": "Tambah item lain",
+  "Select a resident…": "Pilih penghuni…",
+  "Select a medicine…": "Pilih ubat…",
+  "Other…": "Lain-lain…",
+  "Item name": "Nama item",
+  "Enter the medicine name…": "Masukkan nama ubat…",
+  "Every item must be assigned to one resident before it can be added.":
+    "Setiap item mesti diberikan kepada seorang penghuni sebelum ia boleh ditambah.",
+  "Reset review": "Set semula semakan",
+  "Generate purchase list PDF": "Jana PDF senarai pembelian",
+  "Review reset to the calculated values.": "Semakan diset semula kepada nilai yang dikira.",
+  "Purchase list downloaded.": "Senarai pembelian telah dimuat turun.",
+  "Could not generate the PDF.": "Tidak dapat menjana PDF.",
+  "There is nothing to generate.": "Tiada apa untuk dijana.",
+  "No medicine needs restocking at this branch right now.":
+    "Tiada ubat yang perlu ditambah di cawangan ini buat masa ini.",
+  "Added manually": "Ditambah secara manual",
+  "Reset to calculated": "Set semula kepada nilai kira",
+  "Not forecast": "Tiada ramalan",
+  items: "item",
+  residents: "penghuni",
+  units: "unit",
+  "units to order": "unit untuk ditempah",
+  "Nothing to generate: there are no items to order.":
+    "Tiada apa untuk dijana: tiada item untuk ditempah.",
+  "Countable balances are forecasts from the prescription since the last stock count, not a physical count. Editing here does not change any stock record.":
+    "Baki yang dikira ialah ramalan daripada preskripsi sejak kiraan stok terakhir, bukan kiraan fizikal. Suntingan di sini tidak mengubah sebarang rekod stok.",
 };

@@ -68,7 +68,7 @@ sync-loop risk).
 | Server helpers | `webapp/src/lib/medication-stock-server.ts` | StockID generation, latest event, `recordOrderChangedStock` (not a Server Action on purpose) |
 | Apps Script bridge | `webapp/src/lib/medication-orders-script.ts` | `createMedicationStockEntry`, `setMedicationOrderStatus` |
 | Order edits | `.../orders/order-actions.ts` | Order Changed on edit; Sheet-first discontinue / auto-expire |
-| Tab | `.../medication/medication-tabs.tsx` | Orders · Stock · Charts |
+| Tab | `.../medication/medication-tabs.tsx` | Orders · Stock · Charts · Purchase |
 | i18n | `webapp/src/lib/i18n/dict-medication.ts` | "Stock" section |
 | DB | `migration/scripts/create_medication_stock_table.sql` | Table, checks, indexes, RLS (already applied to production) |
 | Sync | `google-apps-script/Sync to Supabase/MedicationStock.gs` | `createStockEntry`, sync, heartbeat, reconciliation |
@@ -261,6 +261,52 @@ Days Remaining (cell tinted red = out, amber = `< LOW_STOCK_DAYS`, green =
 the text carries the meaning too, for B/W prints), Supplied By, Last Count
 (latest **`Stock Count`** entry only — a `Stock Received` is not a count;
 "Never counted" if none).
+
+### 7e. "Purchase" tab — branch-wide restock order sheet
+
+**One PDF per branch**, not per resident. Management gets a single sheet for
+the whole branch; it is *not* a replacement for 7c, which stays as the
+per-resident view.
+
+- Route `webapp/src/app/(app)/residents/medication/purchase/` (after Charts),
+  API `webapp/src/app/api/reports/purchase-list/route.tsx`, document
+  `webapp/src/lib/pdf/documents/purchase-list-document.tsx`.
+- Builder `webapp/src/lib/medication-purchase.ts` (server-only). The pure
+  rules and types — `suggestOrderQty`, `needsRestock`, `groupPurchaseRows`,
+  `summarize` — live in **`medication-purchase-core.ts`**, which is
+  client-safe, so the review screen never imports the server module (the
+  Turbopack footgun in CLAUDE.md). The server file re-exports them.
+- Branch chosen with **`?branch=`** (like Stock's `?resident=`), so the tab is
+  bookmarkable. Branch scoping + DEMO exclusion copied from `charts/page.tsx`.
+
+**Selection** (active, `supplied_by = 'OSEM'`, `external_ref_id` not null):
+- Countable → `daysRemaining < LOW_STOCK_DAYS`, out of stock included.
+- Uncountable → balance `<= 0.5`.
+- Never-recorded orders are **excluded** (no quantity to reorder against), as
+  is anything whose supply outlasts the order's End Date.
+
+**Suggested quantity** = `30 × dailyUsage`, rounded up to a whole unit. The
+current balance is deliberately **not** deducted — it is the buffer stock, so
+we order a full cover period on top of it. Uncountable rows suggest `1`.
+
+**Layout** — grouped by resident (name order, one heading per resident with
+its own item count and subtotal), every medicine on its **own line** under
+that resident, and a grand total across the branch. Every line, including
+manually added ones, **must belong to exactly one resident** — there is no
+"unassigned" bucket, so the add-item control requires a resident first and
+the route rejects a row without one.
+
+**Review step (session-only)** — the user can edit Balance and Qty per row,
+reset a row or the whole list to the calculated values, and add an item from
+the branch's own stock medicines or as free text ("Other…"). Editing here
+**never writes to `tbl_medication_stock` or any other table**; the draft is
+`useState` only and is discarded on navigation (the app-wide dirty-form guard
+warns first, and the branch switch goes through `navigateTo`).
+
+**PDF hand-off** — unlike every other report route, this one is **POSTed**: the
+reviewed rows are sent to the route, which re-reads resident names from the DB
+(so the grouping can't be spoofed) and renders exactly what was approved. It
+is still rendered in memory and streamed, never stored.
 
 ### Stock screen: "Print PDF" menu
 

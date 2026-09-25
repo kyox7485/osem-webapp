@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
-import { ClipboardList, FileText, Package } from "lucide-react";
+import { ClipboardList, FileText, Package, ShoppingCart } from "lucide-react";
 
 export function MedicationSubTabs() {
   const push = useNavPush();
@@ -12,13 +12,14 @@ export function MedicationSubTabs() {
   const t = useTranslation();
   const onCharts = pathname?.startsWith("/residents/medication/charts") ?? false;
   const onStock = pathname?.startsWith("/residents/medication/stock") ?? false;
+  const onPurchase = pathname?.startsWith("/residents/medication/purchase") ?? false;
 
   return (
     <TabRow>
       <TabButton
         size="sm"
         icon={ClipboardList}
-        active={!onCharts && !onStock}
+        active={!onCharts && !onStock && !onPurchase}
         onClick={() => push("/residents/medication/orders")}
       >
         {t("Orders")}
@@ -38,6 +39,14 @@ export function MedicationSubTabs() {
         onClick={() => push("/residents/medication/charts")}
       >
         {t("Charts")}
+      </TabButton>
+      <TabButton
+        size="sm"
+        icon={ShoppingCart}
+        active={onPurchase}
+        onClick={() => push("/residents/medication/purchase")}
+      >
+        {t("Purchase")}
       </TabButton>
     </TabRow>
   );
