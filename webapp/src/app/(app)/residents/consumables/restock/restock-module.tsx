@@ -90,14 +90,15 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
   const blocks = useMemo(
     () =>
       [
-        { id: "max", title: t("Top up to maximum stock"), rows: visible.filter((r) => r.hasMaxStock) },
+        { id: "max", title: t("Top up to maximum stock"), rows: visible.filter((r) => r.hasMaxStock), note: null as string | null },
         {
           id: "nomax",
           title:
             audience === "Family"
-              ? t("Stock balance update (not urgent) — family decides")
+              ? t("Stock balance update — family decides")
               : t("No maximum stock — restock when less than {n} left", { n: LOW_STOCK_THRESHOLD }),
           rows: visible.filter((r) => !r.hasMaxStock),
+          note: audience === "Family" ? t("Usage varies, so no quantity is suggested — the family sees the balance and decides.") : null,
         },
       ]
         .filter((b) => b.rows.length > 0)
@@ -326,10 +327,19 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
           <div className="space-y-4">
             {blocks.map((block) => (
               <section key={block.id} aria-label={block.title}>
-                <h3 className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-fg-secondary">
-                  <span>{block.title}</span>
-                  <span className="text-xs font-normal text-fg-muted">{t("{n} items", { n: block.rows.length })}</span>
+                <h3 className="flex items-center justify-between gap-3 text-sm font-semibold text-fg-secondary">
+                  <span className="flex flex-wrap items-center gap-2">
+                    {block.title}
+                    {block.note && (
+                      <span className="rounded-full border border-line-strong bg-surface-strong px-2 py-0.5 text-[11px] font-medium text-fg-muted">
+                        {t("Not urgent")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-xs font-normal text-fg-muted">{t("{n} items", { n: block.rows.length })}</span>
                 </h3>
+                {block.note && <p className="mt-0.5 text-xs text-fg-subtle">{block.note}</p>}
+                <div className="mb-2" />
                 <div className="overflow-hidden rounded-md border border-line">
                   {block.groups.map((g) => (
                     <div key={g.residentId}>
@@ -348,7 +358,9 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
                                 {r.addedManually && <span className="ml-2 text-xs font-normal text-fg-faint">{t("Added manually")}</span>}
                               </div>
                               <div className="text-xs text-fg-subtle">
-                                {r.currentStock === null
+                                {isBalanceOnly(r) ? (
+                                  `${t("Last counted")}: ${r.lastCount ? formatDate(r.lastCount) : "—"}`
+                                ) : r.currentStock === null
                                   ? t("Not counted yet")
                                   : t("In stock {qty} {unit} · counted {date}", {
                                       qty: fmtQty(r.currentStock),
@@ -359,7 +371,14 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
                             </div>
                             <div className="flex items-center gap-2">
                               {isBalanceOnly(r) ? (
-                                <span className="text-xs text-fg-subtle sm:w-[230px] sm:text-right">{t("Balance only — no quantity requested")}</span>
+                                <>
+                                  <span className="text-xs text-fg-muted">{t("Stock balance")}</span>
+                                  <span className="w-20 text-right text-sm font-semibold text-fg">
+                                    {r.currentStock === null ? "—" : fmtQty(r.currentStock)}
+                                  </span>
+                                  <span className="w-12 text-xs text-fg-subtle">{t(r.unit)}</span>
+                                  <span className="h-10 w-10" aria-hidden />
+                                </>
                               ) : (
                               <>
                               <label htmlFor={`restock-qty-${r.key}`} className="text-xs text-fg-muted">
