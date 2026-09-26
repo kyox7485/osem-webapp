@@ -2,11 +2,14 @@ import { Document, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { ReportPage, branding, type ReportBranchInfo } from "../report-shell";
 import { pdfColors, pdfSpacing } from "../theme";
 import { CJK_FONT } from "../cjk-font";
-import { LOW_STOCK_THRESHOLD, fmtQty, type RestockRow } from "@/lib/consumables";
+import { fmtQty, type RestockRow } from "@/lib/consumables";
 import { formatDate } from "@/lib/format-date";
 
 // Family Consumable Restock Reminder — bilingual (English / 中文), one
-// resident, family-supplied items only. Chinese strings must be in Text
+// resident, family-supplied items only. Two blocks: items with a MaxStock
+// ("Please Bring" a top-up quantity, red) and items without one (milk powder,
+// lotion, Other — a non-urgent balance update, grey, no quantity: usage
+// varies too much to forecast, so the family decides). Chinese strings must be in Text
 // nodes styled with CJK_FONT; the route calls registerCjkFont() first.
 
 const s = StyleSheet.create({
@@ -40,6 +43,12 @@ const s = StyleSheet.create({
   cell: { fontSize: 9, color: pdfColors.ink700, paddingVertical: 6, paddingHorizontal: 6 },
   cellStrong: { fontSize: 9, fontFamily: branding.fontFamilyBold, color: pdfColors.ink900 },
   qty: { fontSize: 10, fontFamily: branding.fontFamilyBold, color: pdfColors.critical },
+
+  infoTable: { borderWidth: 1, borderColor: pdfColors.borderStrong, borderRadius: 4, overflow: "hidden" },
+  infoHead: { flexDirection: "row", backgroundColor: pdfColors.bandStrong },
+  infoHeadCell: { fontSize: 7.5, color: pdfColors.ink700, paddingVertical: 5, paddingHorizontal: 6 },
+  infoNote: { fontSize: 8, color: pdfColors.ink500, lineHeight: 1.45, marginBottom: 5 },
+  balance: { fontSize: 10, fontFamily: branding.fontFamilyBold, color: pdfColors.ink900 },
 });
 
 const COLS = [
@@ -49,12 +58,45 @@ const COLS = [
   { en: "Please Bring", zh: "请补充", width: "24%" },
 ] as const;
 
-// Items with a MaxStock are topped up to it; items without one (lotion, milk
-// powder, Other) are only listed when less than 1 is left — separate block.
-const BLOCKS = [
-  { hasMax: true, en: "Top up to maximum stock", zh: "补充至最高存量" },
-  { hasMax: false, en: `Other items (less than ${LOW_STOCK_THRESHOLD} left)`, zh: `其他物品（存量少于${LOW_STOCK_THRESHOLD}）` },
+const INFO_COLS = [
+  { en: "Item", zh: "物品", width: "44%" },
+  { en: "Current Balance", zh: "现有存量", width: "30%" },
+  { en: "Last Counted", zh: "点算日期", width: "26%" },
 ] as const;
+
+function BlockTitle({ en, zh }: { en: string; zh: string }) {
+  return (
+    <Text style={s.blockTitle} minPresenceAhead={40}>
+      <Text style={s.bold}>{en}</Text>
+      <Text style={s.zhBold}>{`  ${zh}`}</Text>
+    </Text>
+  );
+}
+
+/** Non-urgent block: balance only, no quantity requested. */
+function BalanceTable({ rows }: { rows: RestockRow[] }) {
+  return (
+    <View style={s.infoTable}>
+      <View style={s.infoHead} fixed>
+        {INFO_COLS.map((c) => (
+          <Text key={c.en} style={[s.infoHeadCell, { width: c.width }]}>
+            <Text style={s.bold}>{c.en.toUpperCase()}</Text>
+            <Text style={s.zhBold}>{` ${c.zh}`}</Text>
+          </Text>
+        ))}
+      </View>
+      {rows.map((r, i) => (
+        <View key={i} style={s.row} wrap={false}>
+          <Text style={[s.cell, s.cellStrong, { width: INFO_COLS[0].width }]}>{r.item}</Text>
+          <Text style={[s.cell, s.balance, { width: INFO_COLS[1].width }]}>
+            {r.currentStock === null ? "—" : `${fmtQty(r.currentStock)} ${r.unit}`}
+          </Text>
+          <Text style={[s.cell, { width: INFO_COLS[2].width }]}>{r.lastCount ? formatDate(r.lastCount) : "—"}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function RowsTable({ rows }: { rows: RestockRow[] }) {
   return (
@@ -96,9 +138,13 @@ export function ConsumableFamilyReminderDocument({
   branch: ReportBranchInfo;
   logoSrc: string;
 }) {
+  const topUp = rows.filter((r) => r.hasMaxStock);
+  const balance = rows.filter((r) => !r.hasMaxStock);
+  // Balance-only reminders are an update, not a restock request.
+  const title = topUp.length > 0 ? "Consumable Restock Reminder" : "Consumable Stock Update";
   return (
-    <Document title={`Consumable Restock Reminder - ${residentName}`}>
-      <ReportPage title="Consumable Restock Reminder" branch={branch} logoSrc={logoSrc}>
+    <Document title={`${title} - ${residentName}`}>
+      <ReportPage title={title} branch={branch} logoSrc={logoSrc}>
         <View style={s.identity}>
           {[
             { en: "Resident", zh: "住客", value: residentName, width: "50%" },
@@ -115,28 +161,37 @@ export function ConsumableFamilyReminderDocument({
           ))}
         </View>
 
-        <View style={s.notice} wrap={false}>
-          <Text style={s.noticeLine}>
-            The items below, supplied by the family, are running low based on our latest weekly count. Kindly bring the suggested quantity on your next visit. If you have already arranged a restock, please disregard this reminder. Thank you for your cooperation.
-          </Text>
-          <View style={s.noticeGap} />
-          <Text style={[s.noticeLine, s.zh]}>
-            根据我们最近一次的每周点算，以下由家属提供的物品存量偏低。请于下次探访时带来建议数量。若您已安排补充，请忽略此提醒。感谢您的配合。
-          </Text>
-        </View>
-
-        {BLOCKS.map((block) => ({ block, rows: rows.filter((r) => r.hasMaxStock === block.hasMax) }))
-          .filter((b) => b.rows.length > 0)
-          .map(({ block, rows: blockRows }, i) => (
-            <View key={block.en}>
-              {i > 0 && <View style={s.blockGap} />}
-              <Text style={s.blockTitle} minPresenceAhead={40}>
-                <Text style={s.bold}>{block.en}</Text>
-                <Text style={s.zhBold}>{`  ${block.zh}`}</Text>
+        {topUp.length > 0 && (
+          <>
+            <View style={s.notice} wrap={false}>
+              <Text style={s.noticeLine}>
+                The items below, supplied by the family, are running low based on our latest weekly count. Kindly bring the suggested quantity on your next visit. If you have already arranged a restock, please disregard this reminder. Thank you for your cooperation.
               </Text>
-              <RowsTable rows={blockRows} />
+              <View style={s.noticeGap} />
+              <Text style={[s.noticeLine, s.zh]}>
+                根据我们最近一次的每周点算，以下由家属提供的物品存量偏低。请于下次探访时带来建议数量。若您已安排补充，请忽略此提醒。感谢您的配合。
+              </Text>
             </View>
-          ))}
+            <BlockTitle en="Top up to maximum stock" zh="补充至最高存量" />
+            <RowsTable rows={topUp} />
+          </>
+        )}
+
+        {balance.length > 0 && (
+          <View>
+            {topUp.length > 0 && <View style={s.blockGap} />}
+            <BlockTitle en="Stock balance update (not urgent)" zh="存量更新（非紧急）" />
+            <View wrap={false}>
+              <Text style={s.infoNote}>
+                For your information only. How long these items last depends on the resident&apos;s usage, so we do not suggest a quantity. Please decide whether to top up based on the balance below.
+              </Text>
+              <Text style={[s.infoNote, s.zh]}>
+                仅供参考。这些物品可用多久视住客的用量而定，因此我们不建议补充数量。请根据以下存量自行决定是否补充。
+              </Text>
+            </View>
+            <BalanceTable rows={balance} />
+          </View>
+        )}
       </ReportPage>
     </Document>
   );

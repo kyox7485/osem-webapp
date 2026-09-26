@@ -5,13 +5,14 @@ import { getBranches, getDemoBranchIds } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { loadCatalogue, loadResidentLines, loadStaffOptions } from "@/lib/consumables-server";
-import { hasMaxStock, isOtherItem, lineKey, suggestRestock, type RestockRow } from "@/lib/consumables";
+import { hasMaxStock, isBalanceOnly, isOtherItem, lineKey, suggestRestock, type RestockRow } from "@/lib/consumables";
 import { ResidentsModuleTabs } from "../../module-tabs";
 import { ConsumablesSubTabs } from "../consumables-tabs";
 import { RestockModule, type AddOption } from "./restock-module";
 
 // Restock review for the branch: every item line whose latest count needs a
-// restock (lib/consumables.ts suggestRestock), for both suppliers. The client
+// restock (lib/consumables.ts suggestRestock), for both suppliers, plus every
+// family-supplied item without a MaxStock as a balance-only line. The client
 // filters it into the Family reminder (per resident) or the OSEM pick-up list
 // (whole branch or one resident). Nothing here writes to the database.
 export default async function ConsumablesRestockPage({
@@ -71,7 +72,9 @@ export default async function ConsumablesRestockPage({
         const options: AddOption[] = [];
         for (const l of lines) {
           const s = suggestRestock(l);
-          if (s.needed && l.supplier) {
+          // Family items without a MaxStock are always listed, balance only.
+          const balanceOnly = l.supplier !== null && isBalanceOnly({ hasMaxStock: hasMaxStock(l), supplier: l.supplier });
+          if (l.supplier && (s.needed || balanceOnly)) {
             rows.push({
               key: `${r.id}#${l.key}`,
               residentId: r.id,
@@ -81,7 +84,7 @@ export default async function ConsumablesRestockPage({
               supplier: l.supplier,
               currentStock: l.currentStock,
               lastCount: l.lastCount,
-              suggestedQty: s.qty,
+              suggestedQty: balanceOnly ? 0 : s.qty,
               addedManually: false,
               hasMaxStock: hasMaxStock(l),
             });

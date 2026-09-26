@@ -120,6 +120,16 @@ export type RestockRow = {
   hasMaxStock: boolean;
 };
 
+/**
+ * Family-supplied items without a MaxStock (milk powder, lotion, Other) can't
+ * be forecast — a tin may last days or weeks. They always go on the family
+ * reminder as a non-urgent balance update with no quantity requested; the
+ * family decides. (OSEM-supplied ones still follow suggestRestock.)
+ */
+export function isBalanceOnly(row: Pick<RestockRow, "hasMaxStock" | "supplier">): boolean {
+  return !row.hasMaxStock && row.supplier === "Family";
+}
+
 export type RestockGroup = {
   residentId: number;
   residentName: string;

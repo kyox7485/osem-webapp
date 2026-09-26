@@ -11,6 +11,7 @@ import {
   LOW_STOCK_THRESHOLD,
   fmtQty,
   groupRestockRows,
+  isBalanceOnly,
   type RestockRow,
   type StaffPick,
   type Supplier,
@@ -84,12 +85,20 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
     [visible, residentById]
   );
   // Items with a MaxStock (top-up) and items without one are reviewed — and
-  // printed — in separate blocks.
+  // printed — in separate blocks. On the family reminder the second block is
+  // a non-urgent balance update (no quantity; the family decides).
   const blocks = useMemo(
     () =>
       [
         { id: "max", title: t("Top up to maximum stock"), rows: visible.filter((r) => r.hasMaxStock) },
-        { id: "nomax", title: t("No maximum stock — restock when less than {n} left", { n: LOW_STOCK_THRESHOLD }), rows: visible.filter((r) => !r.hasMaxStock) },
+        {
+          id: "nomax",
+          title:
+            audience === "Family"
+              ? t("Stock balance update (not urgent) — family decides")
+              : t("No maximum stock — restock when less than {n} left", { n: LOW_STOCK_THRESHOLD }),
+          rows: visible.filter((r) => !r.hasMaxStock),
+        },
       ]
         .filter((b) => b.rows.length > 0)
         .map((b) => ({
@@ -99,7 +108,7 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
             return { name: r?.name ?? "—", textId: r?.residentTextId ?? null };
           }),
         })),
-    [visible, residentById, t]
+    [visible, residentById, audience, t]
   );
 
   const serverSig = useMemo(() => signatureOf(serverRows), [serverRows]);
@@ -148,7 +157,7 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
         supplier: audience,
         currentStock: o.currentStock,
         lastCount: o.lastCount,
-        suggestedQty: 1,
+        suggestedQty: isBalanceOnly({ hasMaxStock: o.hasMaxStock, supplier: audience }) ? 0 : 1,
         addedManually: true,
         hasMaxStock: o.hasMaxStock,
       },
@@ -349,6 +358,10 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
+                              {isBalanceOnly(r) ? (
+                                <span className="text-xs text-fg-subtle sm:w-[230px] sm:text-right">{t("Balance only — no quantity requested")}</span>
+                              ) : (
+                              <>
                               <label htmlFor={`restock-qty-${r.key}`} className="text-xs text-fg-muted">
                                 {audience === "Family" ? t("Suggested") : t("Qty to take")}
                               </label>
@@ -366,6 +379,8 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
                               <button type="button" onClick={() => resetRow(r)} title={t("Reset to calculated")} aria-label={`${t("Reset to calculated")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-fg-secondary">
                                 <RotateCcw className="h-4 w-4" aria-hidden />
                               </button>
+                              </>
+                              )}
                               <button type="button" onClick={() => remove(r.key)} title={t("Remove")} aria-label={`${t("Remove")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-red-600 dark:hover:text-red-400">
                                 <Trash2 className="h-4 w-4" aria-hidden />
                               </button>
@@ -462,7 +477,9 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
         )}
 
         <p className="text-xs text-fg-faint">
-          {t("Items with a maximum stock are topped up to it; items without one are listed only when less than {n} is left. Editing here does not change any count.", { n: LOW_STOCK_THRESHOLD })}
+          {audience === "Family"
+            ? t("Items with a maximum stock are topped up to it; items without one show their balance only, so the family can decide. Editing here does not change any count.")
+            : t("Items with a maximum stock are topped up to it; items without one are listed only when less than {n} is left. Editing here does not change any count.", { n: LOW_STOCK_THRESHOLD })}
         </p>
       </div>
     </div>

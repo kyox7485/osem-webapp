@@ -70,6 +70,14 @@ medication stock). SQL: `migration/scripts/create_consumables_tables.sql`.
 - `RestockRow.hasMaxStock` splits the Restock review and both PDFs into two
   blocks: "Top up to maximum stock" and "No maximum stock". The PDF route
   takes `hasMaxStock` from the client rows (missing → treated as top-up).
+- **Balance-only** (`isBalanceOnly`): a **Family**-supplied item with no
+  MaxStock (milk powder, lotion, Other) can't be forecast — usage varies per
+  resident — so it is **always** on the family reminder, whatever its count,
+  in a grey "Stock balance update (not urgent)" block showing balance + last
+  counted, **no quantity**; the family decides. If a reminder has only such
+  items it is titled "Consumable Stock Update" and the red "running low"
+  notice is omitted. OSEM-supplied no-MaxStock items keep the `< 1` rule on
+  the pick-up list.
 - **Count due**: a line whose last count is ≥ `COUNT_DUE_DAYS` (7) old.
 - Counts accept decimals (1.5 tins of milk powder).
 - Lines with a blank supplier never appear on either PDF until recounted
