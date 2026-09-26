@@ -180,13 +180,13 @@ export function ConsumableFamilyReminderDocument({
         {balance.length > 0 && (
           <View>
             {topUp.length > 0 && <View style={s.blockGap} />}
-            <BlockTitle en="Stock balance update (not urgent)" zh="存量更新（非紧急）" />
+            <BlockTitle en="Stock Balance Update" zh="存量更新" />
             <View wrap={false}>
               <Text style={s.infoNote}>
-                For your information only. How long these items last depends on the resident&apos;s usage, so we do not suggest a quantity. Please decide whether to top up based on the balance below.
+                For your reference, these items are currently in stock. As usage may vary from resident to resident, we have not suggested a top-up quantity. Please feel free to replenish them when you feel it is needed.
               </Text>
               <Text style={[s.infoNote, s.zh]}>
-                仅供参考。这些物品可用多久视住客的用量而定，因此我们不建议补充数量。请根据以下存量自行决定是否补充。
+                仅供参考，目前这些物品仍有存量。由于每位住客的使用量不同，我们没有建议具体的补充数量。如有需要，您可根据目前的存量自行安排补充。
               </Text>
             </View>
             <BalanceTable rows={balance} />

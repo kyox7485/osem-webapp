@@ -73,7 +73,7 @@ medication stock). SQL: `migration/scripts/create_consumables_tables.sql`.
 - **Balance-only** (`isBalanceOnly`): a **Family**-supplied item with no
   MaxStock (milk powder, lotion, Other) can't be forecast — usage varies per
   resident — so it is **always** on the family reminder, whatever its count,
-  in a grey "Stock balance update (not urgent)" block showing balance + last
+  in a grey "Stock Balance Update 存量更新" block showing balance + last
   counted, **no quantity**; the family decides. If a reminder has only such
   items it is titled "Consumable Stock Update" and the red "running low"
   notice is omitted. OSEM-supplied no-MaxStock items keep the `< 1` rule on
