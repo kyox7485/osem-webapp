@@ -191,3 +191,41 @@ export async function createConsumableCounts(
 ): Promise<MedicationScriptResponse> {
   return callScript({ action: "consumableCountCreate", entries });
 }
+
+// ─── HQ-ADMIN record correction (AdminEdit.gs) ────────────────────────────────
+// Sheet-first edits/deletes: the Sheet row is changed first, then mirrored to
+// Supabase by the same targeted sync the create path uses.
+
+export async function adminDeleteMedicationOrder(rxOrderId: string): Promise<MedicationScriptResponse> {
+  return callScript({ action: "adminOrderDelete", rxOrderId });
+}
+
+export type AdminStockSheetFields = Partial<
+  Pick<MedicationStockSheetFields, "Balance" | "Unit" | "StockDate" | "RegisteredBy" | "EntryType">
+>;
+
+export async function adminUpdateMedicationStockEntry(
+  stockId: string,
+  fields: AdminStockSheetFields
+): Promise<MedicationScriptResponse> {
+  return callScript({ action: "adminStockUpdate", stockId, fields });
+}
+
+export async function adminDeleteMedicationStockEntry(stockId: string): Promise<MedicationScriptResponse> {
+  return callScript({ action: "adminStockDelete", stockId });
+}
+
+export type AdminConsumableSheetFields = Partial<
+  Pick<ConsumableCountSheetFields, "CurrentStock" | "Supplier" | "LastCount" | "CountedBy">
+>;
+
+export async function adminUpdateConsumableCount(
+  recordId: string,
+  fields: AdminConsumableSheetFields
+): Promise<MedicationScriptResponse> {
+  return callScript({ action: "adminConsumableUpdate", recordId, fields });
+}
+
+export async function adminDeleteConsumableCount(recordId: string): Promise<MedicationScriptResponse> {
+  return callScript({ action: "adminConsumableDelete", recordId });
+}

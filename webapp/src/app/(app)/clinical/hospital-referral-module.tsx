@@ -12,6 +12,7 @@ import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 type HospitalReferral = {
   id: number;
@@ -214,8 +215,11 @@ export function HospitalReferralModule({
                       </div>
                     )}
 
-                    <div className="mt-2 text-xs text-fg-faint">
-                      {t("Reported by")}: {referral.reviewer?.staff_name || referral.reviewed_by_other || "--"}
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs text-fg-faint">
+                        {t("Reported by")}: {referral.reviewer?.staff_name || referral.reviewed_by_other || "--"}
+                      </span>
+                      <AdminRecordControls kind="hospital_referral" id={referral.id} />
                     </div>
                   </div>
                 );

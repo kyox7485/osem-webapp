@@ -94,7 +94,7 @@ medication stock). SQL: `migration/scripts/create_consumables_tables.sql`.
 ## 5. Deployment checklist
 
 1. **Supabase** — run `migration/scripts/create_consumables_tables.sql`
-   (idempotent). Not applied as of 2026-09-26.
+   (idempotent). Applied to production 2026-09-26.
 2. **Apps Script "Sync to Supabase"** — paste `Consumables.gs` (new),
    `Code.gs`, `Config.gs`; Deploy → Manage deployments → edit → **New
    version**. Run `testConsumableSync()` once (backfills master + all

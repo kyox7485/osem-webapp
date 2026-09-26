@@ -12,6 +12,7 @@ import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, ChevronLeft } from "lucide-react";
 import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
+import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 
 const DISTURBANCE_LABELS: Record<number, string> = {
   0: "No disturb",
@@ -67,6 +68,7 @@ export function BehaviourChartModule({
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
   const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
   const [showCustom, setShowCustom] = useState(false);
@@ -256,11 +258,13 @@ export function BehaviourChartModule({
                 onDrillDown={drillIntoDay}
               />
 
-              {/* Legacy summaries (entries with no timed episodes) */}
-              {episodes.length === 0 && entries.length > 0 && (
+              {/* Legacy summaries (entries with no timed episodes). An HQ
+                  ADMIN always gets the list, since it is where each chart
+                  entry's Edit/Delete buttons live. */}
+              {(episodes.length === 0 || isHqAdmin) && entries.length > 0 && (
                 <div className="space-y-2 mt-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-fg-faint">
-                    {t("Chart summaries (no timed episodes)")}
+                    {episodes.length === 0 ? t("Chart summaries (no timed episodes)") : t("Chart entries")}
                   </p>
                   {entries.map((entry) => {
                     const enteredBy = entry.tbl_staff?.staff_name ?? entry.created_by_other ?? "--";
@@ -285,6 +289,9 @@ export function BehaviourChartModule({
                             <span>😌 {entry.emotion_mood.join(", ")}</span>
                           )}
                           {distLabel && <span>🤯 {distLabel}</span>}
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <AdminRecordControls kind="behaviour_chart" id={entry.id} />
                         </div>
                       </div>
                     );

@@ -73,7 +73,10 @@ class LookupResolver:
 
     def reload_branches(self, conn: psycopg2.extensions.connection) -> None:
         cur = conn.cursor()
-        cur.execute("select id, code from tbl_branches")
+        # tbl_branches keys on "BranchID"/"BranchCode", not id/code -- the
+        # access-supabase .eq("id", ...) footgun. Selecting `id` raises
+        # UndefinedColumn, it does not silently return nothing.
+        cur.execute('select "BranchID", "BranchCode" from tbl_branches')
         self.branch_ids = {code: bid for bid, code in cur.fetchall()}
 
     def resolve(self, list_name: str, raw_value: str | None) -> int | None:

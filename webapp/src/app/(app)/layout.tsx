@@ -1,4 +1,5 @@
-import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { getCurrentUser, isAdmin, isHqAdmin } from "@/lib/current-user";
+import { AdminRecordProvider } from "@/components/admin-record-controls";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLoadingProvider } from "@/components/nav-loading";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -68,7 +69,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </div>
               <div className="h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-rose-400" />
             </header>
-            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
+              {/* Edit/Delete record buttons are shown to HQ ADMIN logins only. */}
+              <AdminRecordProvider enabled={isHqAdmin(account)}>{children}</AdminRecordProvider>
+            </main>
           </div>
         </div>
       </PageHeaderProvider>

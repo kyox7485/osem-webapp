@@ -11,6 +11,7 @@ import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 type ProgressNote = {
   id: number;
@@ -219,8 +220,11 @@ export function ProgressNotesModule({
                       </div>
                     )}
 
-                    <div className="mt-2 text-xs text-fg-faint">
-                      {t("Reviewed by")}: {note.reviewer?.staff_name || note.reviewed_by_other || note.author?.staff_name || note.created_by_other || "--"}
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs text-fg-faint">
+                        {t("Reviewed by")}: {note.reviewer?.staff_name || note.reviewed_by_other || note.author?.staff_name || note.created_by_other || "--"}
+                      </span>
+                      <AdminRecordControls kind="progress_note" id={note.id} />
                     </div>
                   </div>
                 );

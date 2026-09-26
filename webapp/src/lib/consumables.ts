@@ -45,6 +45,7 @@ export function lineKey(consumableId: string, otherConsumable: string | null): s
 }
 
 export type CountRecord = {
+  id: number; // tbl_resident_consumables.id (for the HQ-admin Edit/Delete controls)
   recordId: string;
   currentStock: number;
   lastCount: string; // ISO

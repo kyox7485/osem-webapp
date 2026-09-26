@@ -32,6 +32,7 @@ import {
   type Supplier,
 } from "@/lib/consumables";
 import { recordConsumableCountAction } from "./inventory-actions";
+import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 
 export type InventoryResident = { id: number; name: string; residentTextId: string; branchId: number };
 
@@ -89,6 +90,7 @@ function SupplierToggle({ value, onChange, name }: { value: Supplier | null; onC
 
 function HistoryModal({ line, onClose }: { line: ConsumableLine; onClose: () => void }) {
   const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
@@ -120,6 +122,7 @@ function HistoryModal({ line, onClose }: { line: ConsumableLine; onClose: () => 
                 <th className="py-2 pr-3 text-right font-medium">{t("Quantity")}</th>
                 <th className="py-2 pr-3 font-medium">{t("Supplied By")}</th>
                 <th className="py-2 font-medium">{t("Counted By")}</th>
+                {isHqAdmin && <th className="py-2 pl-3 font-medium">{t("Actions")}</th>}
               </tr>
             </thead>
             <tbody>
@@ -129,6 +132,11 @@ function HistoryModal({ line, onClose }: { line: ConsumableLine; onClose: () => 
                   <td className="whitespace-nowrap py-2 pr-3 text-right font-medium text-fg">{fmtQty(h.currentStock)}</td>
                   <td className="py-2 pr-3 text-fg-secondary">{h.supplier ? t(h.supplier) : DASH}</td>
                   <td className="py-2 text-fg-secondary">{h.countedByName ?? DASH}</td>
+                  {isHqAdmin && (
+                    <td className="py-1.5 pl-3">
+                      <AdminRecordControls kind="consumable_count" id={h.id} compact />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

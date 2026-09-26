@@ -80,6 +80,7 @@ export default async function MedicationStockPage({
 
     // ── Stock events for those exact orders (newest first) ───────────────────
     type StockRaw = {
+      id: number;
       external_ref_id: string;
       medication_order_id: number;
       balance: number;
@@ -95,7 +96,7 @@ export default async function MedicationStockPage({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: stockRaw } = await (supabase as any)
         .from("tbl_medication_stock")
-        .select("external_ref_id, medication_order_id, balance, unit, daily_usage, days_remaining, stock_date, registered_by, entry_type")
+        .select("id, external_ref_id, medication_order_id, balance, unit, daily_usage, days_remaining, stock_date, registered_by, entry_type")
         .in("medication_order_id", orderRows.map((o) => o.id))
         .order("stock_date", { ascending: false })
         .order("id", { ascending: false });
@@ -144,6 +145,7 @@ export default async function MedicationStockPage({
       history[o.external_ref_id] = stockRows
         .filter((s) => s.medication_order_id === o.id)
         .map((s) => ({
+          id: s.id,
           stockId: s.external_ref_id,
           stockDate: s.stock_date,
           entryType: s.entry_type,

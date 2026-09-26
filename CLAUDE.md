@@ -102,6 +102,16 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
 ## Domain-specific detail (read only when relevant)
 
 - `docs/database.md` — full core domain model, DEMO exclusion checklist.
+- `docs/access-clinical-migration.md` — migrating the legacy Access clinical
+  tables (NursingChart, ProgressNote, PhyIPProgressNote, HospReferral) into
+  Supabase: the `AMN`-not-`ALMA` branch-code trap, IC-over-name identity
+  resolution and its asserted overrides, cross-branch staff matching,
+  part-time staff auto-creation, the contentless-row skip rule, dropped
+  fields, and what's still blocking NursingChart/PhyIPProgressNote.
+  `docs/access-clinical-migration-next-branch.md` — the pre-commit checklist for
+  migrating a *different* branch: schema-drift guard, branch-scoped lookups
+  that resolve nothing, write throughput, and which asserted overrides are
+  AMN-only.
 - `docs/medication-chart-dosing-days.md` — which day cells the preparation
   chart crosses off with `xxxx`: the single
   `shouldPrepareMedicineOnDay` rule in `CalendarEngine.gs` that the chart,
@@ -135,6 +145,10 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
 - `docs/deployment.md` — canonical, current deployment reference (Vercel,
   Supabase schema changes, Apps Script redeploy). Supersedes the
   historical root-level `DEPLOYMENT_INSTRUCTIONS.md`.
+- `docs/admin-record-edit.md` — HQ-ADMIN Edit/Delete buttons on every
+  record: `isHqAdmin()` gate (server-checked), field whitelist registry,
+  service-role writes, Sheet-first routes in `AdminEdit.gs` (needs an Apps
+  Script redeploy).
 - `docs/theming.md` — Light/Dark/System architecture, token cheat-sheet,
   coloured-status `dark:` convention, testing checklist.
 - `docs/architecture.md` — repo layout, `webapp/` internals, env vars,

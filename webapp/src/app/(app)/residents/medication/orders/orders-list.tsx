@@ -4,6 +4,7 @@ import { useState, useMemo, useTransition, useEffect, useCallback } from "react"
 import Link from "next/link";
 import { useTranslation } from "@/components/language-provider";
 import { discontinueOrderAction } from "./order-actions";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 export type OrderItem = {
   id: number;
@@ -509,6 +510,7 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
                                       {t("Discontinue")}
                                     </button>
                                   )}
+                                  <AdminRecordControls kind="medication_order" id={order.id} compact />
                                 </div>
                               </td>
                             </tr>

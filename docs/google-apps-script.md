@@ -162,6 +162,7 @@ only `createOrder`/`updateOrder` and must **never** define
 | `create` / `update` | `SHARED_SECRET` constant vs Vercel `MEDICATION_ORDER_SCRIPT_SECRET` | appends a row (see below) |
 | `setOrderStatus` | same `SHARED_SECRET` | sets `Status` on existing order rows (webapp Discontinue / auto-expiry), then targeted sync |
 | `stockCreate` | same `SHARED_SECRET` | `MedicationStock.gs` `createStockEntry` — appends a `tbl_MedicationStock` row (idempotent on StockID), then syncs it to `tbl_medication_stock` |
+| `adminOrderDelete` / `adminStockUpdate` / `adminStockDelete` / `adminConsumableUpdate` / `adminConsumableDelete` | same `SHARED_SECRET` | `AdminEdit.gs` — HQ-ADMIN edit/delete, Sheet row first, then targeted Supabase sync/delete (see `docs/admin-record-edit.md`) |
 | `SyncMedicationOrder` | Script Property `MEDICATION_WEBHOOK_TOKEN` | targeted one-row sync + summary rebuild |
 | `RebuildMedication` | same token | full `current_medication_list` rebuild for a resident |
 

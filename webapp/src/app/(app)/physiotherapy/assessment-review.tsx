@@ -5,6 +5,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { EXAM_STRUCTURE, type ExamLimb, type ExamRow } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 export type ReviewAssessment = {
   id: number;
@@ -112,6 +113,7 @@ export function PhysioAssessmentReview({ assessments }: { assessments: ReviewAss
                 <ReadRow label={t("Treatment Compliance")} value={a.treatment_compliance} />
               </div>
             )}
+            <AdminRecordControls kind="physio_assessment" id={a.id} className="mt-3 w-full justify-end" />
           </div>
         );
       })}

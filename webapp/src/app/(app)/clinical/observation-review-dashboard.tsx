@@ -7,6 +7,7 @@ import { useTranslation } from "@/components/language-provider";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { ObservationEntry } from "./observation-chart-actions";
 import type { ObservationStatusRow } from "./observation-status-actions";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 type Props = {
   entries: ObservationEntry[];
@@ -306,6 +307,9 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
                                 <span>SpO₂: {val(e.spo2) ?? "--"}%</span>
                                 <span>DXT: {val(e.dxt) ?? "--"}</span>
                                 <span>AVPU: {val(e.avpu) ?? "--"}</span>
+                              </div>
+                              <div className="mt-2 flex justify-end">
+                                <AdminRecordControls kind="observation_chart" id={e.id} />
                               </div>
                             </div>
                           ))}

@@ -59,6 +59,16 @@ export function isAdmin(account: CurrentUser | null): boolean {
   return account?.rights === "ADMIN";
 }
 
+// True only for an ADMIN login based at an HQ-function branch. Gates the
+// record-correction Edit/Delete buttons on every clinical/medication/
+// consumables list (components/admin-record-controls.tsx) and the Server
+// Actions behind them (app/(app)/admin-record-actions.ts). Deliberately
+// narrower than isAdmin(): a branch-level ADMIN (e.g. the DEMO `test`
+// account) does NOT get it.
+export function isHqAdmin(account: { rights: string; branch_function: string | null } | null): boolean {
+  return account?.rights === "ADMIN" && account.branch_function === "HQ";
+}
+
 // True when this account may see data across every real branch.
 //
 // The rule is driven by the branch's Function, NOT the rights tier:

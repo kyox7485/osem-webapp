@@ -12,6 +12,7 @@ import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { ListChecks, Plus } from "lucide-react";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 export type NursingChartEntry = {
   id: number;
@@ -223,7 +224,10 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
                       </div>
                     )}
 
-                    <div className="mt-2 text-xs text-fg-faint">{t("Entered by")}: {entry.entered_by_name}</div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs text-fg-faint">{t("Entered by")}: {entry.entered_by_name}</span>
+                      <AdminRecordControls kind="nursing_chart" id={entry.id} />
+                    </div>
                   </div>
                 );
               })

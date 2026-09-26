@@ -20,6 +20,7 @@ import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
+import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 
 type Vital = {
   id: number;
@@ -64,6 +65,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
   const [showForm, setShowForm] = useState(false);
 
   function applyFilters(residentId: string, start: string, end: string) {
@@ -189,12 +191,13 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                 <th className="px-4 py-3 font-medium text-fg">{t("Insulin Adj.")}</th>
                 <th className="px-4 py-3 font-medium text-fg">{t("Advanced Obs.")}</th>
                 <th className="px-4 py-3 font-medium text-fg">{t("Reviewed By")}</th>
+                {isHqAdmin && <th className="px-4 py-3 font-medium text-fg">{t("Actions")}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-line-subtle">
               {vitals.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-fg-faint">
+                  <td colSpan={isHqAdmin ? 13 : 12} className="px-4 py-8 text-center text-fg-faint">
                     {t("No vital signs recorded yet.")}
                   </td>
                 </tr>
@@ -239,6 +242,11 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                         {v.respiration_rate === null && !v.gcs_label && !v.avpu_label && "--"}
                       </td>
                       <td className="px-4 py-3 text-fg">{v.tbl_staff?.staff_name || v.reviewed_by_other || "--"}</td>
+                      {isHqAdmin && (
+                        <td className="px-4 py-2">
+                          <AdminRecordControls kind="vital" id={v.id} compact />
+                        </td>
+                      )}
                     </tr>
                   );
                 })

@@ -7,6 +7,7 @@ import { dictPhysio } from "./dict-physio";
 import { dictAuth } from "./dict-auth";
 import { dictMedication } from "./dict-medication";
 import { dictConsumables } from "./dict-consumables";
+import { dictAdmin } from "./dict-admin";
 
 // Each dict-*.ts file owns one module's strings (English -> Bahasa
 // Malaysia) so they can be authored independently without merge
@@ -22,4 +23,5 @@ export const msDictionary: Record<string, string> = {
   ...dictAuth,
   ...dictMedication,
   ...dictConsumables,
+  ...dictAdmin,
 };

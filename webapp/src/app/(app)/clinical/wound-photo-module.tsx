@@ -13,6 +13,7 @@ import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, TrendingUp } from "lucide-react";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -113,8 +114,11 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
                     <span className="font-bold text-fg">{session.tbl_residents?.resident_name}</span>
                     <span className="text-xs text-fg-faint">{formatDateTime(session.session_started_at)}</span>
                   </div>
-                  <div className="mb-3 text-xs text-fg-faint">
-                    {t("Uploaded by")}: {session.uploader?.staff_name || session.uploaded_by_other || "--"}
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs text-fg-faint">
+                      {t("Uploaded by")}: {session.uploader?.staff_name || session.uploaded_by_other || "--"}
+                    </span>
+                    <AdminRecordControls kind="wound_session" id={session.id} />
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {session.photos.map((photo) => (
@@ -124,6 +128,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
                         <div className="p-2">
                           <p className="text-xs font-medium text-fg">{t(photo.body_part_label)}</p>
                           {photo.description && <p className="text-xs text-fg-subtle">{photo.description}</p>}
+                          <AdminRecordControls kind="wound_photo" id={photo.id} compact className="mt-2" />
                         </div>
                       </div>
                     ))}

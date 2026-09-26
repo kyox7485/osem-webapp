@@ -43,6 +43,7 @@ export async function loadCatalogue(supabase: Supabase): Promise<{ items: Catalo
 }
 
 type RecordRaw = {
+  id: number;
   external_ref_id: string;
   resident_id: number;
   consumable_id: string;
@@ -74,7 +75,7 @@ export async function loadResidentLines(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from("tbl_resident_consumables")
-      .select("external_ref_id, resident_id, consumable_id, other_consumable, other_unit, supplier, current_stock, last_count, counted_by")
+      .select("id, external_ref_id, resident_id, consumable_id, other_consumable, other_unit, supplier, current_stock, last_count, counted_by")
       .in("resident_id", residentIds)
       .order("last_count", { ascending: false })
       .order("id", { ascending: false })
@@ -105,6 +106,7 @@ export async function loadResidentLines(
     const otherName = other ? (r.other_consumable ?? "").trim() || null : null;
     const key = lineKey(r.consumable_id, otherName);
     const count: CountRecord = {
+      id: r.id,
       recordId: r.external_ref_id,
       currentStock: Number(r.current_stock),
       lastCount: r.last_count,

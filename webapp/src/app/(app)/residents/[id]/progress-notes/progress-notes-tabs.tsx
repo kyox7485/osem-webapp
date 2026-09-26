@@ -9,6 +9,7 @@ import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
+import { AdminRecordControls } from "@/components/admin-record-controls";
 
 type Note = {
   id: number;
@@ -100,6 +101,7 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
                     {note.nursing_plan}
                   </p>
                 )}
+                <AdminRecordControls kind="progress_note" id={note.id} className="mt-3 w-full justify-end" />
               </div>
             ))}
             {notes.length === 0 && (

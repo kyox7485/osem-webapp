@@ -30,9 +30,15 @@ function doPost(e) {
     // point; medication-orders.gs now only exports createOrder/updateOrder.
     // stockCreate (MedicationStock.gs) and setOrderStatus
     // (medication-orders.gs) are webapp writes too, so they share the same
-    // SHARED_SECRET gate. consumableCountCreate (Consumables.gs) likewise.
+    // SHARED_SECRET gate. consumableCountCreate (Consumables.gs) likewise,
+    // and the HQ-ADMIN edit/delete actions (AdminEdit.gs).
     if (
       request.action === "create" ||
+      request.action === "adminOrderDelete" ||
+      request.action === "adminStockUpdate" ||
+      request.action === "adminStockDelete" ||
+      request.action === "adminConsumableUpdate" ||
+      request.action === "adminConsumableDelete" ||
       request.action === "update" ||
       request.action === "setOrderStatus" ||
       request.action === "stockCreate" ||
@@ -55,6 +61,16 @@ function doPost(e) {
         result = setOrderStatus(request.rxOrderIds, request.status);
       } else if (request.action === "consumableCountCreate") {
         result = createConsumableCounts(request.entries);
+      } else if (request.action === "adminOrderDelete") {
+        result = adminDeleteMedicationOrder(request.rxOrderId);
+      } else if (request.action === "adminStockUpdate") {
+        result = adminUpdateStockEntry(request.stockId, request.fields);
+      } else if (request.action === "adminStockDelete") {
+        result = adminDeleteStockEntry(request.stockId);
+      } else if (request.action === "adminConsumableUpdate") {
+        result = adminUpdateConsumableCount(request.recordId, request.fields);
+      } else if (request.action === "adminConsumableDelete") {
+        result = adminDeleteConsumableCount(request.recordId);
       } else {
         result = createStockEntry(request.entry);
       }

@@ -31,6 +31,7 @@ import {
   type StockStatus,
 } from "@/lib/medication-stock";
 import { recordStockEntryAction } from "./stock-actions";
+import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 
 // ── Types (built by page.tsx) ─────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export type StockOrderRow = {
 };
 
 export type StockHistoryRow = {
+  id: number; // tbl_medication_stock.id (for the HQ-admin Edit/Delete controls)
   stockId: string;
   stockDate: string;
   entryType: string;
@@ -504,6 +506,7 @@ function EntryModal({ row, entryType, staffOptions, history, onClose, onSaved }:
 
 function HistoryModal({ row, rows, onClose }: { row: StockOrderRow; rows: StockHistoryRow[]; onClose: () => void }) {
   const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
 
   // Stored snapshots use 0 for "not applicable" (Sheet/AppSheet convention).
   function snapshot(h: StockHistoryRow, value: number | null): string {
@@ -530,6 +533,7 @@ function HistoryModal({ row, rows, onClose }: { row: StockOrderRow; rows: StockH
                 <div className="mt-0.5 text-xs text-fg-subtle">
                   {t("Daily Usage")}: {snapshot(h, h.dailyUsage)} · {t("Days Remaining")}: {snapshot(h, h.daysRemaining)}
                 </div>
+                <AdminRecordControls kind="medication_stock" id={h.id} className="mt-2" />
               </li>
             ))}
           </ul>
@@ -543,6 +547,7 @@ function HistoryModal({ row, rows, onClose }: { row: StockOrderRow; rows: StockH
                 <th className="py-2 pr-3 text-right font-medium">{t("Daily Usage")}</th>
                 <th className="py-2 pr-3 text-right font-medium">{t("Days Remaining")}</th>
                 <th className="py-2 font-medium">{t("Registered By")}</th>
+                {isHqAdmin && <th className="py-2 pl-3 font-medium">{t("Actions")}</th>}
               </tr>
             </thead>
             <tbody>
@@ -554,6 +559,11 @@ function HistoryModal({ row, rows, onClose }: { row: StockOrderRow; rows: StockH
                   <td className="py-2 pr-3 text-right text-fg-secondary">{snapshot(h, h.dailyUsage)}</td>
                   <td className="py-2 pr-3 text-right text-fg-secondary">{snapshot(h, h.daysRemaining)}</td>
                   <td className="py-2 text-fg-secondary">{h.registeredByName ?? DASH}</td>
+                  {isHqAdmin && (
+                    <td className="py-1.5 pl-3">
+                      <AdminRecordControls kind="medication_stock" id={h.id} compact />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
