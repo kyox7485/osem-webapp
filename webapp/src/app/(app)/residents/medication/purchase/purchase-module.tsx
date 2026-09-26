@@ -196,10 +196,8 @@ export function PurchaseModule({
       setMessage({ text: t("This medicine is already on the purchase list."), kind: "error" });
       return;
     }
-    const inherited = groups.flatMap((g) => g.rows).find(
-      (r) => r.residentId === resident.id && r.medicine === medicineName
-    ) ?? null;
-    const doseStr = (isOther ? (customDose.trim() || "—") : (inherited?.schedule || "—"));
+    const inherited = selected ?? null;
+    const doseStr = isOther ? (customDose.trim() || "—") : (inherited?.schedule || "—");
 
     const row: PurchaseListRow = {
       key: `extra:${nextRowId()}`,
@@ -209,9 +207,10 @@ export function PurchaseModule({
       medicine: medicineName || "—",
       schedule: doseStr,
       unit: selected?.unit || "Unit",
-      // Inherit the current balance / forecast from the order already on the
-      // list, so adding a line the list didn't catch still shows real numbers.
-      balance: inherited?.balance ?? null,
+      // Inherit the order's real dosing/forecast from the picker option, so the
+      // added line shows the resident's actual balance and days left instead
+      // of blanks. "Other…" has no source order, so only its typed dose.
+      balance: isOther ? null : (inherited?.balance ?? null),
       dailyUsage: isOther ? null : (inherited?.dailyUsage ?? null),
       daysRemaining: isOther ? null : (inherited?.daysRemaining ?? null),
       countable: isOther ? false : (inherited?.countable ?? false),

@@ -88,6 +88,13 @@ export type ResidentMedicineOption = {
   value: string;
   label: string;
   unit: string;
+  /** Full dosing line, e.g. "1 Tablet · BD · Mon/Wed/Fri". */
+  schedule: string;
+  /** Live forecast balance for this order, or null if never recorded. */
+  balance: number | null;
+  dailyUsage: number | null;
+  daysRemaining: number | null;
+  countable: boolean;
 };
 
 /**

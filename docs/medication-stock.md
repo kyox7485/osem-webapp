@@ -314,6 +314,12 @@ dirty-form guard warns first, and the branch switch goes through
   line; a free-text "Other…" naming an existing medicine is refused with a
   message. Changing the resident clears the selected medicine and the
   free-text fields, since they belonged to the previous resident.
+- **Adding a medicine inherits the order's real values.** Each picker option
+  carries that order's dose/frequency/dosing days, unit, live balance and
+  days-left, so the new line shows actual numbers rather than blanks. The
+  data comes from the option itself, not from searching the restock list, so
+  it also works for medicines that were never low enough to be listed. Only
+  the free-text "Other…" path starts blank, having no source order.
 - **"Other…" requires both a name and a dose**, both free text and both
   required before the Add button enables. The dose is stored in the row's
   `schedule` and prints in the Dosing column.

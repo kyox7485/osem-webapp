@@ -161,6 +161,14 @@ export async function buildPurchaseList(
       value: o.external_ref_id,
       label: medicineLabel(o),
       unit,
+      // Carry the real dosing/forecast so adding this medicine from the
+      // picker shows the resident's actual dose, frequency, dosing days and
+      // balance rather than blanks.
+      schedule: scheduleLabel(o),
+      balance: st.balance,
+      dailyUsage: st.dailyUsage,
+      daysRemaining: st.forecast ? st.daysRemaining : null,
+      countable: st.forecast && st.dailyUsage !== null,
     });
 
     // Only OSEM-supplied medicine belongs on the restock list itself.
