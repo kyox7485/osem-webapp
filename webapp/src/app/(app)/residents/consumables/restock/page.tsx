@@ -5,7 +5,7 @@ import { getBranches, getDemoBranchIds } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { loadCatalogue, loadResidentLines, loadStaffOptions } from "@/lib/consumables-server";
-import { isOtherItem, lineKey, suggestRestock, type RestockRow } from "@/lib/consumables";
+import { hasMaxStock, isOtherItem, lineKey, suggestRestock, type RestockRow } from "@/lib/consumables";
 import { ResidentsModuleTabs } from "../../module-tabs";
 import { ConsumablesSubTabs } from "../consumables-tabs";
 import { RestockModule, type AddOption } from "./restock-module";
@@ -83,6 +83,7 @@ export default async function ConsumablesRestockPage({
               lastCount: l.lastCount,
               suggestedQty: s.qty,
               addedManually: false,
+              hasMaxStock: hasMaxStock(l),
             });
           } else {
             options.push({
@@ -93,6 +94,7 @@ export default async function ConsumablesRestockPage({
               supplier: l.supplier,
               currentStock: l.currentStock,
               lastCount: l.lastCount,
+              hasMaxStock: hasMaxStock(l),
             });
           }
         }
@@ -108,6 +110,7 @@ export default async function ConsumablesRestockPage({
             supplier: null,
             currentStock: null,
             lastCount: null,
+            hasMaxStock: hasMaxStock(c),
           });
         }
         addOptions[r.id] = options.sort((a, b) => a.item.localeCompare(b.item));

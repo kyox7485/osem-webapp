@@ -6,8 +6,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Clock,
   History,
+  PencilLine,
   Info,
   Plus,
   Trash2,
@@ -28,15 +30,22 @@ import {
   lineKey,
   type CatalogueItem,
   type ConsumableLine,
+  type CountRecord,
   type StaffPick,
   type Supplier,
 } from "@/lib/consumables";
 import { recordConsumableCountAction } from "./inventory-actions";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { TabRow, TabButton } from "@/components/tabs";
 
 export type InventoryResident = { id: number; name: string; residentTextId: string; branchId: number };
+export type InventoryView = "new" | "previous";
 
-/** A line on the count sheet: an existing item, or one added this session. */
+/**
+ * A line on the count sheet: a RestockRequired catalogue item (always listed,
+ * counted before or not), another item the resident already has, or one
+ * added this session.
+ */
 type SheetLine = {
   key: string;
   consumableId: string;
@@ -147,9 +156,105 @@ function HistoryModal({ line, onClose }: { line: ConsumableLine; onClose: () => 
   );
 }
 
+// ── Previous counts ───────────────────────────────────────────────────────────
+
+const SESSIONS_PAGE = 10;
+
+type SessionItem = CountRecord & { name: string; unit: string };
+
+/** Past counts grouped by count session (same date/time + same staff). */
+function PreviousCounts({ lines }: { lines: ConsumableLine[] }) {
+  const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
+  const [shown, setShown] = useState(SESSIONS_PAGE);
+
+  const sessions = useMemo(() => {
+    const map = new Map<string, { key: string; lastCount: string; countedBy: string | null; items: SessionItem[] }>();
+    for (const l of lines) {
+      for (const h of l.history) {
+        const key = `${h.lastCount}|${h.countedByName ?? ""}`;
+        let sess = map.get(key);
+        if (!sess) {
+          sess = { key, lastCount: h.lastCount, countedBy: h.countedByName, items: [] };
+          map.set(key, sess);
+        }
+        sess.items.push({ ...h, name: l.name, unit: l.unit });
+      }
+    }
+    const list = [...map.values()];
+    for (const sess of list) sess.items.sort((a, b) => a.name.localeCompare(b.name));
+    return list.sort((a, b) => new Date(b.lastCount).getTime() - new Date(a.lastCount).getTime());
+  }, [lines]);
+
+  if (sessions.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-fg-subtle">
+        {t("No previous counts for this resident yet.")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {sessions.slice(0, shown).map((sess) => (
+        <section key={sess.key} className="rounded-lg border border-line bg-surface shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line-subtle px-4 py-2.5">
+            <h3 className="text-sm font-semibold text-fg">{formatDateTime(sess.lastCount)}</h3>
+            <p className="text-xs text-fg-subtle">
+              {t("Counted By")}: <span className="font-medium text-fg-secondary">{sess.countedBy ?? DASH}</span>
+              {" · "}
+              {t("{n} items", { n: sess.items.length })}
+            </p>
+          </div>
+          <div className="overflow-x-auto px-4">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-fg-subtle">
+                <tr className="border-b border-line-subtle">
+                  <th className="py-2 pr-3 font-medium">{t("Item")}</th>
+                  <th className="py-2 pr-3 text-right font-medium">{t("Quantity")}</th>
+                  <th className="py-2 pr-3 font-medium">{t("Supplied By")}</th>
+                  {isHqAdmin && <th className="py-2 font-medium">{t("Actions")}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {sess.items.map((h) => (
+                  <tr key={h.recordId} className="border-b border-line-subtle last:border-0">
+                    <td className="py-2 pr-3 text-fg">{h.name}</td>
+                    <td className="whitespace-nowrap py-2 pr-3 text-right font-medium text-fg">
+                      {fmtQty(h.currentStock)} <span className="text-xs font-normal text-fg-subtle">{t(h.unit)}</span>
+                    </td>
+                    <td className="py-2 pr-3 text-fg-secondary">{h.supplier ? t(h.supplier) : DASH}</td>
+                    {isHqAdmin && (
+                      <td className="py-1.5">
+                        <AdminRecordControls kind="consumable_count" id={h.id} compact />
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+      {sessions.length > shown && (
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + SESSIONS_PAGE)}
+            className={`min-h-10 rounded-md border border-line bg-surface px-4 text-sm text-fg-secondary hover:bg-hover ${btnFocus}`}
+          >
+            {t("Show older counts")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export function InventoryModule({ residents, selectedResidentId, catalogue, lines, staffOptions, loadError }: {
+export function InventoryModule({ view, residents, selectedResidentId, catalogue, lines, staffOptions, loadError }: {
+  view: InventoryView;
   residents: InventoryResident[];
   selectedResidentId: number | null;
   catalogue: CatalogueItem[];
@@ -187,9 +292,30 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
   const [now] = useState(() => new Date());
   const catalogueById = useMemo(() => new Map(catalogue.map((c) => [c.consumableId, c])), [catalogue]);
 
-  const sheet: SheetLine[] = useMemo(
-    () => [
-      ...lines.map((l) => ({
+  // RestockRequired catalogue items are always on the sheet (no manual add),
+  // then any other item the resident already has, then this session's adds.
+  const sheet: SheetLine[] = useMemo(() => {
+    const byKey = new Map(lines.map((l) => [l.key, l]));
+    const required: SheetLine[] = catalogue
+      .filter((c) => c.restockRequired && !isOtherItem(c))
+      .map((c) => {
+        const key = lineKey(c.consumableId, null);
+        const ex = byKey.get(key) ?? null;
+        return {
+          key,
+          consumableId: c.consumableId,
+          name: ex?.name ?? c.consumable,
+          unit: ex?.unit ?? c.unit,
+          otherConsumable: null,
+          otherUnit: null,
+          isNew: false,
+          existing: ex,
+        };
+      });
+    const requiredKeys = new Set(required.map((l) => l.key));
+    const others: SheetLine[] = lines
+      .filter((l) => !requiredKeys.has(l.key))
+      .map((l) => ({
         key: l.key,
         consumableId: l.consumableId,
         name: l.name,
@@ -198,11 +324,9 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
         otherUnit: l.otherUnit,
         isNew: false,
         existing: l,
-      })),
-      ...added,
-    ],
-    [lines, added]
-  );
+      }));
+    return [...required, ...others, ...added];
+  }, [catalogue, lines, added]);
   const onSheet = useMemo(() => new Set(sheet.map((l) => l.key)), [sheet]);
   // Catalogue items the resident has no line for yet. "Other" can repeat
   // (one line per free-text name), so it is always offered.
@@ -215,8 +339,23 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
 
   const { markDirty, markClean } = useDirtyForm(`consumable-count-${selectedResidentId ?? "none"}`);
 
+  function hrefFor(id: number | null, v: InventoryView): string {
+    const params = new URLSearchParams();
+    if (id !== null) params.set("resident", String(id));
+    if (v === "previous") params.set("view", "previous");
+    const qs = params.toString();
+    return `/residents/consumables/inventory${qs ? `?${qs}` : ""}`;
+  }
+
   function goTo(id: number | null) {
-    guardedAction(() => push(id === null ? "/residents/consumables/inventory" : `/residents/consumables/inventory?resident=${id}`));
+    guardedAction(() => push(hrefFor(id, view)));
+  }
+
+  // <button> tabs are invisible to the NavigationGuard click interceptor, so
+  // the switch goes through guardedAction (a dirty count is confirmed first).
+  function switchView(v: InventoryView) {
+    if (v === view) return;
+    guardedAction(() => push(hrefFor(selectedResidentId, v)));
   }
 
   function validate(): string | null {
@@ -358,6 +497,15 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
         </div>
       )}
 
+      <TabRow>
+        <TabButton size="sm" icon={PencilLine} active={view === "new"} onClick={() => switchView("new")}>
+          {t("New Count")}
+        </TabButton>
+        <TabButton size="sm" icon={ClipboardList} active={view === "previous"} onClick={() => switchView("previous")}>
+          {t("Previous Count")}
+        </TabButton>
+      </TabRow>
+
       {loadError ? (
         <div className="flex items-start gap-2 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -368,8 +516,12 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
         </div>
       ) : !selected ? (
         <div className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-fg-subtle">
-          {t("Select a resident to do their weekly consumable count.")}
+          {view === "previous"
+            ? t("Select a resident to see their previous counts.")
+            : t("Select a resident to do their weekly consumable count.")}
         </div>
+      ) : view === "previous" ? (
+        <PreviousCounts lines={lines} />
       ) : (
         <form
           className="rounded-lg border border-line bg-surface shadow-sm"
@@ -382,6 +534,9 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
             <h2 className="text-base font-semibold text-fg">{selected.name}</h2>
             <p className="mt-0.5 text-xs text-fg-subtle">
               {t("Enter what is physically there now. Leave an item blank to skip it.")}
+            </p>
+            <p className="mt-0.5 text-xs text-fg-subtle">
+              {t("Items marked Restock Required are listed automatically.")}
             </p>
           </div>
 
@@ -471,14 +626,16 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
                           className={`${inputCls} text-right`}
                         />
                       </div>
-                      {ex ? (
+                      {l.isNew ? (
+                        <button type="button" onClick={() => removeAdded(l.key)} aria-label={`${t("Remove")}: ${l.name}`} title={t("Remove")} className={`inline-flex h-10 w-10 items-center justify-center rounded-md border border-line text-red-600 hover:bg-hover dark:text-red-400 ${btnFocus}`}>
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : ex ? (
                         <button type="button" onClick={() => setHistoryFor(ex)} aria-label={`${t("View History")}: ${l.name}`} title={t("View History")} className={`inline-flex h-10 w-10 items-center justify-center rounded-md border border-line text-fg-secondary hover:bg-hover ${btnFocus}`}>
                           <History className="h-4 w-4" aria-hidden />
                         </button>
                       ) : (
-                        <button type="button" onClick={() => removeAdded(l.key)} aria-label={`${t("Remove")}: ${l.name}`} title={t("Remove")} className={`inline-flex h-10 w-10 items-center justify-center rounded-md border border-line text-red-600 hover:bg-hover dark:text-red-400 ${btnFocus}`}>
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </button>
+                        <span className="h-10 w-10" aria-hidden />
                       )}
                     </div>
                   </li>
@@ -491,7 +648,7 @@ export function InventoryModule({ residents, selectedResidentId, catalogue, line
           <div className="border-t border-line-subtle bg-surface-strong px-4 py-4">
             <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg-secondary">
               <Plus className="h-4 w-4" aria-hidden />
-              {t("Add item")}
+              {t("Add another item")}
             </h3>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
               <div className="sm:min-w-[200px] sm:flex-1">

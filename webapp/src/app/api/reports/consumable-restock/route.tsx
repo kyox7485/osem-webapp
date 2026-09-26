@@ -32,6 +32,7 @@ type IncomingRow = {
   lastCount?: unknown;
   suggestedQty?: unknown;
   addedManually?: unknown;
+  hasMaxStock?: unknown;
 };
 
 function str(v: unknown): string {
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
     lastCount: str(r.lastCount) || null,
     suggestedQty: Math.max(0, num(r.suggestedQty) ?? 0),
     addedManually: r.addedManually === true,
+    hasMaxStock: r.hasMaxStock !== false,
   }));
 
   const groups = groupRestockRows(rows, (id) => {

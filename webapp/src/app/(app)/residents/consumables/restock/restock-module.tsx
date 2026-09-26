@@ -28,6 +28,7 @@ export type AddOption = {
   supplier: Supplier | null;
   currentStock: number | null;
   lastCount: string | null;
+  hasMaxStock: boolean;
 };
 
 type Message = { text: string; kind: "info" | "error" | "success" };
@@ -82,6 +83,24 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
       }),
     [visible, residentById]
   );
+  // Items with a MaxStock (top-up) and items without one are reviewed — and
+  // printed — in separate blocks.
+  const blocks = useMemo(
+    () =>
+      [
+        { id: "max", title: t("Top up to maximum stock"), rows: visible.filter((r) => r.hasMaxStock) },
+        { id: "nomax", title: t("No maximum stock — restock when less than {n} left", { n: LOW_STOCK_THRESHOLD }), rows: visible.filter((r) => !r.hasMaxStock) },
+      ]
+        .filter((b) => b.rows.length > 0)
+        .map((b) => ({
+          ...b,
+          groups: groupRestockRows(b.rows, (id) => {
+            const r = residentById.get(id);
+            return { name: r?.name ?? "—", textId: r?.residentTextId ?? null };
+          }),
+        })),
+    [visible, residentById, t]
+  );
 
   const serverSig = useMemo(() => signatureOf(serverRows), [serverRows]);
   const currentSig = useMemo(() => signatureOf(rows), [rows]);
@@ -131,6 +150,7 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
         lastCount: o.lastCount,
         suggestedQty: 1,
         addedManually: true,
+        hasMaxStock: o.hasMaxStock,
       },
     ]);
     setNewOption("");
@@ -172,6 +192,7 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
               lastCount: r.lastCount,
               suggestedQty: r.suggestedQty,
               addedManually: r.addedManually,
+              hasMaxStock: r.hasMaxStock,
             })),
           }),
         });
@@ -293,59 +314,69 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
               : t("No OSEM-supplied item needs restocking right now.")}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-line">
-            {groups.map((g) => (
-              <div key={g.residentId}>
-                <div className="flex items-center justify-between gap-3 border-b border-line bg-accent-soft px-3 py-1.5">
-                  <span className="text-sm font-semibold text-accent">
-                    {g.residentTextId ? `${g.residentName} (${g.residentTextId})` : g.residentName}
-                  </span>
-                  <span className="text-xs text-fg-muted">{t("{n} items", { n: g.rows.length })}</span>
-                </div>
-                <ul className="divide-y divide-line-subtle">
-                  {g.rows.map((r) => (
-                    <li key={r.key} className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center">
-                      <div className="min-w-0 sm:flex-1">
-                        <div className="text-sm font-medium text-fg">
-                          {t(r.item)}
-                          {r.addedManually && <span className="ml-2 text-xs font-normal text-fg-faint">{t("Added manually")}</span>}
-                        </div>
-                        <div className="text-xs text-fg-subtle">
-                          {r.currentStock === null
-                            ? t("Not counted yet")
-                            : t("In stock {qty} {unit} · counted {date}", {
-                                qty: fmtQty(r.currentStock),
-                                unit: t(r.unit),
-                                date: r.lastCount ? formatDate(r.lastCount) : "—",
-                              })}
-                        </div>
+          <div className="space-y-4">
+            {blocks.map((block) => (
+              <section key={block.id} aria-label={block.title}>
+                <h3 className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-fg-secondary">
+                  <span>{block.title}</span>
+                  <span className="text-xs font-normal text-fg-muted">{t("{n} items", { n: block.rows.length })}</span>
+                </h3>
+                <div className="overflow-hidden rounded-md border border-line">
+                  {block.groups.map((g) => (
+                    <div key={g.residentId}>
+                      <div className="flex items-center justify-between gap-3 border-b border-line bg-accent-soft px-3 py-1.5">
+                        <span className="text-sm font-semibold text-accent">
+                          {g.residentTextId ? `${g.residentName} (${g.residentTextId})` : g.residentName}
+                        </span>
+                        <span className="text-xs text-fg-muted">{t("{n} items", { n: g.rows.length })}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <label htmlFor={`restock-qty-${r.key}`} className="text-xs text-fg-muted">
-                          {audience === "Family" ? t("Suggested") : t("Qty to take")}
-                        </label>
-                        <input
-                          id={`restock-qty-${r.key}`}
-                          type="number"
-                          inputMode="decimal"
-                          min={0}
-                          step="any"
-                          value={r.suggestedQty}
-                          onChange={(e) => update(r.key, Number(e.target.value))}
-                          className="min-h-10 w-20 rounded-md border border-line-strong bg-input px-2 py-1 text-right text-sm font-medium text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                        />
-                        <span className="w-12 text-xs text-fg-subtle">{t(r.unit)}</span>
-                        <button type="button" onClick={() => resetRow(r)} title={t("Reset to calculated")} aria-label={`${t("Reset to calculated")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-fg-secondary">
-                          <RotateCcw className="h-4 w-4" aria-hidden />
-                        </button>
-                        <button type="button" onClick={() => remove(r.key)} title={t("Remove")} aria-label={`${t("Remove")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-red-600 dark:hover:text-red-400">
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </button>
-                      </div>
-                    </li>
+                      <ul className="divide-y divide-line-subtle">
+                        {g.rows.map((r) => (
+                          <li key={r.key} className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center">
+                            <div className="min-w-0 sm:flex-1">
+                              <div className="text-sm font-medium text-fg">
+                                {t(r.item)}
+                                {r.addedManually && <span className="ml-2 text-xs font-normal text-fg-faint">{t("Added manually")}</span>}
+                              </div>
+                              <div className="text-xs text-fg-subtle">
+                                {r.currentStock === null
+                                  ? t("Not counted yet")
+                                  : t("In stock {qty} {unit} · counted {date}", {
+                                      qty: fmtQty(r.currentStock),
+                                      unit: t(r.unit),
+                                      date: r.lastCount ? formatDate(r.lastCount) : "—",
+                                    })}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label htmlFor={`restock-qty-${r.key}`} className="text-xs text-fg-muted">
+                                {audience === "Family" ? t("Suggested") : t("Qty to take")}
+                              </label>
+                              <input
+                                id={`restock-qty-${r.key}`}
+                                type="number"
+                                inputMode="decimal"
+                                min={0}
+                                step="any"
+                                value={r.suggestedQty}
+                                onChange={(e) => update(r.key, Number(e.target.value))}
+                                className="min-h-10 w-20 rounded-md border border-line-strong bg-input px-2 py-1 text-right text-sm font-medium text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                              />
+                              <span className="w-12 text-xs text-fg-subtle">{t(r.unit)}</span>
+                              <button type="button" onClick={() => resetRow(r)} title={t("Reset to calculated")} aria-label={`${t("Reset to calculated")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-fg-secondary">
+                                <RotateCcw className="h-4 w-4" aria-hidden />
+                              </button>
+                              <button type="button" onClick={() => remove(r.key)} title={t("Remove")} aria-label={`${t("Remove")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-red-600 dark:hover:text-red-400">
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
-              </div>
+                </div>
+              </section>
             ))}
           </div>
         )}
@@ -431,7 +462,7 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
         )}
 
         <p className="text-xs text-fg-faint">
-          {t("Items with a maximum stock are topped up to it; other items are listed when {n} or fewer are left. Editing here does not change any count.", { n: LOW_STOCK_THRESHOLD })}
+          {t("Items with a maximum stock are topped up to it; items without one are listed only when less than {n} is left. Editing here does not change any count.", { n: LOW_STOCK_THRESHOLD })}
         </p>
       </div>
     </div>

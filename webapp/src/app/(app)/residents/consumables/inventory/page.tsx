@@ -8,14 +8,17 @@ import { loadCatalogue, loadResidentLines, loadStaffOptions, type StaffPick } fr
 import type { CatalogueItem, ConsumableLine } from "@/lib/consumables";
 import { ResidentsModuleTabs } from "../../module-tabs";
 import { ConsumablesSubTabs } from "../consumables-tabs";
-import { InventoryModule, type InventoryResident } from "./inventory-module";
+import { InventoryModule, type InventoryResident, type InventoryView } from "./inventory-module";
 
-// Weekly count, resident by resident. Each item line shows its latest count;
-// saving appends a new count row per item (Sheet first, then Supabase).
+// Weekly count, resident by resident, in two sub-tabs (?view=):
+//   new (default) — the count sheet: every RestockRequired catalogue item is
+//     listed automatically, plus any other item the resident already has;
+//     saving appends a count row per item (Sheet first, then Supabase).
+//   previous — past counts grouped by count session: items, qty, who.
 export default async function ConsumablesInventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ resident?: string }>;
+  searchParams: Promise<{ resident?: string; view?: string }>;
 }) {
   const { t } = await getServerTranslator();
   const account = await getCurrentUser();
@@ -47,7 +50,8 @@ export default async function ConsumablesInventoryPage({
     (residentsRaw ?? []) as { id: number; resident_name: string; ResidentID: string; branch_id: number }[]
   ).map((r) => ({ id: r.id, name: r.resident_name, residentTextId: r.ResidentID, branchId: r.branch_id }));
 
-  const { resident: residentParam } = await searchParams;
+  const { resident: residentParam, view: viewParam } = await searchParams;
+  const view: InventoryView = viewParam === "previous" ? "previous" : "new";
   const selected = residents.find((r) => String(r.id) === residentParam) ?? null;
 
   let catalogue: CatalogueItem[] = [];
@@ -77,7 +81,8 @@ export default async function ConsumablesInventoryPage({
       </div>
 
       <InventoryModule
-        key={selected?.id ?? "none"}
+        key={`${selected?.id ?? "none"}-${view}`}
+        view={view}
         residents={residents}
         selectedResidentId={selected?.id ?? null}
         catalogue={catalogue}

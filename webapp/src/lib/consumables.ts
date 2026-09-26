@@ -14,7 +14,7 @@ export const OTHER_UNITS = ["Unit", "Piece", "Pack", "Box", "Bottle", "Tin", "Tu
 
 /**
  * Items with no MaxStock (RestockRequired = No: lotion, milk powder, Other)
- * need restocking when the count is at or below this, and 1 unit is
+ * need restocking only when the count is strictly below this, and 1 unit is
  * suggested. Staff can edit the quantity on the Restock review.
  */
 export const LOW_STOCK_THRESHOLD = 1;
@@ -72,42 +72,27 @@ export type ConsumableLine = {
   history: CountRecord[];
 };
 
-export type RestockSuggestion = { needed: boolean; qty: number; rule: "max" | "threshold" | "uncountable-threshold" };
+export type RestockSuggestion = { needed: boolean; qty: number; rule: "max" | "threshold" };
 
-/**
- * RestockRequired items with a MaxStock top up to MaxStock (whole units,
- * rounded up) — same rule as the legacy Apps Script (consumable.gs). Other
- * items use LOW_STOCK_THRESHOLD and suggest 1.
- */
-export function suggestRestock(line: Pick<ConsumableLine, "maxStock" | "restockRequired" | "currentStock">): RestockSuggestion {
-  if (line.restockRequired && line.maxStock !== null && line.maxStock > 0) {
-    const qty = Math.max(0, Math.ceil(line.maxStock - line.currentStock));
-    return { needed: qty > 0, qty, rule: "max" };
-  }
-  const needed = line.currentStock <= LOW_STOCK_THRESHOLD;
-  return { needed, qty: needed ? 1 : 0, rule: "threshold" };
-}
-
-/** Uncountable (no MaxStock): restock only when strictly < 1.0. */
-export function uncountableRestock(line: Pick<ConsumableLine, "currentStock">): RestockSuggestion {
-  const needed = line.currentStock < LOW_STOCK_THRESHOLD;
-  return { needed, qty: needed ? 1 : 0, rule: "uncountable-threshold" };
-}
-
-export function isCountableItem(item: Pick<CatalogueItem, "maxStock">): boolean {
+/** Has a MaxStock to top up to. Items without one print in their own block. */
+export function hasMaxStock(item: Pick<CatalogueItem, "maxStock">): boolean {
   return item.maxStock !== null && item.maxStock > 0;
 }
 
-export type HistoryRecord = {
-  id: number;
-  recordId: string;
-  name: string;
-  unit: string;
-  qty: number;
-  supplier: Supplier | null;
-  countedBy: string | null;
-  lastCount: string;
-};
+/**
+ * RestockRequired items with a MaxStock top up to MaxStock (whole units,
+ * rounded up) — same rule as the legacy Apps Script (consumable.gs). Items
+ * without a MaxStock are needed only when the count is < LOW_STOCK_THRESHOLD
+ * (so exactly 1 left is not yet a restock), and suggest 1.
+ */
+export function suggestRestock(line: Pick<ConsumableLine, "maxStock" | "restockRequired" | "currentStock">): RestockSuggestion {
+  if (line.restockRequired && hasMaxStock(line)) {
+    const qty = Math.max(0, Math.ceil(line.maxStock! - line.currentStock));
+    return { needed: qty > 0, qty, rule: "max" };
+  }
+  const needed = line.currentStock < LOW_STOCK_THRESHOLD;
+  return { needed, qty: needed ? 1 : 0, rule: "threshold" };
+}
 
 /** Whole days between a count and now (KL calendar not needed at this grain). */
 export function daysSince(iso: string, now: Date): number {
@@ -131,6 +116,8 @@ export type RestockRow = {
   lastCount: string | null;
   suggestedQty: number;
   addedManually: boolean;
+  /** Item has a MaxStock (top-up block); false = the "no maximum" block. */
+  hasMaxStock: boolean;
 };
 
 export type RestockGroup = {

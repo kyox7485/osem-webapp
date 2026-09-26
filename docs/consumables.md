@@ -1,7 +1,7 @@
 # Consumables — reference
 
 Built 2026-09-26. Residents → **Consumables** (after Medication), with two
-sub-tabs: **Inventory** (weekly count + history) and **Restock** (family
+sub-tabs: **Inventory** (New Count / Previous Count) and **Restock** (family
 reminder PDF / internal pick-up list PDF). Modelled on Medication Stock
 (`docs/medication-stock.md`), but simpler: counts only — no receiving, no
 forecast.
@@ -64,8 +64,12 @@ medication stock). SQL: `migration/scripts/create_consumables_tables.sql`.
 
 - **Restock** (`suggestRestock`): `RestockRequired = Yes` with `MaxStock` →
   suggest `ceil(MaxStock − current)`, needed when > 0 (legacy
-  `consumable.gs` rule). Everything else → needed when count
-  `≤ LOW_STOCK_THRESHOLD` (1), suggest 1.
+  `consumable.gs` rule). Everything else (no MaxStock: lotion, milk powder,
+  Other) → needed only when count is **strictly** `< LOW_STOCK_THRESHOLD`
+  (1), suggest 1 — exactly 1 left is not a restock yet.
+- `RestockRow.hasMaxStock` splits the Restock review and both PDFs into two
+  blocks: "Top up to maximum stock" and "No maximum stock". The PDF route
+  takes `hasMaxStock` from the client rows (missing → treated as top-up).
 - **Count due**: a line whose last count is ≥ `COUNT_DUE_DAYS` (7) old.
 - Counts accept decimals (1.5 tins of milk powder).
 - Lines with a blank supplier never appear on either PDF until recounted
@@ -73,12 +77,20 @@ medication stock). SQL: `migration/scripts/create_consumables_tables.sql`.
 
 ## 4. Screens
 
-- **Inventory** (`residents/consumables/inventory`, `?resident=`): resident
-  picker with Prev/Next (guarded), Count Date/Time (back-dating allowed, not
-  future) + Counted By, one row per line with Family/OSEM toggle and a
-  "New count" input (blank = skip), History modal, "Add item" (catalogue items
-  the resident has no line for, or Other + name + unit). One save = one Sheet
-  call with one row per counted item. Wired into the dirty-form guard.
+- **Inventory** (`residents/consumables/inventory`, `?resident=&view=`):
+  resident picker with Prev/Next (guarded, keeps the view), then two
+  sub-tabs driven by `?view=` (switch goes through `guardedAction`):
+  - **New Count** (default): Count Date/Time (back-dating allowed, not
+    future) + Counted By. Every `RestockRequired = Yes` catalogue item is
+    listed automatically (counted before or not), then any other line the
+    resident already has, each with Family/OSEM toggle and a "New count"
+    input (blank = skip) and History modal. "Add another item" only offers
+    the non-RestockRequired items / Other + name + unit. One save = one Sheet
+    call with one row per counted item. Wired into the dirty-form guard.
+  - **Previous Count** (`view=previous`): past counts grouped by session
+    (same LastCount + CountedBy) — date, who, items, qty, supplier; newest
+    first, 10 sessions at a time. Built from `loadResidentLines` history (no
+    extra query). HQ-admin Edit/Delete per row.
 - **Restock** (`residents/consumables/restock`, `?branch=`): choose **Family
   Reminder** (one resident required) or **OSEM Pick-up List** (all residents
   or one). Session-only review: edit qty, reset, remove, add another item for

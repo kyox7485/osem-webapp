@@ -8,13 +8,10 @@ import {
   isOtherItem,
   isSupplier,
   lineKey,
-  isCountableItem,
   type CatalogueItem,
   type ConsumableLine,
   type CountRecord,
   type StaffPick,
-  type HistoryRecord,
-  type Supplier,
 } from "@/lib/consumables";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -192,54 +189,6 @@ export async function resolveBranchStaff(
     .maybeSingle();
   if (!data || !allowed.includes(data.branch_id)) return null;
   return { staffId: data.StaffID, name: data.staff_name };
-}
-
-/** All historical count rows for a single resident (Previous Count tab). */
-export async function loadResidentHistory(
-  supabase: Supabase,
-  residentId: number,
-  catalogue: CatalogueItem[]
-): Promise<{ history: HistoryRecord[] } | { error: string }> {
-  const byId = new Map(catalogue.map((c) => [c.consumableId, c]));
-  const records: HistoryRecord[] = [];
-  const PAGE = 1000;
-  for (let from = 0; ; from += PAGE) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("tbl_resident_consumables")
-      .select("id, external_ref_id, resident_id, consumable_id, other_consumable, other_unit, supplier, current_stock, last_count, counted_by")
-      .eq("resident_id", residentId)
-      .order("last_count", { ascending: false })
-      .order("id", { ascending: false })
-      .range(from, from + PAGE - 1);
-    if (error) return { error: error.message };
-    const staffIds = [...new Set(((data ?? []) as Array<{ counted_by?: string }>).map((r) => r.counted_by).filter(Boolean))] as string[];
-    const staffNames: Record<string, string> = {};
-    if (staffIds.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: staffData } = await (supabase as any).from("tbl_staff").select("staff_name, StaffID").in("StaffID", staffIds);
-      for (const s of (staffData ?? []) as { staff_name: string; StaffID: string }[]) staffNames[s.StaffID] = s.staff_name;
-    }
-    for (const r of ((data ?? []) as Array<{ id: number; external_ref_id: string; resident_id: number; consumable_id: string; other_consumable?: string; other_unit?: string; supplier?: string | null; current_stock: number; last_count: string; counted_by?: string | null }>) ?? []) {
-      const item = byId.get(r.consumable_id);
-      if (!item) continue;
-      const other = isOtherItem(item);
-      const name = other ? (r.other_consumable ?? "").trim() || item.consumable : item.consumable;
-      records.push({
-        id: r.id,
-        recordId: r.external_ref_id,
-        name,
-        unit: other ? (r.other_unit ?? "").trim() || item.unit : item.unit,
-        qty: Number(r.current_stock),
-        supplier: isSupplier(r.supplier) ? r.supplier : null,
-        countedBy: r.counted_by ? staffNames[r.counted_by] ?? r.counted_by : null,
-        lastCount: r.last_count,
-      });
-    }
-    if (!data || data.length < PAGE) break;
-  }
-  records.sort((a, b) => new Date(b.lastCount).getTime() - new Date(a.lastCount).getTime());
-  return { history: records };
 }
 
 /** n unique 8-hex RecordIDs (same shape as the existing AppSheet rows). */
