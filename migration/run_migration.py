@@ -142,7 +142,8 @@ def main() -> int:
                 # migrated earlier and are authoritative from here on.
                 print("--- clinical: resolving master lists ---")
                 ctx.residents = ResidentIndex(pg_conn, branch_id, report)
-                ctx.staff = StaffIndex(pg_conn, report)
+                ctx.staff = StaffIndex(pg_conn, report, branch_code=cfg.branch_code,
+                                       branch_id=branch_id, dry_run=dry_run)
                 ctx_staff = ctx.staff
 
                 for table in clinical_tables:

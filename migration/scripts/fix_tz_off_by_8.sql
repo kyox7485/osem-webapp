@@ -39,6 +39,24 @@
 
 begin;
 
+-- Guard (added after the fix was applied): abort unless the data is still in
+-- the UNCORRECTED state. Sentinel is Access tbl_HospReferral RID 85, recorded
+-- in Access as 2026-09-14 10:42:11 Malaysia time. Uncorrected it was stored as
+-- 10:42:11+00; corrected it is 02:42:11+00. Running this file against the
+-- corrected data therefore raises here and changes nothing.
+do $$
+declare v timestamptz;
+begin
+  select h.referral_datetime into v
+    from tbl_hospital_referrals h
+    join etl.id_map m on m.target_id = h.id
+   where m.source_table = 'tbl_HospReferral' and m.branch_code = 'AMN'
+     and m.source_id = '85';
+  if v is distinct from timestamptz '2026-09-14 10:42:11+00' then
+    raise exception 'fix_tz_off_by_8: already applied (sentinel RID 85 = %). Nothing changed.', v;
+  end if;
+end $$;
+
 -- tbl_PhyIPProgressNote -> physio_assessments.entry_timestamp (10,630 rows)
 update physio_assessments t
    set entry_timestamp = t.entry_timestamp - interval '8 hours'

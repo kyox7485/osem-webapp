@@ -2,31 +2,30 @@
 + _elimination_episodes, and the vital-sign columns -> tbl_vital.
 
 85,686 rows, the largest clinical table. The source is one wide row per chart
-entry per day; the target splits it across four tables:
+entry; the target splits it across five tables:
 
-  tbl_nursing_chart_entries           one row per chart entry (the narrative
-                                      and scalar fields)
-  tbl_nursing_chart_meals             repeating group, 0..6 rows (MealPortion)
-  tbl_nursing_chart_hygiene_episodes  0..1 row (AssistedHygieneCare)
+  tbl_nursing_chart_entries              one row per chart entry
+  tbl_nursing_chart_meals                0..n rows: oral meals (MealPortion) and
+                                         tube feeds (TubeFeeding), in the same
+                                         shape the app's own form writes
+  tbl_nursing_chart_hygiene_episodes     0..2 rows, one per assistance level
   tbl_nursing_chart_elimination_episodes 0..1 row (BO + PU)
-  tbl_vital                           only when the row carries vitals
+  tbl_vital                              only when the row carries a vital sign
 
-Decisions taken with the owner on 2026-09-26, recorded in
-docs/access-clinical-migration.md:
+Decisions taken with the owner on 2026-09-26 (see
+docs/access-clinical-migration.md, "tbl_NursingChart"):
 
-  * MealPortion mixes two forms. 'Breakfast (Full)' carries meal AND portion;
-    a bare 'Full' or a bare 'Breakfast' carries only one. A bare token is
-    interpreted by which lookup list it belongs to, so 'Breakfast; Full'
-    becomes two meal rows -- one with the meal id, one with the portion id --
-    and neither half is discarded or invented.
-  * Unmatched multi-select tokens: obvious variants are mapped to the real id
-    (Self PU -> PU @ Toilet, Assisted Shower -> Shower) and anything genuinely
-    new goes to the column's *_other free-text field with the id left NULL.
-    Every variant and every *_other term is listed in the dry-run report.
-  * PU is multi-valued in Access ('Fully Soaked; Half Soaked') but
-    pass_urine_id is single, so the FIRST token wins and any further ones are
-    reported rather than silently dropped. BO is an array, so every BO token
-    is kept.
+  * Preserve as much as possible, but never change the target tables to do it:
+    a value that has no column or no allowed value is dropped AND reported.
+  * Hygiene with no stated assistance level -> 'Unspecified'. This needs
+    scripts/nursing_chart_unspecified_assistance.sql applied before the first
+    --commit; the dry run reports it as a blocker until then.
+  * A bare 'PU' / 'BO' hygiene token names no location, so it is dropped, not
+    mapped to 'PU @ Urinal' / 'BO @ Commode'.
+  * Rows entered after the app went live are handled one by one
+    (SWITCHOVER below) -- staff typed most of them into both systems.
+  * Staff attribution follows clinical_match (branch aliases, first-named
+    person for two-name entries, owner-approved part-time staff only).
 
 Idempotent via etl.id_map keyed on (source_table, source_id, branch_code).
 Child rows are deleted and rewritten per chart entry, which is the only way to
@@ -34,16 +33,16 @@ keep a repeating group consistent with an UPDATE that changes its contents.
 """
 from __future__ import annotations
 
+import datetime as dt
 import re
 from collections import defaultdict
 
 from psycopg2.extras import execute_values
 
 from access_reader import fetch_all
-from clinical_match import clean_ic
 from context import MigrationContext
 from etl_id_map import IdMap
-from multiselect import clean_scalar, extract_assistance_level, split_multiselect
+from multiselect import clean_scalar, split_multiselect
 
 ENTRIES = "tbl_nursing_chart_entries"
 MEALS = "tbl_nursing_chart_meals"
@@ -52,80 +51,193 @@ ELIMINATION = "tbl_nursing_chart_elimination_episodes"
 VITAL = "tbl_vital"
 
 SOURCE = "tbl_NursingChart"
-VITAL_SOURCE = "tbl_NursingChartVital"
 BATCH = 500
 
-# MealPortion token forms. 'Breakfast (Full)' is meal+portion; 'Breakfast' is
-# meal only; 'Full' is portion only. 'Tube Feeding' is a meal name here even
-# though tbl_meal_types does not have it -- it is reported, not invented.
-_MEAL_PAREN_RE = re.compile(r"^(?P<meal>.*?)\s*\(\s*(?P<portion>[^()]*)\s*\)\s*$")
+MEAL_COLS = ("chart_entry_id", "branch_id", "meal_type_id", "meal_portion_id",
+             "meal_type_other", "meal_portion_other", "feeding_time_id",
+             "feeding_volume", "aspirate_amount")
+HYGIENE_COLS = ("chart_entry_id", "branch_id", "assistance_level", "activity_ids")
+ELIM_COLS = ("chart_entry_id", "branch_id", "bowel_output_ids", "pass_urine_id")
 
-# Multi-select variants -> the real lookup label. Asserted rather than fuzzy:
-# every entry is a clear spelling/spacing variant of a term that exists, and
-# the dry-run report lists any Access token that is NOT covered here.
-VARIANTS: dict[str, dict[str, str]] = {
-    "hygiene": {
-        "self pu": "PU @ Toilet",
-        "self bo": "BO @ Toilet",
-        "assisted shower": "Shower",
-        "self shower": "Shower",
-        "assisted sponging": "Sponging",
-        "assisted grooming": "Grooming",
-        "assisted oral care": "Oral Care",
-        "assisted skin care": "Skin Care",
-        "assisted eye care": "Eye Care",
-        "pu": "PU @ Urinal",
-        "bo": "BO @ Commode",
-        "with assistance": None,  # the assistance level itself, not an activity
-    },
-    "activity": {
-        "sit on wheelchair": None,  # genuinely new, goes to activity_other
-        "sit on wheel chair": None,
-        "awake - sit on wheel chair": None,
-        "sit on chair": None,
-    },
+UNSPECIFIED = "Unspecified"
+
+# --- Switchover -------------------------------------------------------------
+# The app went live for nursing charts at AMN on 2026-09-25 11:48 (its first
+# entry). Access kept being used until 2026-09-26 06:03, and staff typed most of
+# those rounds into BOTH systems -- the app copy re-timed to a round number and
+# typed hours later, so the two cannot be matched on timestamp. All 55 were
+# paired by resident + staff + readings and decided with the owner one by one:
+#
+#   SKIP        the app already holds it (exact copy, or a fuller app version)
+#   VITAL_ONLY  the app copy holds the hygiene but not the temperature: import
+#               only the Access vital, as its own tbl_vital row at the Access time
+#   ENTRY_ONLY  keep both versions of the chart entry; the vitals are already in
+#               the app, so they are not written twice
+#   FULL        exists only in Access (or kept alongside a conflicting app copy)
+#
+# A post-go-live row NOT listed here is skipped and reported: it was never
+# reviewed. A branch without an entry here cannot be migrated until its own
+# go-live time and decisions are recorded.
+SKIP, VITAL_ONLY, ENTRY_ONLY, FULL = "skip", "vital_only", "entry_only", "full"
+SWITCHOVER: dict[str, tuple[dt.datetime, dict[int, str]]] = {
+    "AMN": (
+        dt.datetime(2026, 9, 25, 11, 48),
+        {
+            # exact copies of Dewi's 05:03 and Nabilah's 06:00 morning rounds
+            **{i: SKIP for i in (87118, 87119, 87120, 87121, 87122, 87123, 87124,
+                                  87125, 87126, 87127, 87128, 87129, 87130, 87133,
+                                  87136)},
+            # app version is a superset of the Access one
+            **{i: SKIP for i in (87131, 87132, 87134, 87135)},
+            # copies with no temperature to rescue
+            **{i: SKIP for i in (87105, 87110)},
+            # Dewi 21:03 evening round + Nabilah 23:48 night round: temperature only
+            **{i: VITAL_ONLY for i in (87082, 87083, 87084, 87085, 87086, 87087,
+                                        87088, 87089, 87090, 87092, 87093, 87106,
+                                        87108, 87109, 87111, 87112, 87114)},
+            # hygiene conflicts with the app copy -- both kept, vitals already in app
+            **{i: ENTRY_ONLY for i in (87137, 87138)},
+            # Access only: Dewi's 23:44 round, plus rows kept beside a conflicting copy
+            **{i: FULL for i in (87094, 87095, 87096, 87097, 87098, 87099, 87100,
+                                  87101, 87102, 87103, 87104, 87107, 87091, 87113,
+                                  87116)},
+        },
+    ),
 }
 
-# A token that names its OWN assistance level. 22,565 hygiene rows have no
-# 'By Self | '/'With Assistance | ' prefix, but the activity is unambiguous:
-# 'Self PU' is by definition self-toileting, 'Assisted Shower' is assisted.
-# This only recovers a level the row already states; it never upgrades a
-# stated level, and a token carrying neither (a bare 'Shower') still leaves
-# assistance_level NULL and the row is reported rather than guessed at.
+# --- Parsing tables ----------------------------------------------------------
+_MEAL_PAREN_RE = re.compile(r"^(?P<meal>.*?)\s*\(\s*(?P<portion>[^()]*)\s*\)\s*$")
+
+# Hygiene variants -> the real lookup label. Asserted rather than fuzzy. A bare
+# 'PU'/'BO' is deliberately absent: it names no location, and picking one
+# ('PU @ Urinal') would record a detail Access never held.
+HYGIENE_VARIANTS: dict[str, str | None] = {
+    "self pu": "PU @ Toilet",
+    "self bo": "BO @ Toilet",
+    "assisted shower": "Shower",
+    "self shower": "Shower",
+    "assisted sponging": "Sponging",
+    "assisted grooming": "Grooming",
+    "assisted oral care": "Oral Care",
+    "assisted skin care": "Skin Care",
+    "assisted eye care": "Eye Care",
+    "with assistance": None,  # the assistance level itself, not an activity
+    "by self": None,
+}
+BARE_HYGIENE_TOKENS = {"pu", "bo"}
+
+ACTIVITY_VARIANTS: dict[str, str | None] = {
+    # genuinely new -> activity_other (listed so the report shows them as known)
+}
+
+# A token that names its OWN assistance level. Used only when the row states no
+# level ('By Self | ' / 'With Assistance | ' prefix); a stated level wins.
 TOKEN_ASSISTANCE: dict[str, str] = {
     "self pu": "By Self",
     "self bo": "By Self",
     "self shower": "By Self",
+    "assisted shower": "With Assistance",
+    "assisted sponging": "With Assistance",
+    "assisted grooming": "With Assistance",
+    "assisted oral care": "With Assistance",
+    "assisted skin care": "With Assistance",
+    "assisted eye care": "With Assistance",
 }
 
-# MealPortion tokens where the meal name has extra free text, e.g.
-# 'Dinner own food', 'Evening Tea kopi'. The meal is recoverable and the rest
-# is a genuine 'Others' note, so the row keeps both. Tokens with no recognisable
-# meal head are reported and skipped -- a meal name is never invented.
+# 'Dinner own food', 'Evening Tea kopi': the meal head is recoverable, and the
+# food note goes to portion 'Others:' + meal_portion_other when the row gives no
+# portion (see _parse_meal_portion). With a portion already given it has no
+# column left and is dropped and reported.
 _MEAL_PREFIXES: tuple[str, ...] = (
     "Breakfast", "Morning Tea", "Lunch", "Evening Tea", "Supper", "Dinner",
-    "Tube Feeding",
 )
 
-# Access Spo2Con -> tbl_vital.spo2_condition. The target is free text, so the
-# O2 phrases are kept verbatim and only the obvious junk (bare numbers that
-# belong in spo2, not here) is dropped.
-SPO2_CON_DROP = {"128", "123", "84", "108", "109", "119"}
+# '12:00 PM (asp:0mL)' / '9:00 AM' -- a tube feed time, optionally with the
+# aspirate volume. Everything else in the TubeFeeding field is the feed regime
+# ('2scoop milk 200ml+50ml'), which is what the app stores in feeding_volume.
+_FEED_TIME_RE = re.compile(
+    r"(?P<h>\d{1,2}):(?P<m>\d{2})\s*(?P<ap>[AaPp][Mm])"
+    r"(?:\s*\(\s*asp\s*:?\s*(?P<asp>\d+(?:\.\d+)?)\s*m[lL]?\s*\))?"
+)
+
+AVPU_LETTERS = {"a": "Alert", "v": "Verbal", "p": "Pain", "u": "Unresponsive"}
+
+# Plausible ranges. A value outside is a mis-keyed number (36.5 in the
+# respiration field), and a wrong vital is worse than a missing one.
+PLAUSIBLE = {
+    "Temperature": (30.0, 45.0),
+    "RespirationRate": (4.0, 80.0),
+}
 
 
-def _num(raw) -> float | None:
+# --- Notes: collapsed per distinct message, every one rendered ---------------
+_NOTES: dict[tuple[str, str], list] = {}
+
+
+def _note(kind: str, text: str, source_id=None) -> None:
+    entry = _NOTES.setdefault((kind, text), [0, []])
+    entry[0] += 1
+    if source_id is not None and len(entry[1]) < 5:
+        entry[1].append(source_id)
+
+
+def _num(raw, col: str, source_id) -> float | None:
     """Access stores every number as text. Junk becomes NULL, never 0.
 
     A fabricated 0 is a clinical statement -- a temperature of 0 or a heart
-    rate of 0 reads as a real, catastrophic measurement.
+    rate of 0 reads as a real, catastrophic measurement. A doubled or stray
+    decimal point ('36..4', '36.3.') is repaired only when exactly one number
+    remains and it is plausible for the column.
     """
-    text = (clean_scalar(raw) or "").strip().rstrip("%")
+    text = (clean_scalar(raw) or "").strip().rstrip("%").strip()
     if not text:
         return None
     try:
-        return float(text)
+        value = float(text)
     except ValueError:
+        repaired = re.sub(r"\.{2,}", ".", text).strip(".")
+        try:
+            value = float(repaired) if repaired.count(".") <= 1 else None
+        except ValueError:
+            value = None
+        if value is None:
+            _note("number-junk", f"{col} {text!r} is not a number -> NULL", source_id)
+            return None
+        _note("number-repaired", f"{col} {text!r} read as {value}", source_id)
+    if col == "Temperature" and re.fullmatch(r"3[4-9]\d|4[0-2]\d", text):
+        # '365' / '370': the decimal point was not typed. Owner decision
+        # 2026-09-26: read as 36.5 / 37.0. Only a bare 3-digit 340-429 qualifies,
+        # so '98' (likely Fahrenheit) and '3.0' stay NULL.
+        value = int(text) / 10
+        _note("number-repaired", f"{col} {text!r} read as {value} (missing decimal point)", source_id)
+    lo_hi = PLAUSIBLE.get(col)
+    if lo_hi and not (lo_hi[0] <= value <= lo_hi[1]):
+        _note("number-implausible", f"{col} {text!r} outside {lo_hi} -> NULL", source_id)
         return None
+    return value
+
+
+def _fit_allowed(value: str | None, allowed: set[str] | None, col: str, source_id) -> str | None:
+    """Store a value in a CHECK-constrained text column.
+
+    An allowed value is kept as is. Otherwise, if the text is, or starts with,
+    an allowed category ('pre meal', 'Pre-Meal ( PRE DINNER )', 'Fasting 5am'),
+    the stated category is kept and the rest of the note dropped -- the longest
+    matching category wins, so 'Post-Meal 2hr ...' stays 'Post-Meal 2hr'. Free
+    text naming no category ('5am', 'balik dialisis') has no column: dropped.
+    """
+    if value is None or allowed is None or value in allowed:
+        return value
+    norm = re.sub(r"\s+", " ", value.strip().lower()).replace("pre meal", "pre-meal")
+    for category in sorted(allowed, key=len, reverse=True):
+        c = category.lower()
+        if norm == c or norm.startswith(c + " ") or norm.startswith(c + "("):
+            if norm != c:
+                _note(f"{col.lower()}-category-kept",
+                      f"{col} {value!r} -> {category!r}; the rest of the note has no column", source_id)
+            return category
+    _note(f"{col.lower()}-not-allowed", f"{col} {value!r} names no allowed category; dropped", source_id)
+    return None
 
 
 def _lookup(cur, table: str, name_col: str) -> dict[str, int]:
@@ -133,134 +245,276 @@ def _lookup(cur, table: str, name_col: str) -> dict[str, int]:
     return {str(label): pid for pid, label in cur.fetchall() if label is not None}
 
 
-def _resolve(tokens, valid: dict, variants: dict, report, list_name, other_label):
-    """Map multi-select tokens to ids, returning (ids, unmatched_terms).
+def _allowed_values(cur, table: str, column: str) -> set[str] | None:
+    """The literal values a CHECK (column = ANY (ARRAY[...])) admits, or None if
+    the column has no such constraint. Read live so the dry run validates
+    against production, not against an assumption."""
+    cur.execute(
+        "select pg_get_constraintdef(oid) from pg_constraint "
+        "where conrelid = %s::regclass and contype = 'c'", (f"public.{table}",))
+    for (definition,) in cur.fetchall():
+        if re.search(rf"\(\s*{column}\s*=\s*ANY", definition):
+            return {v.replace("''", "'") for v in re.findall(r"'((?:[^']|'')*)'::text", definition)}
+    return None
 
-    A token is used only if it is literally in `valid` or is an asserted
-    variant of one. Anything else is returned as free text for the column's
-    *_other field -- never guessed at, and never silently dropped.
-    """
+
+def _resolve(tokens, valid: dict, variants: dict):
+    """Map multi-select tokens to ids -> (ids, unmatched). A token is used only
+    if it is literally in `valid` or an asserted variant of one."""
     lowered = {k.lower(): v for k, v in variants.items()}
     ids: list[int] = []
     unmatched: list[str] = []
     for token in tokens:
         label = token if token in valid else lowered.get(token.lower())
         if label in valid:
-            if label not in ids:
+            if valid[label] not in ids:
                 ids.append(valid[label])
             continue
-        if token in lowered and lowered[token.lower()] is None:
-            # A known non-activity like the assistance prefix -- drop quietly.
+        if token.lower() in lowered and lowered[token.lower()] is None:
             continue
         if token not in unmatched:
             unmatched.append(token)
     return ids, unmatched
 
 
-def _parse_meal_portion(raw, meal_by_name, portion_by_name, other_meal_ids, report, source_id):
-    """'Breakfast (Full); Lunch (Half); Full' -> [(meal_id, portion_id), ...]
+def _parse_hygiene(raw, hygiene_by_name, source_id) -> list[tuple[str, list[int]]]:
+    """-> [(assistance_level, activity_ids)], at most one episode per level
+    (the table is UNIQUE on (chart_entry_id, assistance_level)).
+
+    Since 2025-04-17 Access writes ONE LINE PER SECTION, either of which may be
+    empty or a bare heading:
+
+        'By Self | BO @ Toilet; PU @ Toilet\\r\\nWith Assistance | Sponging'
+        'By Self | PU @ Toilet\\r\\nWith Assistance'     (empty WA section)
+        '\\r\\nWith Assistance | Change Diapers'          (empty By Self section)
+
+    so each line is parsed on its own. (The generic split_multiselect keeps
+    only the text after the LAST '|', which on 695 rows drops the By Self items
+    and files the With Assistance items under the By Self prefix.) Rows before
+    that date are a bare list ('; Assisted Shower') with no section at all.
+    """
+    items: list[tuple[str | None, str]] = []  # (stated level, token)
+    for line in str(raw or "").replace("\r\n", "\n").split("\n"):
+        line = line.strip()
+        if not line or line in ("By Self", "With Assistance"):
+            continue  # blank line, or a section heading with nothing under it
+        level = None
+        if "|" in line:
+            label, line = (s.strip() for s in line.split("|", 1))
+            if label in ("By Self", "With Assistance"):
+                level = label
+            elif label:
+                _note("hygiene-label", f"hygiene section label {label!r} not recognised; level from item",
+                      source_id)
+        for token in (t.strip() for t in line.split(";")):
+            if token and token.lower() not in ("none", "-"):
+                items.append((level, token))
+
+    by_level: dict[str, list[int]] = defaultdict(list)
+    for stated, token in items:
+        low = token.lower()
+        if low in BARE_HYGIENE_TOKENS:
+            _note("hygiene-bare", f"bare {token!r} names no location; dropped", source_id)
+            continue
+        ids, unmatched = _resolve([token], hygiene_by_name, HYGIENE_VARIANTS)
+        if unmatched:
+            _note("hygiene-unmatched", f"hygiene term {token!r} has no lookup row; dropped", source_id)
+            continue
+        if not ids:
+            continue  # an assistance word, not an activity
+        level = stated or TOKEN_ASSISTANCE.get(low) or UNSPECIFIED
+        for i in ids:
+            if i not in by_level[level]:
+                by_level[level].append(i)
+    if UNSPECIFIED in by_level:
+        _note("hygiene-unspecified", "no assistance level stated -> 'Unspecified'")
+    return [(level, ids) for level, ids in by_level.items() if ids]
+
+
+def _parse_bo(raw, bowel_by_name, source_id) -> list[int]:
+    """BO keeps the literal 'None' -- it is a real lookup value ('no bowel
+    output', 25,793 rows), which the generic multi-select splitter would throw
+    away as an empty token."""
+    if raw is None:
+        return []
+    ids: list[int] = []
+    for token in (t.strip() for t in str(raw).replace("\r\n", "\n").split(";")):
+        if not token:
+            continue
+        pid = bowel_by_name.get(token)
+        if pid is None:
+            _note("bo-unmatched", f"BO {token!r} has no lookup row; dropped", source_id)
+        elif pid not in ids:
+            ids.append(pid)
+    return ids
+
+
+def _parse_tube_feeding(raw, feeding_time_by_time, source_id):
+    """TubeFeeding -> [dict(feeding_time_id, feeding_volume, aspirate_amount)].
+
+    One meal row per feed time, as the app writes it. The regime text around the
+    times ('2scoop milk 200ml+50ml') is kept verbatim in feeding_volume. A time
+    that is not one of the app's six slots keeps its text in feeding_volume
+    rather than being dropped.
+    """
+    rows: list[dict] = []
+    fallback_regime: str | None = None
+    for token in split_multiselect(raw):
+        times = list(_FEED_TIME_RE.finditer(token))
+        regime = _FEED_TIME_RE.sub(" ", token)
+        regime = re.sub(r"\s+", " ", regime).strip(" ,.;") or None
+        if not times:
+            if regime:
+                fallback_regime = regime if fallback_regime is None else f"{fallback_regime}; {regime}"
+            continue
+        for m in times:
+            hour = int(m["h"]) % 12 + (12 if m["ap"].lower() == "pm" else 0)
+            slot = feeding_time_by_time.get(dt.time(hour, int(m["m"])))
+            volume = regime
+            if slot is None:
+                _note("feed-time-no-slot", f"feed time {m.group(0)!r} is not an app slot; kept in feeding_volume", source_id)
+                volume = f"{regime + ' ' if regime else ''}@ {m.group(0)}"
+            rows.append(dict(
+                feeding_time_id=slot,
+                feeding_volume=volume,
+                aspirate_amount=float(m["asp"]) if m["asp"] is not None else None,
+            ))
+    if rows and fallback_regime:
+        for r in rows:
+            r["feeding_volume"] = r["feeding_volume"] or fallback_regime
+    elif fallback_regime:
+        rows.append(dict(feeding_time_id=None, feeding_volume=fallback_regime, aspirate_amount=None))
+    return rows
+
+
+def _others_text(token: str) -> str | None:
+    """'Others: outside food' -> 'outside food'; 'Others:' -> None."""
+    return token.split(":", 1)[1].strip() or None if ":" in token else None
+
+
+def _parse_meal_portion(raw, meal_by_name, portion_by_name, others_meal_id,
+                        others_portion_id, source_id, has_tube_rows: bool):
+    """'Breakfast (Full); Lunch (Half); Full'
+        -> [(meal_id, portion_id, meal_type_other, meal_portion_other)]
 
     A 'Meal (Portion)' token sets both. A bare token is interpreted by which
-    lookup list it belongs to, so a bare meal yields (meal, None) and a bare
-    portion yields (None, portion) -- each becomes its own meal row. A token in
-    neither list is reported and skipped rather than guessed at.
+    lookup list it belongs to. 'Tube Feeding' is not a meal type: when the row's
+    TubeFeeding field produced tube rows it is only a marker (returned as the
+    tube portion instead); otherwise it is kept as 'Others:' + meal_type_other.
+
+    'Others: <text>' uses the app's own 'Others:' meal type / portion and its
+    free-text column, which exist for exactly this. A meal with a food note and
+    no portion ('Dinner own food') keeps the note the same way Access itself
+    recorded it elsewhere -- 'Dinner (Others: outside food)' -- as portion
+    'Others:' + meal_portion_other.
     """
-    out: list[tuple[int | None, int | None, str | None]] = []
-    for token in split_multiselect(raw):
+    out: list[tuple[int | None, int | None, str | None, str | None]] = []
+    tube_portion: int | None = None
+    tokens = split_multiselect(raw)
+    tube_marked = any(t.lower() == "tube feeding" for t in tokens)
+    bare_portions = [t for t in tokens if t in portion_by_name]
+    if has_tube_rows and tube_marked and len(bare_portions) == 1 and not any(
+            t in meal_by_name for t in tokens):
+        # 'Tube Feeding; Full' -- the portion belongs to the tube feed.
+        tube_portion = portion_by_name[bare_portions[0]]
+        return out, tube_portion, True
+
+    def meal_of(text: str):
+        """-> (meal_id, meal_type_other, food_note) for a meal text."""
+        if text in meal_by_name:
+            return meal_by_name[text], None, None
+        if text.lower() == "tube feeding" and others_meal_id is not None:
+            return others_meal_id, "Tube Feeding", None
+        if text.lower().startswith("others") and others_meal_id is not None:
+            return others_meal_id, _others_text(text), None
+        head = next((p for p in _MEAL_PREFIXES if text.startswith(p)), None)
+        if head and head in meal_by_name:
+            note = text[len(head):].strip(" -:,") or None
+            return meal_by_name[head], None, note
+        return None, None, None
+
+    def portion_of(text: str, fallback: bool = True):
+        """-> (portion_id, meal_portion_other). With `fallback`, free text that
+        is no known portion ('3/4', 'Full MILK') is kept verbatim as 'Others:'."""
+        if text in portion_by_name:
+            return portion_by_name[text], None
+        if text.lower().startswith("others") and others_portion_id is not None:
+            return others_portion_id, _others_text(text)
+        if fallback and text and others_portion_id is not None:
+            _note("portion-as-other", "free-text portion kept as 'Others:' + meal_portion_other")
+            return others_portion_id, text
+        return None, None
+
+    for token in tokens:
+        if token.lower() == "tube feeding" and has_tube_rows:
+            continue
         m = _MEAL_PAREN_RE.match(token)
         if m:
-            meal = m.group("meal").strip()
-            portion = m.group("portion").strip()
-            meal_id = meal_by_name.get(meal)
-            if meal_id is None:
-                # 'Dinner own food (Full)' -- the portion is clean but the meal
-                # carries a qualifier. Recover the meal head and keep the
-                # portion, rather than dropping a row whose portion was
-                # recorded perfectly well.
-                head = next((p for p in _MEAL_PREFIXES if meal.startswith(p)), None)
-                if head and head in meal_by_name:
-                    meal_id = meal_by_name[head]
-                    _note("meal-qualifier",
-                          f"MealPortion {token!r} -- meal {head!r} kept, "
-                          f"{meal[len(head):].strip()!r} is a note, not a meal")
-            portion_id = portion_by_name.get(portion)
-            if portion_id is None:
-                _note("portion", f"portion {portion!r} not in tbl_meal_portions")
-            other = None
-            if meal_id is None:
-                # 'Tube Feeding' is a real, recorded feeding mode that simply
-                # has no tbl_meal_types row. tbl_meal_types carries an
-                # 'Others:' entry precisely for this, and the target has a
-                # meal_type_other free-text column, so the row is kept rather
-                # than thrown away.
-                if meal in other_meal_ids:
-                    meal_id = other_meal_ids[meal]
-                    other = meal
-                    _note("meal-other", f"meal {meal!r} has no tbl_meal_types row; "
-                                        f"stored as 'Others:' + meal_type_other")
+            meal_text, portion_text = m.group("meal").strip(), m.group("portion").strip()
+            meal_id, meal_other, food_note = meal_of(meal_text)
+            portion_id, portion_other = portion_of(portion_text)
+            if meal_id is None and meal_text and others_meal_id is not None:
+                meal_id, meal_other = others_meal_id, meal_text
+                _note("meal-as-other", "free-text meal kept as 'Others:' + meal_type_other")
+            elif meal_id is None and meal_text:
+                _note("meal-unknown", f"meal {meal_text!r} not in tbl_meal_types; dropped", source_id)
+            if portion_id is None and portion_text:
+                _note("portion", f"portion {portion_text!r} not in tbl_meal_portions; dropped", source_id)
+            if food_note:
+                if portion_id is None and others_portion_id is not None:
+                    portion_id, portion_other = others_portion_id, food_note
                 else:
-                    _note("meal", f"meal {meal!r} not in tbl_meal_types")
-            out.append((meal_id, portion_id, other))
+                    _note("meal-qualifier",
+                          f"meal {meal_text!r}: note {food_note!r} dropped -- the portion "
+                          f"column is already used", source_id)
+            if meal_id is not None or portion_id is not None:
+                out.append((meal_id, portion_id, meal_other, portion_other))
             continue
-        if token in meal_by_name:
-            out.append((meal_by_name[token], None, None))
-        elif token in other_meal_ids:
-            out.append((other_meal_ids[token], None, token))
-            _note("meal-other", f"meal {token!r} has no tbl_meal_types row; "
-                                f"stored as 'Others:' + meal_type_other")
-        elif token in portion_by_name:
-            out.append((None, portion_by_name[token], None))
+        meal_id, meal_other, food_note = meal_of(token)
+        if meal_id is not None:
+            portion_id = portion_other = None
+            if food_note and others_portion_id is not None:
+                portion_id, portion_other = others_portion_id, food_note
+            out.append((meal_id, portion_id, meal_other, portion_other))
+            continue
+        portion_id, portion_other = portion_of(token, fallback=False)
+        if portion_id is not None:
+            out.append((None, portion_id, None, portion_other))
+        elif others_meal_id is not None:
+            # '1 bowl porridge + 100 mls h2o', 'outside food': a free-text meal
+            # description naming no meal slot -- kept verbatim as 'Others:'.
+            out.append((others_meal_id, None, token, None))
+            _note("meal-as-other", "free-text MealPortion kept as 'Others:' + meal_type_other")
         else:
-            # 'Dinner own food' / 'Evening Tea kopi' -- the meal is recoverable
-            # and the rest is a genuine note, so keep both rather than drop it.
-            head = next((p for p in _MEAL_PREFIXES if token.startswith(p)), None)
-            if head and (head in meal_by_name or head in other_meal_ids):
-                mid = meal_by_name.get(head) or other_meal_ids[head]
-                out.append((mid, None, None))
-                _note("meal-qualifier", f"MealPortion {token!r} -- meal {head!r} kept, remainder is a note, not a portion")
-            else:
-                _note("meal-unknown", f"unrecognised MealPortion token {token!r}")
-    return out
+            _note("meal-unknown", f"MealPortion token {token!r} unrecognised; dropped", source_id)
+    return out, tube_portion, tube_marked
 
 
 def run(ctx: MigrationContext) -> None:
+    _NOTES.clear()
+    if ctx.branch_code not in SWITCHOVER:
+        raise RuntimeError(
+            f"No SWITCHOVER entry for branch {ctx.branch_code!r}: record its app go-live "
+            f"time and the per-row decisions for Access rows entered after it first.")
+    go_live, decisions = SWITCHOVER[ctx.branch_code]
+
     rows = fetch_all(ctx.access_conn, SOURCE)
     ctx.report.inc(f"{SOURCE}.source_rows", len(rows))
 
     idmap = None if ctx.dry_run else IdMap(ctx.pg_conn, ctx.branch_code, SOURCE)
     cur = ctx.pg_conn.cursor()
 
-    for col in ("branch_id", "resident_id", "entry_timestamp", "activity_ids",
-                "active_complaint_ids", "tube_feeding", "fluid_input",
-                "intervention", "reviewed_by"):
-        _assert_column(cur, ENTRIES, col)
-    for col in ("branch_id", "resident_id", "entry_timestamp", "systolic_bp",
-                "temperature", "spo2", "gcs_eye_id", "avpu_id"):
-        _assert_column(cur, VITAL, col)
-
     meal_by_name = _lookup(cur, "tbl_meal_types", "name")
-    # tbl_meal_types ships an 'Others:' row and the target has a
-    # meal_type_other free-text column: that pair is where a feeding mode the
-    # lookup doesn't know about belongs, instead of being discarded. The id is
-    # the 'Others:' row; the actual name goes in meal_type_other.
-    others_meal_id = next(
-        (pid for label, pid in meal_by_name.items() if label.lower().startswith("others")),
-        None,
-    )
-    meal_by_name = {k: v for k, v in meal_by_name.items()
-                    if not k.lower().startswith("others")}
-    # Meals Access records that have no tbl_meal_types row at all. Asserted
-    # rather than inferred: 'Tube Feeding' is a real feeding mode (3,572 rows),
-    # not a typo, and tbl_feeding_types has no row the meal group can use.
-    other_meals = {} if others_meal_id is None else {
-        "Tube Feeding": others_meal_id,
-    }
-    other_meal_ids = {k: v for k, v in other_meals.items()}
+    others_meal_id = next((pid for label, pid in meal_by_name.items()
+                           if label.lower().startswith("others")), None)
+    meal_by_name = {k: v for k, v in meal_by_name.items() if not k.lower().startswith("others")}
     portion_by_name = _lookup(cur, "tbl_meal_portions", "name")
-    feeding_time_by_label = {}
+    others_portion_id = next((pid for label, pid in portion_by_name.items()
+                              if label.lower().startswith("others")), None)
+    portion_by_name = {k: v for k, v in portion_by_name.items()
+                       if not k.lower().startswith("others")}
     cur.execute("select id, time_of_day from tbl_feeding_times")
-    for fid, label in cur.fetchall():
-        feeding_time_by_label[str(label).strip().lower()] = fid
+    feeding_time_by_time = {t: fid for fid, t in cur.fetchall()}
     activity_by_name = _lookup(cur, "tbl_activities", "name")
     hygiene_by_name = _lookup(cur, "tbl_hygiene_care_activities", "activity")
     complaint_by_name = _lookup(cur, "tbl_active_complaints", "name_en")
@@ -268,20 +522,22 @@ def run(ctx: MigrationContext) -> None:
     bowel_by_name = _lookup(cur, "tbl_bowel_output_types", "name")
     urine_by_name = _lookup(cur, "tbl_pass_urine_types", "name")
     disturbance_by_name = _lookup(cur, "tbl_disturbance_levels", "description")
-    avpu_by_label = _lookup(cur, "tbl_avpu_options", "label")
-
-    # DisturbanceLevel in Access is 0..4; the lookup descriptions start
-    # 'L0: ', 'L1: ' ...
-    disturbance_by_code = {k.split(":")[0].strip().lower(): v for k, v in disturbance_by_name.items()}
+    avpu_by_label = {k.lower(): v for k, v in _lookup(cur, "tbl_avpu_options", "label").items()}
+    # 'L0: No disturbance' -> '0'. Access stores the bare digit.
+    disturbance_by_code = {k.split(":")[0].strip().lower().lstrip("l"): v
+                           for k, v in disturbance_by_name.items()}
     gcs_eye = _score_lookup(cur, "tbl_gcs_eye_responses")
     gcs_verbal = _score_lookup(cur, "tbl_gcs_verbal_responses")
     gcs_motor = _score_lookup(cur, "tbl_gcs_motor_responses")
+    spo2_allowed = _allowed_values(cur, VITAL, "spo2_condition")
+    dxt_allowed = _allowed_values(cur, VITAL, "dxt_remark")
 
     to_insert, to_update = [], []
-    meal_rows: list[tuple[int, int | None, int | None, int | None]] = []
-    hygiene_rows: list[tuple[int, str, list[int], str | None]] = []
-    elim_rows: list[tuple[int, list[int], int | None]] = []
-    vitals: list[tuple] = []
+    meal_rows: list[tuple] = []      # (source_id, dict)
+    hygiene_rows: list[tuple] = []   # (source_id, dict)
+    elim_rows: list[tuple] = []      # (source_id, dict)
+    vitals: list[tuple] = []         # (source_id, dict)
+    entry_sample = vital_sample = None
 
     for row in rows:
         source_id = row["ID"]
@@ -290,63 +546,104 @@ def run(ctx: MigrationContext) -> None:
             ctx.report.skip_row(SOURCE, source_id, "no Timestamp (entry_timestamp is NOT NULL)")
             continue
 
-        resident_id, reason = ctx.residents.resolve(row.get("ResidentName"), None)
+        action = FULL
+        if timestamp >= go_live:
+            action = decisions.get(source_id)
+            if action is None:
+                ctx.report.skip_row(SOURCE, source_id,
+                                    f"entered after app go-live {go_live} and not reviewed (SWITCHOVER)")
+                continue
+            ctx.report.inc(f"{SOURCE}.switchover.{action}")
+            if action == SKIP:
+                continue
+
+        resident_id, reason = ctx.residents.resolve(row.get("ResidentName"), None, when=timestamp)
         if resident_id is None:
             ctx.report.skip_row(SOURCE, source_id, reason or "resident not resolved")
             continue
 
-        # --- child groups, built before the entry so the batched writes can
-        # reference chart_entry_id.
-        meals = _parse_meal_portion(row.get("MealPortion"), meal_by_name,
-                                    portion_by_name, other_meal_ids, ctx.report, source_id)
-        # TubeFeeding is a feeding TIME ('9:00 AM; 12:00 PM (asp:0mL)'), not an
-        # enum. It maps to feeding_time_id on the meal rows; the enum column
-        # tbl_feeding_types is not used by this target schema.
-        feed_times: list[int] = []
-        for t in split_multiselect(row.get("TubeFeeding")):
-            fid = feeding_time_by_label.get(t.lower())
-            if fid:
-                feed_times.append(fid)
+        raw_reviewer = clean_scalar(row.get("Review by"))
+        reviewed_by = ctx.staff.resolve(raw_reviewer, SOURCE)
+        unmatched_reviewer = (raw_reviewer if reviewed_by is None
+                              and ctx.staff.part_time.contains(raw_reviewer) else None)
 
-        hygiene_raw = row.get("AssistedHygieneCare")
-        assistance = extract_assistance_level(hygiene_raw)
-        hyg_tokens = split_multiselect(hygiene_raw)
-        hyg_ids, hyg_other = _resolve(
-            hyg_tokens, hygiene_by_name, VARIANTS["hygiene"],
-            ctx.report, "hygiene", "hygiene")
+        # --- vitals (own table, keyed by resident + time, not by chart entry)
+        if action in (FULL, VITAL_ONLY):
+            spo2_con = clean_scalar(row.get("Spo2Con"))
+            if spo2_con is not None and spo2_allowed is not None and spo2_con not in spo2_allowed:
+                _note("spo2con-not-allowed", f"Spo2Con {spo2_con!r} not an allowed value; dropped", source_id)
+                spo2_con = None
+            dxt_remark = _fit_allowed(clean_scalar(row.get("DXTRemark")), dxt_allowed,
+                                      "DXTRemark", source_id)
+            avpu_raw = (clean_scalar(row.get("AVPU")) or "").strip()
+            avpu_id = avpu_by_label.get(avpu_raw.lower()) or avpu_by_label.get(
+                AVPU_LETTERS.get(avpu_raw.lower(), "").lower())
+            if avpu_raw and avpu_id is None:
+                _note("avpu-unmatched", f"AVPU {avpu_raw!r} not recognised; dropped", source_id)
+            vital_values = dict(
+                branch_id=ctx.branch_id, resident_id=resident_id, entry_timestamp=timestamp,
+                systolic_bp=_num(row.get("Systolic BP"), "Systolic BP", source_id),
+                diastolic_bp=_num(row.get("Diastolic BP"), "Diastolic BP", source_id),
+                heart_rate=_num(row.get("Heart Rate"), "Heart Rate", source_id),
+                temperature=_num(row.get("Temperature"), "Temperature", source_id),
+                spo2=_num(row.get("Spo2"), "Spo2", source_id),
+                spo2_condition=spo2_con,
+                dxt=_num(row.get("DXT"), "DXT", source_id),
+                dxt_remark=dxt_remark,
+                insulin_adjustment=clean_scalar(row.get("Insulin Adjustment")),
+                respiration_rate=_num(row.get("RespirationRate"), "RespirationRate", source_id),
+                gcs_eye_id=_gcs(gcs_eye, row.get("GCSE"), "GCSE", source_id),
+                gcs_verbal_id=_gcs(gcs_verbal, row.get("GCSV"), "GCSV", source_id),
+                gcs_motor_id=_gcs(gcs_motor, row.get("GCSM"), "GCSM", source_id),
+                avpu_id=avpu_id,
+                reviewed_by=reviewed_by,
+                reviewed_by_other=unmatched_reviewer,
+            )
+            measured = {k: v for k, v in vital_values.items() if k not in (
+                "branch_id", "resident_id", "entry_timestamp", "reviewed_by", "reviewed_by_other")}
+            if any(v is not None for v in measured.values()):
+                vitals.append((source_id, vital_values))
+                vital_sample = vital_values
+                ctx.report.inc(f"{VITAL}.imported")
+            elif action == VITAL_ONLY:
+                _note("vital-only-empty", "VITAL_ONLY row carries no vital sign", source_id)
 
-        act_ids, act_other = _resolve(
-            split_multiselect(row.get("Activity")), activity_by_name, VARIANTS["activity"],
-            ctx.report, "activity", "activity")
-        complaint_ids, complaint_other = _resolve(
-            split_multiselect(row.get("ActiveComplain")), complaint_by_name, {},
-            ctx.report, "complaint", "complaint")
-        psycho_ids, psycho_other = _resolve(
-            split_multiselect(row.get("PsychoSocialBehaviour")), psycho_by_name, {},
-            ctx.report, "psycho_social", "psycho_social")
+        if action == VITAL_ONLY:
+            continue
 
+        # --- chart entry and its repeating groups
+        tube_rows = _parse_tube_feeding(row.get("TubeFeeding"), feeding_time_by_time, source_id)
+        oral, tube_portion, tube_marked = _parse_meal_portion(
+            row.get("MealPortion"), meal_by_name, portion_by_name, others_meal_id,
+            others_portion_id, source_id, bool(tube_rows))
+        if tube_rows or tube_marked:
+            tube_feeding = "Tube Feeding"
+        elif oral:
+            tube_feeding = "Oral Feed"
+        else:
+            tube_feeding = None
+
+        act_ids, act_other = _resolve(split_multiselect(row.get("Activity")),
+                                      activity_by_name, ACTIVITY_VARIANTS)
+        complaint_ids, complaint_other = _resolve(split_multiselect(row.get("ActiveComplain")),
+                                                  complaint_by_name, {})
+        psycho_ids, psycho_other = _resolve(split_multiselect(row.get("PsychoSocialBehaviour")),
+                                            psycho_by_name, {})
         disturb_ids = []
         for t in split_multiselect(row.get("DisturbanceLevel")):
-            did = disturbance_by_code.get(t.strip().lower())
-            if did:
+            did = disturbance_by_code.get(t.strip().lower().lstrip("l"))
+            if did is None:
+                _note("disturbance-unmatched", f"DisturbanceLevel {t!r} not recognised; dropped", source_id)
+            elif did not in disturb_ids:
                 disturb_ids.append(did)
 
-        bo_ids, _ = _resolve(split_multiselect(row.get("BO")), bowel_by_name, {},
-                             ctx.report, "bowel", "bowel")
-        pu_ids, _ = _resolve(split_multiselect(row.get("PU")), urine_by_name, {},
-                             ctx.report, "urine", "urine")
-        # pass_urine_id is single: first token wins, extras reported.
-        if len(pu_ids) > 1:
-            _note("pu-multi", f"row {source_id}: {len(pu_ids)} PU values; keeping the first")
-
-        tube_text = clean_scalar(row.get("TubeFeeding"))
         values = dict(
             branch_id=ctx.branch_id,
             resident_id=resident_id,
             entry_timestamp=timestamp,
-            tube_feeding=tube_text,
-            fluid_input=_num(row.get("Fluid Input")),
-            fluid_output=_num(row.get("Fluid Output")),
+            tube_feeding=tube_feeding,
+            fluid_input=_num(row.get("Fluid Input"), "Fluid Input", source_id),
+            fluid_output=_num(row.get("Fluid Output"), "Fluid Output", source_id),
             cbd_drainage=clean_scalar(row.get("CBD Drainage")),
             activity_ids=act_ids or None,
             disturbance_level_ids=disturb_ids or None,
@@ -354,74 +651,79 @@ def run(ctx: MigrationContext) -> None:
             active_complaint_ids=complaint_ids or None,
             intervention=clean_scalar(row.get("Intervention")),
             doctors_plan=clean_scalar(row.get("Doctor's Plan")),
-            reviewed_by=ctx.staff.resolve(row.get("Review by"), SOURCE),
+            reviewed_by=reviewed_by,
             activity_other="; ".join(act_other) or None,
             active_complaint_other="; ".join(complaint_other) or None,
             psycho_social_other="; ".join(psycho_other) or None,
         )
         # created_by has no Access counterpart: the chart entry is keyed by the
         # patient, not the nurse who typed it. Left NULL rather than attributed
-        # to a person who did not write it.
-
+        # to a person who did not write it. tbl_nursing_chart_entries has no
+        # reviewed_by_other, so an unmatched reviewer name is kept only on the
+        # vital row (tbl_vital.reviewed_by_other) when there is one.
+        entry_sample = values
         if not ctx.dry_run:
             existing = idmap.get(source_id)
             if existing is not None:
                 to_update.append((source_id, existing, values))
             else:
                 to_insert.append((source_id, values))
-
         ctx.report.inc(f"{ENTRIES}.imported")
 
-        # tbl_vital only when the row actually carries a vital sign.
-        vital_values = dict(
-            branch_id=ctx.branch_id, resident_id=resident_id, entry_timestamp=timestamp,
-            systolic_bp=_num(row.get("Systolic BP")), diastolic_bp=_num(row.get("Diastolic BP")),
-            heart_rate=_num(row.get("Heart Rate")), temperature=_num(row.get("Temperature")),
-            spo2=_num(row.get("Spo2")), spo2_condition=_spo2_con(row.get("Spo2Con")),
-            dxt=_num(row.get("DXT")), dxt_remark=clean_scalar(row.get("DXTRemark")),
-            insulin_adjustment=clean_scalar(row.get("Insulin Adjustment")),
-            respiration_rate=_num(row.get("RespirationRate")),
-            gcs_eye_id=gcs_eye.get(str(clean_scalar(row.get("GCSE")) or "").strip()),
-            gcs_verbal_id=gcs_verbal.get(str(clean_scalar(row.get("GCSV")) or "").strip()),
-            gcs_motor_id=gcs_motor.get(str(clean_scalar(row.get("GCSM")) or "").strip()),
-            avpu_id=avpu_by_label.get(str(clean_scalar(row.get("AVPU")) or "").strip()),
-            reviewed_by=ctx.staff.resolve(row.get("Review by"), SOURCE),
-        )
-        if any(v is not None for k, v in vital_values.items() if k not in ("branch_id", "resident_id", "entry_timestamp", "reviewed_by")):
-            vitals.append((source_id, vital_values))
-            ctx.report.inc(f"{VITAL}.imported")
+        for t in tube_rows:
+            meal_rows.append((source_id, dict(
+                meal_type_id=None, meal_portion_id=tube_portion, meal_type_other=None,
+                meal_portion_other=None, **t)))
+        for meal_id, portion_id, meal_other, portion_other in oral:
+            meal_rows.append((source_id, dict(
+                meal_type_id=meal_id, meal_portion_id=portion_id, meal_type_other=meal_other,
+                meal_portion_other=portion_other, feeding_time_id=None, feeding_volume=None,
+                aspirate_amount=None)))
+        for level, ids in _parse_hygiene(row.get("AssistedHygieneCare"), hygiene_by_name, source_id):
+            hygiene_rows.append((source_id, dict(assistance_level=level, activity_ids=ids)))
+        bo_ids = _parse_bo(row.get("BO"), bowel_by_name, source_id)
+        pu_tokens = split_multiselect(row.get("PU"))
+        pu_ids, pu_unmatched = _resolve(pu_tokens, urine_by_name, {})
+        for t in pu_unmatched:
+            _note("pu-unmatched", f"PU {t!r} has no lookup row; dropped", source_id)
+        if len(pu_ids) > 1:
+            _note("pu-multi", f"{len(pu_ids)} PU values; pass_urine_id holds one -> first kept, rest dropped",
+                  source_id)
+        if bo_ids or pu_ids:
+            elim_rows.append((source_id, dict(bowel_output_ids=bo_ids or None,
+                                              pass_urine_id=pu_ids[0] if pu_ids else None)))
 
-        # Staged in both modes so a dry run reports the real child-row counts.
-        _stage_children(meals, feed_times, hyg_ids, hyg_other, hyg_tokens,
-                        assistance, bo_ids, pu_ids, source_id, meal_rows,
-                        hygiene_rows, elim_rows)
+    # --- validate the payload against the live tables, in BOTH modes, so a dry
+    # run catches what would otherwise only fail mid-commit.
+    blockers = _validate(cur, ctx, entry_sample, vital_sample, hygiene_rows, vitals)
+    for b in blockers:
+        ctx.report.note(f"BLOCKER for --commit: {b}")
+    if blockers and not ctx.dry_run:
+        raise RuntimeError("nursing_chart: " + " | ".join(blockers))
 
     if not ctx.dry_run:
-        _flush(cur, to_insert, to_update, idmap, vitals, meal_rows,
-               hygiene_rows, elim_rows, ctx.branch_id)
-    # Collapse to one report line per distinct message, with a count.
-    tally: dict[tuple[str, str], int] = defaultdict(int)
-    for kind, text in _STAGE_NOTES:
-        tally[(kind, text)] += 1
-    for (kind, text), n in sorted(tally.items(), key=lambda kv: -kv[1])[:60]:
-        ctx.report.note(f"{SOURCE} [{kind}] x{n}: {text}")
-    if len(tally) > 60:
-        ctx.report.note(f"{SOURCE}: {len(tally) - 60} further distinct parsing notes suppressed")
+        _flush(cur, to_insert, to_update, idmap, vitals, meal_rows, hygiene_rows,
+               elim_rows, ctx.branch_id)
+
+    for (kind, text), (n, samples) in sorted(_NOTES.items(), key=lambda kv: (-kv[1][0], kv[0])):
+        eg = f" (e.g. rows {', '.join(map(str, samples))})" if samples else ""
+        ctx.report.note(f"{SOURCE} [{kind}] x{n}: {text}{eg}")
     ctx.report.inc(f"{MEALS}.rows", len(meal_rows))
+    ctx.report.inc(f"{MEALS}.tube_feed_rows", sum(1 for _, m in meal_rows if m["feeding_volume"] or m["feeding_time_id"] or m["aspirate_amount"] is not None))
     ctx.report.inc(f"{HYGIENE}.rows", len(hygiene_rows))
     ctx.report.inc(f"{ELIMINATION}.rows", len(elim_rows))
-    _STAGE_NOTES.clear()
+    _NOTES.clear()
     ctx.commit()
 
 
-def _spo2_con(raw) -> str | None:
-    """Access Spo2Con -> spo2_condition. Bare numbers are dropped: they are
-    mis-keyed SpO2 readings, and a number in a text condition column would be
-    worse than nothing."""
-    text = (clean_scalar(raw) or "").strip()
-    if not text or text in SPO2_CON_DROP:
+def _gcs(lookup, raw, col, source_id):
+    text = str(clean_scalar(raw) or "").strip()
+    if not text:
         return None
-    return text
+    pid = lookup.get(text)
+    if pid is None:
+        _note("gcs-unmatched", f"{col} {text!r} is not a GCS score; dropped", source_id)
+    return pid
 
 
 def _score_lookup(cur, table):
@@ -429,69 +731,44 @@ def _score_lookup(cur, table):
     return {str(score): pid for pid, score in cur.fetchall() if score is not None}
 
 
-def _assert_column(cur, table, column):
-    cur.execute(
-        "select 1 from information_schema.columns where table_schema='public' "
-        "and table_name=%s and column_name=%s", (table, column))
-    if not cur.fetchall():
-        raise RuntimeError(
-            f"{table}.{column} does not exist in production. schema/001_init.sql "
-            f"is a stale snapshot; read the live table instead."
-        )
+def _live_columns(cur, table) -> set[str]:
+    cur.execute("select column_name from information_schema.columns "
+                "where table_schema = 'public' and table_name = %s", (table,))
+    return {r[0] for r in cur.fetchall()}
 
 
-def _stage_children(meals, feed_times, hyg_ids, hyg_other, hyg_tokens,
-                    assistance, bo_ids, pu_ids, source_id, meal_rows,
-                    hygiene_rows, elim_rows):
-    """Queue child rows against the Access source id.
+def _validate(cur, ctx, entry_sample, vital_sample, hygiene_rows, vitals) -> list[str]:
+    """Every column written must exist in production, and every value written to
+    a CHECK-constrained column must be one it admits. schema/001_init.sql is a
+    stale snapshot, so this reads the live catalog."""
+    problems: list[str] = []
+    for table, cols in (
+        (ENTRIES, entry_sample.keys() if entry_sample else ()),
+        (VITAL, vital_sample.keys() if vital_sample else ()),
+        (MEALS, MEAL_COLS), (HYGIENE, HYGIENE_COLS), (ELIMINATION, ELIM_COLS),
+    ):
+        missing = sorted(set(cols) - _live_columns(cur, table))
+        if missing:
+            problems.append(f"{table} has no column(s) {missing} (schema/001_init.sql is stale)")
 
-    They carry source_id, not chart_entry_id, because the entry id is only
-    known after the batched insert returns. _flush() links them.
-
-    Feeding times are paired to meals positionally. When the counts line up --
-    'Breakfast; 9:00 AM; Lunch; 12:00 PM' style, or a single 'Tube Feeding' with
-    one time -- the pairing is meaningful. When they do not (two meals and one
-    time), the times are NOT smeared across the meals: an assertion that Lunch
-    was eaten at 09:00 is a claim Access never made. Those times go to the
-    entry's tube_feeding text, which already carries the raw value.
-    """
-    times = list(feed_times)
-    if len(times) == len(meals):
-        paired = list(zip(meals, times))
-    else:
-        if times:
-            _note("feeding-time", f"row {source_id}: {len(times)} feeding time(s) for {len(meals)} meal(s); not paired")
-        paired = [(m, None) for m in meals]
-    for (meal_id, portion_id, other), fid in paired:
-        meal_rows.append((source_id, meal_id, portion_id, other, fid))
-
-    if hyg_ids or hyg_other or assistance:
-        # assistance_level is NOT NULL. Where the row states it via the
-        # 'With Assistance | ' prefix, use that. Otherwise recover it from a
-        # token that names its own level ('Self PU' -> By Self). A row with
-        # neither is reported and dropped rather than defaulted -- 'By Self'
-        # and 'With Assistance' are different care levels, and asserting the
-        # wrong one misstates the care the resident received.
-        if assistance is None:
-            stated = {TOKEN_ASSISTANCE[t.lower()] for t in hyg_tokens
-                      if t.lower() in TOKEN_ASSISTANCE}
-            if len(stated) == 1:
-                assistance = stated.pop()
-            elif len(stated) > 1:
-                _note("hygiene", f"row {source_id}: conflicting assistance levels {sorted(stated)}; skipped")
-        if assistance is None:
-            _note("hygiene-no-level", "hygiene activities present but no assistance level stated; episode skipped")
-        else:
-            hygiene_rows.append((source_id, assistance, hyg_ids,
-                                 "; ".join(hyg_other) or None))
-    if bo_ids or pu_ids:
-        elim_rows.append((source_id, bo_ids, pu_ids[0] if pu_ids else None))
+    allowed = _allowed_values(cur, HYGIENE, "assistance_level")
+    if allowed is not None:
+        used = defaultdict(int)
+        for _, h in hygiene_rows:
+            used[h["assistance_level"]] += 1
+        for level, n in used.items():
+            if level not in allowed:
+                problems.append(
+                    f"{n} hygiene episodes use assistance_level {level!r}, which "
+                    f"{HYGIENE}'s CHECK does not admit {sorted(allowed)} -- apply "
+                    f"migration/scripts/nursing_chart_unspecified_assistance.sql first")
+    return problems
 
 
 def _flush(cur, to_insert, to_update, idmap, vitals, meal_rows, hygiene_rows,
            elim_rows, branch_id):
     """Write everything batched, then link the child rows to their entries."""
-    entry_id_of = {}
+    entry_id_of: dict[str, int] = {}
 
     if to_insert:
         columns = list(to_insert[0][1].keys())
@@ -504,12 +781,16 @@ def _flush(cur, to_insert, to_update, idmap, vitals, meal_rows, hygiene_rows,
             got = cur.fetchall()
             if len(got) != len(chunk):
                 raise RuntimeError(f"insert returned {len(got)} ids for {len(chunk)} rows")
+            pairs = []
             for (source_id, _), (entry_id,) in zip(chunk, got):
                 entry_id_of[str(source_id)] = entry_id
-                idmap.put(str(source_id), ENTRIES, entry_id)
+                pairs.append((str(source_id), ENTRIES, entry_id))
+            # Batched: put() is one round trip per row, which cost the physio
+            # run 16 minutes for 10,630 rows. Written by flush() below.
+            idmap.put_many(pairs)
 
     if to_update:
-        types = _column_types(cur, ENTRIES)  # noqa: F821 - defined at module bottom
+        types = _column_types(cur, ENTRIES)
 
         def cast(c):
             return f"cast(%s as {_PG_CASTS.get(types.get(c, 'text'), 'text')})"
@@ -529,64 +810,48 @@ def _flush(cur, to_insert, to_update, idmap, vitals, meal_rows, hygiene_rows,
             for source_id, tid, _ in chunk:
                 entry_id_of[str(source_id)] = tid
 
-    # Child rows: delete-then-rewrite per entry so an UPDATE that changes a
-    # repeating group cannot leave a stale row behind.
-    _replace_children(cur, entry_id_of, meal_rows, MEALS, (
-        "chart_entry_id", "branch_id", "meal_type_id", "meal_portion_id",
-        "meal_type_other", "feeding_time_id"),
-        lambda r: (entry_id_of[str(r[0])], r[1], r[2], r[3], r[4], r[5]))
-    _replace_children(cur, entry_id_of, hygiene_rows, HYGIENE, (
-        "chart_entry_id", "branch_id", "assistance_level", "activity_ids"),
-        lambda r: (entry_id_of[str(r[0])], r[1], r[2], r[3]))
-    _replace_children(cur, entry_id_of, elim_rows, ELIMINATION, (
-        "chart_entry_id", "branch_id", "bowel_output_ids", "pass_urine_id"),
-        lambda r: (entry_id_of[str(r[0])], r[1], r[2]))
+    idmap.flush()
+
+    # Children: delete-then-rewrite for EVERY touched entry (not only those
+    # that still have children) so an update that empties a group leaves
+    # nothing stale behind.
+    touched = sorted(entry_id_of.values())
+    for table in (MEALS, HYGIENE, ELIMINATION):
+        for start in range(0, len(touched), BATCH):
+            cur.execute(f"delete from {table} where chart_entry_id = any(%s)",
+                        (touched[start:start + BATCH],))
+    for table, cols, rows in ((MEALS, MEAL_COLS, meal_rows),
+                              (HYGIENE, HYGIENE_COLS, hygiene_rows),
+                              (ELIMINATION, ELIM_COLS, elim_rows)):
+        payload = [(entry_id_of[str(sid)], branch_id, *(d[c] for c in cols[2:]))
+                   for sid, d in rows if str(sid) in entry_id_of]
+        for start in range(0, len(payload), BATCH):
+            execute_values(cur, f"insert into {table} ({', '.join(cols)}) values %s",
+                           payload[start:start + BATCH], page_size=BATCH)
 
     if vitals:
         _flush_vitals(cur, vitals, branch_id)
 
 
-def _replace_children(cur, entry_id_of, rows, table, cols, build):
-    """Delete existing children for every touched entry, then insert the new
-    set. Doing it in that order keeps the repeating group consistent on re-runs
-    -- an UPDATE that removes a meal must not leave the old meal row behind."""
-    if not rows:
-        return
-    ids = sorted({entry_id_of[str(r[0])] for r in rows if str(r[0]) in entry_id_of})
-    if not ids:
-        return
-    for start in range(0, len(ids), BATCH):
-        cur.execute(f"delete from {table} where chart_entry_id = any(%s)",
-                    (ids[start:start + BATCH],))
-    payload = [build(r) for r in rows if str(r[0]) in entry_id_of]
-    if payload:
-        execute_values(
-            cur, f"insert into {table} ({', '.join(cols)}) values %s",
-            payload, template="(" + ", ".join(["%s"] * len(cols)) + ")")
-
-
 def _flush_vitals(cur, vitals, branch_id):
     """tbl_vital is keyed on (resident, timestamp), not on the chart entry, so
-    it has its own identity: the same vital is written on re-run by deleting
-    the rows for the touched timestamps first. Vitals are NOT linked through
-    id_map -- there is no chart_entry_id on the table."""
+    it has its own identity: a re-run deletes this branch's rows at the touched
+    (resident, timestamp) pairs first, then rewrites them. Vitals are NOT linked
+    through id_map -- there is no chart_entry_id on the table."""
     columns = list(vitals[0][1].keys())
     cols_sql = ", ".join(columns)
-    # Delete by (resident_id, entry_timestamp) for everything about to be
-    # rewritten, so a re-run updates in place instead of duplicating.
     keys = sorted({(v["resident_id"], v["entry_timestamp"]) for _, v in vitals})
     for start in range(0, len(keys), BATCH):
         chunk = keys[start:start + BATCH]
         cur.execute(
-            f"delete from {VITAL} where (resident_id, entry_timestamp) in "
+            f"delete from {VITAL} where branch_id = %s and (resident_id, entry_timestamp) in "
             f"(select unnest(%s::bigint[]), unnest(%s::timestamptz[]))",
-            ([k[0] for k in chunk], [k[1] for k in chunk]))
+            (branch_id, [k[0] for k in chunk], [k[1] for k in chunk]))
     for start in range(0, len(vitals), BATCH):
         chunk = vitals[start:start + BATCH]
         execute_values(
             cur, f"insert into {VITAL} ({cols_sql}) values %s",
             [tuple(v.values()) for _, v in chunk], page_size=BATCH)
-
 
 
 # information_schema data_type -> the type to cast back to in a VALUES list.
@@ -599,17 +864,6 @@ _PG_CASTS = {
     "text": "text",
     "ARRAY": "bigint[]",
 }
-
-# Notes raised while staging child rows, flushed into the report at the end of
-# run() so the row loop stays free of report calls. Kept as (kind, text) and
-# COLLAPSED -- there are 85,686 rows, and one line per row would produce a
-# 29,000-line report nobody can review. Each distinct kind is reported once with
-# a count, which is what makes the report readable at all.
-_STAGE_NOTES: list[tuple[str, str]] = []
-
-
-def _note(kind: str, text: str) -> None:
-    _STAGE_NOTES.append((kind, text))
 
 
 def _column_types(cur, table: str) -> dict[str, str]:

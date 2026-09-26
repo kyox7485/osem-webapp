@@ -28,7 +28,7 @@ Migrated so far:
 | `tbl_HospReferral` | 53 | `tbl_hospital_referrals` | done |
 | `tbl_ProgressNote` | 5,117 | `tbl_progress_notes` | done |
 | `tbl_PhyIPProgressNote` | 10,687 | `physio_assessments` | done |
-| `tbl_NursingChart` | 85,686 | `tbl_nursing_chart_entries` + meals/hygiene + `tbl_vital` | not started |
+| `tbl_NursingChart` | 85,686 | `tbl_nursing_chart_entries` + meals/hygiene/elimination + `tbl_vital` | done 2026-09-26 (85,352 entries) |
 
 ## The branch code is `AMN`, not `ALMA`
 
@@ -123,14 +123,33 @@ is **kept** in the primary key, with the un-prefixed form retried as a fallback
 **only if the primary finds nothing** — never both, never in preference to an
 exact hit.
 
-A name matching **no** roster entry is not dropped and not guessed at: per
-owner decision it is treated as **part-time, non-registered staff** and
-auto-created as `position='Healthcare Worker'`, `department='Nursing'`,
-`role='STAFF'`, `status='INACTIVE'`. `tbl_staff` has no generic part-time
-position and no defaults for the non-null columns, so both values are fixed by
-decision and every candidate is listed in the dry-run report for approval
-**before** anything is created. `transforms/part_time_staff.py` runs last, then
-back-fills `reviewed_by` on rows already written.
+A name matching **no** roster entry is not dropped and not guessed at. It is
+listed in the report ("Unmatched staff names awaiting review") and left
+unattributed. A part-time, non-registered staff record
+(`position='Healthcare Worker'`, `department='Nursing'`, `role='STAFF'`,
+`status='INACTIVE'`) is created **only** for names the owner approved one by
+one in `clinical_match.APPROVED_PART_TIME`, inline during the commit run, so the
+clinical row gets the StaffID as it is written. Creating a `tbl_staff` row fires
+its `staff_to_google` trigger, which mirrors it to the staff Google Sheet.
+
+Changed 2026-09-26: `transforms/part_time_staff.py` used to create **every**
+unmatched name and then back-fill. Blind creation turned typos and two-person
+entries (`mera`, `Zulaikha, dewi`, `m,ard`) into fake staff, and the back-fill
+set each new StaffID on **every** row with an empty attribution column, not
+just that person's rows. It never ran only because no part-time staff had been
+created yet. Both are removed; the step now only reports.
+
+**Two-person entries** (`Merawati and rozie`, `Zulaikha, dewi`,
+`Farah Najwa& AYU`) record the **first-named person**, by owner decision; the
+attribution column holds one StaffID.
+
+**Branch-scoped aliases** (`clinical_match.BRANCH_STAFF_ALIASES["AMN"]`) are
+owner-confirmed facts about AMN's staff and apply only while migrating AMN:
+`Dewi`/`Ros` → the AMN staff member of that name (both names exist at other
+branches too), `IVY` → Ivy Tan, `sn aini` → Aini Maisarah, `mera` → Merawati,
+`m`/`mar`/`m,ard` → Mardziyaton, `mere`/`a/n meere`/`mary` → Meere,
+`nabila` → Nabilah, `Aiah` → Aliah, and `ALICE` deliberately unattributed
+(probably resident `LOH POH CHAN @ ALICE` typed into the wrong box).
 
 **Asserted staff aliases** (`clinical_match.STAFF_ALIASES`), because the
 generic rules cannot resolve them:
@@ -213,11 +232,103 @@ via `information_schema` rather than trusting the snapshot.**
 
 Re-syncing `schema/001_init.sql` against production is still outstanding.
 
-## Not yet migrated
+## `tbl_NursingChart` (85,686 rows) — committed 2026-09-26
 
-**`tbl_NursingChart` (85,686 rows)** — the heavy one. Access free-text must be
-parsed into the repeating-group tables, and the observed shapes are messier
-than the column names suggest:
+`transforms/nursing_chart.py`. Owner rule for this table: **preserve as much as
+possible, but never change the table structure to do it** — a value with no
+column (or no allowed value) is dropped *and reported*. The dry-run report now
+lists every loss, collapsed per distinct message with sample row IDs (the old
+60-line cap hid most of them).
+
+**Schema prerequisites — both APPLIED to production 2026-09-26** (Supabase
+migrations `nursing_chart_unspecified_assistance`,
+`vital_dxt_remark_pre_post_meal`; files in `migration/scripts/`):
+`tbl_nursing_chart_hygiene_episodes.assistance_level` admits `Unspecified`, and
+`tbl_vital.dxt_remark` admits `Pre-Meal` / `Post-Meal`. The dry run checks
+these live and reports a `BLOCKER` if either is missing.
+
+**Committed 2026-09-26** (3m44s), then committed a second time to prove
+idempotency: every count, the `etl.id_map` target-id checksum and the three
+part-time staff (AMN-0037 Ayu, AMN-0038 Siti, AMN-0039 Asyiqin) were unchanged,
+with no duplicate vitals. Timestamps checked against Access: exact, in MYT.
+
+Dry run / commit (0 blockers): 85,352 chart entries, 37,224 vitals, 73,483
+meal rows (8,930 tube feeds), 57,111 hygiene episodes, 45,909 elimination
+episodes. Skipped: 21 switchover duplicates and 296 rows whose resident cannot
+be identified — 293 with no name at all, 2 named `7`, and `TEOH KHOON GOH`
+(TEOH KHOON LEE and LIM KHOON GNOH were both resident that day).
+
+**Resident misspellings** were confirmed one by one against each candidate's
+admission window and added to `RESIDENT_OVERRIDES` / `SPELLING_OVERRIDES`
+(29 rows: `The Sock Lek`, `TAN HUA SHE`, `LEE SHEAU HUEY`, `HG AH HUAH`,
+`TANG SAW YING`, `TAN GUEK LAN`, `NG WiLLl Jeah`, `ShUM um Chin Choon`/`shum`,
+`loh muy chung`, `KUMAR`).
+
+**`QUAH CHEOW GUAT` is two residents** (738, admitted 2025-01-18; 778, admitted
+2025-12-14). The undated override (set from one progress note) would have put
+all 21 NursingChart rows on 738; `ADMISSION_WINDOW_OVERRIDES` now picks the
+latest admission on or before each note's date (15 → 738, 6 → 778). Checked:
+no already-migrated progress note, referral or physio row belongs to either.
+
+Mapping decisions (all owner-confirmed 2026-09-26):
+
+- **Hygiene is one line per section** since 2025-04-17:
+  `By Self | A; B\r\nWith Assistance | C`, either line possibly empty or a bare
+  heading. Parsed line by line. The generic `split_multiselect` keeps only the
+  text after the last `|`, which on 695 rows would drop the By Self items and
+  file the With Assistance ones under By Self. Older rows are a bare list; an
+  item that names its own level (`Self PU`, `Assisted Shower`) keeps it, the
+  rest become **`Unspecified`** (3,283 episodes) — never a guessed level.
+- A bare hygiene `PU`/`BO` names no location: **dropped** (530), not mapped to
+  `PU @ Urinal` / `BO @ Commode` as the first draft did.
+- **BO `None`** is a real lookup value ("no bowel output", 25,793 rows) that
+  the generic splitter treats as empty; BO is split without that filter.
+- **Tube feeding** is stored the way the app's form writes it: one meal row per
+  feed time (`9:00 AM` → the `tbl_feeding_times` slot; the table stores `time`,
+  so a string lookup matched nothing), the regime text (`2scoop milk
+  200ml+50ml`) in `feeding_volume`, `asp:NmL` in `aspirate_amount`, and the
+  entry's `tube_feeding` set to the app's `Tube Feeding` / `Oral Feed`, not the
+  raw Access text. A time outside the six slots keeps its text in
+  `feeding_volume`.
+- **`Others:` meals/portions and free-text meals** use the app's `Others:` meal
+  type / portion + `meal_type_other` / `meal_portion_other`. A meal with a food
+  note and no portion (`Dinner own food`) keeps the note as portion `Others:`,
+  matching how Access recorded `Dinner (Others: outside food)`. With a portion
+  already given, the note is dropped (259).
+- AVPU is stored as a letter (`A`/`V`/`P`), disturbance level as a digit
+  (`0`–`4`); both map to their lookups (7,102 and 4,186 values that the first
+  draft silently lost).
+- `tbl_vital.spo2_condition` and `dxt_remark` are CHECK-constrained. DXT
+  `Pre-Meal` (2,467) / `Post-Meal` (172) are admitted by the widened check; a
+  remark starting with a category (`Pre-Meal ( PRE DINNER )`, `Fasting 5am`)
+  keeps the category; the ~225 one-off notes (`5am`, `balik dialisis`) and 14
+  junk SpO2 conditions are dropped and reported.
+- Numbers: `36..4` → 36.4 (repaired only when one plausible number remains);
+  a bare 3-digit temperature 340–429 is a missing decimal point (`365` → 36.5,
+  owner decision); other implausible temperatures (`98`, `3.0`) and
+  respiration rates → NULL, reported.
+- Only one `pass_urine_id`: the first PU value is kept, extras reported (189).
+- An unmatched reviewer name is kept in `tbl_vital.reviewed_by_other`;
+  `tbl_nursing_chart_entries` has no such column.
+
+**Switchover.** The app went live at AMN on 2026-09-25 11:48, but Access was
+used until 2026-09-26 06:03 and staff typed most rounds into **both** systems,
+the app copy re-timed and typed hours later, so no timestamp rule can dedupe
+them. All 55 post-go-live rows were paired by resident + staff + readings and
+decided with the owner one by one; the list is `SWITCHOVER` in the transform
+(skip / temperature-only / entry-only / full). A post-go-live row not in that
+list is skipped and reported, and a branch with no `SWITCHOVER` entry refuses
+to run.
+
+Commit-path defects fixed before any commit (the dry run skipped `_flush()`, so
+none of these could show up in a dry run): child rows were built without
+`branch_id` (meals would crash, hygiene would write `'By Self'` into
+`branch_id`), `IdMap.put()` was still per row, and `tbl_vital`'s CHECK
+constraints would have aborted the run. A `_validate()` step now checks every
+written column and every CHECK-constrained value against the live catalog in
+**both** modes.
+
+### Historical notes from before the transform was written
 
 - **Write throughput is the first problem, not the parsing.** A per-row
   `insert ... returning id` cost a full network round trip per row: 10,633

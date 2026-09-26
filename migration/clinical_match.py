@@ -16,7 +16,9 @@ Diverges from staff_match.py in two deliberate ways:
      'Nursing', role 'STAFF', status 'INACTIVE') -- per owner decision, since a
      name appearing on clinical records but absent from tbl_staff means the
      person worked without being registered. The dry-run LISTS every such
-     candidate and creates none; creation happens only in the commit run.
+     candidate and creates none. A record is created (commit run only) ONLY for
+     names the owner approved one by one in APPROVED_PART_TIME; every other
+     candidate stays unattributed and listed until it is reviewed.
 
 Residents resolve against tbl_residents (the master list), never against
 Access's own ResidentID column -- which is NULL in every row of
@@ -64,10 +66,28 @@ IC_ALIASES: dict[str, str] = {
 #   similarity -- a transposition that Access's free-text entry readily produces.
 #   The notes fall just outside 700's admission window, so the dates do not
 #   corroborate it; the name is the only evidence, and the owner accepted it.
+#
+#   tbl_NursingChart misspellings, confirmed one by one with the owner on
+#   2026-09-26. Each was checked against the candidate's admission window;
+#   the dates are noted. 'TEOH KHOON GOH' (1 row) is deliberately absent:
+#   TEOH KHOON LEE (757) and LIM KHOON GNOH (750) were both resident that day.
+#   The ids are AMN residents, so for any other branch they fail the
+#   master-list existence check and fall through to the normal rules.
 RESIDENT_OVERRIDES: dict[str, int] = {
     "TAN GUEK LEN": 758,
     "QUAH CHEOW GUAT": 738,
     "HANG MA SANG": 700,
+    "THE SOCK LEK": 647,         # Teh Sock Lek; notes 2024-11..2025-04, resident 2021..2026
+    "TAN HUA SHE": 730,          # TAN HUA SEH; notes 2024-12..2025-01, adm 2024-11-04 dis 2025-01-28
+    "LEE SHEAU HUEY": 724,       # LIM SHEAU HUEY; notes 5-6 Nov 2024, adm 2024-11-04
+    "HG AH HUAH": 781,           # NG AH HUAH; notes 14-15 Jan 2026, adm 2026-01-14
+    "TANG SAW YING": 701,        # TANG SAW YIN; resident since 2024-05-02
+    "TAN GUEK LAN": 758,         # TAN GUEK LEN -- follows her override above
+    "NG WILLL JEAH": 660,        # Ng Wil Jeah; resident since 2023-04-01
+    "SHUM UM CHIN CHOON": 649,   # SHUM CHIN CHOON; resident 2021-09-15..2025-03-30
+    "SHUM": 649,                 # note on 2025-03-30, his discharge day; only Shum on record
+    "LOH MUY CHUNG": 745,        # LOH MOOI CUNG; note 2025-03-10 = admission day
+    "KUMAR": 716,                # PULAMI KUMAR; the only Kumar resident on 2024-12-16
 }
 
 # Access staff names that are not the person's name. 'patricia' is Teoh Ying
@@ -102,6 +122,64 @@ STAFF_ALIASES: dict[str, str] = {
     # covers 'PHYSIOTHERAPIST IAN' / 'Physiotherapist Ian' / 'Physiotherapist ian'
     "physiotherapist ian": "AMN-0033",
 }
+
+# Sentinel alias target: the name is known, reviewed with the owner, and
+# deliberately left unattributed -- it must NOT fall through to the part-time
+# registry and create a staff record.
+UNATTRIBUTED = ""
+
+# Aliases that are facts about ONE branch's staff, not general patterns, so they
+# are looked up only while that branch is being migrated. Every entry below was
+# confirmed one by one with the owner on 2026-09-26 against the AMN roster
+# (tbl_NursingChart 'Review by'). Do not copy them to another branch: 'Dewi' and
+# 'Ros' exist at BGN/BMN too, and 'mary' -> Meere is an owner fact, not a
+# spelling rule.
+BRANCH_STAFF_ALIASES: dict[str, dict[str, str]] = {
+    "AMN": {
+        # Same name at other branches; AMN's own staff member is the one who
+        # charted at AMN.
+        "dewi": "AMN-0021",
+        "ros": "AMN-0020",
+        # Given name / 'SN' (staff nurse) prefix / spelling variants.
+        "ivy": "AMN-0017",
+        "sn ivy": "AMN-0017",
+        "sn aini": "AMN-0016",
+        "mera": "AMN-0014",
+        "mearawati": "AMN-0014",
+        "merawatu": "AMN-0014",
+        "m": "AMN-0004",
+        "mar": "AMN-0004",
+        "m ard": "AMN-0004",       # 'm,ard' after _norm
+        "mere": "AMN-0025",
+        "meeere": "AMN-0025",
+        "meerre": "AMN-0025",
+        "neere": "AMN-0025",
+        "a n meere": "AMN-0025",   # 'a/n meere' -- a/n = assistant nurse
+        "mary": "AMN-0025",
+        "nabila": "AMN-0013",
+        "aiah": "AMN-0023",
+        # Not a staff member -- most likely the resident 'LOH POH CHAN @ ALICE'
+        # typed into the wrong box. Left unattributed by owner decision.
+        "alice": UNATTRIBUTED,
+    },
+}
+
+# Names that match no roster entry and that the owner APPROVED, one by one, to
+# be created as part-time staff (PART_TIME_* fields below). Only these are ever
+# created; any other unmatched name is reported and left unattributed until it
+# is reviewed. Keyed by _norm(name) -> the staff_name to create.
+APPROVED_PART_TIME: dict[str, dict[str, str]] = {
+    "AMN": {
+        "asyiqin": "Asyiqin",
+        "ayu": "Ayu",
+        "siti": "Siti",
+    },
+}
+
+# 'Merawati and rozie' / 'Zulaikha, dewi' / 'Farah Najwa& AYU' /
+# 'Shazrianie  N DEWI': two people signed one entry. The attribution column holds
+# one StaffID, so by owner decision the FIRST-named person is recorded.
+_PAIR_SPLIT_RE = re.compile(r"\s*(?:,|&|\band\b|\bn\b)\s*", re.IGNORECASE)
 
 # Auto-created part-time staff. tbl_staff has no 'part time' position and no
 # non-Nursing department that fits, so both are fixed by owner decision and
@@ -231,7 +309,21 @@ def _resident_override(raw_name: str | None) -> tuple[int, str] | None:
 # exists to catch a stale override pointing at a resident who no longer matches
 # what was asserted; for these it would always fail, so they are listed here to
 # be verified only for existence in the master list, not for name equality.
-SPELLING_OVERRIDES: frozenset[str] = frozenset({"HANG MA SANG"})
+# Names shared by two DIFFERENT residents, where neither IC helps, resolved by
+# the note's date: the resident with the latest admission on or before it.
+# QUAH CHEOW GUAT: 738 admitted 2025-01-18 (discharged 01-21), 778 admitted
+# 2025-12-14. Her 21 NursingChart rows split 15 (Jan 2025) / 6 (Dec 2025); the
+# undated RESIDENT_OVERRIDES entry would have put all 21 on 738. Used only when
+# the caller passes the note's date; otherwise RESIDENT_OVERRIDES applies.
+ADMISSION_WINDOW_OVERRIDES: dict[str, tuple[int, ...]] = {
+    "QUAH CHEOW GUAT": (738, 778),
+}
+
+SPELLING_OVERRIDES: frozenset[str] = frozenset({
+    "HANG MA SANG", "THE SOCK LEK", "TAN HUA SHE", "LEE SHEAU HUEY", "HG AH HUAH",
+    "TANG SAW YING", "TAN GUEK LAN", "NG WILLL JEAH", "SHUM UM CHIN CHOON", "SHUM",
+    "LOH MUY CHUNG", "KUMAR",
+})
 
 
 def _staff_candidates(raw_name: str) -> list[str]:
@@ -290,12 +382,14 @@ class PartTimeRegistry:
             self._by_name[key] = candidate
         candidate.occurrences += 1
         candidate.tables.add(table)
-        self.report.note(
-            f"part-time staff candidate {staff_name!r} (from {raw_name!r}) in {table} "
-            f"x{candidate.occurrences} -- no tbl_staff match; would be created as "
-            f"{candidate.position}/{candidate.department} (status {PART_TIME_STATUS})."
-        )
+        # One line per distinct name is rendered by render(); a note per
+        # occurrence buried the report under thousands of identical lines.
         return candidate
+
+    def contains(self, raw_name: str | None) -> bool:
+        """True if this name was registered as an unmatched candidate."""
+        name = clean_scalar(raw_name)
+        return bool(name) and _norm(_strip_role_suffix(name)) in self._by_name
 
     def candidates(self) -> list[PartTimeCandidate]:
         return sorted(self._by_name.values(), key=lambda c: (-c.occurrences, c.staff_name))
@@ -305,11 +399,12 @@ class PartTimeRegistry:
         if not rows:
             return ""
         lines = [
-            f"## Part-time staff to be created ({len(rows)} distinct)",
+            f"## Unmatched staff names awaiting review ({len(rows)} distinct)",
             "",
-            "These staff names appear on clinical records but match no row in tbl_staff.",
-            "Per decision they are treated as part-time, non-registered staff and will",
-            "be auto-created in the COMMIT run. Nothing is created during a dry run.",
+            "These staff names appear on clinical records but match no row in tbl_staff,",
+            "no alias, and no owner-approved part-time name (APPROVED_PART_TIME). They",
+            "are NOT created in either mode; their rows stay unattributed until each",
+            "name is reviewed and added to an alias or APPROVED_PART_TIME.",
             "",
             "| staff_name | source name | position | department | role | status | rows | tables |",
             "|---|---|---|---|---|---|---|---|",
@@ -341,12 +436,14 @@ class ResidentIndex:
 
         cur = pg_conn.cursor()
         cur.execute(
-            "select id, resident_name, ic_number from tbl_residents where branch_id = %s",
+            "select id, resident_name, ic_number, admission_date from tbl_residents where branch_id = %s",
             (branch_id,),
         )
         rows = cur.fetchall()
-        for rid, name, ic in rows:
+        self.admitted: dict[int, object] = {}
+        for rid, name, ic, admitted in rows:
             self.ids.add(rid)
+            self.admitted[rid] = admitted
             if ic:
                 normalised = IC_ALIASES.get(str(ic).strip(), str(ic).strip())
                 self.by_ic.setdefault(normalised, rid)
@@ -380,13 +477,29 @@ class ResidentIndex:
             return min(candidates)
         return None
 
-    def resolve(self, raw_name: str | None, raw_ic: str | None) -> tuple[int | None, str]:
+    def resolve(self, raw_name: str | None, raw_ic: str | None,
+                when=None) -> tuple[int | None, str]:
         """IC wins over name. Returns (resident_id | None, reason).
 
         A row is skipped rather than guessed whenever the IC and the name
         disagree, or the name is ambiguous -- a clinical note attached to the
         wrong resident is worse than a missing one.
+
+        `when` (the note's datetime) enables ADMISSION_WINDOW_OVERRIDES.
         """
+        if when is not None:
+            key = (clean_scalar(raw_name) or "").strip().upper()
+            window_ids = ADMISSION_WINDOW_OVERRIDES.get(key)
+            if window_ids:
+                day = when.date() if hasattr(when, "date") else when
+                admitted = [(self.admitted.get(i), i) for i in window_ids
+                            if i in self.ids and self.admitted.get(i) and self.admitted[i] <= day]
+                if admitted:
+                    target = max(admitted)[1]
+                    self.report.fuzzy("resident_admission_window", str(raw_name),
+                                      f"resident {target} (latest admission on/before {day})")
+                    return target, "admission-window override (see ADMISSION_WINDOW_OVERRIDES)"
+                return None, f"{raw_name!r} on {day}: before any candidate's admission"
         ic = clean_ic(raw_ic)
         by_ic = self.by_ic.get(ic) if ic else None
 
@@ -446,10 +559,18 @@ class ResidentIndex:
 class StaffIndex:
     """tbl_staff across ALL branches, indexed by normalized name."""
 
-    def __init__(self, pg_conn, report):
+    def __init__(self, pg_conn, report, branch_code: str | None = None,
+                 branch_id: int | None = None, dry_run: bool = True):
         self.report = report
+        self.pg_conn = pg_conn
+        self.branch_code = branch_code
+        self.branch_id = branch_id
+        self.dry_run = dry_run
         self.by_name: dict[str, set[str]] = defaultdict(set)  # norm name -> StaffIDs
         self.part_time = PartTimeRegistry(report)
+        self.branch_aliases = BRANCH_STAFF_ALIASES.get(branch_code or "", {})
+        self.approved_part_time = APPROVED_PART_TIME.get(branch_code or "", {})
+        self._part_time_ids: dict[str, str] = {}  # approved staff_name -> StaffID
 
         cur = pg_conn.cursor()
         cur.execute('select "StaffID", staff_name from tbl_staff')
@@ -465,35 +586,121 @@ class StaffIndex:
         Tries each candidate key in priority order and takes the first that hits
         exactly one StaffID. A key matching several different people is treated
         as a miss, not a coin flip.
+
+        A name naming two people ('Merawati and rozie') resolves to the
+        first-named person, by owner decision -- the attribution column holds a
+        single StaffID.
         """
         name = clean_scalar(raw_name)
         if name is None:
             return None
 
-        # Asserted aliases beat every generic rule: 'patricia' and 'sn syaa'
-        # are not names, and 'Syaa' alone collides across AMN/BGN.
-        alias = STAFF_ALIASES.get(_norm(name))
-        if alias is not None:
-            self.report.fuzzy(f"staff_alias:{table}", name, f"{alias} (asserted alias)")
-            return alias
+        staff_id, settled = self._resolve_one(name, table)
+        if settled:
+            return staff_id
 
-        for key in _staff_candidates(name):
-            hits = self.by_name.get(key, set())
-            if len(hits) == 1:
-                (staff_id,) = hits
-                if key != _staff_candidates(name)[0]:
-                    self.report.fuzzy(
-                        f"staff_fallback:{table}",
-                        name,
-                        f"{staff_id} (via '{key}')",
-                    )
+        parts = [p for p in _PAIR_SPLIT_RE.split(name) if p.strip()]
+        if len(parts) > 1:
+            first = parts[0].strip()
+            staff_id, settled = self._resolve_one(first, table)
+            if not settled:
+                # 'Shazrianie DEWI N HAS': no separator between the first two
+                # names, so try the leading words of the first segment, longest
+                # first. An ambiguous prefix ('Farah') settles as unattributed.
+                words = first.split()
+                for n in range(len(words) - 1, 0, -1):
+                    staff_id, settled = self._resolve_one(" ".join(words[:n]), table)
+                    if settled:
+                        break
+            if settled:
+                self.report.fuzzy(f"staff_pair:{table}", name,
+                                  f"{staff_id or 'unattributed'} (first-named person)")
                 return staff_id
-            if len(hits) > 1:
-                self.report.fuzzy(
-                    f"staff_ambiguous:{table}", name, f"{len(hits)} candidates: {sorted(hits)}"
-                )
-                return None
 
         staff_name = _strip_role_suffix(name)
         self.part_time.register(name, staff_name, table)
         return None
+
+    def _resolve_one(self, name: str, table: str) -> tuple[str | None, bool]:
+        """(StaffID | None, settled). `settled` is False only when nothing at all
+        recognised the name -- the caller may then try it as a pair, or register
+        it as a part-time candidate. An ambiguous name is settled (as None)."""
+        key = _norm(name)
+
+        # Asserted aliases beat every generic rule: 'patricia' and 'sn syaa'
+        # are not names, and 'Syaa' alone collides across AMN/BGN.
+        alias = STAFF_ALIASES.get(key)
+        if alias is None:
+            alias = self.branch_aliases.get(key)
+        if alias is not None:
+            self.report.fuzzy(f"staff_alias:{table}", name,
+                              f"{alias} (asserted alias)" if alias else "unattributed (asserted)")
+            return (alias or None), True
+
+        if key in self.approved_part_time:
+            return self._approved_part_time(self.approved_part_time[key], table), True
+
+        for cand in _staff_candidates(name):
+            hits = self.by_name.get(cand, set())
+            if len(hits) == 1:
+                (staff_id,) = hits
+                if cand != _staff_candidates(name)[0]:
+                    self.report.fuzzy(
+                        f"staff_fallback:{table}",
+                        name,
+                        f"{staff_id} (via '{cand}')",
+                    )
+                return staff_id, True
+            if len(hits) > 1:
+                self.report.fuzzy(
+                    f"staff_ambiguous:{table}", name, f"{len(hits)} candidates: {sorted(hits)}"
+                )
+                return None, True
+        return None, False
+
+    def _approved_part_time(self, staff_name: str, table: str) -> str | None:
+        """StaffID of an owner-approved part-time staff member, creating the
+        tbl_staff row on first use in a COMMIT run. Returns None in a dry run
+        (nothing is created) -- the report counts the rows it would attribute.
+
+        Idempotent by looking the row up by exact name in the branch before
+        inserting. etl.id_map cannot hold it: its target_id is bigint and
+        tbl_staff's key is the text "StaffID" ('AMN-0034'), with no numeric id.
+        Note tbl_staff's staff_to_google trigger mirrors the new row to the
+        staff Google Sheet.
+        """
+        self.report.inc(f"part_time_staff.approved_rows:{staff_name}")
+        if self.dry_run:
+            return None
+        if staff_name in self._part_time_ids:
+            return self._part_time_ids[staff_name]
+
+        cur = self.pg_conn.cursor()
+        cur.execute(
+            'select "StaffID" from tbl_staff where branch_id = %s and staff_name = %s',
+            (self.branch_id, staff_name),
+        )
+        found = cur.fetchall()
+        if len(found) > 1:
+            raise RuntimeError(f"{len(found)} tbl_staff rows named {staff_name!r} in this branch")
+        if found:
+            (staff_id,) = found[0]
+        else:
+            cur.execute("select id from tbl_positions where name = %s", (PART_TIME_POSITION,))
+            pos = cur.fetchone()
+            if pos is None:
+                raise RuntimeError(f"position {PART_TIME_POSITION!r} not in tbl_positions")
+            cur.execute(
+                """
+                insert into tbl_staff (branch_id, staff_name, position_id, role, department, status)
+                values (%s, %s, %s, %s, %s, %s)
+                returning "StaffID"
+                """,
+                (self.branch_id, staff_name, pos[0], PART_TIME_ROLE, PART_TIME_DEPARTMENT,
+                 PART_TIME_STATUS),
+            )
+            (staff_id,) = cur.fetchone()
+            self.report.inc("part_time_staff.created")
+            self.report.note(f"created part-time staff {staff_id} for {staff_name!r} (owner-approved)")
+        self._part_time_ids[staff_name] = staff_id
+        return staff_id
