@@ -82,9 +82,9 @@ export const dictConsumables: Record<string, string> = {
   "Top up to maximum stock": "Tambah sehingga stok maksimum",
   "No maximum stock — restock when less than {n} left": "Tiada stok maksimum — tambah stok apabila tinggal kurang daripada {n}",
   "Items with a maximum stock are topped up to it; items without one are listed only when less than {n} is left. Editing here does not change any count.": "Item yang mempunyai stok maksimum ditambah sehingga paras itu; item tanpa stok maksimum hanya disenaraikan apabila tinggal kurang daripada {n}. Suntingan di sini tidak mengubah sebarang kiraan.",
-  "Stock balance update — family decides": "Kemas kini baki stok — keluarga membuat keputusan",
+  "Stock Balance Update": "Kemas Kini Baki Stok",
   "Not urgent": "Tidak segera",
   "Stock balance": "Baki stok",
-  "Usage varies, so no quantity is suggested — the family sees the balance and decides.": "Penggunaan berbeza-beza, jadi tiada kuantiti dicadangkan — keluarga melihat baki dan membuat keputusan.",
+  "Usage varies, so no quantity is suggested.": "Penggunaan berbeza-beza, jadi tiada kuantiti dicadangkan.",
   "Items with a maximum stock are topped up to it; items without one show their balance only, so the family can decide. Editing here does not change any count.": "Item yang mempunyai stok maksimum ditambah sehingga paras itu; item tanpa stok maksimum hanya menunjukkan bakinya supaya keluarga boleh membuat keputusan. Suntingan di sini tidak mengubah sebarang kiraan.",
 };

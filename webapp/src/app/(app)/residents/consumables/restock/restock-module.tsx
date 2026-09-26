@@ -100,10 +100,10 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
           id: "nomax",
           title:
             audience === "Family"
-              ? t("Stock balance update — family decides")
+              ? t("Stock Balance Update")
               : t("No maximum stock — restock when less than {n} left", { n: LOW_STOCK_THRESHOLD }),
           rows: visible.filter((r) => !r.hasMaxStock),
-          note: audience === "Family" ? t("Usage varies, so no quantity is suggested — the family sees the balance and decides.") : null,
+          note: audience === "Family" ? t("Usage varies, so no quantity is suggested.") : null,
         },
       ]
         .filter((b) => b.rows.length > 0)
