@@ -30,12 +30,13 @@ function doPost(e) {
     // point; medication-orders.gs now only exports createOrder/updateOrder.
     // stockCreate (MedicationStock.gs) and setOrderStatus
     // (medication-orders.gs) are webapp writes too, so they share the same
-    // SHARED_SECRET gate.
+    // SHARED_SECRET gate. consumableCountCreate (Consumables.gs) likewise.
     if (
       request.action === "create" ||
       request.action === "update" ||
       request.action === "setOrderStatus" ||
-      request.action === "stockCreate"
+      request.action === "stockCreate" ||
+      request.action === "consumableCountCreate"
     ) {
       if (request.secret !== SHARED_SECRET) {
         return ContentService
@@ -52,6 +53,8 @@ function doPost(e) {
         result = updateOrder(request.rxOrderId, request.order);
       } else if (request.action === "setOrderStatus") {
         result = setOrderStatus(request.rxOrderIds, request.status);
+      } else if (request.action === "consumableCountCreate") {
+        result = createConsumableCounts(request.entries);
       } else {
         result = createStockEntry(request.entry);
       }

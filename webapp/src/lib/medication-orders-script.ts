@@ -168,3 +168,26 @@ export async function createMedicationStockEntry(
 ): Promise<MedicationScriptResponse> {
   return callScript({ action: "stockCreate", entry });
 }
+
+// One row of the consumables spreadsheet tab tbl_ResidentConsumable — exact
+// column names. Same Apps Script project ("Sync to Supabase"), which opens the
+// consumables spreadsheet by ID (Consumables.gs).
+export type ConsumableCountSheetFields = {
+  RecordID: string;
+  ResidentID: string; // Supabase form, e.g. AMN-0138 (the sync pads either form)
+  ConsumableID: string;
+  OtherConsumable: string; // "" unless the catalogue's "Other" item
+  OtherUnit: string;
+  Supplier: "Family" | "OSEM";
+  CurrentStock: number;
+  LastCount: string; // DD/MM/YYYY HH:mm:ss, Asia/Kuala_Lumpur
+  CountedBy: string; // tbl_staff.StaffID
+};
+
+// Appends one weekly count (several items) in one call. Idempotent on
+// RecordID, so callScript's HTTP retries cannot create duplicates.
+export async function createConsumableCounts(
+  entries: ConsumableCountSheetFields[]
+): Promise<MedicationScriptResponse> {
+  return callScript({ action: "consumableCountCreate", entries });
+}

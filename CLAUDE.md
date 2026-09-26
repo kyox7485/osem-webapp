@@ -116,6 +116,10 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   Reminder PDF: Sheet-first stock events, Count vs Estimate units, the
   forecast (implemented twice — `lib/medication-stock.ts` and the PDF
   project's `Stock.gs` — must stay identical), deployment checklist.
+- `docs/consumables.md` — Residents → Consumables (weekly count +
+  restock PDFs): Sheet-first via the Sync to Supabase project (the
+  consumables spreadsheet has no script of its own), ID padding
+  (AMN-138 ↔ AMN-0138), restock rule, deployment checklist.
 - `docs/google-apps-script.md` — the Apps Script folder: the two sync
   projects and their **opposite** directions (Supabase→Sheets mirror vs.
   Sheets→Supabase source of truth), all webhook routes, trigger cadences,
