@@ -634,7 +634,7 @@ function Row({
         ) : (
           <span className="text-xs text-fg-faint">{t("Not forecast")}</span>
         )}
-        <div className="mt-0.5 text-xs text-fg-faint">{row.reason}</div>
+        {row.reason && <div className="mt-0.5 text-xs text-fg-faint">{row.reason}</div>}
       </td>
       <td className="px-3 py-2 text-right">
         <input

@@ -69,10 +69,10 @@ function unitFor(o: OrderRaw, stockUnit: string | null): string {
 }
 
 function reasonFor(st: { forecast: boolean; daysRemaining: number | null; balance: number | null }): string {
-  if (st.forecast) {
-    const days = st.daysRemaining ?? 0;
-    return days === 0 ? "Out of stock" : `${days} days left`;
-  }
+  // Forecast rows: the badge already shows the days count or "Out of stock",
+  // so the reason field adds nothing — return empty to suppress the subtitle.
+  if (st.forecast) return "";
+  // Non-forecast: the badge shows "Not forecast", so the reason IS informative.
   return st.balance !== null && st.balance <= 0 ? "Out of stock" : "Low quantity";
 }
 
