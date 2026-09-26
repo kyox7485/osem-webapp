@@ -235,18 +235,17 @@ export type StockStatus = {
 const MAX_FORECAST_DAYS = 3650;
 
 /**
- * Balance on `todayIso` for a Count-unit order: the event's balance minus
- * usage for every dosing day strictly after the event date, up to and
- * including today (Day 1 = recorded value, Day 2 = minus one day's usage …).
+ * Current forecast balance for a Count-unit order: the event's balance minus
+ * (dailyUsage × elapsed days since the event timestamp). Elapsed time is
+ * computed from the exact event timestamp so fractional balances (e.g. 4.5
+ * Tablet after 1 day at 0.5/day) are preserved rather than rounding to whole
+ * dosing-day steps.
  */
-function forecastBalance(event: StockEvent, order: StockOrder, usage: number, todayIso: string): number {
-  const from = dayNumber(klDate(new Date(event.stock_date)));
-  const to = dayNumber(todayIso);
-  let consumed = 0;
-  for (let day = from + 1; day <= to; day++) {
-    if (isDosingDay(day, order)) consumed += usage;
-  }
-  return Math.max(0, round2(event.balance - consumed));
+function forecastBalance(event: StockEvent, order: StockOrder, now: Date): number {
+  const du = dailyUsage(order, event.unit);
+  if (du === null || du <= 0) return Number(event.balance);
+  const elapsedDays = (now.getTime() - new Date(event.stock_date).getTime()) / 86400000;
+  return Math.max(0, round2(Number(event.balance) - du * elapsedDays));
 }
 
 export type StockOutlook = {
@@ -308,7 +307,7 @@ export function computeStockStatus(latest: StockEvent | null, order: StockOrder,
     return { tracking, unit: latest.unit, balance: Number(latest.balance), forecast: false, ...empty };
   }
 
-  const balance = forecastBalance({ ...latest, balance: Number(latest.balance) }, order, perDosingDay, today);
+  const balance = forecastBalance({ ...latest, balance: Number(latest.balance) }, order, now);
   return {
     tracking,
     unit: latest.unit,

@@ -45,7 +45,6 @@ const s = StyleSheet.create({
     backgroundColor: pdfColors.band,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    marginBottom: pdfSpacing.section + 4,
   },
   noticeTitle: { fontSize: 8.5, color: pdfColors.ink900, marginBottom: 3 },
   noticeLine: { fontSize: 8, color: pdfColors.ink700, lineHeight: 1.45 },
@@ -116,8 +115,6 @@ function ItemTable({
   hintZh,
   items,
   tone,
-  emptyEn,
-  emptyZh,
 }: {
   titleEn: string;
   titleZh: string;
@@ -125,8 +122,6 @@ function ItemTable({
   hintZh?: string;
   items: FamilyReminderItem[];
   tone: Tone;
-  emptyEn: string;
-  emptyZh: string;
 }) {
   return (
     <View style={[s.sub, { borderColor: tone.border, borderWidth: tone === TONES.restock ? 1.5 : 1 }]} wrap={items.length > 8}>
@@ -139,39 +134,48 @@ function ItemTable({
           </Text>
         )}
       </View>
-      {items.length === 0 ? (
-        <Text style={s.empty}>
-          <Text>{emptyEn}</Text>
-          <Text style={s.zh}>{`  ${emptyZh}`}</Text>
-        </Text>
-      ) : (
-        <>
-          <View style={s.colHead}>
-            {COLS.map((c) => (
-              <Text key={c.en} style={[s.colHeadCell, { width: c.width }]}>
-                <Text>{c.en.toUpperCase()}</Text>
-                <Text style={s.zh}>{` ${c.zh}`}</Text>
-              </Text>
-            ))}
+      <View style={s.colHead}>
+        {COLS.map((c) => (
+          <Text key={c.en} style={[s.colHeadCell, { width: c.width }]}>
+            <Text>{c.en.toUpperCase()}</Text>
+            <Text style={s.zh}>{` ${c.zh}`}</Text>
+          </Text>
+        ))}
+      </View>
+      {items.map((item, i) => (
+        <View key={i} style={[s.row, ...(i === items.length - 1 ? [{ borderBottomWidth: 0 }] : [])]} wrap={false}>
+          <View style={[s.cell, { width: COLS[0].width }]}>
+            <Text style={s.cellStrong}>{item.medicine}</Text>
           </View>
-          {items.map((item, i) => (
-            <View key={i} style={[s.row, ...(i === items.length - 1 ? [{ borderBottomWidth: 0 }] : [])]} wrap={false}>
-              <View style={[s.cell, { width: COLS[0].width }]}>
-                <Text style={s.cellStrong}>{item.medicine}</Text>
-              </View>
-              <Text style={[s.cell, { width: COLS[1].width }]}>{item.schedule}</Text>
-              <Text style={[s.cell, { width: COLS[2].width }]}>{item.balance}</Text>
-              <View style={[s.cell, { width: COLS[3].width }]}>
-                <Text style={[s.cellStrong, { color: tone.statusFg }]}>
-                  <Text>{item.status}</Text>
-                  <Text style={s.zhBold}>{`  ${item.statusZh}`}</Text>
-                </Text>
-                {item.detail && <Text style={s.cellMuted}>{item.detail}</Text>}
-              </View>
-            </View>
-          ))}
-        </>
-      )}
+          <Text style={[s.cell, { width: COLS[1].width }]}>{item.schedule}</Text>
+          <Text style={[s.cell, { width: COLS[2].width }]}>{item.balance}</Text>
+          <View style={[s.cell, { width: COLS[3].width }]}>
+            <Text style={[s.cellStrong, { color: tone.statusFg }]}>
+              <Text>{item.status}</Text>
+              <Text style={s.zhBold}>{`  ${item.statusZh}`}</Text>
+            </Text>
+            {item.detail && <Text style={s.cellMuted}>{item.detail}</Text>}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function RestockEmpty({ lowStockDays }: { lowStockDays: number }) {
+  return (
+    <View style={[s.sub, { borderColor: green, backgroundColor: greenSoft }]} wrap={false}>
+      <View style={[s.subHead, { backgroundColor: greenSoft }]}>
+        <Bi en={`Restock Needed (0)`} zh="需要补药" style={[s.subHeadText, { color: green }]} />
+        <Text style={[s.subHeadHint, { color: green }]}>
+          <Text>{`Less than ${lowStockDays} days left`}</Text>
+          <Text style={s.zh}>{`  剩余少于${lowStockDays}天`}</Text>
+        </Text>
+      </View>
+      <Text style={[s.empty, { color: green }]}>
+        <Text>All countable medicines have sufficient supply.</Text>
+        <Text style={s.zh}>{`  所有可计算药物库存充足。`}</Text>
+      </Text>
     </View>
   );
 }
@@ -216,7 +220,52 @@ export function FamilyReminderDocument({
           ))}
         </View>
 
-        <View style={s.notice} wrap={false}>
+        {restock.length > 0 ? (
+          <ItemTable
+            titleEn="Restock Needed"
+            titleZh="需要补药"
+            hintEn={`Less than ${lowStockDays} days left`}
+            hintZh={`剩余少于${lowStockDays}天`}
+            items={restock}
+            tone={TONES.restock}
+          />
+        ) : (
+          <RestockEmpty lowStockDays={lowStockDays} />
+        )}
+
+        {sufficient.length > 0 && (
+          <ItemTable
+            titleEn="Sufficient Supply"
+            titleZh="药量充足"
+            items={sufficient}
+            tone={TONES.sufficient}
+          />
+        )}
+
+        {uncountable.length > 0 && (
+          <>
+            <Bi en="Uncountable Medicines" zh="无法准确计算数量的药物" style={s.blockTitle} />
+            <ItemTable
+              titleEn="Current Quantity"
+              titleZh="目前剩余数量"
+              hintEn="For your reference"
+              hintZh="供您参考"
+              items={uncountable}
+              tone={TONES.neutral}
+            />
+          </>
+        )}
+
+        {lastStockDate && (
+          <>
+            <Text style={s.footnote}>
+              {`Countable balances are estimated from the prescription since the last stock count on ${lastStockDate}, not a physical count.`}
+            </Text>
+            <Text style={[s.footnote, s.zh]}>{`可计算药物的库存是根据${lastStockDate}最后一次点算后的处方用量推算，并非实际点算数量。`}</Text>
+          </>
+        )}
+
+        <View style={[s.notice, { marginTop: pdfSpacing.section + 4, marginBottom: 0 }]} wrap={false}>
           <Text style={[s.noticeTitle, s.bold]}>Notice:</Text>
           <Text style={s.noticeLine}>
             1. For medications that can be counted (e.g. tablets, capsules), we will notify you when the remaining supply is estimated to be less than {lowStockDays} days.
@@ -240,47 +289,6 @@ export function FamilyReminderDocument({
           </Text>
           <Text style={[s.noticeContact, s.zhBold]}>如您认为我们的药物库存更新有任何错误或疑问，欢迎随时与我们联系，我们将尽快为您核实。感谢您的反馈。</Text>
         </View>
-
-        <Bi en="Countable Medicines" zh="可计算数量的药物" style={s.blockTitle} />
-        <ItemTable
-          titleEn="Restock Needed"
-          titleZh="需要补药"
-          hintEn={`Less than ${lowStockDays} days left`}
-          hintZh={`剩余少于${lowStockDays}天`}
-          items={restock}
-          tone={TONES.restock}
-          emptyEn="No countable medicine needs restocking."
-          emptyZh="目前没有需要补充的药物。"
-        />
-        <ItemTable
-          titleEn="Sufficient Supply"
-          titleZh="药量充足"
-          items={sufficient}
-          tone={TONES.sufficient}
-          emptyEn="None."
-          emptyZh="无。"
-        />
-
-        <Bi en="Uncountable Medicines" zh="无法准确计算数量的药物" style={s.blockTitle} />
-        <ItemTable
-          titleEn="Current Quantity"
-          titleZh="目前剩余数量"
-          hintEn="For your reference"
-          hintZh="供您参考"
-          items={uncountable}
-          tone={TONES.neutral}
-          emptyEn="None."
-          emptyZh="无。"
-        />
-
-        {lastStockDate && (
-          <>
-            <Text style={s.footnote}>
-              {`Countable balances are estimated from the prescription since the last stock count on ${lastStockDate}, not a physical count.`}
-            </Text>
-            <Text style={[s.footnote, s.zh]}>{`可计算药物的库存是根据${lastStockDate}最后一次点算后的处方用量推算，并非实际点算数量。`}</Text>
-          </>
-        )}
       </ReportPage>
     </Document>
   );
