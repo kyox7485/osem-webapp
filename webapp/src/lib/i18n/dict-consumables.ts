@@ -25,9 +25,9 @@ export const dictConsumables: Record<string, string> = {
   // Inventory (weekly count)
   "Select a resident to do their weekly consumable count.": "Pilih penghuni untuk kiraan mingguan barang guna habis.",
   "Enter what is physically there now. Leave an item blank to skip it.": "Masukkan kuantiti sebenar yang ada sekarang. Biarkan kosong untuk melangkau item.",
-  "Count Date/Time": "Tarikh/Masa Kiraan",
+  "New Count": "Tarikh/Masa Kiraan",
   "Counted By": "Dikira Oleh",
-  "Counted By is required": "Dikira Oleh diperlukan",
+  "Previous Count": "Dikira Oleh diperlukan",
   "Count date/time cannot be in the future": "Tarikh/masa kiraan tidak boleh pada masa hadapan",
   "No consumables recorded for this resident yet. Add the first item below.": "Belum ada barang guna habis direkodkan untuk penghuni ini. Tambah item pertama di bawah.",
   "New item": "Item baharu",

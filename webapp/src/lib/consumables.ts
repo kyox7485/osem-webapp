@@ -72,7 +72,7 @@ export type ConsumableLine = {
   history: CountRecord[];
 };
 
-export type RestockSuggestion = { needed: boolean; qty: number; rule: "max" | "threshold" };
+export type RestockSuggestion = { needed: boolean; qty: number; rule: "max" | "threshold" | "uncountable-threshold" };
 
 /**
  * RestockRequired items with a MaxStock top up to MaxStock (whole units,
@@ -87,6 +87,27 @@ export function suggestRestock(line: Pick<ConsumableLine, "maxStock" | "restockR
   const needed = line.currentStock <= LOW_STOCK_THRESHOLD;
   return { needed, qty: needed ? 1 : 0, rule: "threshold" };
 }
+
+/** Uncountable (no MaxStock): restock only when strictly < 1.0. */
+export function uncountableRestock(line: Pick<ConsumableLine, "currentStock">): RestockSuggestion {
+  const needed = line.currentStock < LOW_STOCK_THRESHOLD;
+  return { needed, qty: needed ? 1 : 0, rule: "uncountable-threshold" };
+}
+
+export function isCountableItem(item: Pick<CatalogueItem, "maxStock">): boolean {
+  return item.maxStock !== null && item.maxStock > 0;
+}
+
+export type HistoryRecord = {
+  id: number;
+  recordId: string;
+  name: string;
+  unit: string;
+  qty: number;
+  supplier: Supplier | null;
+  countedBy: string | null;
+  lastCount: string;
+};
 
 /** Whole days between a count and now (KL calendar not needed at this grain). */
 export function daysSince(iso: string, now: Date): number {
