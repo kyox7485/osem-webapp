@@ -72,9 +72,14 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
   const residentId = residentFilter === "" || residentFilter === ALL ? null : Number(residentFilter);
   const needsResident = audience === "Family" && residentId === null;
 
+  // Family with no resident chosen shows nothing yet (the footer count must
+  // not suggest there is something to print).
   const visible = useMemo(
-    () => rows.filter((r) => r.supplier === audience && (residentId === null ? true : r.residentId === residentId)),
-    [rows, audience, residentId]
+    () =>
+      needsResident
+        ? []
+        : rows.filter((r) => r.supplier === audience && (residentId === null ? true : r.residentId === residentId)),
+    [rows, audience, residentId, needsResident]
   );
   const groups = useMemo(
     () =>
@@ -369,19 +374,19 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
                                     })}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 sm:flex-nowrap sm:gap-2">
                               {isBalanceOnly(r) ? (
                                 <>
-                                  <span className="text-xs text-fg-muted">{t("Stock balance")}</span>
-                                  <span className="w-20 text-right text-sm font-semibold text-fg">
+                                  <span className="basis-full text-xs text-fg-muted sm:basis-auto">{t("Stock balance")}</span>
+                                  <span className="w-16 shrink-0 px-2 text-right text-sm font-semibold text-fg sm:w-20">
                                     {r.currentStock === null ? "—" : fmtQty(r.currentStock)}
                                   </span>
-                                  <span className="w-12 text-xs text-fg-subtle">{t(r.unit)}</span>
-                                  <span className="h-10 w-10" aria-hidden />
+                                  <span className="w-12 shrink-0 text-xs text-fg-subtle">{t(r.unit)}</span>
+                                  <span className="h-10 w-10 shrink-0" aria-hidden />
                                 </>
                               ) : (
                               <>
-                              <label htmlFor={`restock-qty-${r.key}`} className="text-xs text-fg-muted">
+                              <label htmlFor={`restock-qty-${r.key}`} className="basis-full text-xs text-fg-muted sm:basis-auto">
                                 {audience === "Family" ? t("Suggested") : t("Qty to take")}
                               </label>
                               <input
@@ -392,15 +397,15 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
                                 step="any"
                                 value={r.suggestedQty}
                                 onChange={(e) => update(r.key, Number(e.target.value))}
-                                className="min-h-10 w-20 rounded-md border border-line-strong bg-input px-2 py-1 text-right text-sm font-medium text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                className="min-h-10 w-16 shrink-0 rounded-md border border-line-strong bg-input px-2 py-1 text-right text-sm font-medium text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:w-20"
                               />
-                              <span className="w-12 text-xs text-fg-subtle">{t(r.unit)}</span>
-                              <button type="button" onClick={() => resetRow(r)} title={t("Reset to calculated")} aria-label={`${t("Reset to calculated")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-fg-secondary">
+                              <span className="w-12 shrink-0 text-xs text-fg-subtle">{t(r.unit)}</span>
+                              <button type="button" onClick={() => resetRow(r)} title={t("Reset to calculated")} aria-label={`${t("Reset to calculated")}: ${r.item}`} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-fg-secondary">
                                 <RotateCcw className="h-4 w-4" aria-hidden />
                               </button>
                               </>
                               )}
-                              <button type="button" onClick={() => remove(r.key)} title={t("Remove")} aria-label={`${t("Remove")}: ${r.item}`} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-red-600 dark:hover:text-red-400">
+                              <button type="button" onClick={() => remove(r.key)} title={t("Remove")} aria-label={`${t("Remove")}: ${r.item}`} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-fg-faint hover:bg-hover hover:text-red-600 dark:hover:text-red-400">
                                 <Trash2 className="h-4 w-4" aria-hidden />
                               </button>
                             </div>
@@ -441,9 +446,15 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
         {/* Actions */}
         <div className="flex flex-col gap-3 rounded-md border border-line-subtle bg-surface-strong px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
           <p className="text-sm text-fg-secondary">
-            <span className="font-semibold text-fg">{t("{n} items", { n: visible.length })}</span>
-            {" · "}
-            {t("{n} residents", { n: groups.length })}
+            {needsResident ? (
+              t("Select a resident first")
+            ) : (
+              <>
+                <span className="font-semibold text-fg">{t("{n} items", { n: visible.length })}</span>
+                {" · "}
+                {t("{n} residents", { n: groups.length })}
+              </>
+            )}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="sm:min-w-[200px]">
