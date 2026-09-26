@@ -15,7 +15,7 @@
 // Must stay free of server imports (CLAUDE.md footgun): it only imports the
 // pure registry in lib/admin-records.ts and the "use server" actions.
 
-import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, X, TriangleAlert, CheckCircle2 } from "lucide-react";
@@ -39,8 +39,27 @@ import {
 
 const AdminRecordContext = createContext(false);
 
-export function AdminRecordProvider({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
-  return <AdminRecordContext.Provider value={enabled}>{children}</AdminRecordContext.Provider>;
+// Per-record-kind values a config's `link` can derive from, e.g.
+// { physio_assessment: { Assessment: 0.25, "Full Physio (1hr)": 1, ... } }.
+// The (app) layout fills this from tbl_physio_treatment_types, so the physio
+// edit dialog repopulates Credit hours from the same live values the entry
+// form uses -- editing a binding in Supabase changes both, with no redeploy.
+const LinkValuesContext = createContext<Partial<Record<AdminRecordKind, Record<string, number>>>>({});
+
+export function AdminRecordProvider({
+  enabled,
+  linkValues = {},
+  children,
+}: {
+  enabled: boolean;
+  linkValues?: Partial<Record<AdminRecordKind, Record<string, number>>>;
+  children: React.ReactNode;
+}) {
+  return (
+    <AdminRecordContext.Provider value={enabled}>
+      <LinkValuesContext.Provider value={linkValues}>{children}</LinkValuesContext.Provider>
+    </AdminRecordContext.Provider>
+  );
 }
 
 export function useIsHqAdmin(): boolean {
@@ -271,6 +290,7 @@ function EditDialog({
   const t = useTranslation();
   const router = useRouter();
   const config = ADMIN_RECORDS[kind];
+  const linkValues = useContext(LinkValuesContext)[kind];
   // null while the record is loading from the server.
   const [initial, setInitial] = useState<FormValues | null>(null);
   const [form, setForm] = useState<FormValues>({});
@@ -312,6 +332,25 @@ function EditDialog({
     markCleanRef.current = markClean;
   }, [markClean]);
 
+  // Applies the config's field link (e.g. physio credit hours following the
+  // treatment type) to a candidate set of values. Run both when a field
+  // changes and once when the record loads, so the linked field is already
+  // correct before the admin touches anything.
+  const applyLink = useCallback(
+    (values: FormValues): FormValues => {
+      const link = config.link;
+      if (!link) return values;
+      const selected = values[link.whenField];
+      if (typeof selected !== "string" || !linkValues) return values;
+      const next = link.valueFor(selected, linkValues);
+      // Nothing known for this type (an empty or still-loading lookup) --
+      // leave whatever the admin had rather than blanking the field.
+      if (next === null) return values;
+      return { ...values, [link.populateField]: next };
+    },
+    [config.link, linkValues]
+  );
+
   useEffect(() => {
     let cancelled = false;
     adminGetRecordAction(kind, id).then((result) => {
@@ -321,7 +360,9 @@ function EditDialog({
         return;
       }
       const values = result.values;
-      const loaded = Object.fromEntries(config.fields.map((f) => [f.name, initialValue(f, values[f.name])]));
+      const loaded = applyLink(
+        Object.fromEntries(config.fields.map((f) => [f.name, initialValue(f, values[f.name])]))
+      );
       setInitial(loaded);
       setForm(loaded);
     });
@@ -333,14 +374,14 @@ function EditDialog({
     return () => {
       cancelled = true;
     };
-  }, [kind, id, config.fields]);
+  }, [kind, id, config.fields, applyLink]);
 
   useEffect(() => {
     if (initial) firstFieldRef.current?.querySelector<HTMLElement>("input, textarea, select")?.focus();
   }, [initial]);
 
   function setField(name: string, value: AdminFormValue) {
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => applyLink({ ...prev, [name]: value }));
     markDirty();
   }
 

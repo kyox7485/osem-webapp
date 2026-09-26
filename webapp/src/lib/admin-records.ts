@@ -59,6 +59,16 @@ export type AdminRecordConfig = {
   label: string;
   source: AdminRecordSource;
   fields: AdminField[]; // empty = delete-only
+  // Client-side field linkage, evaluated whenever any field changes and once
+  // on load: when `whenField` holds a value present in `values`, `populateField`
+  // is overwritten with `valueFor(selected, values)`. Used by the physio edit
+  // dialog to keep Credit hours in step with Treatment type; the numbers come
+  // from the live lookup, so nothing about them is baked in here.
+  link?: {
+    whenField: string;
+    populateField: string;
+    valueFor: (selected: string, values: Record<string, number>) => string | null;
+  };
 };
 
 const opts = (values: string[]): AdminFieldOption[] => values.map((v) => ({ value: v, label: v }));
@@ -246,6 +256,20 @@ export const ADMIN_RECORDS: Record<AdminRecordKind, AdminRecordConfig> = {
       { name: "documented_by", label: "Documented by", type: "staff" },
       { name: "documented_by_other", label: "Documented by (other)", type: "text" },
     ],
+    // Credit hours follow the treatment type on every change of that
+    // dropdown, from the live tbl_physio_treatment_types values supplied by
+    // <AdminRecordProvider> -- including when the admin first opens the
+    // dialog on a note whose saved credit hours predate the current binding.
+    link: {
+      whenField: "treatment_type",
+      populateField: "credit_hours",
+      valueFor: (selected, hoursByValue) => {
+        const hours = hoursByValue[selected];
+        // null = no binding known for this type; the dialog then leaves the
+        // field as-is rather than clearing it.
+        return hours === undefined ? null : String(hours);
+      },
+    },
   },
   // Editing an order already exists (the order form -> Apps Script revision
   // with a full audit trail), so this kind is delete-only here.

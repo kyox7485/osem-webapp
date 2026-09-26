@@ -1,4 +1,6 @@
 import { getCurrentUser, isAdmin, isHqAdmin } from "@/lib/current-user";
+import { getPhysioTreatmentTypes } from "@/lib/lookups";
+import { standardCreditHours } from "@/lib/physio-scoring";
 import { AdminRecordProvider } from "@/components/admin-record-controls";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NavLoadingProvider } from "@/components/nav-loading";
@@ -7,6 +9,19 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Sidebar, type SidebarItem, type SidebarFooterInfo } from "@/components/sidebar";
 import { PageHeaderProvider, PageHeaderSlot } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
+
+// Treatment-type name -> standard credit hours, for the admin dialog's
+// Credit-hours link. IP and OP bind the same name to the same number
+// wherever the table defines both, so one map covers both care settings.
+function creditHoursByTreatmentType(
+  options: { label: string; creditHours: number }[]
+): Record<string, number> {
+  return Object.fromEntries(
+    options
+      .map((o) => [o.label, standardCreditHours([o], o.label)] as const)
+      .filter((entry): entry is readonly [string, number] => entry[1] !== null)
+  );
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const account = await getCurrentUser();
@@ -47,6 +62,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const initial = account.username?.trim()?.[0]?.toUpperCase() ?? "?";
 
+  // The HQ-ADMIN physio edit dialog repopulates Credit hours from the
+  // treatment type, and those values must come from
+  // tbl_physio_treatment_types -- the same live source the entry form reads
+  // -- so a binding changed in Supabase takes effect in both places. Only
+  // fetched for an HQ ADMIN, i.e. only when the dialog can actually open.
+  const hqAdmin = isHqAdmin(account);
+  const linkValues = hqAdmin
+    ? { physio_assessment: creditHoursByTreatmentType(await getPhysioTreatmentTypes()) }
+    : {};
+
   const footer: SidebarFooterInfo = {
     branchName: account.branch_name || t("All branches"),
     rights: account.rights,
@@ -71,7 +96,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </header>
             <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
               {/* Edit/Delete record buttons are shown to HQ ADMIN logins only. */}
-              <AdminRecordProvider enabled={isHqAdmin(account)}>{children}</AdminRecordProvider>
+              <AdminRecordProvider enabled={hqAdmin} linkValues={linkValues}>
+                {children}
+              </AdminRecordProvider>
             </main>
           </div>
         </div>

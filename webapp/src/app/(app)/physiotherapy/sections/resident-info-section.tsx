@@ -1,6 +1,6 @@
 "use client";
 
-import type { TreatmentTypeOption } from "@/lib/physio-scoring";
+import { standardCreditHours, type TreatmentTypeOption } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
 
 type Props = {
@@ -41,8 +41,8 @@ export function ResidentInfoSection({
     // Credit Hours auto-fills from the treatment type's standard value, per
     // the reference table, but stays editable afterward if the therapist
     // needs to override it.
-    const match = treatmentTypeOptions.find((t) => t.label === value);
-    if (match) setCreditHours(String(match.creditHours));
+    const hours = standardCreditHours(treatmentTypeOptions, value);
+    if (hours !== null) setCreditHours(String(hours));
   }
 
   return (
@@ -94,7 +94,7 @@ export function ResidentInfoSection({
           {t("Credit Hours")}
           <input
             type="number"
-            step="0.1"
+            step="any"
             value={creditHours}
             onChange={(e) => setCreditHours(e.target.value)}
             className="mt-1 w-full rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"

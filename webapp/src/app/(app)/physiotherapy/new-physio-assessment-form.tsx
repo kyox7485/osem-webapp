@@ -13,6 +13,7 @@ import {
   type ExamRow,
   type FunctionalScores,
   type PhysioCareSetting,
+  standardCreditHours,
   type TreatmentTypeOption,
 } from "@/lib/physio-scoring";
 import { fromDatetimeLocalValue } from "@/lib/format-date";
@@ -101,8 +102,8 @@ export function NewPhysioAssessmentForm({
     // Fresh lookup against tbl_physio_treatment_types, not the value saved on
     // the resident's previous entry -- the standard credit hours for a
     // treatment type may have changed since that entry was recorded.
-    const match = treatmentTypeOptions.find((o) => o.label === previous?.treatment_type);
-    if (match) return String(match.creditHours);
+    const match = standardCreditHours(treatmentTypeOptions, previous?.treatment_type ?? "");
+    if (match !== null) return String(match);
     return previous?.credit_hours != null ? String(previous.credit_hours) : "";
   });
   const [chiefComplaint, setChiefComplaint] = useState(previous?.chief_complaint ?? "");

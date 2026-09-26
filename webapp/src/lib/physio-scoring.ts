@@ -80,6 +80,20 @@ export type TreatmentTypeOption = {
 // changing "Full Physio (1hr)" from 1 credit hour to 2 -- without a code
 // change or redeploy. This file keeps only the shared type.
 
+/**
+ * The standard credit hours for a treatment type, or null when the type
+ * isn't in the list (the caller then leaves the field alone). Always fed
+ * from tbl_physio_treatment_types -- no value is baked in here.
+ */
+export function standardCreditHours(
+  options: Pick<TreatmentTypeOption, "label" | "creditHours">[],
+  label: string
+): number | null {
+  if (!label) return null;
+  const match = options.find((o) => o.label === label);
+  return match ? match.creditHours : null;
+}
+
 // Limb -> region -> movement list, exactly as laid out in the Excel's
 // Examination section (rows 48-78). Trunk sits under the Lower Limb half of
 // the sheet in the source template (Bending/Rotation are genuinely sided;
