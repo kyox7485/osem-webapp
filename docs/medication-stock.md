@@ -305,11 +305,14 @@ dirty-form guard warns first, and the branch switch goes through
 `guardedAction`).
 
 - **"Add another item" is scoped to the chosen resident.** Picking a resident
-  filters the medicine dropdown to *that resident's own active OSEM orders*
-  (`residentMedicines`, built in the same query loop as `groups` — it covers
-  every active order, not just the low-stock ones) plus the free-text
-  "Other…" escape. A reviewer therefore cannot attach another resident's drug
-  to this list. Changing the resident clears the selected medicine and the
+  filters the medicine dropdown to *that resident's own active orders* plus
+  the free-text "Other…" escape, so a reviewer cannot attach another
+  resident's drug to this list. The dropdown covers **every** active order
+  regardless of supplier (OSEM and Family) — a resident's full medication
+  list — while the restock list itself stays OSEM-only. Medicines **already
+  on the list are filtered out**, so the picker cannot create a duplicate
+  line; a free-text "Other…" naming an existing medicine is refused with a
+  message. Changing the resident clears the selected medicine and the
   free-text fields, since they belonged to the previous resident.
 - **"Other…" requires both a name and a dose**, both free text and both
   required before the Add button enables. The dose is stored in the row's

@@ -45,6 +45,17 @@ const OTHER_VALUE = "__other__";
 
 type Message = { text: string; kind: "info" | "error" | "success" };
 
+/**
+ * Monotonic id for manually added rows. A ref counter rather than
+ * Date.now()/Math.random() so the key is unique and the linter is happy about
+ * impure calls.
+ */
+let extraRowCounter = 0;
+function nextRowId(): string {
+  extraRowCounter += 1;
+  return `extra:${extraRowCounter}`;
+}
+
 /** Compact fingerprint of everything the reviewer can change, for dirty tracking. */
 function signatureOf(rows: PurchaseListRow[]): string {
   return rows
@@ -146,9 +157,19 @@ export function PurchaseModule({
   }
 
   // Only the chosen resident's own active medicines — never another
-  // resident's drug.
+  // resident's drug. The server already drops anything already on the list;
+  // also drop anything added during this session so the same medicine cannot
+  // be added twice.
+  const onListNames = useMemo(
+    () => new Set(rows.map((r) => r.medicine.trim().toLowerCase())),
+    [rows]
+  );
   const availableMedicines: ResidentMedicineOption[] =
-    newResidentId === "" ? [] : residentMedicines[newResidentId] ?? [];
+    newResidentId === ""
+      ? []
+      : (residentMedicines[newResidentId] ?? []).filter(
+          (o) => !onListNames.has(o.label.trim().toLowerCase())
+        );
 
   function canAdd(): boolean {
     if (newResidentId === "" || newOption === "") return false;
@@ -164,20 +185,33 @@ export function PurchaseModule({
 
     const isOther = newOption === OTHER_VALUE;
     const selected = availableMedicines.find((o) => o.value === newOption);
+    const medicineName = isOther ? customName.trim() : selected?.label ?? "";
+    // The server already drops listed medicines from the picker, but a
+    // free-text "Other…" can still name one that's already on the list (for
+    // this resident or any other). Refuse rather than create a duplicate.
+    const duplicate = rows.some(
+      (r) => r.medicine.trim().toLowerCase() === medicineName.trim().toLowerCase()
+    );
+    if (duplicate) {
+      setMessage({ text: t("This medicine is already on the purchase list."), kind: "error" });
+      return;
+    }
     const inherited = groups.flatMap((g) => g.rows).find(
-      (r) => r.residentId === resident.id && r.medicine === (selected ? selected.label : customName.trim())
+      (r) => r.residentId === resident.id && r.medicine === medicineName
     ) ?? null;
     const doseStr = (isOther ? (customDose.trim() || "—") : (inherited?.schedule || "—"));
 
     const row: PurchaseListRow = {
-      key: `extra:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+      key: `extra:${nextRowId()}`,
       residentId: resident.id,
       residentName: resident.name,
       residentTextId: resident.residentTextId,
-      medicine: isOther ? customName.trim() : selected?.label ?? "—",
+      medicine: medicineName || "—",
       schedule: doseStr,
       unit: selected?.unit || "Unit",
-      balance: isOther ? (inherited?.balance ?? null) : (inherited?.balance ?? null),
+      // Inherit the current balance / forecast from the order already on the
+      // list, so adding a line the list didn't catch still shows real numbers.
+      balance: inherited?.balance ?? null,
       dailyUsage: isOther ? null : (inherited?.dailyUsage ?? null),
       daysRemaining: isOther ? null : (inherited?.daysRemaining ?? null),
       countable: isOther ? false : (inherited?.countable ?? false),

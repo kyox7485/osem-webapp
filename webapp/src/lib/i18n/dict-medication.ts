@@ -270,6 +270,8 @@ export const dictMedication: Record<string, string> = {
   "Please select the staff member who prepared this list.":
     "Sila pilih petugas yang menyediakan senarai ini.",
   "Prepared By": "Disediakan Oleh",
+  "This medicine is already on the purchase list.":
+    "Ubat ini sudah ada dalam senarai pembelian.",
   "e.g. 1 Tablet twice daily": "cth. 1 Tablet dua kali sehari",
   "Balance adjusted": "Baki diselaraskan",
   "Added manually": "Ditambah secara manual",

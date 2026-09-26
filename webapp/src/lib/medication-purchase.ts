@@ -37,6 +37,7 @@ type OrderRaw = StockOrder & {
   external_ref_id: string;
   dosage_form: string | null;
   brand_name: string | null;
+  supplied_by: string | null;
   active_ingredient: string;
   resident_id: number;
   resident_name: string;
@@ -93,10 +94,9 @@ export async function buildPurchaseList(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: ordersRaw, error: ordersError } = await (supabase as any)
     .from("tbl_medication_orders")
-    .select(`${STOCK_ORDER_COLUMNS}, dosage_form, brand_name, active_ingredient`)
+    .select(`${STOCK_ORDER_COLUMNS}, dosage_form, brand_name, active_ingredient, supplied_by`)
     .eq("branch_id", branchId)
     .eq("status", "Active")
-    .eq("supplied_by", "OSEM")
     .not("external_ref_id", "is", null)
     .order("id");
   if (ordersError) return { error: ordersError.message };
@@ -146,9 +146,10 @@ export async function buildPurchaseList(
   }
 
   const rows: PurchaseListRow[] = [];
-  // Every active OSEM order in the branch (not just the low-stock ones), so
-  // the "add item" picker can offer a resident any medicine they are
-  // currently prescribed -- including ones already on the list.
+  // Every active order in the branch (ANY supplier), so the "add item" picker
+  // offers a resident every medicine they are currently prescribed — the
+  // purchase sheet itself only lists OSEM-supplied items, but a reviewer may
+  // legitimately need to add a Family-supplied line to this order.
   const residentMedicines: Record<number, ResidentMedicineOption[]> = {};
 
   for (const o of orders) {
@@ -162,8 +163,9 @@ export async function buildPurchaseList(
       unit,
     });
 
+    // Only OSEM-supplied medicine belongs on the restock list itself.
+    if (o.supplied_by !== "OSEM") continue;
     if (!needsRestock(st, latest !== null)) continue;
-
     const countable = st.forecast && st.dailyUsage !== null;
     rows.push({
       key: o.external_ref_id,
@@ -180,6 +182,12 @@ export async function buildPurchaseList(
       suggestedQty: suggestOrderQty(st.dailyUsage, countable),
       reason: reasonFor(st),
     });
+  }
+  // Remove any medicine already on the list for that resident, so the picker
+  // cannot be used to add a duplicate line.
+  const listedKeys = new Set(rows.map((r) => r.key));
+  for (const [residentId, opts] of Object.entries(residentMedicines)) {
+    residentMedicines[Number(residentId)] = opts.filter((o) => !listedKeys.has(o.value));
   }
   for (const opts of Object.values(residentMedicines)) {
     opts.sort((a, b) => a.label.localeCompare(b.label));
