@@ -59,6 +59,7 @@ export type ResidentRow = {
   mobility: string | null;
   feeding_type_id: number | null;
   hygiene: string | null;
+  care_type: string | null;
 };
 
 export type ResidentDetail = ResidentRow & {
@@ -95,6 +96,17 @@ export function computeDischarges(residents: ResidentRow[], range: DateRange): n
 
 export function computeCurrentOccupancy(residents: ResidentRow[]): number {
   return residents.filter((r) => r.status === "ACTIVE").length;
+}
+
+export function computeOccupancyByCareType(residents: ResidentRow[]): {
+  fullTime: number;
+  daycare: number;
+} {
+  const active = residents.filter((r) => r.status === "ACTIVE");
+  return {
+    fullTime: active.filter((r) => r.care_type !== "Daycare").length,
+    daycare: active.filter((r) => r.care_type === "Daycare").length,
+  };
 }
 
 // Calculate occupancy percentage given active resident count and total bed capacity.

@@ -20,6 +20,7 @@ export type KpiCardClientProps = {
   admissions: number;
   discharges: number;
   currentOccupancy: number;
+  occupancyByCareType: { fullTime: number; daycare: number };
   netGrowth: number;
   avgLos: number | null;
   occupancyPercentage: number | null;
@@ -36,6 +37,7 @@ export function KpiCardsClient({
   admissions,
   discharges,
   currentOccupancy,
+  occupancyByCareType,
   netGrowth,
   avgLos,
   occupancyPercentage,
@@ -148,7 +150,13 @@ export function KpiCardsClient({
             <KpiCard
               label={t("Active Residents")}
               value={currentOccupancy}
-              sub={t("current occupancy")}
+              sub={
+                <span className="flex gap-2 text-[11px]">
+                  <span>{occupancyByCareType.fullTime} {t("24-Hr")}</span>
+                  <span className="text-fg-faint">·</span>
+                  <span>{occupancyByCareType.daycare} {t("Daycare")}</span>
+                </span>
+              }
               tint="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
               icon={<BedDouble className="h-4 w-4" strokeWidth={2} />}
               t={t}
@@ -199,7 +207,7 @@ export function KpiCardsClient({
             <KpiCard
               label={t("Occupancy %")}
               value={`${occupancyPercentage}%`}
-              sub={`${currentOccupancy}/${totalBedCapacity} beds`}
+              sub={`${occupancyByCareType.fullTime}/${totalBedCapacity} beds (24-Hr)`}
               tint="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
               icon={<BarChart3 className="h-4 w-4" strokeWidth={2} />}
               t={t}

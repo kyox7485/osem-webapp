@@ -327,7 +327,7 @@ export function KpiCard({
 }: {
   label: string;
   value: React.ReactNode;
-  sub?: string;
+  sub?: React.ReactNode;
   tint: string;
   icon: React.ReactNode;
   delta?: { value: number; positive: boolean } | null;

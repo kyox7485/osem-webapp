@@ -12,6 +12,7 @@ import {
   computeAdmissions,
   computeDischarges,
   computeCurrentOccupancy,
+  computeOccupancyByCareType,
   computeOccupancyPercentage,
   computeAvgLOS,
   computeOccupancyTrend,
@@ -76,7 +77,7 @@ export default async function AdmissionAnalyticsPage({
   let query = supabase
     .from("tbl_residents")
     .select(
-      "id, resident_name, branch_id, age, gender, status, admission_date, discharge_date, mobility, feeding_type_id, hygiene"
+      "id, resident_name, branch_id, age, gender, status, admission_date, discharge_date, mobility, feeding_type_id, hygiene, care_type"
     );
 
   if (!admin) {
@@ -104,6 +105,7 @@ export default async function AdmissionAnalyticsPage({
   const admissions = computeAdmissions(residents, range);
   const discharges = computeDischarges(residents, range);
   const currentOccupancy = computeCurrentOccupancy(residents);
+  const occupancyByCareType = computeOccupancyByCareType(residents);
   const netGrowth = admissions - discharges;
   const avgLos = computeAvgLOS(residents);
   const trendPoints = computeOccupancyTrend(residents, range);
@@ -130,7 +132,8 @@ export default async function AdmissionAnalyticsPage({
     }
   });
 
-  const occupancyPercentage = computeOccupancyPercentage(currentOccupancy, totalBedCapacity || null);
+  // Occupancy % is based on 24-Hour Care residents only — Daycare residents don't occupy a bed overnight.
+  const occupancyPercentage = computeOccupancyPercentage(occupancyByCareType.fullTime, totalBedCapacity || null);
 
   // ── Check if period is "current" (not a historical view) ──────────────────
   const today = new Date();
@@ -175,6 +178,7 @@ export default async function AdmissionAnalyticsPage({
         admissions={admissions}
         discharges={discharges}
         currentOccupancy={currentOccupancy}
+        occupancyByCareType={occupancyByCareType}
         netGrowth={netGrowth}
         avgLos={avgLos}
         occupancyPercentage={occupancyPercentage}
