@@ -13,6 +13,7 @@ import { TabRow, TabButton } from "@/components/tabs";
 import { ListChecks, Plus } from "lucide-react";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
 import { AdminRecordControls } from "@/components/admin-record-controls";
+import { ResultNotice } from "./result-notice";
 
 export type NursingChartEntry = {
   id: number;
@@ -46,6 +47,8 @@ type Props = {
   currentStart: string;
   currentEnd: string;
   error: string | null;
+  /** The server hit its row cap -- the list below is the most recent N, not all. */
+  truncated?: boolean;
 };
 
 const TAG_GROUPS: [keyof NursingChartEntry, string][] = [
@@ -58,7 +61,7 @@ const TAG_GROUPS: [keyof NursingChartEntry, string][] = [
   ["hygiene_labels", "Hygiene care"],
 ];
 
-export function NursingChartModule({ entries, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error }: Props) {
+export function NursingChartModule({ entries, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
@@ -137,7 +140,7 @@ export function NursingChartModule({ entries, residents, allStaff, lookups, curr
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <ResultNotice error={error} truncated={truncated} />
 
           <div className="space-y-3">
             {entries.length === 0 ? (

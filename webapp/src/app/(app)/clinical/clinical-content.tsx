@@ -95,6 +95,8 @@ type Props = {
   vitals: Vital[];
   notes: ProgressNote[];
   nursingChartEntries: NursingChartEntry[];
+  /** The active tab's query hit the server-side row cap -- not the full set. */
+  truncated?: boolean;
   nursingChartLookups: ClinicalLookups;
   feedingTypes: LookupOption[];
   referrals: HospitalReferral[];
@@ -136,6 +138,7 @@ export function ClinicalContent({
   currentEnd,
   currentPrev,
   error,
+  truncated,
 }: Props) {
   const push = useNavPush();
   const t = useTranslation();
@@ -199,6 +202,7 @@ export function ClinicalContent({
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}
+            truncated={truncated}
           />
         )}
         {activeTab === "observation-chart" && (
@@ -223,6 +227,7 @@ export function ClinicalContent({
             currentEnd={currentEnd}
             currentPrev={currentPrev}
             error={error}
+            truncated={truncated}
           />
         )}
         {activeTab === "vitals" && (
@@ -235,6 +240,7 @@ export function ClinicalContent({
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}
+            truncated={truncated}
           />
         )}
         {activeTab === "wound-photo" && (
@@ -247,6 +253,7 @@ export function ClinicalContent({
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}
+            truncated={truncated}
           />
         )}
         {activeTab === "progress-notes" && (
@@ -258,6 +265,7 @@ export function ClinicalContent({
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}
+            truncated={truncated}
           />
         )}
         {activeTab === "hospital-referral" && (
@@ -271,6 +279,7 @@ export function ClinicalContent({
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}
+            truncated={truncated}
           />
         )}
       </div>

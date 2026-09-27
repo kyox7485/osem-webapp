@@ -216,9 +216,10 @@ export async function getBehaviourCharts(filters: {
   start?: string;
   end?: string;
   excludedBranchIds?: number[];
-}): Promise<{ entries: BehaviourEntry[]; error: string | null }> {
+  limit?: number;
+}): Promise<{ entries: BehaviourEntry[]; error: string | null; truncated: boolean }> {
   const account = await getCurrentUser();
-  if (!account) return { entries: [], error: "Not authenticated" };
+  if (!account) return { entries: [], error: "Not authenticated", truncated: false };
 
   const supabase = await createClient();
 
@@ -246,7 +247,7 @@ export async function getBehaviourCharts(filters: {
   if (filters.start) query = query.gte("entry_timestamp", `${filters.start}T00:00:00`);
   if (filters.end) query = query.lte("entry_timestamp", `${filters.end}T23:59:59`);
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(filters.limit ?? 500);
 
   // Supabase returns joined rows as single-element arrays; unwrap them.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -256,7 +257,11 @@ export async function getBehaviourCharts(filters: {
     tbl_staff: Array.isArray(e.tbl_staff) ? e.tbl_staff[0] : e.tbl_staff,
   }));
 
-  return { entries, error: error?.message ?? null };
+  return {
+    entries,
+    error: error?.message ?? null,
+    truncated: (data?.length ?? 0) >= (filters.limit ?? 500),
+  };
 }
 
 export async function getBehaviourEpisodes(filters: {

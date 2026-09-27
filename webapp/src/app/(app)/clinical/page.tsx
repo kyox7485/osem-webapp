@@ -14,6 +14,36 @@ import type { NursingChartEntry } from "./nursing-chart-module";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 
+// The AMN clinical migration committed ~85k nursing chart entries (and ~37k
+// vital readings) on 2026-09-26, so an unbounded all-branches read now exceeds
+// the statement timeout. Every report query in this file is capped at
+// REPORT_LIMIT and bounded by a default date window; the module shows a notice
+// when a cap is hit, so a truncated list is never mistaken for the full one.
+const REPORT_LIMIT = 500;
+
+// Default window, in days, when the user hasn't set a range. Nursing chart and
+// vitals chart several times a day, so 7; observation chart already defaults
+// to 3. Wound photos and progress notes are low-volume -- see the per-tab
+// comments where those deliberately keep the full range.
+const DEFAULT_WINDOW_DAYS = 7;
+
+// Last N days ending today, in Asia/Kuala_Lumpur, as {start, end} YYYY-MM-DD.
+function defaultWindow(days: number): { start: string; end: string } {
+  const nowMYT = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+  const end = nowMYT.toLocaleDateString("en-CA");
+  const startDate = new Date(nowMYT);
+  startDate.setDate(startDate.getDate() - (days - 1));
+  return { start: startDate.toLocaleDateString("en-CA"), end };
+}
+
+// Splits `start`/`end` (either may be empty) into the window a query should
+// actually use, falling back to `days` when neither is set. A user who sets
+// only one end keeps exactly that end -- we don't silently invent the other.
+function resolveWindow(start: string, end: string, days: number | null): { start: string; end: string } {
+  if (!days || start || end) return { start, end };
+  return defaultWindow(days);
+}
+
 export default async function ClinicalPage({
   searchParams,
 }: {
@@ -77,8 +107,21 @@ export default async function ClinicalPage({
   let behaviourEntries: BehaviourEntry[] = [];
   let behaviourEpisodes: BehaviourEpisode[] = [];
   let error = null;
+  // Set by whichever tab is active when its query hit REPORT_LIMIT.
+  let truncated = false;
+  // What the active tab's query actually used. Tabs with a default window
+  // report their resolved range so the filter bar never contradicts the query;
+  // tabs without one leave these equal to the raw params.
+  let appliedStart = startDate;
+  let appliedEnd = endDate;
 
   if (currentTab === "vitals") {
+    // Vitals are charted several times a day per resident, so this is the
+    // second-heaviest table here -- bound it the same way as the nursing chart.
+    const window = resolveWindow(startDate, endDate, DEFAULT_WINDOW_DAYS);
+    appliedStart = window.start;
+    appliedEnd = window.end;
+
     // Fetch vitals
     let vitalsQuery = supabase
       .from("tbl_vital")
@@ -116,10 +159,11 @@ export default async function ClinicalPage({
     }
 
     if (residentFilter) vitalsQuery = vitalsQuery.eq("resident_id", parseInt(residentFilter));
-    if (startDate) vitalsQuery = vitalsQuery.gte("entry_timestamp", `${startDate}T00:00:00`);
-    if (endDate) vitalsQuery = vitalsQuery.lte("entry_timestamp", `${endDate}T23:59:59`);
+    if (window.start) vitalsQuery = vitalsQuery.gte("entry_timestamp", `${window.start}T00:00:00`);
+    if (window.end) vitalsQuery = vitalsQuery.lte("entry_timestamp", `${window.end}T23:59:59`);
 
-    const { data: rawVitals, error: vitalsError } = await vitalsQuery;
+    const { data: rawVitals, error: vitalsError } = await vitalsQuery.limit(REPORT_LIMIT);
+    truncated = (rawVitals?.length ?? 0) >= REPORT_LIMIT;
 
     const gcsEyeById = new Map(nursingChartLookups.gcsEyeResponses.map((o) => [Number(o.id), o.label]));
     const gcsVerbalById = new Map(nursingChartLookups.gcsVerbalResponses.map((o) => [Number(o.id), o.label]));
@@ -181,7 +225,8 @@ export default async function ClinicalPage({
     if (startDate) notesQuery = notesQuery.gte("entry_timestamp", `${startDate}T00:00:00`);
     if (endDate) notesQuery = notesQuery.lte("entry_timestamp", `${endDate}T23:59:59`);
 
-    const { data: rawNotes, error: notesError } = await notesQuery;
+    const { data: rawNotes, error: notesError } = await notesQuery.limit(REPORT_LIMIT);
+    truncated = (rawNotes?.length ?? 0) >= REPORT_LIMIT;
 
     notes = (rawNotes || []).map((n: any) => ({
       ...n,
@@ -192,6 +237,14 @@ export default async function ClinicalPage({
 
     error = notesError?.message || null;
   } else if (currentTab === "nursing-chart") {
+    // Default to the last 7 days when the user hasn't set a range, so the
+    // all-branches (HQ) view doesn't read the whole table. The resolved range
+    // is passed down to the filter bar so it never contradicts what was
+    // queried; clearing either date drops back to the 7-day default.
+    const window = resolveWindow(startDate, endDate, DEFAULT_WINDOW_DAYS);
+    appliedStart = window.start;
+    appliedEnd = window.end;
+
     let chartQuery = supabase
       .from("tbl_nursing_chart_entries")
       .select(
@@ -227,11 +280,12 @@ export default async function ClinicalPage({
     }
 
     if (residentFilter) chartQuery = chartQuery.eq("resident_id", parseInt(residentFilter));
-    if (startDate) chartQuery = chartQuery.gte("entry_timestamp", `${startDate}T00:00:00`);
-    if (endDate) chartQuery = chartQuery.lte("entry_timestamp", `${endDate}T23:59:59`);
+    if (window.start) chartQuery = chartQuery.gte("entry_timestamp", `${window.start}T00:00:00`);
+    if (window.end) chartQuery = chartQuery.lte("entry_timestamp", `${window.end}T23:59:59`);
 
-    const { data: rawEntries, error: chartError } = await chartQuery;
+    const { data: rawEntries, error: chartError } = await chartQuery.limit(REPORT_LIMIT);
     error = chartError?.message || null;
+    truncated = (rawEntries?.length ?? 0) >= REPORT_LIMIT;
 
     const entryIds = (rawEntries ?? []).map((e: any) => e.id);
     const [{ data: mealsRaw }, { data: hygieneRaw }, { data: eliminationRaw }] =
@@ -365,7 +419,8 @@ export default async function ClinicalPage({
     if (startDate) referralsQuery = referralsQuery.gte("referral_datetime", `${startDate}T00:00:00`);
     if (endDate) referralsQuery = referralsQuery.lte("referral_datetime", `${endDate}T23:59:59`);
 
-    const { data: rawReferrals, error: referralsError } = await referralsQuery;
+    const { data: rawReferrals, error: referralsError } = await referralsQuery.limit(REPORT_LIMIT);
+    truncated = (rawReferrals?.length ?? 0) >= REPORT_LIMIT;
 
     referrals = (rawReferrals || []).map((r: any) => ({
       ...r,
@@ -375,9 +430,19 @@ export default async function ClinicalPage({
 
     error = referralsError?.message || null;
   } else if (currentTab === "wound-photo") {
-    const result = await getWoundSessionHistory({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds });
+    // Wound photos are a low-volume, episodic record, so this keeps the full
+    // range rather than defaulting to a window -- but still caps the row count
+    // so an all-branches read can't run away.
+    const result = await getWoundSessionHistory({
+      residentId: residentFilter,
+      start: startDate,
+      end: endDate,
+      excludedBranchIds,
+      limit: REPORT_LIMIT,
+    });
     woundSessions = result.sessions;
     error = result.error;
+    truncated = result.truncated;
   } else if (currentTab === "observation-chart") {
     const [activeResult, completedResult] = await Promise.all([
       getActiveObservationStatuses({ excludedBranchIds }),
@@ -389,17 +454,13 @@ export default async function ClinicalPage({
 
     const activeResidentIds = activeObservationEpisodes.map((e) => e.resident_id);
     if (activeResidentIds.length > 0) {
-      // Default to the last 3 days (Asia/Kuala_Lumpur) when no filter is set.
-      const nowMYT = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
-      const defaultEnd = nowMYT.toLocaleDateString("en-CA");
-      const defaultStartDate = new Date(nowMYT);
-      defaultStartDate.setDate(defaultStartDate.getDate() - 2);
-      const defaultStart = defaultStartDate.toLocaleDateString("en-CA");
+      // Default to the last 3 days when no filter is set.
+      const obsWindow = defaultWindow(3);
 
       const chartsResult = await getObservationChartsForResidents({
         residentIds: activeResidentIds,
-        start: startDate || defaultStart,
-        end: endDate || defaultEnd,
+        start: startDate || obsWindow.start,
+        end: endDate || obsWindow.end,
         excludedBranchIds,
       });
       observationEntries = chartsResult.entries;
@@ -407,7 +468,7 @@ export default async function ClinicalPage({
     }
   } else if (currentTab === "behaviour-chart") {
     const [chartsResult, episodesResult] = await Promise.all([
-      getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds }),
+      getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds, limit: REPORT_LIMIT }),
       residentFilter
         ? getBehaviourEpisodes({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds })
         : { episodes: [], error: null },
@@ -415,6 +476,7 @@ export default async function ClinicalPage({
     behaviourEntries = chartsResult.entries;
     behaviourEpisodes = episodesResult.episodes;
     error = chartsResult.error ?? episodesResult.error;
+    truncated = chartsResult.truncated;
   }
 
   return (
@@ -439,10 +501,11 @@ export default async function ClinicalPage({
         behaviourEntries={behaviourEntries}
         behaviourEpisodes={behaviourEpisodes}
         currentResident={residentFilter}
-        currentStart={startDate}
-        currentEnd={endDate}
+        currentStart={appliedStart}
+        currentEnd={appliedEnd}
         currentPrev={prevParam}
         error={error}
+        truncated={truncated}
       />
     </div>
   );

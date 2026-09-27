@@ -27,9 +27,10 @@ export async function getWoundSessionHistory(filters: {
   start?: string;
   end?: string;
   excludedBranchIds?: number[];
-}): Promise<{ sessions: WoundSession[]; error: string | null }> {
+  limit?: number;
+}): Promise<{ sessions: WoundSession[]; error: string | null; truncated: boolean }> {
   const account = await getCurrentUser();
-  if (!account) return { sessions: [], error: "Not authenticated" };
+  if (!account) return { sessions: [], error: "Not authenticated", truncated: false };
 
   const supabase = await createClient();
   let query = supabase
@@ -57,7 +58,7 @@ export async function getWoundSessionHistory(filters: {
   if (filters.start) query = query.gte("session_started_at", `${filters.start}T00:00:00`);
   if (filters.end) query = query.lte("session_started_at", `${filters.end}T23:59:59`);
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(filters.limit ?? 500);
 
   const sessions = (data ?? []).map((s: any) => ({
     ...s,
@@ -66,7 +67,11 @@ export async function getWoundSessionHistory(filters: {
     photos: (s.photos ?? []) as WoundPhoto[],
   }));
 
-  return { sessions, error: error?.message || null };
+  return {
+    sessions,
+    error: error?.message || null,
+    truncated: (data?.length ?? 0) >= (filters.limit ?? 500),
+  };
 }
 
 // "Uploaded by" is deliberately not asked for until this point -- staff

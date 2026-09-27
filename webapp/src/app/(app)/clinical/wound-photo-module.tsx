@@ -14,6 +14,7 @@ import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, TrendingUp } from "lucide-react";
 import { AdminRecordControls } from "@/components/admin-record-controls";
+import { ResultNotice } from "./result-notice";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -26,9 +27,11 @@ type Props = {
   currentStart: string;
   currentEnd: string;
   error: string | null;
+  /** The server hit its row cap -- the list below is the most recent N, not all. */
+  truncated?: boolean;
 };
 
-export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, currentResident, currentStart, currentEnd, error }: Props) {
+export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, currentResident, currentStart, currentEnd, error, truncated }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
@@ -100,7 +103,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <ResultNotice error={error} truncated={truncated} />
 
           <div className="space-y-3">
             {sessions.length === 0 ? (

@@ -123,6 +123,7 @@ export const dictClinical: Record<string, string> = {
   Meals: "Hidangan",
   "Hygiene care": "Penjagaan kebersihan",
   "No nursing chart entries yet.": "Tiada entri carta kejururawatan lagi.",
+  "Showing the most recent entries only. Narrow the date range or pick a resident to see older ones.": "Memaparkan entri terkini sahaja. Narrowkan julat tarikh atau pilih seorang penghuni untuk melihat entri lama.",
   area: "kawasan",
   areas: "kawasan",
   "Tube feeding": "Suapan tiub",

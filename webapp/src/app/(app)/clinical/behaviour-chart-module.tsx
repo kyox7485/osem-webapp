@@ -13,6 +13,7 @@ import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, ChevronLeft } from "lucide-react";
 import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { ResultNotice } from "./result-notice";
 
 const DISTURBANCE_LABELS: Record<number, string> = {
   0: "No disturb",
@@ -34,6 +35,8 @@ type Props = {
   currentEnd: string;
   currentPrev?: string; // previous range days (for back nav after drill-down)
   error: string | null;
+  /** The server hit its row cap -- the list below is the most recent N, not all. */
+  truncated?: boolean;
 };
 
 function todayMYT(): string {
@@ -64,6 +67,7 @@ export function BehaviourChartModule({
   currentEnd,
   currentPrev,
   error,
+  truncated,
 }: Props) {
   const router = useRouter();
   const push = useNavPush();
@@ -238,7 +242,7 @@ export function BehaviourChartModule({
             </button>
           )}
 
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <ResultNotice error={error} truncated={truncated} />
 
           {!currentResident ? (
             <div className="rounded-md border border-dashed border-line-strong p-8 text-center">

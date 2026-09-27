@@ -10,6 +10,13 @@
 | Staff | Roster (`tbl_staff`), separate from logins |
 | Accounts | Logins (`tbl_user_accounts`); admin-only; clickable rows open an edit-confirmation modal |
 
+Clinical report queries are row-capped (500) and the Nursing Chart and
+Vital Signs tabs default to a 7-day window, so an all-branches (HQ) read
+can't hit the statement timeout. Known gap: `tbl_nursing_chart_elimination_episodes`
+has no index on `chart_entry_id` — its two sibling child tables have one — so
+its lookup is a sequential scan; acceptable at the current cap, worth adding if
+it ever gets slow.
+
 ## Wound Photo
 
 The most involved sub-tab: a front/back body-chart image

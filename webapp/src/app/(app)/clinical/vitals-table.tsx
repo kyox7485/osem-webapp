@@ -21,6 +21,7 @@ import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { ResultNotice } from "./result-notice";
 
 type Vital = {
   id: number;
@@ -59,9 +60,11 @@ type Props = {
   currentStart: string;
   currentEnd: string;
   error: string | null;
+  /** The server hit its row cap -- the list below is the most recent N, not all. */
+  truncated?: boolean;
 };
 
-export function VitalsTable({ vitals, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error }: Props) {
+export function VitalsTable({ vitals, residents, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
@@ -162,7 +165,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
       </div>
 
       {/* Error */}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      <ResultNotice error={error} truncated={truncated} />
 
       <div className="flex items-center gap-4 text-xs text-fg-subtle">
         <span className="flex items-center gap-1">
