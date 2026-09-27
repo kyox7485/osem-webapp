@@ -173,7 +173,7 @@ export const dictPhysio: Record<string, string> = {
   "Body Chart / Anatomical Findings": "Carta Badan / Dapatan Anatomi",
   findings: "dapatan",
   finding: "dapatan",
-  "Tap a point on the diagram to add a finding": "Ketik satu titik pada gambar rajah untuk menambah dapatan",
+  "Tap a point on the diagram to add a finding": "Tekan satu titik pada gambar rajah untuk menambah dapatan",
   "Finding / comment...": "Dapatan / komen...",
   "Add finding": "Tambah dapatan",
   "Recorded findings": "Dapatan yang direkodkan",
@@ -194,7 +194,7 @@ export const dictPhysio: Record<string, string> = {
 
   // sections/examination-section.tsx
   'Power, Tone, ROM and Reflexes -- leave any field "Not assessed" where not applicable. Tap a body part to record it.':
-    "Kekuatan, Tonus, Julat Gerakan dan Refleks -- biarkan mana-mana medan \"Belum dinilai\" jika tidak berkenaan. Ketik bahagian badan untuk merekodkannya.",
+    "Kekuatan, Tonus, Julat Gerakan dan Refleks -- biarkan mana-mana medan \"Belum dinilai\" jika tidak berkenaan. Tekan bahagian badan untuk merekodkannya.",
 
   // EXAM_STRUCTURE regions (body parts shown as collapsible group headers)
   Hip: "Pinggul",
@@ -237,6 +237,10 @@ export const dictPhysio: Record<string, string> = {
 
   // sections/narrative-section.tsx
   "Physiotherapist impression / analysis...": "Impresi / analisis ahli fisioterapi...",
+
+  // dashboard filters
+  "Select therapist": "Pilih ahli fisioterapi",
+  "Select a therapist to view individual analytics.": "Pilih ahli fisioterapi untuk melihat analitik individu.",
 
   // sections/resident-info-section.tsx
   "Assessment Information": "Maklumat Penilaian",

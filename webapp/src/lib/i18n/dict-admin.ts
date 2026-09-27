@@ -58,7 +58,7 @@ export const dictAdmin: Record<string, string> = {
   "Insulin adjustment": "Pelarasan insulin",
   "Active issue": "Isu aktif",
   "SOB / Cough": "Sesak nafas / Batuk",
-  Pain: "Sakit",
+  Pain: "Kesakitan",
   "Pain location": "Lokasi sakit",
   Wound: "Luka",
   Appetite: "Selera makan",

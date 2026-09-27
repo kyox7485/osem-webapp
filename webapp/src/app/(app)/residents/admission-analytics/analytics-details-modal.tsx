@@ -236,11 +236,11 @@ function ResidentListTable({
               {t("Status")}
             </th>
             <th className="px-3 py-2 text-left text-xs font-semibold text-fg-secondary">
-              {t("Admission Date")}
+              {t("Admission date")}
             </th>
             {showDischargeDate && (
               <th className="px-3 py-2 text-left text-xs font-semibold text-fg-secondary">
-                {t("Discharge Date")}
+              {t("Discharge date")}
               </th>
             )}
             {showLOS && (

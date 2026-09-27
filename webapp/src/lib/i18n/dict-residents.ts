@@ -104,8 +104,11 @@ export const dictResidents: Record<string, string> = {
   "Any food served after the admission?": "Adakah makanan dihidangkan selepas kemasukan?",
   "When is the last bowel output?": "Bila masa najis terakhir?",
   "Please specify the complaint": "Sila nyatakan aduan tersebut",
-  "Unsaved changes": "Perubahan belum disimpan",
-  "You have unsaved changes. What would you like to do?": "Anda mempunyai perubahan yang belum disimpan. Apakah yang ingin anda lakukan?",
+  // "Unsaved changes" and "You have unsaved changes. What would you like to
+  // do?" are the unsaved-changes dialog's keys, owned by dict-common.ts.
+  // They used to be repeated here with different wording, which meant the
+  // same dialog read differently depending on which screen it was opened
+  // from -- whichever dict-*.ts spreads last in translations.ts won.
   "Save and exit": "Simpan dan keluar",
   "Exit without saving": "Keluar tanpa simpan",
   "Continue editing": "Teruskan sunting",
@@ -118,6 +121,8 @@ export const dictResidents: Record<string, string> = {
   "Select a branch": "Pilih cawangan",
   "e.g. Jasmin (Daughter) - 012-34567890": "cth. Jasmin (Anak perempuan) - 012-34567890",
   "e.g. MOPD 1/12/2026, SOPD 21/11/2026": "cth. MOPD 1/12/2026, SOPD 21/11/2026",
+  "e.g. Paracetamol 500mg PO stat": "cth. Paracetamol 500mg PO serta-merta",
+  "Arrival Vital Signs": "Tanda Vital Ketibaan",
 
   "Reviewed by": "Disemak oleh",
   "Select a branch first": "Pilih cawangan dahulu",
@@ -160,4 +165,48 @@ export const dictResidents: Record<string, string> = {
   "31–90 days": "31–90 hari",
   "91–180 days": "91–180 hari",
   ">180 days": ">180 hari",
+
+  // Admission Analytics -- page header, filters and KPI cards. These were
+  // added with the analytics feature and had no MS entry at all, so the whole
+  // screen fell back to English.
+  "Admission Analytics": "Analitik Kemasukan",
+  "From date": "Dari tarikh",
+  "To date": "Hingga tarikh",
+  "in selected period": "dalam tempoh dipilih",
+  "24-Hr": "24 jam",
+  "admissions − discharges": "kemasukan − discaj",
+  "Avg Length of Stay": "Purata Tempoh Tinggal",
+  "Occupancy %": "Penghunian %",
+  "Occupancy Trend": "Trend Penghunian",
+  "Residents occupying a bed at month-end": "Penghuni yang menduduki katil pada akhir bulan",
+  "Age × Gender": "Umur × Jantina",
+  "Current active residents": "Penghuni aktif semasa",
+  "All residents (completed + active)": "Semua penghuni (tamat + aktif)",
+  "No active residents.": "Tiada penghuni aktif.",
+  "resident(s) with unknown age not shown.": "penghuni dengan umur tidak diketahui tidak dipaparkan.",
+  "No residents with admission date.": "Tiada penghuni dengan tarikh kemasukan.",
+  "Care Dependency": "Pergantungan Penjagaan",
+  "Hygiene / Toileting": "Kebersihan / Tandas",
+
+  // Admission Analytics -- details modal
+  Admissions: "Kemasukan",
+  Discharges: "Discaj",
+  "Active Residents": "Penghuni Aktif",
+  "Admitted Residents": "Penghuni Diterima",
+  "Discharged Residents": "Penghuni Discaj",
+  "Currently Active Residents": "Penghuni Aktif Sekarang",
+  "Net Bed Change": "Perubahan Katil Bersih",
+  "Net Change": "Perubahan Bersih",
+  "Length of Stay": "Tempoh Tinggal",
+  "Length of Stay Details": "Butiran Tempoh Tinggal",
+  "Total Bed Capacity": "Jumlah Kapasiti Katil",
+  "Calculation": "Pengiraan",
+  Occupancy: "Penghunian",
+  "By Branch": "Mengikut Cawangan",
+  Details: "Butiran",
+  "No residents to display.": "Tiada penghuni untuk dipaparkan.",
+  "LOS (days)": "TGG (hari)",
+
+  // Module tab label
+  "Resident's Particular": "Butiran Penghuni",
 };

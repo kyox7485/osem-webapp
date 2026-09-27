@@ -51,7 +51,11 @@ export const dictMedication: Record<string, string> = {
 
   // Frequency options
   PRN: "PRN",
-  EOD: "Setiap 2 Hari",
+  // EOD = every other day, i.e. a 2-day dosing cycle (see
+  // FREQUENCY_DAY_INTERVAL in lib/medication-stock.ts). Deliberately NOT
+  // "setiap 2 hari", which reads as "every 2 days" and would lead a nurse
+  // to dose on the wrong days.
+  EOD: "Setiap Hari Selang",
   "Every 3 Days": "Setiap 3 Hari",
   "Selected Days": "Hari Terpilih",
 
@@ -128,7 +132,7 @@ export const dictMedication: Record<string, string> = {
   // silently for the whole app, not just this module.
   "Unsaved Changes": "Perubahan Belum Disimpan",
   "You have unsaved changes. What would you like to do?":
-    "Anda mempunyai perubahan yang belum disimpan. Apakah yang ingin anda lakukan?",
+    "Anda mempunyai perubahan yang belum disimpan. Apa yang anda ingin lakukan?",
   "Order submitted successfully.": "Pesanan berjaya diserahkan.",
   "Redirecting...": "Mengalih hala...",
   "Edit order": "Sunting pesanan",
@@ -269,7 +273,7 @@ export const dictMedication: Record<string, string> = {
   "Could not load the purchase list for this branch.":
     "Senarai pembelian untuk cawangan ini tidak dapat dimuatkan.",
   "Please select the staff member who prepared this list.":
-    "Sila pilih petugas yang menyediakan senarai ini.",
+    "Sila pilih kakitangan yang menyediakan senarai ini.",
   "Prepared By": "Disediakan Oleh",
   "This medicine is already on the purchase list.":
     "Ubat ini sudah ada dalam senarai pembelian.",
@@ -286,4 +290,11 @@ export const dictMedication: Record<string, string> = {
     "Tiada rekod untuk dijana: tiada item yang perlu ditempah.",
   "Countable balances are forecasts from the prescription since the last stock count, not a physical count. Editing here does not change any stock record.":
     "Baki yang boleh dikira adalah jangkaan berdasarkan preskripsi sejak kiraan stok terakhir, bukan kiraan sebenar. Perubahan di sini tidak akan mengubah mana-mana rekod stok.",
+
+  // Purchase list review table
+  "Not forecast; Added manually": "Tiada ramalan; Ditambah secara manual",
+  "Low quantity": "Kuantiti rendah",
+  Medicine: "Ubat",
+  "Days left": "Baki hari",
+  "Qty to order": "Kuantiti untuk ditempah",
 };

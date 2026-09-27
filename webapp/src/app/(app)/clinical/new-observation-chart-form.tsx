@@ -238,7 +238,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
             </select>
           </div>
           <div>
-            <label className={labelCls}>{t("Date & Time")}</label>
+            <label className={labelCls}>{t("Date & time")}</label>
             <input
               type="datetime-local"
               value={entryTimestamp}
@@ -249,7 +249,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
         </div>
 
         <div>
-          <label className={labelCls}>{t("Active Issue")} <span className="text-xs font-normal text-fg-subtle">({t("why is this resident being monitored?")})</span></label>
+            <label className={labelCls}>{t("Active issue")} <span className="text-xs font-normal text-fg-subtle">({t("why is this resident being monitored?")})</span></label>
           <textarea
             value={activeIssue}
             onChange={(e) => setActiveIssue(e.target.value)}

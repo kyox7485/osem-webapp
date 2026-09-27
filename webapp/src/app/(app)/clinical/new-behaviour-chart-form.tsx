@@ -416,7 +416,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
             </select>
           </div>
           <div>
-            <label className={labelCls}>{t("Date & Time")}</label>
+            <label className={labelCls}>{t("Date & time")}</label>
             <input
               type="datetime-local"
               value={entryTimestamp}

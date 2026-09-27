@@ -19,14 +19,18 @@ export const dictAccounts: Record<string, string> = {
   "Save changes": "Simpan perubahan",
   "Create account & send invite": "Cipta akaun & hantar jemputan",
 
-  // Rights levels (RIGHTS_OPTIONS literal values)
-  ADMIN: "PENTADBIR",
-  MODERATOR: "MODERATOR",
-  STAFF: "KAKITANGAN",
+  // Rights levels (RIGHTS_OPTIONS literal values). The stored value stays
+  // English in the database forever -- only these display labels change.
+  // Title case rather than ALL-CAPS so the three read as a set, and so
+  // "MODERATOR" no longer shows untranslated.
+  ADMIN: "Pentadbir",
+  MODERATOR: "Moderator",
+  STAFF: "Kakitangan",
 
-  // Status values (STAFF_STATUS_OPTIONS literal values)
-  ACTIVE: "AKTIF",
-  INACTIVE: "TIDAK AKTIF",
+  // Status values (STAFF_STATUS_OPTIONS literal values) -- same title-case
+  // treatment as the rights levels above.
+  ACTIVE: "Aktif",
+  INACTIVE: "Tidak Aktif",
 
   // Set password form
   "Set new password": "Tetapkan kata laluan baharu",
@@ -35,4 +39,8 @@ export const dictAccounts: Record<string, string> = {
   "New password (min 6 characters)": "Kata laluan baharu (minimum 6 aksara)",
   "Password updated.": "Kata laluan telah dikemas kini.",
   "Set password": "Tetapkan kata laluan",
+
+  // Accounts list -- edit dialog
+  "Edit account": "Sunting akaun",
+  "Edit account information for": "Sunting maklumat akaun untuk",
 };

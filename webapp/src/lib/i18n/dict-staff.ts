@@ -24,4 +24,8 @@ export const dictStaff: Record<string, string> = {
   "Select a department": "Pilih jabatan",
   "Save changes": "Simpan perubahan",
   "Create staff": "Cipta kakitangan",
+
+  // staff-picker-with-other.tsx
+  "Others (specify below)": "Lain-lain (nyatakan di bawah)",
+  "Enter name...": "Masukkan nama...",
 };

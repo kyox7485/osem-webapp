@@ -123,7 +123,7 @@ export const dictClinical: Record<string, string> = {
   Meals: "Hidangan",
   "Hygiene care": "Penjagaan kebersihan",
   "No nursing chart entries yet.": "Tiada entri carta kejururawatan lagi.",
-  "Showing the most recent entries only. Narrow the date range or pick a resident to see older ones.": "Memaparkan entri terkini sahaja. Narrowkan julat tarikh atau pilih seorang penghuni untuk melihat entri lama.",
+  "Showing the most recent entries only. Narrow the date range or pick a resident to see older ones.": "Memaparkan entri terkini sahaja. Persempit julat tarikh atau pilih seorang penghuni untuk melihat entri lama.",
   area: "kawasan",
   areas: "kawasan",
   "Tube feeding": "Suapan tiub",
@@ -215,6 +215,17 @@ export const dictClinical: Record<string, string> = {
   "Wound Photo History": "Sejarah Gambar Luka",
   "No wound photo sessions yet.": "Belum ada sesi gambar luka.",
   "Uploaded by": "Dimuat naik oleh",
+  // Grouped history tree (resident > year > month > day). Only the
+  // labels need translating -- the year/month/day keys themselves are
+  // derived from the timestamp and stay language-neutral.
+  Day: "Hari",
+  photo: "gambar",
+  photos: "gambar",
+  session: "sesi",
+  sessions: "sesi",
+  "Click to load": "Klik untuk muat",
+  "Open photo": "Buka gambar",
+  Close: "Tutup",
   "Please select who uploaded these photos": "Sila pilih pegawai yang memuat naik gambar ini",
   "Select a resident to start a wound photo session.": "Pilih penghuni untuk mula sesi gambar luka.",
   "Body chart (front and back views)": "Carta badan (pandangan hadapan dan belakang)",
@@ -312,7 +323,7 @@ export const dictClinical: Record<string, string> = {
   "Sleep / Nap": "Tidur / Tidur Sekejap",
   "No behaviour chart entries yet.": "Tiada entri carta tingkah laku lagi.",
   "Please select who entered this chart": "Sila pilih pegawai yang memasukkan carta ini",
-  "Timed Episodes": "Episod Berjangka",
+  "Timed Episodes": "Episod Bermasa",
   "Add period": "Tambah tempoh",
   "Add another period": "Tambah tempoh lain",
   "Record specific time periods for each behaviour episode.": "Rekodkan tempoh masa khusus untuk setiap episod tingkah laku.",
@@ -342,7 +353,7 @@ export const dictClinical: Record<string, string> = {
   "Start time": "Masa mula",
   "End time": "Masa tamat",
   Duration: "Tempoh",
-  "Chart summaries (no timed episodes)": "Ringkasan carta (tiada episod berjangka)",
+  "Chart summaries (no timed episodes)": "Ringkasan carta (tiada episod bermasa)",
   // Severity colours / concern levels
   "Normal / Neutral": "Normal / Neutral",
   "Mild Concern": "Kebimbangan Ringan",
@@ -355,11 +366,91 @@ export const dictClinical: Record<string, string> = {
   // Day view / drill-down
   "Back to": "Kembali ke",
   "Click to view this day in detail": "Klik untuk lihat hari ini secara terperinci",
-  "Tap a day to view its detailed 24-hour timeline": "Ketik hari untuk lihat garis masa 24 jam terperinci",
+  "Tap a day to view its detailed 24-hour timeline": "Tekan hari untuk lihat garis masa 24 jam terperinci",
   // Inline timing
   "Time not specified": "Masa tidak dinyatakan",
   "add a period to record exact time": "tambah tempoh untuk rekod masa tepat",
   "Add a period": "Tambah tempoh",
   "Any note for this period": "Sebarang nota untuk tempoh ini",
   "Not specified": "Tidak dinyatakan",
+
+  // Observation Chart module (observation-chart-module.tsx,
+  // observation-review-dashboard.tsx, observation-status-button.tsx).
+  // Added with the observation feature; previously had no MS entry at all,
+  // so the whole screen fell back to English.
+  "Observation Chart": "Carta Pemerhatian",
+  Observation: "Pemerhatian",
+  "No residents are currently under observation. Start observation from the Resident List first.":
+    "Tiada penghuni dalam pemerhatian sekarang. Mulakan pemerhatian dari Senarai Penghuni dahulu.",
+  "No residents are currently under observation.": "Tiada penghuni dalam pemerhatian sekarang.",
+  "residents currently under observation": "penghuni dalam pemerhatian sekarang",
+  "Under observation for": "Dalam pemerhatian selama",
+  "started by": "dimulakan oleh",
+  "Started by": "Dimulakan oleh",
+  "Ended by": "Dihentikan oleh",
+  "ended by": "dihentikan oleh",
+  "Ended reason": "Sebab dihentikan",
+  "Today's report done": "Laporan hari ini selesai",
+  "No report today yet": "Belum ada laporan hari ini",
+  "reports in period": "laporan dalam tempoh",
+  "No observation chart entries in this period.": "Tiada entri carta pemerhatian dalam tempoh ini.",
+  "Latest vs previous entry": "Terkini berbanding entri sebelumnya",
+  "Latest entry": "Entri terkini",
+  Timeline: "Garis masa",
+  Period: "Tempoh",
+  "Completed Observations": "Pemerhatian Selesai",
+  "No completed observation episodes.": "Tiada episod pemerhatian yang selesai.",
+
+  // Observation start / end controls
+  "Start observation": "Mulakan pemerhatian",
+  "Start Observation": "Mulakan Pemerhatian",
+  "End observation": "Hentikan pemerhatian",
+  "End Observation": "Hentikan Pemerhatian",
+  "Under Observation": "Dalam Pemerhatian",
+  "Please select who is starting this observation": "Sila pilih pegawai yang memulakan pemerhatian ini",
+  "Please select who is ending this observation": "Sila pilih pegawai yang menghentikan pemerhatian ini",
+  "This resident will appear in the Observation Chart until observation ends.":
+    "Penghuni ini akan muncul dalam Carta Pemerhatian sehingga pemerhatian dihentikan.",
+  "Record why observation is ending.": "Rekodkan sebab pemerhatian dihentikan.",
+  "Please select a reason": "Sila pilih sebab",
+  Reason: "Sebab",
+  "Select reason": "Pilih sebab",
+  "Specify reason...": "Nyatakan sebab...",
+  "Confirm start": "Sahkan mula",
+  "Confirm end": "Sahkan henti",
+
+  // Observation Chart entry form
+  "why is this resident being monitored?": "mengapa penghuni ini dipantau?",
+  "Nursing Assessment": "Penilaian Kejururawatan",
+  "Location (e.g. Right knee, lower back)": "Lokasi (cth. Lutut kanan, belakang bawah)",
+  "Specify other behaviour...": "Nyatakan tingkah laku lain...",
+  "Loading latest vitals...": "Memuatkan tanda vital terkini...",
+  "Pre-filled from latest record — edit if different": "Diisi automatik daripada rekod terkini — ubah jika berbeza",
+  "SpO₂": "SpO₂",
+  "SpO₂ Condition": "Keadaan SpO₂",
+  "Select or leave blank": "Pilih atau biarkan kosong",
+
+  // Behaviour chart form + wound photo save. ("Date & time" is already
+  // defined in the nursing-chart section above; "Active issue" belongs to
+  // dict-admin.ts -- don't redefine either here or the merge order in
+  // translations.ts decides the winner for the whole app.)
+  "Select all that apply": "Pilih semua yang berkaitan",
+  "select all that apply": "pilih semua yang berkaitan",
+  "Select level": "Pilih tahap",
+  "Describe any active complaints...": "Huraikan aduan aktif yang ada...",
+  "Save & Notify": "Simpan & Maklumkan",
+  "Failed to save": "Gagal menyimpan",
+  Note: "Nota",
+  "Aspirate (mL)": "Aspiran (mL)",
+  "Please select who uploaded these photos before saving.":
+    "Sila pilih pegawai yang memuat naik gambar ini sebelum menyimpan.",
+
+  // Observation chart entry form -- placeholder examples
+  "e.g. Post-fall monitoring, fever workup, newly admitted, critical condition":
+    "cth. Pemantauan selepas jatuh, siasatan demam, kemasukan baharu, keadaan kritikal",
+  "e.g. Dry / Soaked / Foul smell / N/A": "cth. Kering / Ketas / Bau busuk / T/A",
+  "e.g. Breakfast finished + drank 250ml; Lunch refused":
+    "cth. Sarapan habis + minum 250ml; Makan tengahari ditolak",
+  "e.g. Clear yellow, adequate output / Catheter patent / Concentrated":
+    "cth. Kuning jernih, output mencukupi / Kateter lancar / Pekat",
 };

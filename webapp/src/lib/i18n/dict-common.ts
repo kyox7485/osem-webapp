@@ -62,6 +62,7 @@ export const dictCommon: Record<string, string> = {
   System: "Sistem",
   "Collapse sidebar": "Kecilkan bar sisi",
   "Expand sidebar": "Kembangkan bar sisi",
+  "External Links": "Pautan Luaran",
 
   // Unsaved-changes guard dialog
   "Unsaved changes": "Perubahan belum disimpan",
