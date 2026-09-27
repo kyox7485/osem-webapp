@@ -235,17 +235,21 @@ export type StockStatus = {
 const MAX_FORECAST_DAYS = 3650;
 
 /**
- * Current forecast balance for a Count-unit order: the event's balance minus
- * (dailyUsage × elapsed days since the event timestamp). Elapsed time is
- * computed from the exact event timestamp so fractional balances (e.g. 4.5
- * Tablet after 1 day at 0.5/day) are preserved rather than rounding to whole
- * dosing-day steps.
+ * Current forecast balance for a Count-unit order: walks the actual dosing
+ * schedule from the day after the stock event up to and including today,
+ * deducting usagePerDosingDay on each scheduled dosing day. This produces
+ * whole-unit steps for non-daily schedules (EOD, Mon/Wed/Fri) and fractional
+ * balances only when the actual dose is fractional (e.g. 0.5 Tablet OD).
+ * Daily Usage is NOT used here — it is an average for Days Remaining only.
  */
-function forecastBalance(event: StockEvent, order: StockOrder, now: Date): number {
-  const du = dailyUsage(order, event.unit);
-  if (du === null || du <= 0) return Number(event.balance);
-  const elapsedDays = (now.getTime() - new Date(event.stock_date).getTime()) / 86400000;
-  return Math.max(0, round2(Number(event.balance) - du * elapsedDays));
+function forecastBalance(event: StockEvent, order: StockOrder, usage: number, todayIso: string): number {
+  const from = dayNumber(klDate(new Date(event.stock_date)));
+  const to = dayNumber(todayIso);
+  let consumed = 0;
+  for (let day = from + 1; day <= to; day++) {
+    if (isDosingDay(day, order)) consumed += usage;
+  }
+  return Math.max(0, round2(Number(event.balance) - consumed));
 }
 
 export type StockOutlook = {
@@ -307,7 +311,7 @@ export function computeStockStatus(latest: StockEvent | null, order: StockOrder,
     return { tracking, unit: latest.unit, balance: Number(latest.balance), forecast: false, ...empty };
   }
 
-  const balance = forecastBalance({ ...latest, balance: Number(latest.balance) }, order, now);
+  const balance = forecastBalance({ ...latest, balance: Number(latest.balance) }, order, perDosingDay, today);
   return {
     tracking,
     unit: latest.unit,
