@@ -19,7 +19,6 @@ import {
 import type { LookupOption } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
-import { PdfDownloadLink } from "@/components/pdf-download-link";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 import { ResultNotice } from "./result-notice";
 
