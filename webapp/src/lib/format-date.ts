@@ -25,6 +25,16 @@ export function formatDate(iso: string): string {
   });
 }
 
+// Month name for grouped headings (e.g. "September 2026"). Pinned to
+// en-GB for the same hydration reason as above, and derived from klParts()
+// so the month always agrees with formatDate()'s day/year rather than
+// being re-read in the runtime's ambient zone.
+export function formatMonthYear(iso: string): string {
+  const { y, mo } = klParts(iso);
+  const date = new Date(Date.UTC(Number(y), Number(mo) - 1, 1));
+  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
 // For <input type="datetime-local"> -- that control has no timezone concept,
 // it's a plain "wall clock" string, so we treat it as Asia/Kuala_Lumpur local
 // time throughout (matching every other timestamp in this app).
