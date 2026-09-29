@@ -116,7 +116,7 @@ language sql immutable set search_path = '' as $$
     when 'REVERSE'             then 3
     when 'CORRECT'             then 3
     when 'ADJUSTMENT_APPROVE'  then 3
-    when 'REQUEST_APPROVE'     then 3
+    when 'REQUEST_APPROVE'     then 4   -- owner 2026-09-29: ADMIN only (approve/reject, mark ordered)
     when 'EXCEPTIONS_REVIEW'   then 3
     when 'PERIOD_LOCK'         then 3
     when 'PRICE_PENDING'       then 3

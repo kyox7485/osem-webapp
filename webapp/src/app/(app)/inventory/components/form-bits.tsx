@@ -122,7 +122,7 @@ export function ErrorNotice({ code }: { code: string | null }) {
 export function SuccessNotice({ data }: { data: Record<string, unknown> | null }) {
   const t = useTranslation();
   if (!data) return null;
-  const ref = (data.txn_no ?? data.receipt_no ?? data.adjustment_no ?? data.transfer_no ?? "") as string;
+  const ref = (data.txn_no ?? data.receipt_no ?? data.adjustment_no ?? data.transfer_no ?? data.request_no ?? "") as string;
   return (
     <div role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
       {t("Saved.")} {ref}

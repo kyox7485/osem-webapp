@@ -23,6 +23,8 @@ export const INV_TIER = {
   VIEW_COST: 2,
   REVERSE: 3,
   ADJUSTMENT_APPROVE: 3,
+  STOCK_REQUEST: 2,
+  REQUEST_APPROVE: 4,
   OPENING_BALANCE: 4,
   STOCK_LEVELS: 4,
 } as const;
@@ -67,6 +69,15 @@ export type InvSupplier = {
 export type InvStaff = { id: string; name: string; isSenior: boolean };
 export type InvResident = { id: number; name: string; residentCode: string | null; status: string };
 export type InvBranch = { id: number; label: string };
+/** A stock request a delivery can be received against, with its outstanding lines (base units). */
+export type InvOpenRequest = {
+  id: number;
+  requestNo: string;
+  status: string;
+  externalRef: string | null;
+  supplierId: number | null;
+  lines: { productId: number; outstandingBase: number }[];
+};
 
 /** Everything a posting form needs, loaded once by the page. */
 export type InvCatalogue = {
@@ -99,6 +110,9 @@ export const INV_RPCS = [
   "inv_deactivate_barcode",
   "inv_save_supplier",
   "inv_set_stock_level",
+  "inv_create_stock_request",
+  "inv_decide_stock_request",
+  "inv_stock_request_action",
 ] as const;
 export type InvRpcName = (typeof INV_RPCS)[number];
 
@@ -189,6 +203,39 @@ export const ADJUSTMENT_STATUS_LABELS: Record<string, string> = {
   REJECTED: "Rejected",
   CANCELLED: "Cancelled",
 };
+
+export const REQUEST_STATUS_OPTIONS = [
+  { value: "DRAFT", label: "Draft" },
+  { value: "SUBMITTED", label: "Submitted" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "ORDERED", label: "Ordered" },
+  { value: "PARTIALLY_RECEIVED", label: "Partially received" },
+  { value: "RECEIVED", label: "Received" },
+  { value: "CLOSED", label: "Closed" },
+  { value: "CANCELLED", label: "Cancelled" },
+] as const;
+
+/** Statuses a delivery can still be received against (schema/017). */
+export const REQUEST_RECEIVABLE_STATUSES: readonly string[] = ["APPROVED", "ORDERED", "PARTIALLY_RECEIVED"];
+
+export const REQUEST_EVENT_LABELS: Record<string, string> = {
+  CREATED: "Created",
+  SUBMITTED: "Submitted",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  ORDERED: "Ordered",
+  FOLLOW_UP: "Follow-up",
+  RECEIPT_LINKED: "Delivery received",
+  LINE_CLOSED_SHORT: "Line closed short",
+  CLOSED: "Closed",
+  CANCELLED: "Cancelled",
+};
+
+/** A base-unit qty expressed in another unit, e.g. 250 EA with BOX = 100 → 2.5. */
+export function toPurchaseQty(base: number, factor: number): number {
+  return factor > 0 ? Math.round((base / factor) * 10000) / 10000 : base;
+}
 
 export function labelOf(options: readonly { value: string; label: string }[], value: string | null | undefined): string {
   return options.find((o) => o.value === value)?.label ?? value ?? "";
@@ -294,6 +341,15 @@ const CODE_MESSAGES: Record<string, string> = {
   INVALID_BARCODE: "Invalid barcode.",
   BARCODE_IN_USE: "This barcode is already used by another product.",
   ALREADY_INACTIVE: "Already inactive.",
+  REQUEST_NOT_FOUND: "Stock request not found for this branch.",
+  REQUEST_BAD_STATUS: "The request is no longer in a state that allows this.",
+  REQUEST_NOT_RECEIVABLE: "This request is not approved or is already complete.",
+  REQUEST_NO_MATCHING_LINE: "None of these products is on the selected request.",
+  REQUEST_LINE_NOT_FOUND: "Request line not found.",
+  NOTHING_APPROVED: "Approve at least one line, or reject the request.",
+  LINE_ALREADY_CLOSED: "This line is already closed.",
+  NOTE_REQUIRED: "Please add a note.",
+  INVALID_REF: "The order reference is too long (max 60 characters).",
 };
 
 /** English message key (translated by the caller with t()). */

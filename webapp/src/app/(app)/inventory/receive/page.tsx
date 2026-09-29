@@ -1,7 +1,7 @@
 import { getServerTranslator } from "@/lib/i18n/server";
 import { getBranches } from "@/lib/lookups";
 import { INV_TIER, formatQty } from "@/lib/inventory/core";
-import { isDemoBranch, loadCatalogue, loadLocations, loadResidents, loadStaff, loadSuppliers } from "@/lib/inventory/server";
+import { isDemoBranch, loadCatalogue, loadLocations, loadOpenRequests, loadResidents, loadStaff, loadSuppliers } from "@/lib/inventory/server";
 import { InventoryShell, requireInventory } from "../shell";
 import { EmptyState } from "../components/form-bits";
 import { TransferAction } from "../transfers/transfer-action";
@@ -46,6 +46,7 @@ export default async function InventoryReceivePage({ searchParams }: { searchPar
                 .limit(100)
             : Promise.resolve({ data: [] }),
           canReceiveTransfers ? getBranches("NUR") : Promise.resolve([]),
+          loadOpenRequests(ctx.supabase, branchId),
         ]);
 
   let tabs = null;
@@ -90,6 +91,7 @@ export default async function InventoryReceivePage({ searchParams }: { searchPar
             suppliers={data[2]}
             staff={staff}
             residents={data[4]}
+            openRequests={data[7]}
           />
         }
         transfers={

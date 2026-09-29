@@ -9,15 +9,17 @@ import {
   parseQty,
   todayKL,
   type InvCatalogue,
+  type InvOpenRequest,
   type InvResident,
   type InvStaff,
   type InvSupplier,
 } from "@/lib/inventory/core";
 import { useInvSubmit } from "../components/use-inv-submit";
-import { LineEditor, type EditorLine } from "../components/line-editor";
+import { LineEditor, newLine, type EditorLine } from "../components/line-editor";
 import { CARD_CLS, EmptyState, Field, FormStatus, INPUT_CLS, SMALL_INPUT_CLS, StaffSelect, SubmitButton } from "../components/form-bits";
 
 type Header = {
+  requestId: string;
   supplierId: string;
   docType: string;
   invoiceNo: string;
@@ -33,6 +35,7 @@ type Header = {
 };
 
 const emptyHeader = (): Header => ({
+  requestId: "",
   supplierId: "",
   docType: "INVOICE",
   invoiceNo: "",
@@ -53,8 +56,11 @@ export function ReceiveForm({
   suppliers,
   staff,
   residents,
+  openRequests = [],
 }: {
   storeId: number | null;
+  /** Approved / ordered stock requests with outstanding lines (optional link, schema/017). */
+  openRequests?: InvOpenRequest[];
   catalogue: InvCatalogue;
   suppliers: InvSupplier[];
   staff: InvStaff[];
@@ -68,6 +74,27 @@ export function ReceiveForm({
     setLines([]);
   });
   const set = (k: keyof Header) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setH({ ...h, [k]: e.target.value });
+
+  // Picking a request prefills its outstanding lines (purchase UOM when it divides evenly)
+  // and the supplier; everything stays editable. Products are still added only by barcode / SKU.
+  function pickRequest(value: string) {
+    state.touch();
+    const req = openRequests.find((r) => String(r.id) === value);
+    if (!req) {
+      setH({ ...h, requestId: "" });
+      return;
+    }
+    const next: EditorLine[] = [];
+    for (const l of req.lines) {
+      const p = catalogue.products.find((x) => x.id === l.productId);
+      if (!p) continue;
+      const factor = p.uoms.find((u) => u.uomId === p.purchaseUomId && u.isActive)?.factor ?? 0;
+      const usePurchase = factor > 1 && l.outstandingBase % factor === 0;
+      next.push(newLine(p.id, usePurchase ? p.purchaseUomId : p.baseUomId, String(usePurchase ? l.outstandingBase / factor : l.outstandingBase)));
+    }
+    setLines(next);
+    setH({ ...h, requestId: value, supplierId: h.supplierId || (req.supplierId ? String(req.supplierId) : "") });
+  }
 
   if (!storeId) return <EmptyState text={t("This branch has no Store location.")} />;
 
@@ -114,6 +141,7 @@ export function ReceiveForm({
       rounding_adj: rounding,
       invoice_total_paper: paper,
       remarks: h.remarks || null,
+      stock_request_id: h.requestId ? Number(h.requestId) : null,
       lines: payloadLines,
     });
   }
@@ -121,6 +149,19 @@ export function ReceiveForm({
   return (
     <form className="space-y-4" onChangeCapture={state.touch} onSubmit={handleSubmit}>
       <div className={`${CARD_CLS} grid gap-3 sm:grid-cols-3`}>
+        {openRequests.length > 0 && (
+          <Field label={t("For stock request")} hint={t("Optional. Fills in what is still outstanding on the request.")}>
+            <select className={INPUT_CLS} value={h.requestId} onChange={(e) => pickRequest(e.target.value)}>
+              <option value="">{t("Not linked to a request")}</option>
+              {openRequests.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.requestNo}
+                  {r.externalRef ? ` · ${r.externalRef}` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label={t("Supplier")} required>
           <select className={INPUT_CLS} value={h.supplierId} onChange={set("supplierId")}>
             <option value="">{t("Select supplier")}</option>

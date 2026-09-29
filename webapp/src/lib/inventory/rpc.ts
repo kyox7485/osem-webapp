@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { InvRpcName, RpcResult } from "./core";
 
-// Typed wrapper around the inv_* RPCs (schema/010, 011, 014, 015). Always the
+// Typed wrapper around the inv_* RPCs (schema/010, 011, 014, 015, 017). Always the
 // user-session client — never the service role (D-85): auth.uid() must be
 // the real login for fn_inv_can and the audit log.
 //
@@ -12,7 +12,10 @@ import type { InvRpcName, RpcResult } from "./core";
 // with the SAME key (§4.6), everything else becomes RPC_ERROR.
 
 const RETRYABLE = new Set(["40P01", "40001"]);
-const RAISED_CODES: [RegExp, string][] = [[/INV_ISSUE_HAS_RETURNS/, "ISSUE_HAS_RETURNS"]];
+const RAISED_CODES: [RegExp, string][] = [
+  [/INV_ISSUE_HAS_RETURNS/, "ISSUE_HAS_RETURNS"],
+  [/INV_REQUEST_LINK/, "REQUEST_NOT_FOUND"],
+];
 
 export async function callInventoryRpc(rpc: InvRpcName, payload: Record<string, unknown>, key: string): Promise<RpcResult> {
   const supabase = await createClient();

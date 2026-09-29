@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Flag,
   Settings,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 import { useNavPush } from "@/components/nav-loading";
@@ -30,6 +31,7 @@ const TABS: Tab[] = [
   { href: "/inventory/transfers", label: "Transfers", icon: ArrowLeftRight, minRank: INV_TIER.TRANSFER },
   { href: "/inventory/returns", label: "Returns", icon: Undo2, minRank: INV_TIER.RETURN_FROM_ISSUE },
   { href: "/inventory/write-off", label: "Write-off", icon: Trash2, minRank: INV_TIER.WRITE_OFF },
+  { href: "/inventory/requests", label: "Stock requests", icon: ShoppingCart, minRank: INV_TIER.STOCK_REQUEST },
   { href: "/inventory/adjustments", label: "Adjustments", icon: SlidersHorizontal, minRank: INV_TIER.ADJUSTMENT_REQUEST },
   { href: "/inventory/opening", label: "Opening balance", icon: Flag, minRank: INV_TIER.OPENING_BALANCE },
   { href: "/inventory/setup/products", label: "Setup", icon: Settings, minRank: INV_TIER.VIEW },

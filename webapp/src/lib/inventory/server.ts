@@ -4,7 +4,9 @@ import { getCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { getBranches, getDemoBranchIds } from "@/lib/lookups";
 import {
   isSeniorPosition,
+  REQUEST_RECEIVABLE_STATUSES,
   type InvBarcode,
+  type InvOpenRequest,
   type InvBranch,
   type InvCatalogue,
   type InvCategory,
@@ -236,4 +238,43 @@ export async function loadResidents(supabase: Supabase, branchId: number, active
 
 export async function isDemoBranch(branchId: number): Promise<boolean> {
   return (await getDemoBranchIds()).includes(branchId);
+}
+
+/**
+ * Stock requests a delivery can be received against (schema/017): APPROVED /
+ * ORDERED / PARTIALLY_RECEIVED with something still outstanding. Outstanding
+ * comes from v_inv_request_line_progress (approved − delivered, not closed short).
+ */
+export async function loadOpenRequests(supabase: Supabase, branchId: number): Promise<InvOpenRequest[]> {
+  const { data: reqs } = await supabase
+    .from("tbl_inv_stock_requests")
+    .select("id, request_no, status, external_ref, tbl_inv_stock_request_lines(supplier_id)")
+    .eq("branch_id", branchId)
+    .in("status", [...REQUEST_RECEIVABLE_STATUSES])
+    .order("id", { ascending: false })
+    .limit(100);
+  const ids = (reqs ?? []).map((r) => Number(r.id));
+  if (ids.length === 0) return [];
+  const { data: progress } = await supabase
+    .from("v_inv_request_line_progress")
+    .select("request_id, product_id, outstanding_qty")
+    .in("request_id", ids)
+    .gt("outstanding_qty", 0);
+  return (reqs ?? [])
+    .map((r) => {
+      const suppliers = (r.tbl_inv_stock_request_lines ?? [])
+        .map((l: { supplier_id: number | null }) => l.supplier_id)
+        .filter((s): s is number => s !== null);
+      return {
+        id: Number(r.id),
+        requestNo: r.request_no as string,
+        status: r.status as string,
+        externalRef: (r.external_ref as string | null) ?? null,
+        supplierId: suppliers.length > 0 ? Number(suppliers[0]) : null,
+        lines: (progress ?? [])
+          .filter((p) => Number(p.request_id) === Number(r.id))
+          .map((p) => ({ productId: Number(p.product_id), outstandingBase: Number(p.outstanding_qty) })),
+      };
+    })
+    .filter((r) => r.lines.length > 0);
 }
