@@ -1295,7 +1295,7 @@ Filters: branch, location, product, category, txn type, date range and resident.
   - Qty inputs reject more than 7 integer digits.
   - Receipt lines show cost per purchase UOM and per base UOM side by side, and show the last receipt cost and the WAC for comparison.
   - Scanners must send an Enter suffix, which goes in the setup notes.
-- Scanning the same product+UOM again increments the qty, and a box barcode adds 1 BOX. Focus returns to the scan box. Manual search is a client-side filter, with a `pg_trgm` server fallback. Camera scanning is V2.
+- Scanning the same product+UOM again increments the qty, and a box barcode adds 1 BOX. Focus returns to the scan box. ~~Manual search is a client-side filter, with a `pg_trgm` server fallback.~~ **Superseded by the owner rule (§0.2, §16): operational forms have no name search.** Camera scanning is V2.
 
 ---
 
@@ -1590,6 +1590,23 @@ Skipped: near-expiry (D-139, no batch or expiry) and every reconciliation / prov
 
 ---
 
+## 16. Phase 8: mobile and scanner UX (no SQL)
+
+**Owner rule overrides §9.6.** Operational forms (Receive, Issue with its Returns / Write-off / Adjustments sub-tabs, Transfers, Counts entry, Charge a service, Opening balance, Suggested order) find products **only by barcode or exact SKU**. There is no name search, no client-side name filter and no `pg_trgm` fallback on those screens; the "manual search" line in §9.6 does not apply to them. Setup pages keep name search.
+
+- **D-173 (one lookup).** `useProductLookup` (components) is the single lookup for `LineEditor` and Count entry: the preloaded map of branch-visible active barcodes (`buildBarcodeMap`, D-95; RLS gives global + demo-owned exactly as the RPCs do) -> exact code, then UPC-A <-> EAN-13 by adding or dropping a leading `0` -> exact SKU (case-insensitive) -> one server lookup `lookupBarcodeAction` (keeps a code attached a moment ago working) -> "Not found: <code>". Pure helpers live in `lib/inventory/scan.ts`.
+- **D-174 (scanner capture).** `useScannerCapture` installs one document-level `keydown` listener (capture phase) while a screen is mounted. A burst of >= 6 printable characters with < 35 ms between keys ending in Enter is routed to the newest visible, enabled screen whatever has focus; the Enter is swallowed and the burst characters are removed from the focused input (its previous value is restored through the native setter + `input` event, so controlled inputs follow). IME composition is ignored; `data-scanner-ignore` on a field or modal opts out. Listener and state are cleaned up when the last screen unmounts. Enter in the scan box never submits the form.
+- **D-175 (qty guard).** Qty inputs (line editor, count entry) refuse a keystroke that would give more than 7 integer digits or 4 decimals (`limitQtyInput`); `parseQty` still validates on submit.
+- **D-176 (repeat scan).** The same product + unit increments that line; a box barcode adds 1 of its own unit; a different unit for a product already on the form switches that line (one line per product, the RPCs reject duplicates). Focus returns to the scan box. In Count entry a scan jumps to the sheet line, highlights it for 2.5 s and focuses its qty input; a product not on the sheet is added as a found item (Transit counts ask for the resident first).
+- **D-177 (attach flow).** A code that is not found offers "Attach this barcode to a product" for logins at the BARCODE_ATTACH tier (rank >= 2, not the DEMO login unless DEMO admin): the product is chosen by **exact SKU**, then the unit the code stands for, plus a senior performer unless the caller is HQ ADMIN or the DEMO admin. It calls the existing `inv_add_barcode` (no SQL change); the RPC stays the authority. Who may attach and the performer list come from `getBarcodeAttachContext` (loaded lazily, so no page changes).
+- **D-178 (receipt cost hints).** Each Receive line shows the entered cost per purchase unit and per base unit, plus the last non-voided receipt cost and the current WAC in the line's unit. Display only: `loadCostHints` reads `tbl_inv_cost_pools.wac` and `tbl_inv_receipt_lines` (unit cost / factor) with plain SELECTs; the RPC still owns landed cost.
+- **D-179 (mobile).** Tab bars scroll sideways (`SCROLL_TABROW_CLS`), line editors and the count sheet stack into cards below `md`, inputs and buttons are >= 44 px high with 16 px text below `md` (`max-md:` utilities on the shared form classes), numeric `inputMode` on qty and price inputs. Wide read-only tables keep their own `overflow-x-auto` wrapper, so the page itself never scrolls sideways.
+- **D-180 (scanner note).** A collapsed "Scanner setup" note under the Setup sub-tabs: keyboard-wedge (HID) mode, Enter suffix required, scan without focusing a field, no name search, camera scanning is V2.
+- Not built: camera scanning (V2), unit tests for the pure helpers (the repo's only runner, `test:inventory`, is a PGlite SQL runner; no TS test framework is configured and none was added).
+- Not verified: no logged-in browser or real-scanner run against live data; burst timing was reasoned from the D-109 thresholds, not measured on hardware.
+
+---
+
 ## Appendix A. Decision register
 
 | D | Decision | Status | § |
@@ -1711,3 +1728,11 @@ Skipped: near-expiry (D-139, no batch or expiry) and every reconciliation / prov
 | D-170 | Valuation totals from cost pools / latest closing snapshot only; unknown WAC flagged; in-transit at month end noted apart | active | 15 |
 | D-171 | Suggested order = `v_inv_suggested_order` (no minimum level exists) | active | 15 |
 | D-172 | Count variance report: SUBMITTED and CLOSED only; SUBMITTED stays blind below Count-Investigate | active | 15 |
+| D-173 | One product lookup: preloaded map, UPC/EAN, exact SKU, server fallback | active | 16 |
+| D-174 | Scanner burst capture hook (>= 6 chars, < 35 ms, Enter) | active | 16 |
+| D-175 | Qty inputs: max 7 integer digits | active | 16 |
+| D-176 | Repeat scan increments; count scan jumps and highlights | active | 16 |
+| D-177 | Not found: attach by exact SKU via inv_add_barcode (rank >= 2) | active | 16 |
+| D-178 | Receipt cost per purchase and base UOM, last cost and WAC hints | active | 16 |
+| D-179 | Mobile pass: scrolling tabs, card lines, 44 px targets | active | 16 |
+| D-180 | Scanner setup note | active | 16 |

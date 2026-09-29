@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "@/components/language-provider";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { TabRow, TabButton } from "@/components/tabs";
+import { SCROLL_TABROW_CLS, TAB_BTN_CLS } from "../components/form-bits";
 
 type View = "INVOICE" | "TRANSFER";
 
@@ -37,11 +38,11 @@ export function ReceiveTabs({
         </button>
       )}
       {transfers !== null && (
-        <TabRow>
-          <TabButton size="sm" active={view === "INVOICE"} onClick={() => switchTo("INVOICE")}>
+        <TabRow className={SCROLL_TABROW_CLS}>
+          <TabButton className={TAB_BTN_CLS} size="sm" active={view === "INVOICE"} onClick={() => switchTo("INVOICE")}>
             {t("Supplier invoice")}
           </TabButton>
-          <TabButton size="sm" active={view === "TRANSFER"} onClick={() => switchTo("TRANSFER")}>
+          <TabButton className={TAB_BTN_CLS} size="sm" active={view === "TRANSFER"} onClick={() => switchTo("TRANSFER")}>
             {t("Branch transfer")}
           </TabButton>
         </TabRow>

@@ -7,6 +7,7 @@ import {
   nextMonthStart,
   REQUEST_RECEIVABLE_STATUSES,
   type InvBarcode,
+  type InvCostHint,
   type InvOpenRequest,
   type InvBranch,
   type InvCountAdjustment,
@@ -499,4 +500,36 @@ export async function loadBillingCodes(supabase: Supabase, branchId: number): Pr
     .eq("branch_id", branchId)
     .limit(5000);
   return new Map((data ?? []).map((r) => [Number(r.resident_id), r.billing_code as string]));
+}
+
+/**
+ * Cost hints for the Receive form (read-only): the branch's current WAC per
+ * product and the cost of its last non-voided receipt, both per base unit.
+ * Plain SELECTs under the caller's RLS (cost is visible from the receipt tier).
+ */
+export async function loadCostHints(supabase: Supabase, branchId: number): Promise<InvCostHint[]> {
+  const [{ data: pools }, { data: recent }] = await Promise.all([
+    supabase.from("tbl_inv_cost_pools").select("product_id, wac").eq("branch_id", branchId).limit(10000),
+    supabase
+      .from("tbl_inv_receipt_lines")
+      .select("id, product_id, unit_cost_entered, factor_to_base, tbl_inv_receipts!inner(is_voided)")
+      .eq("branch_id", branchId)
+      .eq("tbl_inv_receipts.is_voided", false)
+      .gt("unit_cost_entered", 0)
+      .order("id", { ascending: false })
+      .limit(5000),
+  ]);
+  const hints = new Map<number, InvCostHint>();
+  for (const p of pools ?? []) {
+    hints.set(Number(p.product_id), { productId: Number(p.product_id), wac: p.wac === null ? null : Number(p.wac), lastCostBase: null });
+  }
+  for (const l of recent ?? []) {
+    const id = Number(l.product_id);
+    const factor = Number(l.factor_to_base);
+    const existing = hints.get(id) ?? { productId: id, wac: null, lastCostBase: null };
+    if (existing.lastCostBase === null && factor > 0) {
+      hints.set(id, { ...existing, lastCostBase: Number(l.unit_cost_entered) / factor });
+    }
+  }
+  return [...hints.values()];
 }

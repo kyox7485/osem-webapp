@@ -7,14 +7,17 @@ import { messageForCode, type InvResident, type InvStaff } from "@/lib/inventory
 // only (docs/theming.md); coloured notices carry their dark: partner.
 
 export const INPUT_CLS =
-  "w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong";
+  "w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-surface-strong max-md:min-h-11 max-md:text-base";
 export const SMALL_INPUT_CLS =
-  "w-full rounded-md border border-line-strong bg-input px-2 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "w-full rounded-md border border-line-strong bg-input px-2 py-1.5 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-md:min-h-11 max-md:text-base";
+/** Tab bars scroll sideways on a phone instead of wrapping; buttons keep a 44 px touch target. */
+export const SCROLL_TABROW_CLS = "max-w-full max-md:flex-nowrap max-md:overflow-x-auto";
+export const TAB_BTN_CLS = "shrink-0 whitespace-nowrap max-md:min-h-11 max-md:px-4";
 export const CARD_CLS = "rounded-lg border border-line bg-surface p-4 shadow-sm";
 export const PRIMARY_BTN_CLS =
-  "inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50";
+  "inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50 max-md:min-h-11";
 export const SECONDARY_BTN_CLS =
-  "inline-flex items-center gap-2 rounded-md border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg-secondary hover:bg-hover disabled:opacity-50";
+  "inline-flex items-center gap-2 rounded-md border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-fg-secondary hover:bg-hover disabled:opacity-50 max-md:min-h-11";
 
 export function Field({ label, required, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) {
   return (

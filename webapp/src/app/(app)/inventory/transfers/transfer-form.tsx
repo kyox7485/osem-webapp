@@ -28,6 +28,8 @@ import {
   ResidentSelect,
   StaffSelect,
   SubmitButton,
+  SCROLL_TABROW_CLS,
+  TAB_BTN_CLS,
 } from "../components/form-bits";
 
 type Kind = "INTERNAL" | "BRANCH";
@@ -53,10 +55,11 @@ export function TransferForm(props: Props) {
   ];
   return (
     <div className="space-y-3">
-      <TabRow>
+      <TabRow className={SCROLL_TABROW_CLS}>
         {kinds.map((k) => (
           // local tab toggle: guarded so a dirty form is not silently discarded (CLAUDE.md)
           <TabButton
+            className={TAB_BTN_CLS}
             key={k.value}
             size="sm"
             active={kind === k.value}

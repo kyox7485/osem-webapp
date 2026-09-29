@@ -17,12 +17,14 @@ export function TabButton({
   children,
   size = "md",
   icon: Icon,
+  className = "",
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   size?: "md" | "sm";
   icon?: LucideIcon;
+  className?: string;
 }) {
   return (
     <button
@@ -30,7 +32,7 @@ export function TabButton({
       onClick={onClick}
       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${
         size === "sm" ? "px-3 py-1 text-[13px]" : "px-4 py-1.5 text-sm"
-      } ${active ? "bg-surface text-fg shadow-sm" : "text-fg-subtle hover:text-fg"}`}
+      } ${active ? "bg-surface text-fg shadow-sm" : "text-fg-subtle hover:text-fg"} ${className}`}
     >
       {Icon && <Icon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2} />}
       {children}

@@ -1,17 +1,20 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ScanLine, Trash2 } from "lucide-react";
 import { useTranslation } from "@/components/language-provider";
 import {
-  findBarcode,
   parseQty,
   productUoms,
   uomLabel,
   type InvCatalogue,
   type InvProduct,
 } from "@/lib/inventory/core";
+import { isPlausibleBarcode, limitQtyInput } from "@/lib/inventory/scan";
+import { BarcodeAttach } from "./barcode-attach";
 import { SMALL_INPUT_CLS } from "./form-bits";
+import { useProductLookup } from "./use-product-lookup";
+import { useScannerCapture } from "./use-scanner-capture";
 
 export type EditorLine = {
   key: string;
@@ -44,12 +47,16 @@ export function newLine(
 }
 
 /**
- * Product lines with barcode scanning (§9.6, D-95): a keyboard-wedge scanner
- * types into the scan box and sends Enter; the code is looked up in the
- * preloaded barcode map (exact, then UPC-A ↔ EAN-13) and adds a line or
- * increments the same product+UOM. Enter in the scan box never submits the
- * form. An exact SKU typed into the scan box also works. There is deliberately
- * NO search-by-name: similar product names made picking the wrong item too easy.
+ * Product lines with barcode scanning (§9.6, D-95, D-109): a keyboard-wedge
+ * scanner sends a fast burst ending in Enter; `useScannerCapture` routes it here
+ * whatever has focus (and takes the characters back out of the focused input),
+ * or it is typed into the scan box. The code is looked up in the preloaded
+ * barcode map (exact, then UPC-A <-> EAN-13), then by exact SKU, then once on
+ * the server. A hit adds a line or increments the same product+UOM (a box
+ * barcode adds 1 of its own unit). Enter in the scan box never submits the
+ * form. There is deliberately NO search-by-name (owner rule, design 0.2):
+ * an unknown code offers "attach to a product" to senior staff, by exact SKU.
+ * On a phone each line stacks into a card.
  */
 export function LineEditor({
   catalogue,
@@ -74,74 +81,70 @@ export function LineEditor({
   const [found, setFound] = useState<string | null>(null);
   const [notFound, setNotFound] = useState<string | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const linesRef = useRef(lines);
+  const { byId, skuMap, resolve, resolveLocal, addAttached } = useProductLookup(catalogue);
 
-  const stockProducts = useMemo(
-    () => catalogue.products.filter((p) => p.isStockItem === !serviceOnly && p.isActive),
-    [catalogue.products, serviceOnly],
-  );
-  const byId = useMemo(
-    () => new Map(catalogue.products.map((p) => [p.id, p])),
-    [catalogue.products],
+  useEffect(() => {
+    linesRef.current = lines;
+  });
+
+  const accepts = useCallback(
+    (p: InvProduct) => p.isActive && p.isStockItem === !serviceOnly,
+    [serviceOnly],
   );
 
   function addOrIncrement(product: InvProduct, uomId: number) {
-    const existing = lines.find(
-      (l) => l.productId === product.id && l.uomId === uomId,
-    );
+    const current = linesRef.current;
+    const existing = current.find((l) => l.productId === product.id && l.uomId === uomId);
+    let next: EditorLine[];
     if (existing) {
       const n = Number(existing.qty) || 0;
-      onChange(
-        lines.map((l) =>
-          l.key === existing.key ? { ...l, qty: String(n + 1) } : l,
-        ),
-      );
-    } else if (lines.some((l) => l.productId === product.id)) {
+      next = current.map((l) => (l.key === existing.key ? { ...l, qty: String(n + 1) } : l));
+    } else if (current.some((l) => l.productId === product.id)) {
       // one line per product (the RPCs reject duplicates): switch that line's unit
-      onChange(
-        lines.map((l) =>
-          l.productId === product.id ? { ...l, uomId, qty: "1" } : l,
-        ),
-      );
+      next = current.map((l) => (l.productId === product.id ? { ...l, uomId, qty: "1" } : l));
     } else {
-      onChange([...lines, newLine(product.id, uomId)]);
+      next = [...current, newLine(product.id, uomId)];
     }
+    linesRef.current = next;
+    onChange(next);
   }
 
-  function handleScan() {
-    const code = scan.trim();
+  async function handleCode(raw: string) {
+    const code = raw.trim();
     if (!code) return;
-    const hit = findBarcode(catalogue.barcodes, code);
-    const product = hit
-      ? byId.get(hit.productId)
-      : stockProducts.find((p) => p.sku.toLowerCase() === code.toLowerCase());
-    if (!product || product.isStockItem === serviceOnly || !product.isActive) {
+    const res = resolveLocal(code) ?? (await resolve(code));
+    if (!res || !accepts(res.product)) {
       setNotFound(code);
       setFound(null);
     } else {
+      const { product } = res;
       setNotFound(null);
       setFound(product.name);
       addOrIncrement(
         product,
-        hit
-          ? hit.uomId
-          : defaultUom === "purchase"
-            ? product.purchaseUomId
-            : product.baseUomId,
+        res.uomId ?? (defaultUom === "purchase" ? product.purchaseUomId : product.baseUomId),
       );
     }
-    setScan("");
     scanRef.current?.focus();
   }
+
+  useScannerCapture((code) => void handleCode(code), { rootRef });
 
   const update = (key: string, patch: Partial<EditorLine>) =>
     onChange(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
+  // phone: each row becomes a card; each cell shows its label from data-label
+  const cellCls =
+    "px-2 py-2 max-md:flex max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-0 max-md:py-1.5 max-md:before:text-xs max-md:before:text-fg-subtle max-md:before:content-[attr(data-label)] max-md:[&>*]:w-3/5";
+
   return (
-    <div className="space-y-3">
+    <div ref={rootRef} className="space-y-3">
       <div className="max-w-xl">
         <div className="relative">
           <ScanLine
-            className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-fg-faint"
+            className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-fg-faint max-md:top-3.5"
             aria-hidden
           />
           <input
@@ -149,27 +152,50 @@ export function LineEditor({
             className={`${SMALL_INPUT_CLS} py-2 pl-8`}
             placeholder={t("Scan barcode or type SKU, then Enter")}
             value={scan}
+            enterKeyHint="go"
+            autoComplete="off"
             onChange={(e) => setScan(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault(); // never submits the form
-                handleScan();
+                const code = scan;
+                setScan("");
+                void handleCode(code);
               }
             }}
             aria-label={t("Scan barcode")}
           />
-          {notFound && (
+        </div>
+        {notFound && (
+          <>
             <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-              {t("Not found")}: {notFound}.{" "}
+              {t("Not found")}: <span className="break-all font-mono">{notFound}</span>.{" "}
               {t("Scan the barcode or enter the exact SKU.")}
             </p>
-          )}
-          {!notFound && found && (
-            <p className="mt-1 text-xs text-fg-secondary">
-              {t("Found")}: {found}
-            </p>
-          )}
-        </div>
+            {isPlausibleBarcode(notFound) && (
+              <BarcodeAttach
+                key={notFound}
+                code={notFound}
+                catalogue={catalogue}
+                skuMap={skuMap}
+                accept={accepts}
+                onCancel={() => setNotFound(null)}
+                onAttached={(barcode, product) => {
+                  addAttached(barcode);
+                  setNotFound(null);
+                  setFound(product.name);
+                  addOrIncrement(product, barcode.uomId);
+                  scanRef.current?.focus();
+                }}
+              />
+            )}
+          </>
+        )}
+        {!notFound && found && (
+          <p className="mt-1 text-xs text-fg-secondary">
+            {t("Found")}: {found}
+          </p>
+        )}
       </div>
 
       {lines.length === 0 ? (
@@ -178,8 +204,8 @@ export function LineEditor({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted text-left text-xs text-fg-subtle">
+          <table className="w-full text-sm max-md:block">
+            <thead className="bg-surface-muted text-left text-xs text-fg-subtle max-md:hidden">
               <tr>
                 <th className="px-2 py-2 font-medium">{t("Product")}</th>
                 <th className="w-28 px-2 py-2 font-medium">{t("Unit")}</th>
@@ -195,19 +221,22 @@ export function LineEditor({
                 <th className="w-10" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-line-subtle">
+            <tbody className="divide-y divide-line-subtle max-md:block max-md:space-y-3 max-md:divide-y-0">
               {lines.map((line) => {
                 const product = byId.get(line.productId);
                 const uoms = productUoms(product);
                 return (
-                  <tr key={line.key}>
-                    <td className="px-2 py-2 text-fg">
+                  <tr
+                    key={line.key}
+                    className="max-md:block max-md:rounded-lg max-md:border max-md:border-line max-md:bg-surface max-md:p-3"
+                  >
+                    <td className="px-2 py-2 text-fg max-md:block max-md:px-0 max-md:pt-0">
                       {product?.name ?? "?"}
                       <div className="text-xs text-fg-subtle">
                         {product?.sku}
                       </div>
                     </td>
-                    <td className="px-2 py-2">
+                    <td className={cellCls} data-label={t("Unit")}>
                       {allowUomChange ? (
                         <select
                           className={SMALL_INPUT_CLS}
@@ -215,6 +244,7 @@ export function LineEditor({
                           onChange={(e) =>
                             update(line.key, { uomId: Number(e.target.value) })
                           }
+                          aria-label={t("Unit")}
                         >
                           {uoms.map((u) => (
                             <option key={u.uomId} value={u.uomId}>
@@ -229,20 +259,20 @@ export function LineEditor({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2">
+                    <td className={cellCls} data-label={t("Qty")}>
                       <input
                         className={SMALL_INPUT_CLS}
                         inputMode="decimal"
                         maxLength={12}
                         value={line.qty}
                         onChange={(e) =>
-                          update(line.key, { qty: e.target.value })
+                          update(line.key, { qty: limitQtyInput(e.target.value, line.qty) })
                         }
                         aria-label={t("Qty")}
                       />
                     </td>
                     {columns.map((c) => (
-                      <td key={c.id} className="px-2 py-2">
+                      <td key={c.id} className={cellCls} data-label={c.label}>
                         {c.render(
                           line,
                           (value) =>
@@ -253,10 +283,10 @@ export function LineEditor({
                         )}
                       </td>
                     ))}
-                    <td className="px-2 py-2 text-right">
+                    <td className="px-2 py-2 text-right max-md:block max-md:px-0 max-md:pb-0">
                       <button
                         type="button"
-                        className="rounded p-1 text-fg-faint hover:bg-hover hover:text-red-600"
+                        className="rounded p-1 text-fg-faint hover:bg-hover hover:text-red-600 max-md:inline-flex max-md:min-h-11 max-md:min-w-11 max-md:items-center max-md:justify-center"
                         onClick={() =>
                           onChange(lines.filter((l) => l.key !== line.key))
                         }

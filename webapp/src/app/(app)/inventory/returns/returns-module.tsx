@@ -17,7 +17,7 @@ import {
 } from "@/lib/inventory/core";
 import { useInvSubmit } from "../components/use-inv-submit";
 import { LineEditor, linesToPayload, type EditorLine } from "../components/line-editor";
-import { CARD_CLS, EmptyState, Field, FormStatus, INPUT_CLS, SMALL_INPUT_CLS, StaffSelect, SubmitButton } from "../components/form-bits";
+import { CARD_CLS, EmptyState, Field, FormStatus, INPUT_CLS, SMALL_INPUT_CLS, StaffSelect, SubmitButton, SCROLL_TABROW_CLS, TAB_BTN_CLS } from "../components/form-bits";
 
 export type IssueLineOption = {
   id: number;
@@ -48,12 +48,12 @@ export function ReturnsModule(props: Props) {
   const [tab, setTab] = useState<"issue" | "supplier">("issue");
   return (
     <div className="space-y-3">
-      <TabRow>
-        <TabButton size="sm" active={tab === "issue"} onClick={() => guardedAction(() => setTab("issue"))}>
+      <TabRow className={SCROLL_TABROW_CLS}>
+        <TabButton className={TAB_BTN_CLS} size="sm" active={tab === "issue"} onClick={() => guardedAction(() => setTab("issue"))}>
           {t("Return from issue")}
         </TabButton>
         {props.canReturnToSupplier && (
-          <TabButton size="sm" active={tab === "supplier"} onClick={() => guardedAction(() => setTab("supplier"))}>
+          <TabButton className={TAB_BTN_CLS} size="sm" active={tab === "supplier"} onClick={() => guardedAction(() => setTab("supplier"))}>
             {t("Return to supplier")}
           </TabButton>
         )}

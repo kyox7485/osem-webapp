@@ -4,6 +4,7 @@ import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { TabRow, TabButton } from "@/components/tabs";
+import { SCROLL_TABROW_CLS, TAB_BTN_CLS } from "./form-bits";
 
 export type SubTabItem = { key: string; label: string };
 
@@ -25,9 +26,9 @@ export function SubTabs({ basePath, items, active, branchId }: { basePath: strin
   if (items.length < 2) return null;
   return (
     <div className="mb-4">
-      <TabRow>
+      <TabRow className={SCROLL_TABROW_CLS}>
         {items.map((i) => (
-          <TabButton key={i.key} size="sm" active={i.key === active} onClick={() => go(i.key)}>
+          <TabButton className={TAB_BTN_CLS} key={i.key} size="sm" active={i.key === active} onClick={() => go(i.key)}>
             {t(i.label)}
           </TabButton>
         ))}

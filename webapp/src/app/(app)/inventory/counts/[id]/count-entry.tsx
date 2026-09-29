@@ -1,17 +1,20 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { useTranslation } from "@/components/language-provider";
 import {
-  findBarcode,
   type InvCatalogue,
   type InvCountLineView,
   type InvProduct,
   type InvResident,
   type InvStaff,
 } from "@/lib/inventory/core";
+import { isPlausibleBarcode, limitQtyInput } from "@/lib/inventory/scan";
+import { BarcodeAttach } from "../../components/barcode-attach";
 import { useInvSubmit } from "../../components/use-inv-submit";
+import { useProductLookup } from "../../components/use-product-lookup";
+import { useScannerCapture } from "../../components/use-scanner-capture";
 import {
   CARD_CLS,
   ErrorNotice,
@@ -63,6 +66,7 @@ export function CountEntry({
   const [extras, setExtras] = useState<FoundDraft[]>([]);
   const [scan, setScan] = useState("");
   const [notice, setNotice] = useState<{ kind: "notFound" | "found"; text: string } | null>(null);
+  const [highlight, setHighlight] = useState<string | null>(null);
   const [transitProduct, setTransitProduct] = useState<InvProduct | null>(null);
   const [transitResident, setTransitResident] = useState("");
   const [showInvalid, setShowInvalid] = useState(false);
@@ -71,7 +75,8 @@ export function CountEntry({
   const submitAfterSave = useRef(false);
   const [intent, setIntent] = useState<"save" | "submit">("save");
 
-  const byId = useMemo(() => new Map(catalogue.products.map((p) => [p.id, p])), [catalogue.products]);
+  const { byId, skuMap, resolve, resolveLocal, addAttached } = useProductLookup(catalogue);
+  const rootRef = useRef<HTMLDivElement>(null);
   const uomCode = (p: InvProduct | undefined) => catalogue.uoms.find((u) => u.id === p?.baseUomId)?.code ?? "";
   const residentName = (id: string) => residents.find((r) => String(r.id) === id)?.name ?? "";
 
@@ -97,7 +102,14 @@ export function CountEntry({
     submitState.touch();
   }
 
+  useEffect(() => {
+    if (!highlight) return;
+    const timer = setTimeout(() => setHighlight(null), 2500);
+    return () => clearTimeout(timer);
+  }, [highlight]);
+
   function focusSoon(key: string) {
+    setHighlight(key);
     setTimeout(() => {
       const el = inputs.current.get(key);
       el?.scrollIntoView({ block: "center" });
@@ -114,19 +126,7 @@ export function CountEntry({
     focusSoon(`x-${key}`);
   }
 
-  function handleScan() {
-    const code = scan.trim();
-    if (!code) return;
-    const hit = findBarcode(catalogue.barcodes, code);
-    const product = hit
-      ? byId.get(hit.productId)
-      : catalogue.products.find((p) => p.sku.toLowerCase() === code.toLowerCase());
-    setScan("");
-    setTransitProduct(null);
-    if (!product || !product.isStockItem || !product.isActive) {
-      setNotice({ kind: "notFound", text: code });
-      return;
-    }
+  function routeProduct(product: InvProduct) {
     const onSheet = lines.find((l) => l.productId === product.id);
     if (onSheet) {
       setNotice({ kind: "found", text: product.name });
@@ -139,6 +139,22 @@ export function CountEntry({
     }
     addFound(product, "");
   }
+
+  // Scan (typed in the box, or captured from the scanner whatever has focus):
+  // jump to the sheet line and focus its qty, or add a found item.
+  async function handleCode(raw: string) {
+    const code = raw.trim();
+    if (!code) return;
+    const res = resolveLocal(code) ?? (await resolve(code));
+    setTransitProduct(null);
+    if (!res || !res.product.isStockItem || !res.product.isActive) {
+      setNotice({ kind: "notFound", text: code });
+      return;
+    }
+    routeProduct(res.product);
+  }
+
+  useScannerCapture((code) => void handleCode(code), { rootRef });
 
   function buildPayload() {
     const changed: { count_line_id: number; physical_qty: number | null }[] = [];
@@ -175,10 +191,10 @@ export function CountEntry({
   }
 
   const inputCls = (raw: string) =>
-    `${SMALL_INPUT_CLS} w-28 text-right ${showInvalid && invalid(raw) ? "border-red-500 dark:border-red-400" : ""}`;
+    `${SMALL_INPUT_CLS} w-24 text-right md:w-28 ${showInvalid && invalid(raw) ? "border-red-500 dark:border-red-400" : ""}`;
 
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4">
       <div className={`${CARD_CLS} space-y-3`}>
         <div className="max-w-xl">
           <div className="relative">
@@ -193,15 +209,32 @@ export function CountEntry({
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault(); // never submits the form
-                  handleScan();
+                  const code = scan;
+                  setScan("");
+                  void handleCode(code);
                 }
               }}
             />
           </div>
           {notice?.kind === "notFound" && (
             <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-              {t("Not found")}: {notice.text}. {t("Scan the barcode or enter the exact SKU.")}
+              {t("Not found")}: <span className="break-all font-mono">{notice.text}</span>. {t("Scan the barcode or enter the exact SKU.")}
             </p>
+          )}
+          {notice?.kind === "notFound" && isPlausibleBarcode(notice.text) && (
+            <BarcodeAttach
+              key={notice.text}
+              code={notice.text}
+              catalogue={catalogue}
+              skuMap={skuMap}
+              accept={(p) => p.isActive && p.isStockItem}
+              onCancel={() => setNotice(null)}
+              onAttached={(barcode, product) => {
+                addAttached(barcode);
+                setNotice(null);
+                routeProduct(product);
+              }}
+            />
           )}
           {notice?.kind === "found" && <p className="mt-1 text-xs text-fg-secondary">{notice.text}</p>}
         </div>
@@ -239,19 +272,20 @@ export function CountEntry({
           <thead className="bg-surface-strong text-left text-xs text-fg-subtle">
             <tr>
               <th className="px-3 py-2 font-medium">{t("Product")}</th>
-              <th className="px-3 py-2 font-medium">{t("SKU")}</th>
+              <th className="px-3 py-2 font-medium max-md:hidden">{t("SKU")}</th>
               {isTransit && <th className="px-3 py-2 font-medium">{t("Resident")}</th>}
               <th className="px-3 py-2 text-right font-medium">{t("Counted")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line-subtle">
             {lines.map((l) => (
-              <tr key={l.id}>
+              <tr key={l.id} className={`transition-colors ${highlight === `l-${l.id}` ? "bg-amber-100 ring-2 ring-inset ring-amber-400 dark:bg-amber-950/40 dark:ring-amber-500" : ""}`}>
                 <td className="px-3 py-2 text-fg">
                   {l.name}
                   {l.isFound && <FoundBadge />}
+                  <div className="text-xs text-fg-subtle md:hidden">{l.sku}</div>
                 </td>
-                <td className="px-3 py-2 text-fg-subtle">{l.sku}</td>
+                <td className="px-3 py-2 text-fg-subtle max-md:hidden">{l.sku}</td>
                 {isTransit && <td className="px-3 py-2 text-fg-secondary">{l.residentName ?? ""}</td>}
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-end gap-1">
@@ -264,7 +298,7 @@ export function CountEntry({
                       inputMode="decimal"
                       aria-label={`${t("Counted")} ${l.name}`}
                       value={valueOf(l)}
-                      onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: e.target.value }))}
+                      onChange={(e) => setQty((prev) => ({ ...prev, [l.id]: limitQtyInput(e.target.value, prev[l.id] ?? valueOf(l)) }))}
                     />
                     <span className="w-10 text-xs text-fg-subtle">{l.uomCode}</span>
                   </div>
@@ -274,12 +308,13 @@ export function CountEntry({
             {extras.map((x) => {
               const p = byId.get(x.productId);
               return (
-                <tr key={x.key} className="bg-indigo-50/40 dark:bg-indigo-950/20">
+                <tr key={x.key} className={`bg-indigo-50/40 dark:bg-indigo-950/20 ${highlight === `x-${x.key}` ? "bg-amber-100 ring-2 ring-inset ring-amber-400 dark:bg-amber-950/40 dark:ring-amber-500" : ""}`}>
                   <td className="px-3 py-2 text-fg">
                     {p?.name}
                     <FoundBadge />
+                    <div className="text-xs text-fg-subtle md:hidden">{p?.sku}</div>
                   </td>
-                  <td className="px-3 py-2 text-fg-subtle">{p?.sku}</td>
+                  <td className="px-3 py-2 text-fg-subtle max-md:hidden">{p?.sku}</td>
                   {isTransit && <td className="px-3 py-2 text-fg-secondary">{residentName(x.residentId)}</td>}
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
@@ -293,7 +328,7 @@ export function CountEntry({
                         aria-label={`${t("Counted")} ${p?.name ?? ""}`}
                         value={x.qty}
                         onChange={(e) =>
-                          setExtras((prev) => prev.map((y) => (y.key === x.key ? { ...y, qty: e.target.value } : y)))
+                          setExtras((prev) => prev.map((y) => (y.key === x.key ? { ...y, qty: limitQtyInput(e.target.value, y.qty) } : y)))
                         }
                       />
                       <span className="w-10 text-xs text-fg-subtle">{uomCode(p)}</span>

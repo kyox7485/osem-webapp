@@ -5,10 +5,13 @@ import { useTranslation } from "@/components/language-provider";
 import {
   DOC_TYPE_OPTIONS,
   formatMoney,
+  uomLabel,
   parseMoney,
   parseQty,
   todayKL,
   type InvCatalogue,
+  type InvCostHint,
+  type InvProduct,
   type InvOpenRequest,
   type InvResident,
   type InvStaff,
@@ -57,10 +60,13 @@ export function ReceiveForm({
   staff,
   residents,
   openRequests = [],
+  costHints = [],
 }: {
   storeId: number | null;
   /** Approved / ordered stock requests with outstanding lines (optional link, schema/017). */
   openRequests?: InvOpenRequest[];
+  /** WAC and last receipt cost per product, per base unit (read-only comparison). */
+  costHints?: InvCostHint[];
   catalogue: InvCatalogue;
   suppliers: InvSupplier[];
   staff: InvStaff[];
@@ -212,9 +218,12 @@ export function ReceiveForm({
             {
               id: "unit_cost",
               label: t("Unit cost (per unit)"),
-              width: "w-28",
-              render: (l, setV) => (
-                <input className={SMALL_INPUT_CLS} inputMode="decimal" value={l.extra.unit_cost ?? ""} onChange={(e) => setV(e.target.value)} />
+              width: "w-40",
+              render: (l, setV, product) => (
+                <div className="space-y-1">
+                  <input className={SMALL_INPUT_CLS} inputMode="decimal" value={l.extra.unit_cost ?? ""} onChange={(e) => setV(e.target.value)} />
+                  <CostHints catalogue={catalogue} line={l} product={product} hint={costHints.find((h) => h.productId === l.productId)} />
+                </div>
               ),
             },
             {
@@ -264,5 +273,37 @@ export function ReceiveForm({
       <FormStatus state={state} />
       <SubmitButton isPending={state.isPending} label={t("Receive into Store")} />
     </form>
+  );
+}
+
+/**
+ * Cost per purchase unit and per base unit side by side, with the last receipt
+ * cost and the current WAC to compare against (display only: the RPC owns cost).
+ */
+function CostHints({ catalogue, line, product, hint }: { catalogue: InvCatalogue; line: EditorLine; product: InvProduct | undefined; hint: InvCostHint | undefined }) {
+  const t = useTranslation();
+  const factor = product?.uoms.find((u) => u.uomId === line.uomId && u.isActive)?.factor ?? 1;
+  const unit = uomLabel(catalogue.uoms, line.uomId);
+  const baseUnit = uomLabel(catalogue.uoms, product?.baseUomId ?? 0);
+  const entered = parseMoney(line.extra.unit_cost ?? "", false);
+  const perBase = typeof entered === "number" && factor > 0 ? entered / factor : null;
+  const inUnit = (baseCost: number | null | undefined) => (baseCost === null || baseCost === undefined ? null : baseCost * factor);
+  const last = inUnit(hint?.lastCostBase);
+  const wac = inUnit(hint?.wac);
+  return (
+    <div className="space-y-0.5 text-xs text-fg-subtle">
+      {typeof entered === "number" && (
+        <p>
+          RM {formatMoney(entered)} / {unit}
+          {factor !== 1 && perBase !== null && ` = RM ${formatMoney(perBase, 4)} / ${baseUnit}`}
+        </p>
+      )}
+      <p>
+        {t("Last receipt")}: {last === null ? t("none") : `RM ${formatMoney(last)} / ${unit}`}
+      </p>
+      <p>
+        {t("Average cost (WAC)")}: {wac === null ? t("none") : `RM ${formatMoney(wac)} / ${unit}`}
+      </p>
+    </div>
   );
 }

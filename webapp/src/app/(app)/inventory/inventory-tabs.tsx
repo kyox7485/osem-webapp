@@ -19,7 +19,9 @@ import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { TabRow, TabButton } from "@/components/tabs";
+import { SCROLL_TABROW_CLS, TAB_BTN_CLS } from "./components/form-bits";
 import { INV_TIER, type InvBranch } from "@/lib/inventory/core";
+import { ScannerSetupNote } from "./components/scanner-note";
 
 type Tab = { href: string; label: string; icon: LucideIcon; minRank: number };
 
@@ -53,9 +55,9 @@ export function InventoryTabs({ rank, branches, branchId }: { rank: number; bran
 
   return (
     <div className="mb-6 flex flex-col gap-3">
-      <TabRow>
+      <TabRow className={SCROLL_TABROW_CLS}>
         {TABS.filter((tab) => rank >= tab.minRank).map((tab) => (
-          <TabButton key={tab.href} size="sm" icon={tab.icon} active={active(tab.href)} onClick={() => go(tab.href)}>
+          <TabButton className={TAB_BTN_CLS} key={tab.href} size="sm" icon={tab.icon} active={active(tab.href)} onClick={() => go(tab.href)}>
             {t(tab.label)}
           </TabButton>
         ))}
@@ -64,7 +66,7 @@ export function InventoryTabs({ rank, branches, branchId }: { rank: number; bran
         <label className="flex items-center gap-2 text-sm text-fg-secondary">
           {t("Branch")}
           <select
-            className="rounded-md border border-line-strong bg-input px-2 py-1 text-sm text-fg"
+            className="rounded-md border border-line-strong bg-input px-2 py-1 text-sm text-fg max-md:min-h-11 max-md:text-base"
             value={branchId ?? ""}
             onChange={(e) => go(pathname, Number(e.target.value))}
           >
@@ -92,9 +94,10 @@ export function SetupSubTabs({ branchId }: { branchId: number | null }) {
   ];
   return (
     <div className="mb-4">
-      <TabRow>
+      <TabRow className={SCROLL_TABROW_CLS}>
         {items.map((i) => (
           <TabButton
+            className={TAB_BTN_CLS}
             key={i.href}
             size="sm"
             active={pathname.startsWith(i.href)}
@@ -104,6 +107,7 @@ export function SetupSubTabs({ branchId }: { branchId: number | null }) {
           </TabButton>
         ))}
       </TabRow>
+      <ScannerSetupNote />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "@/components/language-provider";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { TabRow, TabButton } from "@/components/tabs";
+import { SCROLL_TABROW_CLS, TAB_BTN_CLS } from "../components/form-bits";
 
 type View = "SUGGESTED" | "LIST";
 
@@ -16,11 +17,11 @@ export function RequestsTabs({ suggested, list, initialView }: { suggested: Reac
 
   return (
     <div className="space-y-3">
-      <TabRow>
-        <TabButton size="sm" active={view === "SUGGESTED"} onClick={() => switchTo("SUGGESTED")}>
+      <TabRow className={SCROLL_TABROW_CLS}>
+        <TabButton className={TAB_BTN_CLS} size="sm" active={view === "SUGGESTED"} onClick={() => switchTo("SUGGESTED")}>
           {t("Suggested order")}
         </TabButton>
-        <TabButton size="sm" active={view === "LIST"} onClick={() => switchTo("LIST")}>
+        <TabButton className={TAB_BTN_CLS} size="sm" active={view === "LIST"} onClick={() => switchTo("LIST")}>
           {t("Requests")}
         </TabButton>
       </TabRow>

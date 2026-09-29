@@ -90,6 +90,9 @@ export type InvOpenRequest = {
   lines: { productId: number; outstandingBase: number }[];
 };
 
+/** Read-only cost comparison for a Receive line (D-109): current WAC and the last receipt cost, both per BASE unit. */
+export type InvCostHint = { productId: number; wac: number | null; lastCostBase: number | null };
+
 /** Everything a posting form needs, loaded once by the page. */
 export type InvCatalogue = {
   products: InvProduct[];
