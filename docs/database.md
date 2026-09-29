@@ -71,8 +71,21 @@ allowed everything. When changing scope, change both.
   re-derived from `body_part_id`). Deliberate: a permanent clinical record
   must keep showing what was true the day it was written, even if an
   admin later renames or deactivates the lookup row.
-- RLS is branch-scoped almost everywhere: `ADMIN`/`MODERATOR` bypass, a
-  plain `STAFF` login only sees `branch_id = auth_branch_id()`.
+- RLS is branch-scoped everywhere: `branch_id = auth_branch_id()`, or
+  `auth_is_all_branch_account()` (ADMIN, or an HQ/PHY-function branch —
+  the SQL twin of `canAccessAllBranches()`) minus DEMO rows. Rights tier
+  alone (e.g. MODERATOR) never grants other branches.
+- `tbl_audit_log` has RLS on with **no policies and no anon/authenticated
+  grants** — only `fn_audit_trigger` (SECURITY DEFINER) writes it and only
+  the service role reads it (`schema/006_security_lockdown.sql`). Every new
+  table must enable RLS and revoke `anon`: the project's default privileges
+  grant `anon` full rights on new objects.
+- **General Inventory (`tbl_inv_*`, `schema/007`–`013`)**: once applied,
+  its foreign keys block hard deletes of `tbl_residents`, `tbl_staff` and
+  `tbl_user_accounts` rows that have inventory history, and inventory rows
+  themselves can never be deleted (immutable ledger). DEMO cleanup scripts
+  must run `fn_inv_purge_demo()` (SQL editor, `postgres` only) before
+  deleting DEMO residents/staff. Design: `docs/inventory-design.md`.
 
 ## DEMO isolation — canonical check
 
@@ -119,6 +132,7 @@ the same exclusion — otherwise fake demo data surfaces to real users.
 
 ## Login for testing
 
-A demo login exists for manual testing: username `test`, password
-`test123`. Prefer it over inventing test data through the admin UI when a
-task just needs "log in and look at something."
+A demo login exists for manual testing: username `test` (ADMIN rights,
+pinned to the DEMO branch). Its password is not kept in the repo — ask the
+project owner. Prefer it over inventing test data through the admin UI when
+a task just needs "log in and look at something."
