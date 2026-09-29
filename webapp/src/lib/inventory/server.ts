@@ -4,6 +4,7 @@ import { getCurrentUser, type CurrentUser } from "@/lib/current-user";
 import { getBranches, getDemoBranchIds } from "@/lib/lookups";
 import {
   isSeniorPosition,
+  nextMonthStart,
   REQUEST_RECEIVABLE_STATUSES,
   type InvBarcode,
   type InvOpenRequest,
@@ -12,6 +13,9 @@ import {
   type InvCountHeader,
   type InvCountRow,
   type InvCatalogue,
+  type InvChargeRow,
+  type InvExceptionRow,
+  type InvPeriodRow,
   type InvCategory,
   type InvLocation,
   type InvProduct,
@@ -384,4 +388,115 @@ export async function loadCountDetail(
     })),
     adjustments: (adj ?? []).map((a) => ({ id: Number(a.id), adjustmentNo: a.adjustment_no as string, status: a.status as string })),
   };
+}
+
+// ----------------------------------------------------------------- charges and month-end (schema/019)
+
+/**
+ * Charges dated in a KL month (D-73: a charge belongs to the month of its own
+ * date). RLS lets the branch login (rank 2) read them (D-148). Capped; a month
+ * of one branch is far below the cap.
+ */
+export async function loadCharges(
+  supabase: Supabase,
+  branchId: number,
+  month: string,
+  residentId: number | null
+): Promise<InvChargeRow[]> {
+  let query = supabase
+    .from("tbl_inv_charges")
+    .select(
+      "id, charge_date, charge_kind, target, resident_id, related_charge_id, product_name, sku, uom_code, qty_base, unit_charge_price, charge_amount, reason, created_by_staff, tbl_inv_txns(txn_no)"
+    )
+    .eq("branch_id", branchId)
+    .gte("charge_date", `${month}-01`)
+    .lt("charge_date", nextMonthStart(month))
+    .order("charge_date")
+    .order("id")
+    .limit(5000);
+  if (residentId !== null) query = query.eq("resident_id", residentId);
+  const { data } = await query;
+  return (data ?? []).map((c) => {
+    const txn = Array.isArray(c.tbl_inv_txns) ? c.tbl_inv_txns[0] : c.tbl_inv_txns;
+    return {
+      id: Number(c.id),
+      chargeDate: c.charge_date as string,
+      kind: c.charge_kind as string,
+      target: c.target as string,
+      residentId: c.resident_id === null ? null : Number(c.resident_id),
+      txnNo: (txn as { txn_no?: string } | null)?.txn_no ?? null,
+      relatedChargeId: c.related_charge_id === null ? null : Number(c.related_charge_id),
+      productName: c.product_name as string,
+      sku: c.sku as string,
+      uomCode: c.uom_code as string,
+      qtyBase: Number(c.qty_base),
+      unitPrice: c.unit_charge_price === null ? null : Number(c.unit_charge_price),
+      amount: Number(c.charge_amount),
+      reason: (c.reason as string | null) ?? null,
+      byStaff: c.created_by_staff as string,
+    };
+  });
+}
+
+export async function loadPeriods(supabase: Supabase, branchId: number): Promise<InvPeriodRow[]> {
+  const { data } = await supabase
+    .from("tbl_inv_billing_periods")
+    .select(
+      "id, period_month, status, exceptions_reviewed_at, exceptions_reviewed_by_staff, locked_at, locked_by_staff, reopen_count"
+    )
+    .eq("branch_id", branchId)
+    .order("period_month", { ascending: false })
+    .limit(36);
+  return (data ?? []).map((p) => ({
+    id: Number(p.id),
+    month: p.period_month as string,
+    status: p.status as "OPEN" | "LOCKED",
+    reviewedAt: (p.exceptions_reviewed_at as string | null) ?? null,
+    reviewedByStaff: (p.exceptions_reviewed_by_staff as string | null) ?? null,
+    lockedAt: (p.locked_at as string | null) ?? null,
+    lockedByStaff: (p.locked_by_staff as string | null) ?? null,
+    reopenCount: Number(p.reopen_count),
+  }));
+}
+
+/**
+ * Month-end exceptions of one branch (v_inv_exceptions, MODERATOR+ only).
+ * Pending adjustments of earlier months block this one too, and idle Transit
+ * stock is dated in the current month, so both are added to the month's rows.
+ */
+export async function loadExceptions(supabase: Supabase, branchId: number, month: string): Promise<InvExceptionRow[]> {
+  const first = `${month}-01`;
+  const { data } = await supabase
+    .from("v_inv_exceptions")
+    .select(
+      "kind, ref_type, ref_id, reference, event_date, product_name, resident_id, qty, amount, performed_by_staff, from_branch_login, is_blocking"
+    )
+    .eq("branch_id", branchId)
+    .or(`period_month.eq.${first},and(kind.eq.ADJUSTMENT_PENDING,period_month.lt.${first})`)
+    .order("event_date")
+    .limit(5000);
+  return (data ?? []).map((e) => ({
+    kind: e.kind as string,
+    refType: e.ref_type as string,
+    refId: Number(e.ref_id),
+    reference: e.reference as string,
+    eventDate: e.event_date as string,
+    productName: (e.product_name as string | null) ?? null,
+    residentId: e.resident_id === null ? null : Number(e.resident_id),
+    qty: e.qty === null ? null : Number(e.qty),
+    amount: e.amount === null ? null : Number(e.amount),
+    staff: (e.performed_by_staff as string | null) ?? null,
+    fromBranchLogin: e.from_branch_login === true,
+    isBlocking: e.is_blocking === true,
+  }));
+}
+
+/** resident_id → billing code for one branch (rank 3+; RLS hides it below that). */
+export async function loadBillingCodes(supabase: Supabase, branchId: number): Promise<Map<number, string>> {
+  const { data } = await supabase
+    .from("tbl_inv_resident_billing")
+    .select("resident_id, billing_code")
+    .eq("branch_id", branchId)
+    .limit(5000);
+  return new Map((data ?? []).map((r) => [Number(r.resident_id), r.billing_code as string]));
 }

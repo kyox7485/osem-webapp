@@ -109,6 +109,7 @@ begin
   end if;
 end $$;
 
+drop view if exists public.v_inv_exceptions;   -- 019
 drop view if exists public.v_inv_request_line_progress;   -- 017
 drop view if exists public.v_inv_suggested_order;
 drop view if exists public.v_inv_stock_balance;

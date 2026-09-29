@@ -10,6 +10,8 @@ import {
   Settings,
   ShoppingCart,
   ListChecks,
+  Receipt,
+  CalendarCheck,
   type LucideIcon,
 } from "lucide-react";
 import { useNavPush } from "@/components/nav-loading";
@@ -27,6 +29,8 @@ const TABS: Tab[] = [
   { href: "/inventory/issue", label: "Issue", icon: PackageMinus, minRank: INV_TIER.ISSUE },
   { href: "/inventory/transfers", label: "Transfers", icon: ArrowLeftRight, minRank: INV_TIER.TRANSFER },
   { href: "/inventory/counts", label: "Counts", icon: ListChecks, minRank: INV_TIER.COUNT },
+  { href: "/inventory/charges", label: "Charges", icon: Receipt, minRank: INV_TIER.VIEW_CHARGES },
+  { href: "/inventory/month-end", label: "Month-end", icon: CalendarCheck, minRank: INV_TIER.PERIOD_LOCK },
   { href: "/inventory/requests", label: "Stock requests", icon: ShoppingCart, minRank: INV_TIER.STOCK_REQUEST },
   { href: "/inventory/setup/products", label: "Setup", icon: Settings, minRank: INV_TIER.VIEW },
 ];

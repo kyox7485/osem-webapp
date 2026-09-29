@@ -58,6 +58,7 @@ export function LineEditor({
   defaultUom = "base",
   columns = [],
   allowUomChange = true,
+  serviceOnly = false,
 }: {
   catalogue: InvCatalogue;
   lines: EditorLine[];
@@ -65,6 +66,8 @@ export function LineEditor({
   defaultUom?: "base" | "purchase";
   columns?: ExtraColumn[];
   allowUomChange?: boolean;
+  /** true: only service items can be added (Charge a service); false: only stock items */
+  serviceOnly?: boolean;
 }) {
   const t = useTranslation();
   const [scan, setScan] = useState("");
@@ -73,8 +76,8 @@ export function LineEditor({
   const scanRef = useRef<HTMLInputElement>(null);
 
   const stockProducts = useMemo(
-    () => catalogue.products.filter((p) => p.isStockItem && p.isActive),
-    [catalogue.products],
+    () => catalogue.products.filter((p) => p.isStockItem === !serviceOnly && p.isActive),
+    [catalogue.products, serviceOnly],
   );
   const byId = useMemo(
     () => new Map(catalogue.products.map((p) => [p.id, p])),
@@ -111,7 +114,7 @@ export function LineEditor({
     const product = hit
       ? byId.get(hit.productId)
       : stockProducts.find((p) => p.sku.toLowerCase() === code.toLowerCase());
-    if (!product || !product.isStockItem || !product.isActive) {
+    if (!product || product.isStockItem === serviceOnly || !product.isActive) {
       setNotFound(code);
       setFound(null);
     } else {

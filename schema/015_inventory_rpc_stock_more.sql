@@ -327,11 +327,12 @@ begin
     expense_note, txn_id, txn_line_id, related_charge_id, product_id, product_name, sku, uom_code, qty_base,
     unit_charge_price, charge_amount, cost_amount, request_key, created_by_account, created_by_staff)
   select t.branch_id, t.billing_period_id, t.txn_date, 'RETURN_CREDIT', c.target, c.resident_id, c.expense_note,
-         t.id, rl.id, c.id, c.product_id, c.product_name, c.sku, c.uom_code, -rl.qty_base, c.unit_charge_price,
+         t.id, rl.id, c.id, c.product_id, c.product_name, c.sku, c.uom_code, -rl.qty_base,
+         coalesce(c.unit_charge_price, pr.unit_charge_price),   -- D-72: the PRICING price once a PRICE_PENDING line is priced
          case when c.target <> 'RESIDENT' then 0
               -- the last units back credit exactly what is left of the charge (no 1-sen residue)
               when (k->>'last')::boolean then
-                -(c.charge_amount
+                -(c.charge_amount + coalesce(pr.charge_amount, 0)
                   + coalesce((select sum(x.charge_amount) from public.tbl_inv_charges x
                                where x.related_charge_id = c.id and x.charge_kind = 'RETURN_CREDIT'
                                  and x.txn_id <> t.id), 0)
@@ -339,12 +340,13 @@ begin
                                 join public.tbl_inv_charges x on x.id = y.related_charge_id
                                where x.related_charge_id = c.id and x.charge_kind = 'RETURN_CREDIT'
                                  and y.charge_kind = 'REVERSAL'), 0))
-              else -coalesce(round(rl.qty_base * c.unit_charge_price, 2), 0) end,
+              else -coalesce(round(rl.qty_base * coalesce(c.unit_charge_price, pr.unit_charge_price), 2), 0) end,
          -rl.value, p_key, v_acc.account_id, v_staff
     from jsonb_array_elements(v_links) k
     join public.tbl_inv_txn_lines rl on rl.id = (k->>'line_id')::bigint
     join public.tbl_inv_txns t on t.id = rl.txn_id
-    join public.tbl_inv_charges c on c.id = (k->>'charge_id')::bigint;
+    join public.tbl_inv_charges c on c.id = (k->>'charge_id')::bigint
+    left join public.tbl_inv_charges pr on pr.related_charge_id = c.id and pr.charge_kind = 'PRICING';
   select coalesce(sum(c.charge_amount), 0) into v_credit from public.tbl_inv_charges c where c.txn_id = v_txn_id;
 
   v_result := public.fn_inv_ok(jsonb_build_object('txn_id', v_txn_id, 'txn_no', v_res_w->'written'->'txns'->0->>'txn_no',

@@ -29,6 +29,15 @@ export const INV_TIER = {
   REQUEST_APPROVE: 4,
   OPENING_BALANCE: 4,
   STOCK_LEVELS: 4,
+  VIEW_CHARGES: 2,
+  SERVICE_CHARGE: 1,
+  PRICE_PENDING: 3,
+  MANUAL_CHARGE_ADJ: 3,
+  EXPORT: 3,
+  BILLING_CODES: 3,
+  EXCEPTIONS_REVIEW: 3,
+  PERIOD_LOCK: 3,
+  PERIOD_REOPEN: 4,
 } as const;
 
 export type LocationKind = "STORE" | "FLOOR" | "TRANSIT";
@@ -120,8 +129,17 @@ export const INV_RPCS = [
   "inv_submit_count",
   "inv_review_count",
   "inv_cancel_count",
+  "inv_price_charge",
+  "inv_manual_charge_adjustment",
+  "inv_set_resident_billing_code",
+  "inv_charge_service",
+  "inv_reverse_charge",
+  "inv_mark_exceptions_reviewed",
+  "inv_lock_period",
+  "inv_reopen_period",
 ] as const;
-export type InvRpcName = (typeof INV_RPCS)[number];
+/** inv_export_charges is reached only through the CSV route handler, never the generic Server Action. */
+export type InvRpcName = (typeof INV_RPCS)[number] | "inv_export_charges";
 
 /** Soft rejections answered by re-submitting with a flag and the SAME key (§4.5). */
 export const CONFIRM_FLAGS: Record<string, string> = {
@@ -416,6 +434,27 @@ const CODE_MESSAGES: Record<string, string> = {
   COUNT_EMPTY: "This count has no lines.",
   COUNT_LINE_NOT_FOUND: "Count line not found.",
   INVALID_COUNT_TYPE: "Please choose the count type.",
+  INVALID_PRICE: "Please enter a valid price (0 or more, up to 4 decimals).",
+  NOT_PRICE_PENDING: "This charge is not waiting for a price.",
+  ALREADY_PRICED: "This charge has already been priced.",
+  INVALID_AMOUNT: "Please enter a valid amount (not zero, at most 2 decimals).",
+  RESIDENT_MISMATCH: "The resident does not match the related charge.",
+  NOT_RESIDENT_CHARGE: "The related charge is not a resident charge.",
+  INVALID_BILLING_CODE: "Please enter a billing code (1 to 40 characters).",
+  DUPLICATE_BILLING_CODE: "This billing code is already used by another resident.",
+  MISSING_BILLING_CODE: "Some residents have no billing code. Set their codes first.",
+  PERIOD_NOT_FOUND: "There is nothing to export for that month yet.",
+  NOT_SERVICE_ITEM: "Only service items can be charged here.",
+  PRICE_PENDING_EXISTS: "Some charges still have no price. Price them first.",
+  EXCEPTIONS_NOT_REVIEWED: "Mark the exceptions as reviewed first.",
+  EXCEPTIONS_STALE: "Postings were made in this month after the exception review. Review again.",
+  PENDING_ADJUSTMENTS: "Some adjustments are still waiting for a decision.",
+  BALANCE_DRIFT: "The stock balances do not agree with the ledger. Ask an administrator to investigate.",
+  PREVIOUS_PERIOD_OPEN: "The previous month must be locked first.",
+  MONTH_NOT_ENDED: "The month has not ended yet.",
+  ALREADY_LOCKED: "This month is already locked.",
+  PERIOD_NOT_LOCKED: "This month is not locked.",
+  INVALID_PERIOD: "Please choose a valid month.",
 };
 
 /** English message key (translated by the caller with t()). */
@@ -488,4 +527,174 @@ export function formatQty(n: number | null | undefined): string {
 export function formatMoney(n: number | null | undefined, digits = 2): string {
   if (n === null || n === undefined) return "";
   return Number(n).toLocaleString("en-MY", { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 2) });
+}
+
+// ----------------------------------------------------------------- charges and month-end (schema/019)
+
+export const CHARGE_KIND_OPTIONS = [
+  { value: "ISSUE", label: "Issue" },
+  { value: "SERVICE", label: "Service" },
+  { value: "RETURN_CREDIT", label: "Return credit" },
+  { value: "REVERSAL", label: "Reversal" },
+  { value: "PRICING", label: "Pricing" },
+  { value: "MANUAL_ADJUSTMENT", label: "Manual adjustment" },
+] as const;
+
+export const EXCEPTION_KIND_OPTIONS = [
+  { value: "PRICE_PENDING", label: "Charges waiting for a price" },
+  { value: "ADJUSTMENT_PENDING", label: "Adjustments waiting for approval" },
+  { value: "WRITE_OFF", label: "Write-offs" },
+  { value: "TRANSIT_RELEASE", label: "Transit releases" },
+  { value: "RELEASE_REALLOCATE_7D", label: "Release then re-allocate within 7 days" },
+  { value: "NEGATIVE_STOCK_CONFIRMED", label: "Issued with negative stock" },
+  { value: "INACTIVE_RESIDENT_ISSUE", label: "Issued to an inactive resident" },
+  { value: "OSEM_EXPENSE_ISSUE", label: "OSEM expense issues" },
+  { value: "PENDING_COST", label: "Movements at unknown cost" },
+  { value: "SANITY_CONFIRMED", label: "Confirmed unusual quantities or costs" },
+  { value: "ADJUSTMENT_APPROVED", label: "Approved adjustments" },
+  { value: "STALE_TRANSIT", label: "Transit stock idle for 30 days" },
+] as const;
+
+/** CSV column headers of the charge export (schema/019 column keys). */
+export const EXPORT_HEADERS: Record<string, string> = {
+  billing_code: "Billing code",
+  resident_ref: "Resident ID",
+  resident_name: "Resident name",
+  charge_date: "Date",
+  sku: "SKU",
+  product_name: "Product",
+  qty: "Qty",
+  uom: "UOM",
+  unit_price: "Unit price",
+  amount: "Amount",
+  kind: "Kind",
+  txn_no: "Txn no.",
+  related_charge_period: "Related charge period",
+  is_prior_period_credit: "Prior period credit",
+  line_count: "Lines",
+};
+
+export type InvChargeRow = {
+  id: number;
+  chargeDate: string;
+  kind: string;
+  target: string;
+  residentId: number | null;
+  txnNo: string | null;
+  relatedChargeId: number | null;
+  productName: string;
+  sku: string;
+  uomCode: string;
+  qtyBase: number;
+  unitPrice: number | null;
+  amount: number;
+  reason: string | null;
+  byStaff: string;
+};
+
+export type InvChargeLine = InvChargeRow & {
+  /** id of the line this row belongs to (itself for an issue/service/manual line) */
+  rootId: number;
+  isChild: boolean;
+  /** on a root row: its amount plus every child in view (pricing, credits, reversals) */
+  effective: number | null;
+  isPricePending: boolean;
+  isReversed: boolean;
+};
+
+/** Groups children under their root line and computes the effective amount (D-121: sum over the line and its children). */
+export function groupCharges(rows: InvChargeRow[]): InvChargeLine[] {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const rootOf = (r: InvChargeRow): number => {
+    let cur = r;
+    for (let i = 0; i < 4; i++) {
+      const parent = cur.relatedChargeId === null ? undefined : byId.get(cur.relatedChargeId);
+      if (!parent) return cur.id;
+      cur = parent;
+    }
+    return cur.id;
+  };
+  const totals = new Map<number, number>();
+  const hasPricing = new Set<number>();
+  const reversed = new Set<number>();
+  for (const r of rows) {
+    const root = rootOf(r);
+    totals.set(root, Math.round(((totals.get(root) ?? 0) + r.amount) * 100) / 100);
+    if (r.kind === "PRICING" && r.relatedChargeId !== null) hasPricing.add(r.relatedChargeId);
+    if (r.kind === "REVERSAL" && r.relatedChargeId !== null) reversed.add(r.relatedChargeId);
+  }
+  const lines = rows.map((r): InvChargeLine => {
+    const rootId = rootOf(r);
+    const isRoot = rootId === r.id;
+    return {
+      ...r,
+      rootId,
+      isChild: !isRoot,
+      effective: isRoot ? (totals.get(r.id) ?? r.amount) : null,
+      isPricePending:
+        r.target === "RESIDENT" &&
+        (r.kind === "ISSUE" || r.kind === "SERVICE") &&
+        r.unitPrice === null &&
+        !hasPricing.has(r.id) &&
+        !reversed.has(r.id),
+      isReversed: reversed.has(r.id),
+    };
+  });
+  // roots by date then id, each followed by its children
+  const roots = lines.filter((l) => !l.isChild).sort((a, b) => a.chargeDate.localeCompare(b.chargeDate) || a.id - b.id);
+  const children = new Map<number, InvChargeLine[]>();
+  for (const l of lines.filter((x) => x.isChild)) {
+    children.set(l.rootId, [...(children.get(l.rootId) ?? []), l]);
+  }
+  const orphans = lines.filter((l) => l.isChild && !roots.some((r) => r.id === l.rootId));
+  return [...roots.flatMap((r) => [r, ...(children.get(r.id) ?? []).sort((a, b) => a.id - b.id)]), ...orphans];
+}
+
+export type InvPeriodRow = {
+  id: number;
+  month: string; // YYYY-MM-01
+  status: "OPEN" | "LOCKED";
+  reviewedAt: string | null;
+  reviewedByStaff: string | null;
+  lockedAt: string | null;
+  lockedByStaff: string | null;
+  reopenCount: number;
+};
+
+export type InvExceptionRow = {
+  kind: string;
+  refType: string;
+  refId: number;
+  reference: string;
+  eventDate: string;
+  productName: string | null;
+  residentId: number | null;
+  qty: number | null;
+  amount: number | null;
+  staff: string | null;
+  fromBranchLogin: boolean;
+  isBlocking: boolean;
+};
+
+/** YYYY-MM of the KL calendar today. */
+export function currentMonthKL(): string {
+  return todayKL().slice(0, 7);
+}
+
+export function isMonthParam(value: string | undefined): value is string {
+  return !!value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+/** First day (YYYY-MM-DD) of the month after YYYY-MM. */
+export function nextMonthStart(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+}
+
+/** Money input for amounts that may be negative, at most 2 decimals; null when invalid. */
+export function parseSignedMoney(value: string): number | null {
+  const v = value.trim();
+  if (!/^-?\d{1,9}(\.\d{1,2})?$/.test(v)) return null;
+  const n = Number(v);
+  return n === 0 ? null : n;
 }
