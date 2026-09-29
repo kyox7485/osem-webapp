@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { discontinueOrderAction } from "./order-actions";
 import { AdminRecordControls } from "@/components/admin-record-controls";
@@ -289,8 +290,19 @@ function DiscontinueModal({
 
 // ─── Main list ────────────────────────────────────────────────────────────────
 
-export function OrdersList({ orders }: { orders: OrderItem[] }) {
+export function OrdersList({
+  orders,
+  branches,
+  currentBranch,
+}: {
+  orders: OrderItem[];
+  /** Branch dropdown options -- HQ ADMIN only, so empty for every other login. */
+  branches: { id: string; label: string }[];
+  /** Currently selected branch id as a string, or "" for "All branches". */
+  currentBranch: string;
+}) {
   const t = useTranslation();
+  const push = useNavPush();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Active");
   const [discontinuingId, setDiscontinuingId] = useState<number | null>(null);
@@ -399,6 +411,29 @@ export function OrdersList({ orders }: { orders: OrderItem[] }) {
               <option key={s} value={s}>{t(s)}</option>
             ))}
           </select>
+          {/*
+            Branch filter, HQ ADMIN only. Unlike the search box and status
+            select above, this one is server-side: the orders list is capped
+            at 500 rows, so narrowing the already-fetched rows in the browser
+            would show a truncated slice rather than the real result.
+          */}
+          {branches.length > 0 && (
+            <select
+              value={currentBranch}
+              onChange={(e) => {
+                const params = new URLSearchParams();
+                if (e.target.value) params.set("branch", e.target.value);
+                const qs = params.toString();
+                push(`/residents/medication/orders${qs ? `?${qs}` : ""}`);
+              }}
+              className="rounded-md border border-line-strong bg-input px-3 py-1.5 text-sm text-fg-secondary focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">{t("All branches")}</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {discontinueError && (

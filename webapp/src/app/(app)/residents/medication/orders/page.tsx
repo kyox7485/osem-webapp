@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
-import { getDemoBranchIds } from "@/lib/lookups";
+import { getCurrentUser, canAccessAllBranches, isHqAdmin } from "@/lib/current-user";
+import { getDemoBranchIds, getBranches } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { ResidentsModuleTabs } from "../../module-tabs";
@@ -10,7 +10,11 @@ import { MedicationSubTabs } from "../medication-tabs";
 import { OrdersList } from "./orders-list";
 import { autoExpireOrdersAction } from "./order-actions";
 
-export default async function MedicationOrdersPage() {
+export default async function MedicationOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branch?: string }>;
+}) {
   const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/");
@@ -21,6 +25,13 @@ export default async function MedicationOrdersPage() {
   const demoBranchIds = await getDemoBranchIds();
   const isDemoUser = demoBranchIds.includes(currentUser.branch_id);
   const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
+
+  // Branch filter, HQ ADMIN only. Read for everyone but honoured only for an
+  // HQ ADMIN, and applied after the access filters below so it can only
+  // narrow what this user may already see.
+  const { branch } = await searchParams;
+  const hqAdmin = isHqAdmin(currentUser);
+  const branchFilter = hqAdmin ? Number(branch) || null : null;
 
   // Auto-expire orders whose end_date has passed (best-effort, silent)
   await autoExpireOrdersAction(currentUser.branch_id, admin, excludedBranchIds).catch(() => undefined);
@@ -47,7 +58,19 @@ export default async function MedicationOrdersPage() {
     ordersQuery = ordersQuery.eq("branch_id", currentUser.branch_id);
   }
 
+  // Applied after the access filters above, so it can only narrow.
+  if (branchFilter) ordersQuery = ordersQuery.eq("branch_id", branchFilter);
+
   const { data: ordersRaw } = await ordersQuery;
+
+  // Options for the branch dropdown. From the branch table rather than from
+  // the orders just fetched, so the choices stay stable while the user
+  // narrows down instead of collapsing to the branch they just picked.
+  const branchOptions = hqAdmin
+    ? (await getBranches())
+        .filter((b) => isDemoUser || !excludedBranchIds.includes(Number(b.id)))
+        .map((b) => ({ id: String(b.id), label: b.label }))
+    : [];
 
   type OrderRow = {
     id: number;
@@ -203,7 +226,11 @@ export default async function MedicationOrdersPage() {
         </Link>
       </div>
 
-      <OrdersList orders={items} />
+      <OrdersList
+        orders={items}
+        branches={branchOptions}
+        currentBranch={branchFilter ? String(branchFilter) : ""}
+      />
     </div>
   );
 }

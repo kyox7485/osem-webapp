@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { getCurrentUser, canAccessPhysioOp, canAccessAllBranches } from "@/lib/current-user";
-import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds, getDemoBranchIds } from "@/lib/lookups";
+import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds, getDemoBranchIds, getBranches } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ import { PhysioModuleTabs } from "./module-tabs";
 import { PhysioAssessmentTabs } from "./assessment-tabs";
 import { PhysioDirtyProvider, PhysioGlobalDirtyBridge } from "./physio-dirty-context";
 import { ResidentPicker } from "./resident-picker";
+import { BranchPicker } from "./branch-picker";
 import { NewOpPatientForm } from "./new-op-patient-form";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
 import type { ReviewAssessment } from "./assessment-review";
@@ -63,7 +64,7 @@ function pickCoordination(row: any): CoordinationScores {
 export default async function PhysiotherapyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; resident?: string }>;
+  searchParams: Promise<{ type?: string; resident?: string; branch?: string }>;
 }) {
   const account = await getCurrentUser();
   if (!account) redirect("/login");
@@ -71,7 +72,7 @@ export default async function PhysiotherapyPage({
   const { t } = await getServerTranslator();
   const opAllowed = canAccessPhysioOp(account);
 
-  const { type, resident: residentIdParam } = await searchParams;
+  const { type, resident: residentIdParam, branch } = await searchParams;
   // Non-physio accounts are silently redirected to IP if they somehow land on OP.
   const careSetting: PhysioCareSetting = type === "op" && opAllowed ? "OP" : "IP";
   const supabase = await createClient();
@@ -79,6 +80,12 @@ export default async function PhysiotherapyPage({
   const allDemoBranchIds = await getDemoBranchIds();
   // Show DEMO patients/assessments only when the logged-in account belongs to the DEMO branch itself.
   const demoBranchIds = allDemoBranchIds.includes(account.branch_id) ? [] : allDemoBranchIds;
+
+  // Branch filter for the patient list. Unlike the clinical tabs this is not
+  // gated on isHqAdmin(): a PHY hub legitimately covers every NUR branch and
+  // needs the same narrowing aid. The options below are already restricted to
+  // the branches this account may cover, so the filter can only narrow.
+  const branchFilter = careSetting === "IP" && canAccessAllBranches(account) ? Number(branch) || null : null;
 
   // IP patients are active tbl_residents; OP patients are the separate
   // tbl_physio_op_patients list (no "ACTIVE" status column of its own --
@@ -99,11 +106,25 @@ export default async function PhysiotherapyPage({
     patientQuery = patientQuery.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
   }
 
+  // Applied after the access filters above, so it can only narrow.
+  if (branchFilter) patientQuery = patientQuery.eq("branch_id", branchFilter);
+
   const { data: patients } = await patientQuery;
 
   const selectedPatient = residentIdParam
     ? (patients ?? []).find((r) => String(r.id) === residentIdParam)
     : undefined;
+
+  // Options for the branch dropdown. Derived from the branch table rather
+  // than from the (already branch-filtered) patient list, so the choices
+  // stay stable while the user narrows down instead of collapsing to the
+  // one branch they just picked. Restricted to the branches this account
+  // may cover, so the filter can only narrow.
+  const branchOptions = canAccessAllBranches(account)
+    ? (await getBranches())
+        .filter((b) => !demoBranchIds.includes(Number(b.id)))
+        .map((b) => ({ id: String(b.id), label: b.label }))
+    : [];
 
   return (
     <div>
@@ -123,6 +144,18 @@ export default async function PhysiotherapyPage({
           label={careSetting === "OP" ? t("Patient") : t("Resident")}
         />
 
+        {careSetting === "IP" && (
+          <div className="mt-4">
+            {/* Keyed on the branch so a completed switch remounts with the
+                new value in place, rather than syncing it back in an effect. */}
+            <BranchPicker
+              key={branchFilter ?? "all"}
+              branches={branchOptions}
+              currentBranch={branchFilter ? String(branchFilter) : ""}
+            />
+          </div>
+        )}
+
         {careSetting === "OP" && <NewOpPatientForm />}
 
         <div className="mt-4">
@@ -134,6 +167,7 @@ export default async function PhysiotherapyPage({
             careSetting={careSetting}
             account={account}
             demoBranchIds={demoBranchIds}
+            branchFilter={branchFilter}
           />
         </div>
       </PhysioDirtyProvider>
@@ -151,10 +185,12 @@ async function AllPatientsReview({
   careSetting,
   account,
   demoBranchIds,
+  branchFilter,
 }: {
   careSetting: PhysioCareSetting;
   account: { rights: string; branch_id: number; branch_function: string | null };
   demoBranchIds: number[];
+  branchFilter: number | null;
 }) {
   const supabase = await createClient();
 
@@ -176,6 +212,9 @@ async function AllPatientsReview({
   } else if (demoBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${demoBranchIds.join(",")})`);
   }
+
+  // Applied after the access filters above, so it can only narrow.
+  if (branchFilter) query = query.eq("branch_id", branchFilter);
 
   const { data: assessments, error } = await query;
 
@@ -254,14 +293,16 @@ async function PhysiotherapyContent({
   careSetting,
   account,
   demoBranchIds,
+  branchFilter,
 }: {
   residentId: number | null;
   careSetting: PhysioCareSetting;
   account: { rights: string; branch_id: number; branch_function: string | null };
   demoBranchIds: number[];
+  branchFilter: number | null;
 }) {
   if (residentId === null) {
-    return <AllPatientsReview careSetting={careSetting} account={account} demoBranchIds={demoBranchIds} />;
+    return <AllPatientsReview careSetting={careSetting} account={account} demoBranchIds={demoBranchIds} branchFilter={branchFilter} />;
   }
 
   const supabase = await createClient();

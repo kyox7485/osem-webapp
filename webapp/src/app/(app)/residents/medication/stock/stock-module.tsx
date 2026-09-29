@@ -701,9 +701,13 @@ function PrintPdfMenu({ reports, onEmpty }: { reports: PdfReport[]; onEmpty: (me
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export function StockModule({ residents, selectedResidentId, orders, history, staffOptions }: {
+export function StockModule({ residents, selectedResidentId, branches, currentBranch, orders, history, staffOptions }: {
   residents: StockResident[];
   selectedResidentId: number | null;
+  /** Branch dropdown options -- HQ ADMIN only, so empty for every other login. */
+  branches: { id: string; label: string }[];
+  /** Currently selected branch id as a string, or "" for "All branches". */
+  currentBranch: string;
   orders: StockOrderRow[];
   history: Record<string, StockHistoryRow[]>;
   staffOptions: StaffPick[];
@@ -716,9 +720,17 @@ export function StockModule({ residents, selectedResidentId, orders, history, st
   const index = residents.findIndex((r) => r.id === selectedResidentId);
   const selected = index >= 0 ? residents[index] : null;
 
-  function goTo(id: number | null) {
+  function goTo(id: number | null, branchOverride?: string) {
     setNotice(null);
-    push(id === null ? "/residents/medication/stock" : `/residents/medication/stock?resident=${id}`);
+    // Carries the branch filter through, so paging to the next resident
+    // stays inside the branch the user narrowed to. A branch change clears
+    // the resident, since the new branch has a different patient list.
+    const branch = branchOverride ?? currentBranch;
+    const params = new URLSearchParams();
+    if (id !== null && branchOverride === undefined) params.set("resident", String(id));
+    if (branch) params.set("branch", branch);
+    const qs = params.toString();
+    push(`/residents/medication/stock${qs ? `?${qs}` : ""}`);
   }
 
   const navBtn = `inline-flex min-h-10 items-center gap-1 rounded-md border border-line bg-surface px-3 text-sm text-fg-secondary hover:bg-hover disabled:opacity-40 transition-colors ${btnFocus}`;
@@ -727,6 +739,31 @@ export function StockModule({ residents, selectedResidentId, orders, history, st
     <div className="space-y-4">
       {/* Resident picker — patient-by-patient */}
       <div className="rounded-lg border border-line bg-surface p-4 shadow-sm">
+        {/*
+          Branch filter, HQ ADMIN only. Sits above the resident select so the
+          resident list beneath is always the current branch's. Changing it
+          clears the resident (and therefore any stock entries in progress),
+          which is why it goes through the dirty-form-guarded goTo below.
+        */}
+        {branches.length > 0 && (
+          <>
+            <label htmlFor="stock-branch" className="mb-1 block text-xs font-medium text-fg-muted">
+              {t("Branch")}
+            </label>
+            <select
+              id="stock-branch"
+              value={currentBranch}
+              onChange={(e) => goTo(null, e.target.value)}
+              className="mb-3 min-h-10 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">{t("All branches")}</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+          </>
+        )}
+
         <label htmlFor="stock-resident" className="mb-1 block text-xs font-medium text-fg-muted">
           {t("Resident")}
         </label>

@@ -253,10 +253,14 @@ function PreviousCounts({ lines }: { lines: ConsumableLine[] }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export function InventoryModule({ view, residents, selectedResidentId, catalogue, lines, staffOptions, loadError }: {
+export function InventoryModule({ view, residents, selectedResidentId, branches, currentBranch, catalogue, lines, staffOptions, loadError }: {
   view: InventoryView;
   residents: InventoryResident[];
   selectedResidentId: number | null;
+  /** Branch dropdown options -- HQ ADMIN only, so empty for every other login. */
+  branches: { id: string; label: string }[];
+  /** Currently selected branch id as a string, or "" for "All branches". */
+  currentBranch: string;
   catalogue: CatalogueItem[];
   lines: ConsumableLine[];
   staffOptions: StaffPick[];
@@ -339,16 +343,18 @@ export function InventoryModule({ view, residents, selectedResidentId, catalogue
 
   const { markDirty, markClean } = useDirtyForm(`consumable-count-${selectedResidentId ?? "none"}`);
 
-  function hrefFor(id: number | null, v: InventoryView): string {
+  function hrefFor(id: number | null, v: InventoryView, branchOverride?: string): string {
+    const branch = branchOverride ?? currentBranch;
     const params = new URLSearchParams();
     if (id !== null) params.set("resident", String(id));
     if (v === "previous") params.set("view", "previous");
+    if (branch) params.set("branch", branch);
     const qs = params.toString();
     return `/residents/consumables/inventory${qs ? `?${qs}` : ""}`;
   }
 
-  function goTo(id: number | null) {
-    guardedAction(() => push(hrefFor(id, view)));
+  function goTo(id: number | null, branchOverride?: string) {
+    guardedAction(() => push(hrefFor(id, view, branchOverride)));
   }
 
   // <button> tabs are invisible to the NavigationGuard click interceptor, so
@@ -461,6 +467,29 @@ export function InventoryModule({ view, residents, selectedResidentId, catalogue
     <div className="space-y-4">
       {/* Resident picker */}
       <div className="rounded-lg border border-line bg-surface p-4 shadow-sm">
+        {/*
+          Branch filter, HQ ADMIN only. Above the resident select so the list
+          beneath is always the current branch's. Changing it clears the
+          resident (and any count in progress), so it goes through the same
+          dirty-form-guarded goTo.
+        */}
+        {branches.length > 0 && (
+          <>
+            <label htmlFor="cons-branch" className={labelCls}>{t("Branch")}</label>
+            <select
+              id="cons-branch"
+              value={currentBranch}
+              onChange={(e) => goTo(null, e.target.value)}
+              className="mb-3 min-h-10 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">{t("All branches")}</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+          </>
+        )}
+
         <label htmlFor="cons-resident" className={labelCls}>{t("Resident")}</label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <select

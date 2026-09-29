@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
-import { getDemoBranchIds } from "@/lib/lookups";
+import { getCurrentUser, canAccessAllBranches, isHqAdmin } from "@/lib/current-user";
+import { getDemoBranchIds, getBranches } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { loadCatalogue, loadResidentLines, loadStaffOptions, type StaffPick } from "@/lib/consumables-server";
@@ -18,7 +18,7 @@ import { InventoryModule, type InventoryResident, type InventoryView } from "./i
 export default async function ConsumablesInventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ resident?: string; view?: string }>;
+  searchParams: Promise<{ resident?: string; view?: string; branch?: string }>;
 }) {
   const { t } = await getServerTranslator();
   const account = await getCurrentUser();
@@ -30,6 +30,13 @@ export default async function ConsumablesInventoryPage({
   const demoBranchIds = await getDemoBranchIds();
   const isDemoUser = demoBranchIds.includes(account.branch_id);
   const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
+
+  // Branch filter, HQ ADMIN only. Honoured only for an HQ ADMIN and applied
+  // after the access filters below, so it can only narrow what this user may
+  // already see.
+  const hqAdmin = isHqAdmin(account);
+  const { resident: residentParam, view: viewParam, branch } = await searchParams;
+  const branchFilter = hqAdmin ? Number(branch) || null : null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let residentsQuery: any = supabase
@@ -45,14 +52,27 @@ export default async function ConsumablesInventoryPage({
   } else {
     residentsQuery = residentsQuery.eq("branch_id", account.branch_id);
   }
+
+  // Applied after the access filters above, so it can only narrow.
+  if (branchFilter) residentsQuery = residentsQuery.eq("branch_id", branchFilter);
+
   const { data: residentsRaw } = await residentsQuery;
   const residents: InventoryResident[] = (
     (residentsRaw ?? []) as { id: number; resident_name: string; ResidentID: string; branch_id: number }[]
   ).map((r) => ({ id: r.id, name: r.resident_name, residentTextId: r.ResidentID, branchId: r.branch_id }));
 
-  const { resident: residentParam, view: viewParam } = await searchParams;
   const view: InventoryView = viewParam === "previous" ? "previous" : "new";
   const selected = residents.find((r) => String(r.id) === residentParam) ?? null;
+
+  // Options for the branch dropdown. From the branch table rather than from
+  // the (already branch-filtered) resident list, so the choices stay stable
+  // while the user narrows down instead of collapsing to the one branch they
+  // just picked.
+  const branchOptions = hqAdmin
+    ? (await getBranches())
+        .filter((b) => isDemoUser || !excludedBranchIds.includes(Number(b.id)))
+        .map((b) => ({ id: String(b.id), label: b.label }))
+    : [];
 
   let catalogue: CatalogueItem[] = [];
   let lines: ConsumableLine[] = [];
@@ -85,6 +105,8 @@ export default async function ConsumablesInventoryPage({
         view={view}
         residents={residents}
         selectedResidentId={selected?.id ?? null}
+        branches={branchOptions}
+        currentBranch={branchFilter ? String(branchFilter) : ""}
         catalogue={catalogue}
         lines={lines}
         staffOptions={staffOptions}
