@@ -6,6 +6,7 @@
 export const dictInventory: Record<string, string> = {
   // tabs, titles
   Transactions: "Transaksi",
+  Ledger: "Lejar",
   Receive: "Terima",
   Issue: "Keluarkan",
   Transfers: "Pindahan",

@@ -7,10 +7,6 @@ import {
   PackagePlus,
   PackageMinus,
   ArrowLeftRight,
-  Undo2,
-  Trash2,
-  SlidersHorizontal,
-  Flag,
   Settings,
   ShoppingCart,
   type LucideIcon,
@@ -29,11 +25,7 @@ const TABS: Tab[] = [
   { href: "/inventory/receive", label: "Receive", icon: PackagePlus, minRank: INV_TIER.RECEIPT },
   { href: "/inventory/issue", label: "Issue", icon: PackageMinus, minRank: INV_TIER.ISSUE },
   { href: "/inventory/transfers", label: "Transfers", icon: ArrowLeftRight, minRank: INV_TIER.TRANSFER },
-  { href: "/inventory/returns", label: "Returns", icon: Undo2, minRank: INV_TIER.RETURN_FROM_ISSUE },
-  { href: "/inventory/write-off", label: "Write-off", icon: Trash2, minRank: INV_TIER.WRITE_OFF },
   { href: "/inventory/requests", label: "Stock requests", icon: ShoppingCart, minRank: INV_TIER.STOCK_REQUEST },
-  { href: "/inventory/adjustments", label: "Adjustments", icon: SlidersHorizontal, minRank: INV_TIER.ADJUSTMENT_REQUEST },
-  { href: "/inventory/opening", label: "Opening balance", icon: Flag, minRank: INV_TIER.OPENING_BALANCE },
   { href: "/inventory/setup/products", label: "Setup", icon: Settings, minRank: INV_TIER.VIEW },
 ];
 
