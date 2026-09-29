@@ -10,12 +10,20 @@
 | Staff | Roster (`tbl_staff`), separate from logins |
 | Accounts | Logins (`tbl_user_accounts`); admin-only; clickable rows open an edit-confirmation modal |
 
-Clinical report queries are row-capped (500) and the Nursing Chart and
-Vital Signs tabs default to a 7-day window, so an all-branches (HQ) read
-can't hit the statement timeout. Known gap: `tbl_nursing_chart_elimination_episodes`
-has no index on `chart_entry_id` — its two sibling child tables have one — so
-its lookup is a sequential scan; acceptable at the current cap, worth adding if
-it ever gets slow.
+Clinical report queries are row-capped (500) so a bounded list is never
+mistaken for the complete one. The Nursing Chart tab still defaults to a
+7-day window; Vital Signs does not — a silent default there rendered older
+readings as "No vital signs recorded yet." and hid the HQ ADMIN edit/delete
+buttons entirely, since an empty table has no rows to hang them on. Instead,
+`schema/016_add_vital_entry_timestamp_index.sql` indexes
+`tbl_vital.entry_timestamp desc` (and the same for the nursing chart) so the
+"All Residents, no date range" read is served by an index scan instead of a
+seq scan + sort of ~37k rows. That shape is what timed out as "canceling
+statement due to statement timeout" — `LIMIT` does not save it, because the
+sort must finish before the first row is returned. Known gap:
+`tbl_nursing_chart_elimination_episodes` has no index on `chart_entry_id` —
+its two sibling child tables have one — so its lookup is a sequential scan;
+acceptable at the current cap, worth adding if it ever gets slow.
 
 ## Wound Photo
 
