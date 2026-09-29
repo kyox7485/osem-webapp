@@ -8,6 +8,9 @@ import {
   type InvBarcode,
   type InvOpenRequest,
   type InvBranch,
+  type InvCountAdjustment,
+  type InvCountHeader,
+  type InvCountRow,
   type InvCatalogue,
   type InvCategory,
   type InvLocation,
@@ -277,4 +280,108 @@ export async function loadOpenRequests(supabase: Supabase, branchId: number): Pr
       };
     })
     .filter((r) => r.lines.length > 0);
+}
+
+// ----------------------------------------------------------------- stock counts (schema/018)
+
+export async function loadCounts(supabase: Supabase, branchId: number): Promise<InvCountRow[]> {
+  const { data } = await supabase
+    .from("tbl_inv_counts")
+    .select(
+      "id, count_no, status, count_type, location_id, freeze_location, counted_by_staff, started_at, submitted_at, closed_at, tbl_inv_count_lines(count)"
+    )
+    .eq("branch_id", branchId)
+    .order("id", { ascending: false })
+    .limit(100);
+  return (data ?? []).map((c) => ({
+    id: Number(c.id),
+    countNo: c.count_no as string,
+    status: c.status as string,
+    countType: c.count_type as string,
+    locationId: Number(c.location_id),
+    freezeLocation: c.freeze_location as boolean,
+    countedByStaff: c.counted_by_staff as string,
+    startedAt: (c.started_at as string | null) ?? null,
+    submittedAt: (c.submitted_at as string | null) ?? null,
+    closedAt: (c.closed_at as string | null) ?? null,
+    lineCount: Number((c.tbl_inv_count_lines as { count: number }[] | null)?.[0]?.count ?? 0),
+  }));
+}
+
+export type CountDetail = {
+  header: InvCountHeader;
+  lines: {
+    id: number;
+    productId: number;
+    residentId: number | null;
+    isFound: boolean;
+    physical: number | null;
+    expected: number | null;
+    postedSince: number | null;
+    variance: number | null;
+    note: string | null;
+  }[];
+  adjustments: InvCountAdjustment[];
+};
+
+/**
+ * One count with its lines. While the count is blind (IN_PROGRESS, or
+ * SUBMITTED for a login that may not review) only the counted quantity is
+ * selected: expected / posted-since-start / variance are never requested, so
+ * the counter cannot be shown them.
+ */
+export async function loadCountDetail(
+  supabase: Supabase,
+  branchId: number,
+  countId: number,
+  canReview: boolean
+): Promise<CountDetail | null> {
+  const { data: c } = await supabase
+    .from("tbl_inv_counts")
+    .select(
+      "id, count_no, status, count_type, location_id, freeze_location, counted_by_staff, started_at, submitted_at, closed_at, investigated_by_staff, investigation_summary"
+    )
+    .eq("id", countId)
+    .eq("branch_id", branchId)
+    .maybeSingle();
+  if (!c) return null;
+  const blind = c.status === "IN_PROGRESS" || (c.status === "SUBMITTED" && !canReview);
+  const cols = blind
+    ? "id, product_id, resident_id, is_found_item, physical_qty"
+    : "id, product_id, resident_id, is_found_item, physical_qty, expected_qty, posted_since_start, variance_qty, investigation_note";
+  const [{ data: lines }, { data: adj }] = await Promise.all([
+    supabase.from("tbl_inv_count_lines").select(cols).eq("count_id", countId).order("id").limit(5000),
+    supabase.from("tbl_inv_adjustments").select("id, adjustment_no, status").eq("count_id", countId).order("id"),
+  ]);
+  const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  return {
+    header: {
+      id: Number(c.id),
+      countNo: c.count_no as string,
+      status: c.status as string,
+      countType: c.count_type as string,
+      locationId: Number(c.location_id),
+      freezeLocation: c.freeze_location as boolean,
+      countedByStaff: c.counted_by_staff as string,
+      startedAt: (c.started_at as string | null) ?? null,
+      submittedAt: (c.submitted_at as string | null) ?? null,
+      closedAt: (c.closed_at as string | null) ?? null,
+      lineCount: (lines ?? []).length,
+      investigatedByStaff: (c.investigated_by_staff as string | null) ?? null,
+      investigationSummary: (c.investigation_summary as string | null) ?? null,
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    lines: ((lines ?? []) as any[]).map((l) => ({
+      id: Number(l.id),
+      productId: Number(l.product_id),
+      residentId: num(l.resident_id),
+      isFound: l.is_found_item as boolean,
+      physical: num(l.physical_qty),
+      expected: blind ? null : num(l.expected_qty),
+      postedSince: blind ? null : num(l.posted_since_start),
+      variance: blind ? null : num(l.variance_qty),
+      note: blind ? null : ((l.investigation_note as string | null) ?? null),
+    })),
+    adjustments: (adj ?? []).map((a) => ({ id: Number(a.id), adjustmentNo: a.adjustment_no as string, status: a.status as string })),
+  };
 }

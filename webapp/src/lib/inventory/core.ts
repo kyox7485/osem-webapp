@@ -24,6 +24,8 @@ export const INV_TIER = {
   REVERSE: 3,
   ADJUSTMENT_APPROVE: 3,
   STOCK_REQUEST: 2,
+  COUNT: 1,
+  COUNT_INVESTIGATE: 2,
   REQUEST_APPROVE: 4,
   OPENING_BALANCE: 4,
   STOCK_LEVELS: 4,
@@ -113,6 +115,11 @@ export const INV_RPCS = [
   "inv_create_stock_request",
   "inv_decide_stock_request",
   "inv_stock_request_action",
+  "inv_start_count",
+  "inv_save_count_lines",
+  "inv_submit_count",
+  "inv_review_count",
+  "inv_cancel_count",
 ] as const;
 export type InvRpcName = (typeof INV_RPCS)[number];
 
@@ -232,6 +239,58 @@ export const REQUEST_EVENT_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
+// ----------------------------------------------------------------- stock counts (schema/018)
+
+export const COUNT_STATUS_OPTIONS = [
+  { value: "IN_PROGRESS", label: "In progress" },
+  { value: "SUBMITTED", label: "Awaiting review" },
+  { value: "CLOSED", label: "Closed" },
+  { value: "CANCELLED", label: "Cancelled" },
+] as const;
+
+export const COUNT_TYPE_OPTIONS = [
+  { value: "MONTHLY_STORE", label: "Monthly Store count" },
+  { value: "WEEKLY_FLOOR", label: "Weekly Floor count" },
+  { value: "AD_HOC", label: "Ad hoc count" },
+] as const;
+
+/** Q-30: a monthly Store count freezes its location by default; the others do not. */
+export function defaultFreeze(countType: string): boolean {
+  return countType === "MONTHLY_STORE";
+}
+
+export type InvCountRow = {
+  id: number;
+  countNo: string;
+  status: string;
+  countType: string;
+  locationId: number;
+  freezeLocation: boolean;
+  countedByStaff: string;
+  startedAt: string | null;
+  submittedAt: string | null;
+  closedAt: string | null;
+  lineCount: number;
+};
+export type InvCountHeader = InvCountRow & { investigatedByStaff: string | null; investigationSummary: string | null };
+/** One count-sheet line as the pages show it; expected/variance stay null while the count is blind. */
+export type InvCountLineView = {
+  id: number;
+  productId: number;
+  name: string;
+  sku: string;
+  uomCode: string;
+  allowFraction: boolean;
+  residentName: string | null;
+  isFound: boolean;
+  physical: number | null;
+  expected: number | null;
+  postedSince: number | null;
+  variance: number | null;
+  note: string | null;
+};
+export type InvCountAdjustment = { id: number; adjustmentNo: string; status: string };
+
 /** A base-unit qty expressed in another unit, e.g. 250 EA with BOX = 100 → 2.5. */
 export function toPurchaseQty(base: number, factor: number): number {
   return factor > 0 ? Math.round((base / factor) * 10000) / 10000 : base;
@@ -350,6 +409,13 @@ const CODE_MESSAGES: Record<string, string> = {
   LINE_ALREADY_CLOSED: "This line is already closed.",
   NOTE_REQUIRED: "Please add a note.",
   INVALID_REF: "The order reference is too long (max 60 characters).",
+  COUNT_IN_PROGRESS: "A count at this location is still in progress or waiting for review.",
+  COUNT_ADJUSTMENT_PENDING: "The last count's adjustment at this location is still waiting for approval.",
+  COUNT_BAD_STATUS: "The count is no longer in a state that allows this.",
+  COUNT_INCOMPLETE: "Every line must be counted before the count can be submitted.",
+  COUNT_EMPTY: "This count has no lines.",
+  COUNT_LINE_NOT_FOUND: "Count line not found.",
+  INVALID_COUNT_TYPE: "Please choose the count type.",
 };
 
 /** English message key (translated by the caller with t()). */

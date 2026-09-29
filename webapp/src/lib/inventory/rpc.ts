@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { InvRpcName, RpcResult } from "./core";
 
-// Typed wrapper around the inv_* RPCs (schema/010, 011, 014, 015, 017). Always the
+// Typed wrapper around the inv_* RPCs (schema/010, 011, 014, 015, 017, 018). Always the
 // user-session client — never the service role (D-85): auth.uid() must be
 // the real login for fn_inv_can and the audit log.
 //

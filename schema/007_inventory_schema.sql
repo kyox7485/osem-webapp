@@ -846,7 +846,7 @@ begin
                          'investigated_by_account','investigation_summary','closed_at','updated_at'];
       v_ok := (v_from = v_to or (v_from, v_to) in (
                  ('DRAFT','IN_PROGRESS'),('DRAFT','CANCELLED'),('IN_PROGRESS','SUBMITTED'),('IN_PROGRESS','CANCELLED'),
-                 ('SUBMITTED','INVESTIGATED'),('SUBMITTED','CLOSED'),('INVESTIGATED','CLOSED')))
+                 ('SUBMITTED','INVESTIGATED'),('SUBMITTED','CLOSED'),('SUBMITTED','CANCELLED'),('INVESTIGATED','CLOSED')))
           and (not ('snapshot_line_id' = any(v_changed)) or v_old->'snapshot_line_id' = 'null'::jsonb);
     when 'tbl_inv_count_lines' then
       v_allowed := array['expected_qty','posted_since_start','physical_qty','investigation_note'];

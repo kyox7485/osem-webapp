@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   Settings,
   ShoppingCart,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { useNavPush } from "@/components/nav-loading";
@@ -25,6 +26,7 @@ const TABS: Tab[] = [
   { href: "/inventory/receive", label: "Receive", icon: PackagePlus, minRank: INV_TIER.RECEIPT },
   { href: "/inventory/issue", label: "Issue", icon: PackageMinus, minRank: INV_TIER.ISSUE },
   { href: "/inventory/transfers", label: "Transfers", icon: ArrowLeftRight, minRank: INV_TIER.TRANSFER },
+  { href: "/inventory/counts", label: "Counts", icon: ListChecks, minRank: INV_TIER.COUNT },
   { href: "/inventory/requests", label: "Stock requests", icon: ShoppingCart, minRank: INV_TIER.STOCK_REQUEST },
   { href: "/inventory/setup/products", label: "Setup", icon: Settings, minRank: INV_TIER.VIEW },
 ];
