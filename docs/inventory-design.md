@@ -93,7 +93,7 @@ The owner answered §11 on 2026-09-29. The effect on the audit rows above:
 - **Q-12 dropped:** no guard on resident branch changes.
 - **Owner UI requests (2026-09-29):**
   - *Built now:* Transfers → one "Internal Transfer" tab (Store / Floor Stock / Transit as three equal locations; Store↔Floor, allocate to Transit and release from Transit all go through it). Operational forms (receive, issue, transfer, returns, write-off) find products **only by barcode or exact SKU — no name search** (similar names cause wrong-product errors); setup pages keep name search.
-  - *Deferred to Phase 7 (reports), recorded here as owner requirements:* the **Stock** and **Transactions** pages need **PDF export** of the filtered view. **Transactions** filters: product by barcode or name, date range, storage location (Store / Floor Stock / Transit), transaction type. **Stock** filters: category, product by name or barcode, product status (active / inactive), supplier (product's default supplier).
+  - *Phase 7 (reports): built.* The **Stock** and **Transactions -> Ledger** pages have URL filters and PDF (and CSV) export of the filtered view: Stock by category, product (name, SKU or barcode), product status and default supplier; Ledger by product (barcode or name), date range (required, at most 366 days), storage location and transaction type. Details in section 15 (D-165 to D-172).
 - **Phase 3 applied to live** 2026-09-29: `014` + `015` + re-run `013` in one transaction. DEMO `opening_window_days` set to 31 (opening balance testable until ~2026-10-02).
 - **Phase 5 applied to live** 2026-09-29: `018` + re-run `013` in one transaction (dry run first). Verified: 5 count RPCs, every `tbl_inv_*` has RLS, anon has no table or function access, authenticated can execute the count RPCs but no `fn_inv_*` helper.
 - **Phase 6 applied to live** 2026-09-29: `019` + re-run `013` in one transaction (dry run first). Verified: the new RPCs and the re-issued `inv_post_return_from_issue` exist, every `tbl_inv_*` has RLS, anon has no inventory access, `v_inv_exceptions` is `security_invoker` and SELECT-only for authenticated.
@@ -1556,6 +1556,40 @@ Written 2026-09-29 as `schema/019_inventory_charges.sql`, tests in `schema/tests
 
 ---
 
+## 15. Phase 7: reports (no SQL)
+
+Built 2026-09-29. **No migration:** every report is a plain SELECT from an existing table or `security_invoker` view through the caller's own Supabase session, so RLS (branch scope, DEMO, rank on charges) decides the rows. Nothing to apply to live.
+
+| Report | Where | Min rank | Source |
+|---|---|---|---|
+| Stock balance | `/inventory/stock` | 1 | `v_inv_stock_balance` |
+| Movement (ledger) | `/inventory/transactions` (Ledger tab) | 1 | `tbl_inv_txn_lines` |
+| Valuation (current, and as of a locked month) | `/inventory/reports?tab=valuation` | 2 | `tbl_inv_cost_pools`, latest `lock_seq` of `tbl_inv_period_closing` |
+| Suggested order | `?tab=suggested` | 1 | `v_inv_suggested_order` |
+| Receiving history | `?tab=receiving` | 2 | `tbl_inv_receipts` |
+| Transfers (internal and between branches) | `?tab=transfers` | 1 | `tbl_inv_txn_lines`, `tbl_inv_branch_transfers` (+ lines) |
+| Stock requests | `?tab=requests` | 2 | `tbl_inv_stock_requests`, `v_inv_request_line_progress` |
+| Resident charges | `?tab=charges` | 3 | `loadCharges` + `groupCharges` |
+| OSEM operational expense | `?tab=expense` | 3 | `tbl_inv_charges` (`OSEM_EXPENSE`) |
+| Count variance | `?tab=counts` | 1 | `tbl_inv_counts`, `tbl_inv_count_lines`, `tbl_inv_adjustments` |
+| Month-end exceptions | link to `/inventory/month-end` | 3 | `v_inv_exceptions` (Phase 6) |
+
+Skipped: near-expiry (D-139, no batch or expiry) and every reconciliation / provisional column (D-138).
+
+- **D-165 (one loader, three outputs).** `lib/inventory/reports/*` holds one loader per report. The page, the CSV and the PDF all call `loadReport(key, ctx)`, which returns a display-ready `ReportResult` (translated labels and enum cells, raw numbers, optional totals row, notes, `truncated`, the filter summary). Nothing is computed twice.
+- **D-166 (filters in the URL).** Filters are a plain GET form, so a view is shareable and server-rendered. Every parameter is validated against a whitelist in `parseReportParams` (ids are positive integers, enums are checked against their vocabularies, `q` is trimmed to 60 characters). A report with a date range needs `from` and `to`: missing or malformed dates fall back to the last 31 days; a reversed range, or one longer than 366 days, is rejected (`RANGE_INVALID`, `RANGE_TOO_LONG`) and the page shows the message instead of trimming silently.
+- **D-167 (caps).** On screen 500 rows; PDF 5,000; CSV 20,000. The loader reads one row past the cap to know it was cut. The screen says so, and the PDF ends with a notice ("Only the first N rows are shown"). Stock reads at most 20,000 source rows and filters them in memory (PostgREST returns 1,000 rows per request, so the loaders page through with `range`), which avoids long `in (...)` URLs.
+- **D-168 (export route).** `GET /api/inventory/reports/<report>?format=csv|pdf&branch=..&<filters>` (Route Handler, `runtime = "nodejs"`). The report name is checked against `REPORT_KEYS`, the format against `csv|pdf`, the rank against the report minimum (also enforced on the page and, for charges, by RLS), and the branch through `getInventoryContext` (scope, enabled, DEMO exclusion). Errors are JSON `{ok:false, code}` with 400/401/403/404/500. The service-role client is never used.
+- **D-169 (CSV / PDF).** CSV reuses the charge export rules (UTF-8 BOM, CRLF, text cells formula-safe) via `buildReportCsv`: money at 2 dp (WAC and unit cost at 4 dp), quantities trimmed to 4 dp, a totals row when the report has one, headers in the user language. One generic `InventoryReportDocument` renders every PDF through the existing `ReportPage` shell (logo, branch block, KL generated-at and page numbers in its footer), adds a filter summary and "generated by", a repeating header row, an optional totals row, and switches to landscape from 8 columns (`ReportPage` got an optional `landscape` prop). Labels are translated with `getServerTranslator()`; the built-in PDF font is Latin-1 only, so other characters print as `?` and the double arrow in "Store <-> Floor" as `/`.
+- **D-170 (valuation).** Current value and WAC come from `tbl_inv_cost_pools` (one pool per branch and product, Store + Floor + Transit together); an unknown WAC on non-zero stock is flagged "Unknown cost". "As of month end" picks the latest `lock_seq` of the chosen LOCKED month and reads only pool rows (`location_id is null`, not in transit); goods dispatched to another branch and still in transit at month end (D-153) are reported as a separate note, not in the column. Totals are the sum of the pools or of the closing rows, never of `v_inv_stock_balance.value_at_wac`. An unlocked month gives a note and no month-end column.
+- **D-171 (suggested order).** The schema has no minimum level, so "at or below the minimum" is not available; the report lists every product with `suggested_base > 0` from `v_inv_suggested_order` (max - Store/Floor on hand - already on approved requests, D-119), in base and purchase units, exactly like the suggestion on the Stock requests page.
+- **D-172 (counts, blind rule).** Only SUBMITTED and CLOSED counts. A SUBMITTED count stays blind (no expected, posted-since-start or variance) for a caller below the Count-Investigate tier, the same rule as the count page. Each line shows the linked adjustment number and status (via `tbl_inv_adjustment_lines.count_line_id`).
+- Charges and expense: the resident report is a per-resident summary (default) or line by line with effective amounts (D-121: an original line plus its pricing, credits and reversals) for one month; the expense report is a summary by month and product (net of returns and reversals, at recorded cost) or line by line, for a date range.
+- UI: a **Reports** tab (rank 1+) with one sub-tab per report the rank may run (`SubTabs`, active tab in `?tab=`), and links to Stock, Movement and the Month-end page. Filter forms are server-rendered GET forms (no dirty-form state to guard); theme tokens with `dark:` partners; all text through `t()` with EN and MS in `dict-inventory.ts`.
+- Not verified against live data: the reports were built and type-checked, and the PDF / CSV builders were smoke-tested with synthetic rows, but no logged-in browser run against Supabase has happened yet.
+
+---
+
 ## Appendix A. Decision register
 
 | D | Decision | Status | § |
@@ -1669,3 +1703,11 @@ Written 2026-09-29 as `schema/019_inventory_charges.sql`, tests in `schema/tests
 | D-162 | `inv_set_resident_billing_code` and a rank-3 editor | active | 14 |
 | D-163 | Export: delta by default, flagged full re-export, hash over the rows, CSV built in the app | active | 14 |
 | D-164 | `v_inv_exceptions` from persisted data only; kinds removed by D-138 / D-158 dropped | active | 14 |
+| D-165 | Reports: one loader per report feeds the page, the CSV and the PDF (`ReportResult`) | active | 15 |
+| D-166 | Report filters live in the URL, whitelisted; date range required and at most 366 days where a report has one | active | 15 |
+| D-167 | Caps: 500 rows on screen, 5,000 PDF, 20,000 CSV; truncation is stated | active | 15 |
+| D-168 | `/api/inventory/reports/[report]`: whitelisted report, format and params; rank and branch scope re-checked; user session only | active | 15 |
+| D-169 | CSV via `buildReportCsv`; one generic table PDF on `ReportPage` (landscape from 8 columns) | active | 15 |
+| D-170 | Valuation totals from cost pools / latest closing snapshot only; unknown WAC flagged; in-transit at month end noted apart | active | 15 |
+| D-171 | Suggested order = `v_inv_suggested_order` (no minimum level exists) | active | 15 |
+| D-172 | Count variance report: SUBMITTED and CLOSED only; SUBMITTED stays blind below Count-Investigate | active | 15 |

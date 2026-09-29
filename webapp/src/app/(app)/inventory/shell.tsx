@@ -6,9 +6,9 @@ import { InventoryTabs } from "./inventory-tabs";
 import { EmptyState } from "./components/form-bits";
 
 /** Resolves the inventory context for a page or sends the user home. */
-export async function requireInventory(searchParams: Promise<{ branch?: string }>): Promise<InventoryContext> {
+export async function requireInventory(searchParams: Promise<{ branch?: string | string[] }>): Promise<InventoryContext> {
   const { branch } = await searchParams;
-  const ctx = await getInventoryContext(branch);
+  const ctx = await getInventoryContext(Array.isArray(branch) ? branch[0] : branch);
   if (!ctx) redirect("/");
   return ctx;
 }

@@ -12,6 +12,7 @@ import {
   ListChecks,
   Receipt,
   CalendarCheck,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import { useNavPush } from "@/components/nav-loading";
@@ -32,6 +33,7 @@ const TABS: Tab[] = [
   { href: "/inventory/charges", label: "Charges", icon: Receipt, minRank: INV_TIER.VIEW_CHARGES },
   { href: "/inventory/month-end", label: "Month-end", icon: CalendarCheck, minRank: INV_TIER.PERIOD_LOCK },
   { href: "/inventory/requests", label: "Stock requests", icon: ShoppingCart, minRank: INV_TIER.STOCK_REQUEST },
+  { href: "/inventory/reports", label: "Reports", icon: BarChart3, minRank: INV_TIER.VIEW },
   { href: "/inventory/setup/products", label: "Setup", icon: Settings, minRank: INV_TIER.VIEW },
 ];
 
