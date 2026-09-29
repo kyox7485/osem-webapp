@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Sidebar, type SidebarItem, type SidebarFooterInfo } from "@/components/sidebar";
 import { PageHeaderProvider, PageHeaderSlot } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
+import { hasInventoryAccess } from "@/lib/inventory/server";
 
 // Treatment-type name -> standard credit hours, for the admin dialog's
 // Credit-hours link. IP and OP bind the same name to the same number
@@ -49,12 +50,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
 
+  // Inventory: NUR branches and HQ only (the SQL scope is empty for a PHY
+  // login, and before the inventory migrations are applied) — D-135.
+  const inventoryVisible = await hasInventoryAccess();
+
   // One soft accent per module -- makes the rail scannable at a glance
   // instead of a stack of same-colour rows.
   const navItems: SidebarItem[] = [
     { href: "/residents", label: t("Residents"), icon: "Users", tint: "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300" },
     { href: "/clinical", label: t("Clinical"), icon: "Stethoscope", tint: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300" },
     { href: "/physiotherapy", label: t("Physiotherapy"), icon: "Activity", tint: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" },
+    ...(inventoryVisible
+      ? ([{ href: "/inventory", label: t("Inventory"), icon: "Package", tint: "bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300" }] as SidebarItem[])
+      : []),
     { href: "/staff", label: t("Staff"), icon: "IdCard", tint: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" },
     { href: "/external-links", label: t("External Links"), icon: "Link2", tint: "bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300" },
     ...(isAdmin(account) ? ([{ href: "/accounts", label: t("Accounts"), icon: "ShieldCheck", tint: "bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300" }] as SidebarItem[]) : []),
@@ -94,7 +102,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </div>
               <div className="h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-rose-400" />
             </header>
-            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
+            {/* Wide by default: the report tables (Vital Signs, Nursing
+                Chart) carry 12-13 columns and were forcing a horizontal
+                scrollbar inside the old max-w-5xl (1024px) container. On a
+                1600px monitor with the 256px sidebar that left ~320px of
+                usable width unused. max-w keeps the reading centred on very
+                large monitors instead of letting lines run edge to edge. */}
+            <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6 sm:px-6">
               {/* Edit/Delete record buttons are shown to HQ ADMIN logins only. */}
               <AdminRecordProvider enabled={hqAdmin} linkValues={linkValues}>
                 {children}

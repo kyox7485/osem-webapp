@@ -88,7 +88,15 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
     <div className="space-y-4">
       {/* Filters */}
       <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        {/*
+          sm:grid-cols-4 spread the three fields and the action buttons over
+          the full width, which on a wide monitor left each control a lonely
+          ~380px column. Below lg the fields stack 2-up and the actions stay
+          one column; at lg they become 6 tracks and the actions take the
+          last two, so the controls sit in a readable band on the left and
+          the buttons stay together on the right.
+        */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div>
             <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
               {t("Resident")}
@@ -134,7 +142,7 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
             />
           </div>
 
-          <div className="flex flex-col gap-2 sm:col-span-1">
+          <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2 lg:flex-row lg:items-end">
             <button
               type="button"
               onClick={() => setShowForm(true)}
@@ -177,23 +185,73 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
 
       {/* Table */}
       <div className="overflow-hidden rounded-md border border-line bg-surface shadow-sm">
+        {/*
+          table-fixed + explicit column widths: the 13 columns used to
+          size to their content, so a long resident name or a "Reviewing
+          Nurse" in the remarks forced the whole table wider than the
+          container and produced a horizontal scrollbar on desktop. Proportions
+          below sum to 100% so the row always fills the container exactly.
+          min-w-[900px] keeps every column readable on a phone and lets
+          overflow-x-auto do the scrolling there, which is the existing
+          narrow-screen behaviour.
+        */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[900px] table-fixed text-left text-sm">
+            {/*
+              Percentages, not pixels, so the row always fills whatever the
+              container is. The two lists (HQ ADMIN sees Actions, everyone
+              else does not) each sum to 100% on their own -- a short colgroup
+              would leave the last column short of the table's right edge.
+            */}
+            <colgroup>
+              {isHqAdmin ? (
+                <>
+                  <col className="w-[3%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[6%]" />
+                </>
+              ) : (
+                <>
+                  <col className="w-[3%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[7%]" />
+                </>
+              )}
+            </colgroup>
             <thead className="border-b border-line bg-surface-muted">
               <tr>
-                <th className="px-4 py-3 font-medium text-fg"></th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Date/Time")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Resident")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Systolic BP")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Diastolic BP")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Heart Rate")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Temp (°C)")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("SpO2")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("DXT")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Insulin Adj.")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Advanced Obs.")}</th>
-                <th className="px-4 py-3 font-medium text-fg">{t("Reviewed By")}</th>
-                {isHqAdmin && <th className="px-4 py-3 font-medium text-fg">{t("Actions")}</th>}
+                <th className="px-2 py-3 font-medium text-fg"></th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Date/Time")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Resident")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Systolic BP")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Diastolic BP")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Heart Rate")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Temp (°C)")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("SpO2")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("DXT")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Insulin Adj.")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Advanced Obs.")}</th>
+                <th className="px-2 py-3 font-medium text-fg">{t("Reviewed By")}</th>
+                {isHqAdmin && <th className="px-2 py-3 font-medium text-fg">{t("Actions")}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-line-subtle">
@@ -222,40 +280,40 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
                         {rowSeverity === "critical" && <span aria-label="critical">🔴</span>}
                         {rowSeverity === "warning" && <span aria-label="warning">🟠</span>}
                       </td>
-                      <td className="px-4 py-3 text-fg">{formatDateTime(v.entry_timestamp)}</td>
-                      <td className="px-4 py-3 text-fg">{v.tbl_residents?.resident_name || "--"}</td>
-                      <td className={`px-4 py-3 ${vitalFlagClass(flagSystolic(v.systolic_bp))}`}>
+                      <td className="break-words px-2 py-3 text-fg">{formatDateTime(v.entry_timestamp)}</td>
+                      <td className="break-words px-2 py-3 text-fg">{v.tbl_residents?.resident_name || "--"}</td>
+                      <td className={`px-2 py-3 ${vitalFlagClass(flagSystolic(v.systolic_bp))}`}>
                         {v.systolic_bp ?? "--"}
                       </td>
-                      <td className={`px-4 py-3 ${vitalFlagClass(flagDiastolic(v.diastolic_bp))}`}>
+                      <td className={`px-2 py-3 ${vitalFlagClass(flagDiastolic(v.diastolic_bp))}`}>
                         {v.diastolic_bp ?? "--"}
                       </td>
-                      <td className={`px-4 py-3 ${vitalFlagClass(flagHeartRate(v.heart_rate))}`}>
+                      <td className={`px-2 py-3 ${vitalFlagClass(flagHeartRate(v.heart_rate))}`}>
                         {v.heart_rate ?? "--"}
                       </td>
-                      <td className={`px-4 py-3 ${vitalFlagClass(flagTemperature(v.temperature))}`}>
+                      <td className={`px-2 py-3 ${vitalFlagClass(flagTemperature(v.temperature))}`}>
                         {v.temperature ?? "--"}
                       </td>
-                      <td className={`px-4 py-3 ${vitalFlagClass(flagSpo2(v.spo2))}`}>
+                      <td className={`px-2 py-3 ${vitalFlagClass(flagSpo2(v.spo2))}`}>
                         {v.spo2 ?? "--"}
                         {v.spo2_condition && (
                           <span className="ml-1 text-xs text-fg-subtle">({v.spo2_condition})</span>
                         )}
                       </td>
-                      <td className={`px-4 py-3 ${vitalFlagClass(flagDxt(v.dxt))}`}>
+                      <td className={`px-2 py-3 ${vitalFlagClass(flagDxt(v.dxt))}`}>
                         {v.dxt ?? "--"}
                         {v.dxt_remark && <span className="ml-1 text-xs text-fg-subtle">({v.dxt_remark})</span>}
                       </td>
-                      <td className="px-4 py-3 text-fg">{v.insulin_adjustment || "--"}</td>
-                      <td className="px-4 py-3 text-fg">
+                      <td className="break-words px-2 py-3 text-fg">{v.insulin_adjustment || "--"}</td>
+                      <td className="break-words px-2 py-3 text-fg">
                         {v.respiration_rate !== null && <span className="mr-1">RR{v.respiration_rate}</span>}
                         {v.gcs_label && <span className="mr-1">{v.gcs_label}</span>}
                         {v.avpu_label && <span>{v.avpu_label}</span>}
                         {v.respiration_rate === null && !v.gcs_label && !v.avpu_label && "--"}
                       </td>
-                      <td className="px-4 py-3 text-fg">{v.tbl_staff?.staff_name || v.reviewed_by_other || "--"}</td>
+                      <td className="break-words px-2 py-3 text-fg">{v.tbl_staff?.staff_name || v.reviewed_by_other || "--"}</td>
                       {isHqAdmin && (
-                        <td className="px-4 py-2">
+                        <td className="px-2 py-2">
                           <AdminRecordControls kind="vital" id={v.id} compact />
                         </td>
                       )}

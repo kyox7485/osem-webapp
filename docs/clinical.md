@@ -14,16 +14,25 @@ Clinical report queries are row-capped (500) so a bounded list is never
 mistaken for the complete one. The Nursing Chart tab still defaults to a
 7-day window; Vital Signs does not — a silent default there rendered older
 readings as "No vital signs recorded yet." and hid the HQ ADMIN edit/delete
-buttons entirely, since an empty table has no rows to hang them on. Instead,
+buttons entirely, since an empty table has no rows to hang them on.
 `schema/016_add_vital_entry_timestamp_index.sql` indexes
-`tbl_vital.entry_timestamp desc` (and the same for the nursing chart) so the
-"All Residents, no date range" read is served by an index scan instead of a
-seq scan + sort of ~37k rows. That shape is what timed out as "canceling
-statement due to statement timeout" — `LIMIT` does not save it, because the
-sort must finish before the first row is returned. Known gap:
-`tbl_nursing_chart_elimination_episodes` has no index on `chart_entry_id` —
-its two sibling child tables have one — so its lookup is a sequential scan;
-acceptable at the current cap, worth adding if it ever gets slow.
+`tbl_vital.entry_timestamp desc` so the "All Residents, no date range" read is
+an index scan rather than a seq scan + sort of ~37k rows (measured: ~775ms →
+bounded index scan). That is a modest win on a sub-second query; it is **not**
+the fix for the "canceling statement due to statement timeout" that error was
+originally blamed on — that read completes in well under a second, and the
+Nursing Chart read returns its 500 rows without trouble, so neither report
+query is what times out. Unrooted as of 2026-09-29; the next step is
+Supabase → Logs → Postgres Logs, searched for `statement timeout` at a
+failing page-load, which names the actual statement. The leading suspect is
+one of the lookup queries in the `Promise.all` on the clinical page
+(`getClinicalLookups()`, `getAllStaffWithBranch()`, …), not either report
+query.
+
+Known gap: `tbl_nursing_chart_elimination_episodes` has no index on
+`chart_entry_id` — its two sibling child tables have one — so its lookup is a
+sequential scan; acceptable at the current cap, worth adding if it ever gets
+slow.
 
 ## Wound Photo
 
