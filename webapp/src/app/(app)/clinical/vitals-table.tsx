@@ -200,7 +200,17 @@ export function VitalsTable({ vitals, residents, allStaff, lookups, currentResid
               {vitals.length === 0 ? (
                 <tr>
                   <td colSpan={isHqAdmin ? 13 : 12} className="px-4 py-8 text-center text-fg-faint">
-                    {t("No vital signs recorded yet.")}
+                    {/* Distinguish "no readings at all" from "your filters
+                        excluded everything" -- a bare "no records" line on a
+                        filtered view is indistinguishable from data loss. */}
+                    {currentStart || currentEnd || currentResident ? (
+                      <span>
+                        {t("No vital signs match these filters.")}{" "}
+                        {t("Clear the date range and resident to see all readings.")}
+                      </span>
+                    ) : (
+                      t("No vital signs recorded yet.")
+                    )}
                   </td>
                 </tr>
               ) : (

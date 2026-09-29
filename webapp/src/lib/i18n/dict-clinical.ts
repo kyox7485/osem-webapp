@@ -30,6 +30,8 @@ export const dictClinical: Record<string, string> = {
   "Advanced Obs.": "Pemerhatian Lanjutan",
   "Reviewed By": "Disemak Oleh",
   "No vital signs recorded yet.": "Tiada tanda vital direkodkan lagi.",
+  "No vital signs match these filters.": "Tiada tanda vital sepadan dengan penapis ini.",
+  "Clear the date range and resident to see all readings.": "Kosongkan julat tarikh dan penghuni untuk melihat semua bacaan.",
 
   // New vital form
   "Please select a resident": "Sila pilih seorang penghuni",

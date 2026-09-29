@@ -116,9 +116,14 @@ export default async function ClinicalPage({
   let appliedEnd = endDate;
 
   if (currentTab === "vitals") {
-    // Vitals are charted several times a day per resident, so this is the
-    // second-heaviest table here -- bound it the same way as the nursing chart.
-    const window = resolveWindow(startDate, endDate, DEFAULT_WINDOW_DAYS);
+    // No default date window here, unlike the nursing chart. A silent default
+    // made a tab full of older readings render as "No vital signs recorded
+    // yet." -- which reads as data loss and hides the HQ ADMIN edit/delete
+    // buttons, since an empty table has no rows to hang them on. The row cap
+    // below is what keeps this bounded: it returns the newest REPORT_LIMIT
+    // readings overall, and ResultNotice says so when the cap is hit. See
+    // commit 57515a8 for the statement timeout this window was covering.
+    const window = resolveWindow(startDate, endDate, null);
     appliedStart = window.start;
     appliedEnd = window.end;
 
