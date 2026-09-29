@@ -162,12 +162,15 @@ export function ReportPage({
   subtitle,
   branch,
   logoSrc,
+  landscape = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   branch: ReportBranchInfo;
   logoSrc: string;
+  /** wide tables (the inventory reports); the header keeps its portrait column widths and simply sits left/right */
+  landscape?: boolean;
   children: React.ReactNode;
 }) {
   const generatedOn = new Date().toLocaleString("en-GB", {
@@ -180,7 +183,7 @@ export function ReportPage({
   });
 
   return (
-    <Page size="A4" style={styles.page} wrap>
+    <Page size="A4" orientation={landscape ? "landscape" : "portrait"} style={styles.page} wrap>
       <View style={styles.headerFixed} fixed>
         <View style={styles.accentBar} />
         <View style={styles.headerBand}>
