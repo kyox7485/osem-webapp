@@ -88,6 +88,10 @@ type Resident = {
 
 type Props = {
   residents: Resident[];
+  /** Branch dropdown options -- HQ ADMIN only, so empty for every other login. */
+  branches: LookupOption[];
+  /** Currently selected branch id as a string, or "" for "All branches". */
+  currentBranch: string;
   allStaff: (LookupOption & { branch_id: number })[];
   // Nursing Chart's "entered by" picker only -- restricted to Nursing/
   // Medical department staff, unlike the other tabs which use allStaff.
@@ -118,6 +122,8 @@ type TabKey = "vitals" | "wound-photo" | "progress-notes" | "nursing-chart" | "h
 
 export function ClinicalContent({
   residents,
+  branches,
+  currentBranch,
   allStaff,
   nursingStaff,
   vitals,
@@ -234,6 +240,8 @@ export function ClinicalContent({
           <VitalsTable
             vitals={vitals}
             residents={residents}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={allStaff}
             lookups={nursingChartLookups}
             currentResident={currentResident}

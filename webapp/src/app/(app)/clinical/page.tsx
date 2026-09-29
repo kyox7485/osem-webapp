@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
-import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds } from "@/lib/lookups";
+import { getCurrentUser, canAccessAllBranches, isHqAdmin } from "@/lib/current-user";
+import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds, getBranches } from "@/lib/lookups";
 import { getObservationChartsForResidents } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
 import { getActiveObservationStatuses, getCompletedObservationEpisodes } from "./observation-status-actions";
@@ -53,6 +53,7 @@ export default async function ClinicalPage({
     start?: string;
     end?: string;
     prev?: string;
+    branch?: string;
   }>;
 }) {
   const account = await getCurrentUser();
@@ -73,6 +74,18 @@ export default async function ClinicalPage({
   const isDemoUser = demoBranchIds.includes(account.branch_id);
   const excludedBranchIds = isDemoUser ? [] : demoBranchIds;
 
+  // Branch dropdown for HQ ADMIN. They can see every non-demo branch, so
+  // they need a way to narrow the resident list (and the readings that hang
+  // off it) to one branch -- the same reason the Staff page has one. Gated on
+  // isHqAdmin(), not canAccessAllBranches(): a MODERATOR at an HQ/PHY branch
+  // also spans branches, but this is the HQ ADMIN browsing aid, and
+  // isHqAdmin() is the same gate the Edit/Delete controls use.
+  const hqAdmin = isHqAdmin(account);
+  // Read the param but only honour it for an HQ ADMIN: a hand-edited URL
+  // must not widen anyone else's view, and everyone else is already pinned
+  // to their own branch by the .eq() below.
+  const branchFilter = hqAdmin ? Number(params.branch) || null : null;
+
   // Fetch residents for both tabs
   let residentQuery = supabase
     .from("tbl_residents")
@@ -86,14 +99,36 @@ export default async function ClinicalPage({
     residentQuery = residentQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
   }
 
-  const [{ data: residents }, allStaff, nursingStaff, nursingChartLookups, feedingTypes, woundBodyParts] = await Promise.all([
+  // Applied AFTER the access filters above, so it can only narrow what this
+  // user is already allowed to see -- it can never widen it.
+  if (branchFilter) residentQuery = residentQuery.eq("branch_id", branchFilter);
+
+  const [
+    { data: residents },
+    allStaff,
+    nursingStaff,
+    nursingChartLookups,
+    feedingTypes,
+    woundBodyParts,
+    allBranches,
+  ] = await Promise.all([
     residentQuery,
     getAllStaffWithBranch(),
     getNursingStaff(),
     getClinicalLookups(),
     getFeedingTypes(),
     getWoundBodyParts(),
+    // Only fetched when the dropdown will actually render.
+    hqAdmin ? getBranches() : Promise.resolve([]),
   ]);
+
+  // The dropdown never offers the DEMO branch, and `excludedBranchIds` is
+  // empty for the demo account itself -- so the demo branch is added back for
+  // that one login rather than showing it an empty list. (The demo account is
+  // HQ ADMIN but pinned to a NUR branch, so it can only ever see this branch.)
+  const branches = hqAdmin
+    ? allBranches.filter((b) => isDemoUser || !excludedBranchIds.includes(Number(b.id)))
+    : [];
 
   // Fetch data based on active tab
   let vitals = [];
@@ -163,6 +198,7 @@ export default async function ClinicalPage({
       vitalsQuery = vitalsQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
+    if (branchFilter) vitalsQuery = vitalsQuery.eq("branch_id", branchFilter);
     if (residentFilter) vitalsQuery = vitalsQuery.eq("resident_id", parseInt(residentFilter));
     if (window.start) vitalsQuery = vitalsQuery.gte("entry_timestamp", `${window.start}T00:00:00`);
     if (window.end) vitalsQuery = vitalsQuery.lte("entry_timestamp", `${window.end}T23:59:59`);
@@ -490,6 +526,8 @@ export default async function ClinicalPage({
 
       <ClinicalContent
         residents={residents || []}
+        branches={branches}
+        currentBranch={branchFilter ? String(branchFilter) : ""}
         allStaff={allStaff}
         nursingStaff={nursingStaff}
         vitals={vitals}
