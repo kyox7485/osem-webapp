@@ -126,6 +126,11 @@ export default async function PhysiotherapyPage({
         .map((b) => ({ id: String(b.id), label: b.label }))
     : [];
 
+  // BranchPicker renders null when it has nothing to narrow to, so mirror
+  // that here: with no branch picker the resident picker should span the
+  // full width rather than sit in a half-empty two-column grid.
+  const showBranchPicker = careSetting === "IP" && branchOptions.length > 1;
+
   return (
     <div>
       <PageTitle title={t("Physiotherapy")} />
@@ -137,24 +142,29 @@ export default async function PhysiotherapyPage({
 
       <PhysioDirtyProvider>
         <PhysioGlobalDirtyBridge />
-        <ResidentPicker
-          residents={patients ?? []}
-          currentResident={residentIdParam || ""}
-          careSetting={careSetting}
-          label={careSetting === "OP" ? t("Patient") : t("Resident")}
-        />
-
-        {careSetting === "IP" && (
-          <div className="mt-4">
-            {/* Keyed on the branch so a completed switch remounts with the
-                new value in place, rather than syncing it back in an effect. */}
+        {/* Branch first, then resident: the branch narrows the pool the
+            resident is picked from, so it reads left-to-right as a funnel.
+            Two equal columns from sm up so PC users see both without
+            scrolling; stacks to one column on narrow screens. `items-start`
+            keeps each card at its own height -- the two pickers' labels
+            wrap differently at some label lengths. */}
+        <div className={`mb-4 grid grid-cols-1 items-start gap-4 ${showBranchPicker ? "sm:grid-cols-2" : ""}`}>
+          {showBranchPicker && (
+            /* Keyed on the branch so a completed switch remounts with the
+               new value in place, rather than syncing it back in an effect. */
             <BranchPicker
               key={branchFilter ?? "all"}
               branches={branchOptions}
               currentBranch={branchFilter ? String(branchFilter) : ""}
             />
-          </div>
-        )}
+          )}
+          <ResidentPicker
+            residents={patients ?? []}
+            currentResident={residentIdParam || ""}
+            careSetting={careSetting}
+            label={careSetting === "OP" ? t("Patient") : t("Resident")}
+          />
+        </div>
 
         {careSetting === "OP" && <NewOpPatientForm />}
 
