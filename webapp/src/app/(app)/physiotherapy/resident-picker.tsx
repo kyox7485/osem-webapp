@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavPush } from "@/components/nav-loading";
 import { usePhysioDirty } from "./physio-dirty-context";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
+import { Combobox } from "@/components/combobox";
+import type { LookupOption } from "@/lib/types";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -32,6 +34,13 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
   const [pendingResident, setPendingResident] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // The list arrives already sorted by name from the page query, so the
+  // combobox dropdown reads alphabetically without a client-side sort.
+  const residentOptions = useMemo<LookupOption[]>(
+    () => residents.map((r) => ({ id: r.id, label: r.resident_name })),
+    [residents]
+  );
 
   // Keep the visible selection in sync once the URL actually changes (a
   // completed switch, or a cancelled one snapping back).
@@ -88,22 +97,15 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
 
   return (
     <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
-      <label htmlFor="resident-picker" className="mb-1 block text-sm font-medium text-fg-secondary">
-        {resolvedLabel}
-      </label>
-      <select
+      <Combobox
         id="resident-picker"
         value={displayValue}
-        onChange={(e) => handleChange(e.target.value)}
-        className="w-full max-w-md rounded-md border border-line-strong bg-input text-fg px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-      >
-        <option value="">{t("Select")} {resolvedLabel.toLowerCase()}</option>
-        {residents.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.resident_name}
-          </option>
-        ))}
-      </select>
+        onChange={handleChange}
+        options={residentOptions}
+        label={resolvedLabel}
+        placeholder={t("Type to search...")}
+        emptyMessage={`${t("No matching")} ${resolvedLabel.toLowerCase()}`}
+      />
 
       {pendingResident !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

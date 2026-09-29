@@ -152,6 +152,9 @@ export const dictPhysio: Record<string, string> = {
   "Couldn't save the current assessment. Fix the error above, or discard your changes to switch anyway.":
     "Tidak dapat menyimpan penilaian semasa. Betulkan ralat di atas, atau buang perubahan anda untuk bertukar juga.",
   Select: "Pilih",
+  "Type to search...": "Taip untuk mencari...",
+  "No matches found": "Tiada padanan ditemui",
+  "No matching": "Tiada",
   "Unsaved changes": "Perubahan belum disimpan",
   "This assessment has unsaved changes. Save it before switching":
     "Penilaian ini mempunyai perubahan yang belum disimpan. Simpan sebelum bertukar",
