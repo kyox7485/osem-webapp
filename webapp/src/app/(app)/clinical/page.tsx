@@ -262,6 +262,7 @@ export default async function ClinicalPage({
       notesQuery = notesQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
+    if (branchFilter) notesQuery = notesQuery.eq("branch_id", branchFilter);
     if (residentFilter) notesQuery = notesQuery.eq("resident_id", parseInt(residentFilter));
     if (startDate) notesQuery = notesQuery.gte("entry_timestamp", `${startDate}T00:00:00`);
     if (endDate) notesQuery = notesQuery.lte("entry_timestamp", `${endDate}T23:59:59`);
@@ -320,6 +321,7 @@ export default async function ClinicalPage({
       chartQuery = chartQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
+    if (branchFilter) chartQuery = chartQuery.eq("branch_id", branchFilter);
     if (residentFilter) chartQuery = chartQuery.eq("resident_id", parseInt(residentFilter));
     if (window.start) chartQuery = chartQuery.gte("entry_timestamp", `${window.start}T00:00:00`);
     if (window.end) chartQuery = chartQuery.lte("entry_timestamp", `${window.end}T23:59:59`);
@@ -456,6 +458,7 @@ export default async function ClinicalPage({
       referralsQuery = referralsQuery.not("branch_id", "in", `(${excludedBranchIds.join(",")})`);
     }
 
+    if (branchFilter) referralsQuery = referralsQuery.eq("branch_id", branchFilter);
     if (residentFilter) referralsQuery = referralsQuery.eq("resident_id", parseInt(residentFilter));
     if (startDate) referralsQuery = referralsQuery.gte("referral_datetime", `${startDate}T00:00:00`);
     if (endDate) referralsQuery = referralsQuery.lte("referral_datetime", `${endDate}T23:59:59`);
@@ -479,6 +482,7 @@ export default async function ClinicalPage({
       start: startDate,
       end: endDate,
       excludedBranchIds,
+      branchId: branchFilter,
       limit: REPORT_LIMIT,
     });
     woundSessions = result.sessions;
@@ -486,8 +490,8 @@ export default async function ClinicalPage({
     truncated = result.truncated;
   } else if (currentTab === "observation-chart") {
     const [activeResult, completedResult] = await Promise.all([
-      getActiveObservationStatuses({ excludedBranchIds }),
-      getCompletedObservationEpisodes({ excludedBranchIds }),
+      getActiveObservationStatuses({ excludedBranchIds, branchId: branchFilter }),
+      getCompletedObservationEpisodes({ excludedBranchIds, branchId: branchFilter }),
     ]);
     activeObservationEpisodes = activeResult.episodes;
     completedObservationEpisodes = completedResult.episodes;
@@ -503,13 +507,14 @@ export default async function ClinicalPage({
         start: startDate || obsWindow.start,
         end: endDate || obsWindow.end,
         excludedBranchIds,
+        branchId: branchFilter,
       });
       observationEntries = chartsResult.entries;
       error = error ?? chartsResult.error;
     }
   } else if (currentTab === "behaviour-chart") {
     const [chartsResult, episodesResult] = await Promise.all([
-      getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds, limit: REPORT_LIMIT }),
+      getBehaviourCharts({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds, branchId: branchFilter, limit: REPORT_LIMIT }),
       residentFilter
         ? getBehaviourEpisodes({ residentId: residentFilter, start: startDate, end: endDate, excludedBranchIds })
         : { episodes: [], error: null },

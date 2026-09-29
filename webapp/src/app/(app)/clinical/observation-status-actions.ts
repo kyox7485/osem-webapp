@@ -31,6 +31,7 @@ function unwrapEpisode(e: any): ObservationStatusRow {
 
 export async function getActiveObservationStatuses(filters: {
   excludedBranchIds?: number[];
+  branchId?: number | null;
 }): Promise<{ episodes: ObservationStatusRow[]; error: string | null }> {
   const account = await getCurrentUser();
   if (!account) return { episodes: [], error: "Not authenticated" };
@@ -61,12 +62,16 @@ export async function getActiveObservationStatuses(filters: {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
   }
 
+  // Applied after the access filters above, so it can only narrow.
+  if (filters.branchId) query = query.eq("branch_id", filters.branchId);
+
   const { data, error } = await query;
   return { episodes: (data ?? []).map(unwrapEpisode), error: error?.message ?? null };
 }
 
 export async function getCompletedObservationEpisodes(filters: {
   excludedBranchIds?: number[];
+  branchId?: number | null;
 }): Promise<{ episodes: ObservationStatusRow[]; error: string | null }> {
   const account = await getCurrentUser();
   if (!account) return { episodes: [], error: "Not authenticated" };
@@ -93,6 +98,9 @@ export async function getCompletedObservationEpisodes(filters: {
   } else if (filters.excludedBranchIds && filters.excludedBranchIds.length > 0) {
     query = query.not("branch_id", "in", `(${filters.excludedBranchIds.join(",")})`);
   }
+
+  // Applied after the access filters above, so it can only narrow.
+  if (filters.branchId) query = query.eq("branch_id", filters.branchId);
 
   const { data, error } = await query;
   return { episodes: (data ?? []).map(unwrapEpisode), error: error?.message ?? null };

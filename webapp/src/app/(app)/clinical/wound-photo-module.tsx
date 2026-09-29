@@ -13,7 +13,8 @@ import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, TrendingUp, ChevronRight, Images } from "lucide-react";
-import { AdminRecordControls } from "@/components/admin-record-controls";
+import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
@@ -21,6 +22,8 @@ type Resident = { id: number; resident_name: string; branch_id: number };
 type Props = {
   sessions: WoundSession[];
   residents: Resident[];
+  branches: LookupOption[];
+  currentBranch: string;
   allStaff: (LookupOption & { branch_id: number })[];
   bodyParts: WoundBodyPart[];
   currentResident: string;
@@ -78,10 +81,11 @@ function pluralSessions(t: (s: string) => string, n: number) {
 // Three nested levels of collapsible sections. Every one starts closed, so
 // the module renders as a text-only outline and issues zero requests for
 // photo bytes until the user asks for a specific day.
-export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, currentResident, currentStart, currentEnd, error, truncated }: Props) {
+export function WoundPhotoModule({ sessions, residents, branches, currentBranch, allStaff, bodyParts, currentResident, currentStart, currentEnd, error, truncated }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
   const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "progression" | "new">("review");
   const [openResidents, setOpenResidents] = useState<Set<string>>(new Set());
@@ -160,9 +164,10 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
     // cheap next to the photo requests it avoids.
   }, [sessions, t]);
 
-  function applyFilters(residentId: string, start: string, end: string) {
+  function applyFilters(residentId: string, start: string, end: string, branchId: string) {
     const params = new URLSearchParams();
     params.set("tab", "wound-photo");
+    if (branchId) params.set("branch", branchId);
     if (residentId) params.set("resident", residentId);
     if (start) params.set("start", start);
     if (end) params.set("end", end);
@@ -190,12 +195,18 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
       ) : innerTab === "review" ? (
         <>
           <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-3 ${isHqAdmin ? "lg:grid-cols-4" : ""}`}>
+              <BranchFilterSelect
+                branches={branches}
+                currentBranch={currentBranch}
+                onChange={(branchId) => applyFilters("", currentStart, currentEnd, branchId)}
+                id="wp-branch-filter"
+              />
               <div>
                 <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Resident")}</label>
                 <select
                   value={currentResident}
-                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
+                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd, currentBranch)}
                   className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
                 >
                   <option value="">{t("All residents")}</option>
@@ -211,7 +222,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
                 <input
                   type="date"
                   value={currentStart}
-                  onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
+                  onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd, currentBranch)}
                   className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
                 />
               </div>
@@ -220,7 +231,7 @@ export function WoundPhotoModule({ sessions, residents, allStaff, bodyParts, cur
                 <input
                   type="date"
                   value={currentEnd}
-                  onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
+                  onChange={(e) => applyFilters(currentResident, currentStart, e.target.value, currentBranch)}
                   className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
                 />
               </div>

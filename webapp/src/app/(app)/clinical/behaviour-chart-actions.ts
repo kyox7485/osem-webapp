@@ -216,6 +216,7 @@ export async function getBehaviourCharts(filters: {
   start?: string;
   end?: string;
   excludedBranchIds?: number[];
+  branchId?: number | null;
   limit?: number;
 }): Promise<{ entries: BehaviourEntry[]; error: string | null; truncated: boolean }> {
   const account = await getCurrentUser();
@@ -244,6 +245,8 @@ export async function getBehaviourCharts(filters: {
   }
 
   if (filters.residentId) query = query.eq("resident_id", parseInt(filters.residentId));
+  // Applied after the access filters above, so it can only narrow.
+  if (filters.branchId) query = query.eq("branch_id", filters.branchId);
   if (filters.start) query = query.gte("entry_timestamp", `${filters.start}T00:00:00`);
   if (filters.end) query = query.lte("entry_timestamp", `${filters.end}T23:59:59`);
 

@@ -8,11 +8,15 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { ObservationEntry } from "./observation-chart-actions";
 import type { ObservationStatusRow } from "./observation-status-actions";
 import { AdminRecordControls } from "@/components/admin-record-controls";
+import { BranchFilterSelect } from "./branch-filter-select";
+import type { LookupOption } from "@/lib/types";
 
 type Props = {
   entries: ObservationEntry[];
   activeEpisodes: ObservationStatusRow[];
   completedEpisodes: ObservationStatusRow[];
+  branches: LookupOption[];
+  currentBranch: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
@@ -89,7 +93,7 @@ function buildComparisonRows(latest: ObservationEntry, previous: ObservationEntr
   return rows.filter(([, , latestVal]) => latestVal != null).map(([label, previousVal, latestVal]) => ({ label, previous: previousVal, latest: latestVal }));
 }
 
-export function ObservationReviewDashboard({ entries, activeEpisodes, completedEpisodes, currentStart, currentEnd, error }: Props) {
+export function ObservationReviewDashboard({ entries, activeEpisodes, completedEpisodes, branches, currentBranch, currentStart, currentEnd, error }: Props) {
   const push = useNavPush();
   const t = useTranslation();
   const [expandedResidentId, setExpandedResidentId] = useState<number | null>(null);
@@ -133,6 +137,27 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
     <div className="space-y-4">
       {/* Date filter */}
       <div className="rounded-md border border-line bg-surface p-4 shadow-sm space-y-3">
+        {/*
+          Branch filter, HQ ADMIN only. This tab has no resident dropdown --
+          it is driven by the active/completed episode lists -- so the branch
+          select narrows those lists and the readings beneath them.
+        */}
+        <BranchFilterSelect
+          branches={branches}
+          currentBranch={currentBranch}
+          onChange={(branchId) => {
+            setShowCustom(false);
+            const params = new URLSearchParams();
+            params.set("tab", "observation-chart");
+            if (branchId) params.set("branch", branchId);
+            // Keep the period the user is looking at rather than resetting it.
+            params.set("start", currentStart || daysAgoMYT(3));
+            params.set("end", currentEnd || todayMYT());
+            push(`/clinical?${params.toString()}`);
+          }}
+          id="obs-branch-filter"
+        />
+
         <div>
           <p className="mb-1 text-sm font-medium text-fg-secondary">{t("Period")}</p>
           <div className="flex flex-wrap gap-1">

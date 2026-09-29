@@ -202,6 +202,8 @@ export function ClinicalContent({
           <NursingChartModule
             entries={nursingChartEntries}
             residents={residents}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={nursingStaff}
             lookups={nursingChartLookups}
             currentResident={currentResident}
@@ -216,6 +218,8 @@ export function ClinicalContent({
             entries={observationEntries}
             activeEpisodes={activeObservationEpisodes}
             completedEpisodes={completedObservationEpisodes}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={nursingStaff}
             currentStart={currentStart}
             currentEnd={currentEnd}
@@ -227,6 +231,8 @@ export function ClinicalContent({
             entries={behaviourEntries}
             episodes={behaviourEpisodes}
             residents={residents}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={allStaff}
             currentResident={currentResident}
             currentStart={currentStart}
@@ -255,6 +261,8 @@ export function ClinicalContent({
           <WoundPhotoModule
             sessions={woundSessions}
             residents={residents}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={allStaff}
             bodyParts={woundBodyParts}
             currentResident={currentResident}
@@ -268,6 +276,8 @@ export function ClinicalContent({
           <ProgressNotesModule
             notes={notes}
             residents={residents}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={allStaff}
             currentResident={currentResident}
             currentStart={currentStart}
@@ -280,6 +290,8 @@ export function ClinicalContent({
           <HospitalReferralModule
             referrals={referrals}
             residents={residents}
+            branches={branches}
+            currentBranch={currentBranch}
             allStaff={allStaff}
             lookups={nursingChartLookups}
             feedingTypes={feedingTypes}

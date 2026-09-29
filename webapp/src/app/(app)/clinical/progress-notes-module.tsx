@@ -11,7 +11,8 @@ import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
-import { AdminRecordControls } from "@/components/admin-record-controls";
+import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
 
 type ProgressNote = {
@@ -44,6 +45,8 @@ type Resident = {
 type Props = {
   notes: ProgressNote[];
   residents: Resident[];
+  branches: LookupOption[];
+  currentBranch: string;
   allStaff: (LookupOption & { branch_id: number })[];
   currentResident: string;
   currentStart: string;
@@ -66,6 +69,8 @@ const PLAN_LABELS: [keyof ProgressNote, string][] = [
 export function ProgressNotesModule({
   notes,
   residents,
+  branches,
+  currentBranch,
   allStaff,
   currentResident,
   currentStart,
@@ -76,13 +81,15 @@ export function ProgressNotesModule({
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
+  const isHqAdmin = useIsHqAdmin();
   const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  function applyFilters(residentId: string, start: string, end: string) {
+  function applyFilters(residentId: string, start: string, end: string, branchId: string) {
     const params = new URLSearchParams();
     params.set("tab", "progress-notes");
+    if (branchId) params.set("branch", branchId);
     if (residentId) params.set("resident", residentId);
     if (start) params.set("start", start);
     if (end) params.set("end", end);
@@ -104,7 +111,13 @@ export function ProgressNotesModule({
         <>
           {/* Filters */}
           <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-3 ${isHqAdmin ? "lg:grid-cols-4" : ""}`}>
+              <BranchFilterSelect
+                branches={branches}
+                currentBranch={currentBranch}
+                onChange={(branchId) => applyFilters("", currentStart, currentEnd, branchId)}
+                id="pn-branch-filter"
+              />
               <div>
                 <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
                   {t("Resident")}
@@ -112,7 +125,7 @@ export function ProgressNotesModule({
                 <select
                   id="resident-filter"
                   value={currentResident}
-                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd)}
+                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd, currentBranch)}
                   className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">{t("All residents")}</option>
@@ -132,7 +145,7 @@ export function ProgressNotesModule({
                   type="date"
                   id="start-date"
                   value={currentStart}
-                  onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd)}
+                  onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd, currentBranch)}
                   className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -145,7 +158,7 @@ export function ProgressNotesModule({
                   type="date"
                   id="end-date"
                   value={currentEnd}
-                  onChange={(e) => applyFilters(currentResident, currentStart, e.target.value)}
+                  onChange={(e) => applyFilters(currentResident, currentStart, e.target.value, currentBranch)}
                   className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>

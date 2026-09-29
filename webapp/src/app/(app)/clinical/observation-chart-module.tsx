@@ -16,13 +16,15 @@ type Props = {
   entries: ObservationEntry[];
   activeEpisodes: ObservationStatusRow[];
   completedEpisodes: ObservationStatusRow[];
+  branches: LookupOption[];
+  currentBranch: string;
   allStaff: (LookupOption & { branch_id: number })[];
   currentStart: string;
   currentEnd: string;
   error: string | null;
 };
 
-export function ObservationChartModule({ entries, activeEpisodes, completedEpisodes, allStaff, currentStart, currentEnd, error }: Props) {
+export function ObservationChartModule({ entries, activeEpisodes, completedEpisodes, branches, currentBranch, allStaff, currentStart, currentEnd, error }: Props) {
   const router = useRouter();
   const t = useTranslation();
   const { guardedAction } = useSafeNavigation();
@@ -55,6 +57,8 @@ export function ObservationChartModule({ entries, activeEpisodes, completedEpiso
           entries={entries}
           activeEpisodes={activeEpisodes}
           completedEpisodes={completedEpisodes}
+          branches={branches}
+          currentBranch={currentBranch}
           currentStart={currentStart}
           currentEnd={currentEnd}
           error={error}

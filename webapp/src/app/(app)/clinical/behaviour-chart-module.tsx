@@ -13,6 +13,7 @@ import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus, ChevronLeft } from "lucide-react";
 import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
 
 const DISTURBANCE_LABELS: Record<number, string> = {
@@ -29,6 +30,8 @@ type Props = {
   entries: BehaviourEntry[];
   episodes: BehaviourEpisode[];
   residents: Resident[];
+  branches: LookupOption[];
+  currentBranch: string;
   allStaff: (LookupOption & { branch_id: number })[];
   currentResident: string;
   currentStart: string;
@@ -61,6 +64,8 @@ export function BehaviourChartModule({
   entries,
   episodes,
   residents,
+  branches,
+  currentBranch,
   allStaff,
   currentResident,
   currentStart,
@@ -84,9 +89,10 @@ export function BehaviourChartModule({
   const isCustom = !isDayView && days !== 7 && days !== 14 && days !== 30;
   const endDate = currentEnd || todayMYT();
 
-  function applyFilters(residentId: string, start: string, end: string, extra?: Record<string, string>) {
+  function applyFilters(residentId: string, start: string, end: string, branchId: string, extra?: Record<string, string>) {
     const params = new URLSearchParams();
     params.set("tab", "behaviour-chart");
+    if (branchId) params.set("branch", branchId);
     if (residentId) params.set("resident", residentId);
     if (start) params.set("start", start);
     if (end) params.set("end", end);
@@ -98,20 +104,21 @@ export function BehaviourChartModule({
     const end = todayMYT();
     const start = n === 1 ? end : daysAgoMYT(n);
     setShowCustom(false);
-    applyFilters(currentResident, start, end);
+    applyFilters(currentResident, start, end, currentBranch);
   }
 
   function applyCustom() {
     if (!customFrom || !customTo) return;
     if (customTo < customFrom) return;
     setShowCustom(false);
-    applyFilters(currentResident, customFrom, customTo);
+    applyFilters(currentResident, customFrom, customTo, currentBranch);
   }
 
   function drillIntoDay(dateStr: string) {
     // Save current range as prev
     const params = new URLSearchParams();
     params.set("tab", "behaviour-chart");
+    if (currentBranch) params.set("branch", currentBranch);
     if (currentResident) params.set("resident", currentResident);
     params.set("start", dateStr);
     params.set("end", dateStr);
@@ -147,6 +154,13 @@ export function BehaviourChartModule({
         <div className="space-y-4">
           {/* Filters */}
           <div className="rounded-md border border-line bg-surface p-4 shadow-sm space-y-3">
+            <BranchFilterSelect
+              branches={branches}
+              currentBranch={currentBranch}
+              onChange={(branchId) => applyFilters("", currentStart || daysAgoMYT(7), currentEnd || todayMYT(), branchId)}
+              id="beh-branch-filter"
+            />
+
             {/* Resident picker */}
             <div>
               <label htmlFor="beh-resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
@@ -155,7 +169,7 @@ export function BehaviourChartModule({
               <select
                 id="beh-resident-filter"
                 value={currentResident}
-                onChange={(e) => applyFilters(e.target.value, currentStart || daysAgoMYT(7), currentEnd || todayMYT())}
+                onChange={(e) => applyFilters(e.target.value, currentStart || daysAgoMYT(7), currentEnd || todayMYT(), currentBranch)}
                 className="w-full max-w-xs rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">{t("Select a resident")}</option>
