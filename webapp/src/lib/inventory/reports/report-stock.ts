@@ -14,6 +14,11 @@ import {
 } from "./report-core";
 import type { ReportColumn, ReportResult } from "./types";
 
+// Format a qty number with its UOM code, e.g. "10 EA", "5 Tab".
+function qtyWithUnit(qty: number, uomCode: string): string {
+  return `${qty} ${uomCode}`;
+}
+
 // Stock balance, Movement (ledger) and Suggested order.
 
 const MAX_SOURCE_ROWS = 20000;
@@ -108,10 +113,10 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
   const columns: ReportColumn[] = [
     { key: "sku", label: t("SKU"), kind: "text" },
     { key: "product", label: t("Product"), kind: "text" },
-    { key: "store", label: t("Store"), kind: "qty" },
-    { key: "floor", label: t("Floor Stock"), kind: "qty" },
-    { key: "transit", label: t("Transit"), kind: "qty" },
-    { key: "total", label: t("Total"), kind: "qty" },
+    { key: "storeWithUnit", label: t("Store"), kind: "text" },
+    { key: "floorWithUnit", label: t("Floor Stock"), kind: "text" },
+    { key: "transitWithUnit", label: t("Transit"), kind: "text" },
+    { key: "totalWithUnit", label: t("Total"), kind: "text" },
     { key: "unit", label: t("Unit"), kind: "text" },
     { key: "max", label: t("Max"), kind: "qty" },
   ];
@@ -121,10 +126,10 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
   const rows = shown.map((b) => ({
     sku: b.sku,
     product: b.product_name,
-    store: b.store,
-    floor: b.floor,
-    transit: b.transit,
-    total: b.total,
+    storeWithUnit: qtyWithUnit(b.store, b.unit),
+    floorWithUnit: qtyWithUnit(b.floor, b.unit),
+    transitWithUnit: qtyWithUnit(b.transit, b.unit),
+    totalWithUnit: qtyWithUnit(b.total, b.unit),
     unit: b.unit,
     max: b.max,
     wac: b.wac,
