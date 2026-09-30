@@ -73,7 +73,7 @@ The owner answered §11 on 2026-09-29. The effect on the audit rows above:
 
 | Row | Effect of the owner's answers |
 |---|---|
-| F4 | **Narrowed by D-138.** Receipts need the supplier invoice (INVOICE or CASH_BILL, number + date mandatory). No DO receipts, no PROVISIONAL cost, no attach-invoice-later, no finalise-cost RPC. Landed-cost allocation and FOC stay. **No reconciliation handling at all** (no UNRECONCILED status, no MODERATOR acknowledgement, no lock blocker); the UI may later show computed vs. paper total for information only. |
+| F4 | **Narrowed by D-138.** Receipts need the supplier invoice (number + date mandatory). No DO receipts, no PROVISIONAL cost, no attach-invoice-later, no finalise-cost RPC. Landed-cost allocation and FOC stay. **No reconciliation handling at all** (no UNRECONCILED status, no MODERATOR acknowledgement, no lock blocker); the UI may later show computed vs. paper total for information only. **The INVOICE / CASH_BILL distinction was dropped outright by `schema/020`** — the column, its validation and the report column are all gone. |
 | F7 | **Changed by D-134.** No individual Head Nurse logins in V1, so they are **not** a go-live prerequisite. Head-Nurse-tier actions are allowed to the branch's shared login, attributed to a senior staff member picked from `tbl_staff`. The write-off threshold, fixed release reasons and month-end exception review stay. |
 | F8 | **Resolved by D-136.** Inventory is the only stock and billing system for goods OSEM buys. Medication Stock and Consumables are reminder tools; no integration, no `goods_class`. |
 | F14 (roles table), F27 | **Superseded by D-134.** No `tbl_inv_account_roles` in V1. |
@@ -1695,7 +1695,7 @@ Skipped: near-expiry (D-139, no batch or expiry) and every reconciliation / prov
 | D-135 | Scope by branch Function: NUR → own branch, HQ → every non-demo NUR branch, PHY → nothing (master data included), demo → its own demo branch | active | 13.1 |
 | D-136 | Q-27: Inventory is the only stock + billing system for OSEM-bought goods; Medication Stock / Consumables are reminder tools; no integration, no `goods_class` | active | 11.1 |
 | D-137 | Q-16: 5 categories; Service = non-stock (`categories.is_service` → `products.is_stock_item = false`), charged by `inv_charge_service` with no ledger row, balance or WAC; reversed by `inv_reverse_charge` | active | 13.1 |
-| D-138 | Q-26/Q-11: receipts need the invoice (INVOICE or CASH_BILL, number + date); tax + charges + rounding − discount spread pro-rata; FOC at zero cost; no DO, provisional cost or reconciliation handling | active | 13.2 |
+| D-138 | Q-26/Q-11: receipts need the invoice (number + date; the INVOICE/CASH_BILL doc type was later dropped by `schema/020`); tax + charges + rounding − discount spread pro-rata; FOC at zero cost; no DO, provisional cost or reconciliation handling | active | 13.2 |
 | D-139 | Q-29: no batch/expiry columns and no controlled-drug register in V1 | active | 11.1 |
 | D-140 | Q-2: settings and locations only for NUR branches (guard trigger) | active | 13.2 |
 | D-141 | Q-24: SQL tests on PGlite in-process with a Supabase + core-table stub; never production; local Supabase stack once Docker exists | active | 13.4 |

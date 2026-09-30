@@ -307,7 +307,7 @@ begin
   perform tests.eq((select outstanding_qty from public.v_inv_request_line_progress where line_id = line), 200::numeric, 'voided receipt no longer delivered');
   c := tests.ok(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r2->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_QTY', 'receipt', jsonb_build_object(
-      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null), 'doc_type', 'INVOICE',
+      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null),
       'invoice_no', 'V4-2', 'invoice_date', tests.today(),
       'lines', tests.lines('[{"sku":"GLOVES","qty":150,"unit_cost":1}]')))), 'correct r2');
   perform tests.eq((select stock_request_id from public.tbl_inv_receipts where id = (c->>'receipt_id')::bigint), req, 'correction inherits the request');

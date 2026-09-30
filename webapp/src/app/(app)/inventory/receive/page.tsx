@@ -27,6 +27,13 @@ export default async function InventoryReceivePage({ searchParams }: { searchPar
   const { t } = await getServerTranslator();
   const branchId = ctx.branchId;
   const canReceiveTransfers = ctx.rank >= INV_TIER.TRANSFER;
+  // Who may register a supplier from this page. Same derivation as Setup ›
+  // Suppliers: a real branch's Head-Nurse tier may create a global supplier but
+  // must attribute it to a senior staff member.
+  const demoAdmin = ctx.isDemoUser && ctx.rank >= 4;
+  const branchEditor =
+    !ctx.isDemoUser && !ctx.isHqAdmin && ctx.rank >= INV_TIER.SUPPLIER_EDIT && ctx.account.branch_function === "NUR";
+  const canCreateSupplier = ctx.isHqAdmin || branchEditor || demoAdmin;
   const data =
     branchId === null || ctx.rank < INV_TIER.RECEIPT
       ? null
@@ -94,6 +101,8 @@ export default async function InventoryReceivePage({ searchParams }: { searchPar
             residents={data[4]}
             openRequests={data[7]}
             costHints={data[8]}
+            canCreateSupplier={canCreateSupplier}
+            needsSupplierStaff={branchEditor}
           />
         }
         transfers={

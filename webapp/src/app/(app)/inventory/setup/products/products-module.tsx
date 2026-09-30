@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "@/components/language-provider";
+import { Combobox } from "@/components/combobox";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
-import { formatMoney, uomLabel, type InvCatalogue, type InvCategory, type InvStaff, type InvSupplier } from "@/lib/inventory/core";
-import { SECONDARY_BTN_CLS, SMALL_INPUT_CLS } from "../../components/form-bits";
+import type { InvCatalogue, InvCategory, InvStaff, InvSupplier, InvProduct } from "@/lib/inventory/core";
+import type { LookupOption } from "@/lib/types";
+import { SECONDARY_BTN_CLS } from "../../components/form-bits";
 import { ProductEditor } from "./product-editor";
 import { BarcodePanel } from "./barcode-panel";
 
@@ -24,15 +26,19 @@ export type ProductsModuleProps = {
 export function ProductsModule(props: ProductsModuleProps) {
   const t = useTranslation();
   const { guardedAction } = useSafeNavigation();
-  const { catalogue, categories } = props;
-  const [filter, setFilter] = useState("");
+  const { catalogue } = props;
   const [selected, setSelected] = useState<number | "new" | null>(props.initialProductId);
-  const categoryName = new Map(categories.map((c) => [c.id, c.name]));
 
-  const visible = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    return catalogue.products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-  }, [filter, catalogue.products]);
+  // Name and SKU share one label so the shared Combobox's single
+  // substring filter matches either -- the old input filtered on both too.
+  const productOptions = useMemo<LookupOption[]>(
+    () =>
+      catalogue.products
+        .map((p: InvProduct) => ({ id: p.id, label: `${p.name} — ${p.sku}` }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [catalogue.products]
+  );
+
   const product = typeof selected === "number" ? catalogue.products.find((p) => p.id === selected) : undefined;
   const canEdit = (owner: number | null) => (owner === null ? props.isHqAdmin : props.isDemoAdmin);
   // switching the product being edited is a local state change: guard it (CLAUDE.md)
@@ -40,15 +46,22 @@ export function ProductsModule(props: ProductsModuleProps) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <input
-            className={SMALL_INPUT_CLS}
-            placeholder={t("Search product by name or SKU")}
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            aria-label={t("Search product")}
-          />
+      <div>
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Combobox
+              id="product-search"
+              hideLabel
+              label={t("Search product")}
+              placeholder={t("Search product by name or SKU")}
+              emptyMessage={t("Not found")}
+              value={typeof selected === "number" ? String(selected) : ""}
+              // The Combobox clears the value to "" while the user is typing;
+              // that's not a selection change, so leave the editor alone.
+              onChange={(id) => id && select(Number(id))}
+              options={productOptions}
+            />
+          </div>
           {props.canCreate && (
             <button type="button" className={SECONDARY_BTN_CLS} onClick={() => select("new")}>
               <Plus className="h-4 w-4" />
@@ -56,23 +69,6 @@ export function ProductsModule(props: ProductsModuleProps) {
             </button>
           )}
         </div>
-        <ul className="max-h-[70vh] divide-y divide-line-subtle overflow-auto rounded-lg border border-line bg-surface shadow-sm">
-          {visible.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                className={`block w-full px-3 py-2 text-left text-sm hover:bg-hover ${selected === p.id ? "bg-selected text-selected-fg" : "text-fg"}`}
-                onClick={() => select(p.id)}
-              >
-                <span className={p.isActive ? "" : "line-through opacity-60"}>{p.name}</span>
-                <span className="ml-2 text-xs text-fg-subtle">
-                  {p.sku} · {categoryName.get(p.categoryId)} · {uomLabel(catalogue.uoms, p.baseUomId)}
-                  {p.chargePrice !== null ? ` · RM ${formatMoney(p.chargePrice)}` : ""}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
       </div>
       <div className="space-y-4">
         {selected === "new" && <ProductEditor key="new" {...props} product={undefined} readOnly={false} />}

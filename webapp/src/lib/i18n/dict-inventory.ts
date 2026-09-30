@@ -102,6 +102,10 @@ export const dictInventory: Record<string, string> = {
   "Search product": "Cari produk",
   "Search product by name or SKU": "Cari produk mengikut nama atau SKU",
   "Not found": "Tidak dijumpai",
+  // receiving: register an unregistered supplier without leaving the page
+  "Type to search or add a new supplier": "Taip untuk mencari atau tambah pembekal baharu",
+  'Register "{name}" as a new supplier': 'Daftarkan "{name}" sebagai pembekal baharu',
+  "Choose who received this first, so the new supplier is attributed to them.": "Pilih siapa yang menerima ini dahulu, supaya pembekal baharu itu dikaitkan kepada mereka.",
   "Scan the barcode or enter the exact SKU.": "Imbas kod bar atau masukkan SKU yang tepat.",
   "Internal Transfer": "Pemindahan Dalaman",
   "From and To must be different locations.": "Lokasi Dari dan Ke mesti berbeza.",

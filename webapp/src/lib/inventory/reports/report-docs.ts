@@ -2,7 +2,6 @@ import "server-only";
 import {
   ADJUSTMENT_STATUS_LABELS,
   COUNT_STATUS_OPTIONS,
-  DOC_TYPE_OPTIONS,
   INV_TIER,
   LOCATION_KIND_OPTIONS,
   REQUEST_STATUS_OPTIONS,
@@ -32,7 +31,6 @@ type ReceiptRow = {
   receipt_no: string;
   received_date: string;
   supplier_name: string;
-  doc_type: string;
   invoice_no: string;
   invoice_date: string;
   item_count: number;
@@ -50,7 +48,7 @@ export async function loadReceivingReport(ctx: ReportCtx): Promise<ReportResult>
     let query = sb
       .from("tbl_inv_receipts")
       .select(
-        "receipt_no, received_date, supplier_name, doc_type, invoice_no, invoice_date, item_count, landed_total, is_voided, corrects_receipt_id, superseded_by_receipt_id, received_by_staff"
+        "receipt_no, received_date, supplier_name, invoice_no, invoice_date, item_count, landed_total, is_voided, corrects_receipt_id, superseded_by_receipt_id, received_by_staff"
       )
       .eq("branch_id", branchId)
       .gte("received_date", params.from)
@@ -64,7 +62,6 @@ export async function loadReceivingReport(ctx: ReportCtx): Promise<ReportResult>
     { key: "receiptNo", label: t("Receipt no."), kind: "text" },
     { key: "received", label: t("Received"), kind: "date" },
     { key: "supplier", label: t("Supplier"), kind: "text" },
-    { key: "docType", label: t("Document"), kind: "text" },
     { key: "invoiceNo", label: t("Invoice no."), kind: "text" },
     { key: "invoiceDate", label: t("Invoice date"), kind: "date" },
     { key: "lines", label: t("Lines"), kind: "int" },
@@ -77,7 +74,6 @@ export async function loadReceivingReport(ctx: ReportCtx): Promise<ReportResult>
     receiptNo: r.receipt_no,
     received: r.received_date,
     supplier: r.supplier_name,
-    docType: t(labelOf(DOC_TYPE_OPTIONS, r.doc_type)),
     invoiceNo: r.invoice_no,
     invoiceDate: r.invoice_date,
     lines: Number(r.item_count),

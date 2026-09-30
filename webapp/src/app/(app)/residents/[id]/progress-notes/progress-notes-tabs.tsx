@@ -3,20 +3,28 @@
 import { useState } from "react";
 import { ResidentDashboard } from "./resident-dashboard";
 import { NewNoteForm } from "./new-note-form";
-import { formatDateTime } from "@/lib/format-date";
 import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
-import { AdminRecordControls } from "@/components/admin-record-controls";
+import { ProgressNotesTimeline, type ProgressNoteRow } from "@/app/(app)/clinical/progress-notes-timeline";
 
 type Note = {
   id: number;
   entry_timestamp: string;
   progress_note: string | null;
+  physical_examination: string | null;
   medical_plan: string | null;
   nursing_plan: string | null;
+  feeding_plan: string | null;
+  monitoring_plan: string | null;
+  dressing_plan: string | null;
+  physio_plan: string | null;
+  reviewed_by: string | null;
+  reviewed_by_other: string | null;
+  created_by: string | null;
+  created_by_other: string | null;
   authorName: string;
 };
 
@@ -81,35 +89,11 @@ export function ProgressNotesTabs({ residentId, staffOptions, notes, notesError,
 
           {notesError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{notesError}</p>}
 
-          <div className="space-y-3">
-            {notes.map((note) => (
-              <div key={note.id} className="rounded-md border border-line bg-surface p-4 shadow-sm">
-                <div className="mb-2 flex items-center justify-between text-xs text-fg-faint">
-                  <span>{formatDateTime(note.entry_timestamp)}</span>
-                  <span>{note.authorName}</span>
-                </div>
-                <p className="whitespace-pre-wrap text-sm text-fg">{note.progress_note}</p>
-                {note.medical_plan && (
-                  <p className="mt-2 text-sm text-fg-muted">
-                    <span className="font-medium text-fg-subtle">{t("Medical plan")}: </span>
-                    {note.medical_plan}
-                  </p>
-                )}
-                {note.nursing_plan && (
-                  <p className="mt-1 text-sm text-fg-muted">
-                    <span className="font-medium text-fg-subtle">{t("Nursing plan")}: </span>
-                    {note.nursing_plan}
-                  </p>
-                )}
-                <AdminRecordControls kind="progress_note" id={note.id} className="mt-3 w-full justify-end" />
-              </div>
-            ))}
-            {notes.length === 0 && (
-              <p className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
-                {t("No progress notes yet.")}
-              </p>
-            )}
-          </div>
+          <ProgressNotesTimeline
+            notes={notes as ProgressNoteRow[]}
+            t={t}
+            showLatestStatus={false}
+          />
         </>
       ) : (
         <>

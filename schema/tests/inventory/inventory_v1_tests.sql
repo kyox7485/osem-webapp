@@ -320,7 +320,7 @@ begin
     'performed_by_staff', 'HQ-ND', 'reason_code', 'DATA_ENTRY', 'allow_negative', true)), 'TRANSIT_STOCK_USED', 'blocked');
   perform tests.code(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r2->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_COST', 'receipt', jsonb_build_object('supplier_id',
-    (select id from public.tbl_inv_suppliers where owner_branch_id is null), 'doc_type', 'INVOICE', 'invoice_no', 'RA2',
+    (select id from public.tbl_inv_suppliers where owner_branch_id is null), 'invoice_no', 'RA2',
     'invoice_date', tests.today(), 'lines', tests.lines('[{"sku":"MILK","qty":6,"unit_cost":21.00}]')))),
     'RECEIPT_HAS_ALLOCATION', 'allocated receipts are reversed, not corrected');
 end $$;
@@ -365,7 +365,7 @@ begin
   -- R2 really cost 1.25; no allow_negative: the net bucket change is 0
   c := tests.ok(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r2->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_COST', 'receipt', jsonb_build_object(
-      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null), 'doc_type', 'INVOICE',
+      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null),
       'invoice_no', 'F2-2', 'invoice_date', tests.today(),
       'lines', tests.lines('[{"sku":"GLOVES","qty":100,"unit_cost":1.25}]')))), 'correct');
   p := tests.pool('AMN','GLOVES');
@@ -384,7 +384,7 @@ begin
   perform tests.eq(jsonb_array_length(public.fn_inv_verify_balances(1)), 0, 'I1 holds after netting');
   perform tests.code(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r2->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_COST', 'receipt', jsonb_build_object(
-      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null), 'doc_type', 'INVOICE',
+      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null),
       'invoice_no', 'F2-2', 'invoice_date', tests.today(),
       'lines', tests.lines('[{"sku":"GLOVES","qty":100,"unit_cost":1.30}]')))), 'RECEIPT_VOIDED', 'a superseded receipt cannot be corrected again');
 end $$;
@@ -403,7 +403,7 @@ begin
     'lines', '[{"sku":"GLOVES","qty":150,"loc":"AMN/STORE"}]'::jsonb)), 'issue 150');
   perform tests.ok(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r2->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_QTY', 'receipt', jsonb_build_object('supplier_id', v_supplier,
-    'doc_type', 'INVOICE', 'invoice_no', 'Q-2', 'invoice_date', tests.today(),
+    'invoice_no', 'Q-2', 'invoice_date', tests.today(),
     'lines', tests.lines('[{"sku":"GLOVES","qty":90,"unit_cost":1.20}]')))), 'qty correction');
   p := tests.pool('AMN','GLOVES');
   perform tests.eq(p.qty, 40::numeric, 'Q 40');
@@ -415,13 +415,13 @@ begin
     'lines', '[{"sku":"GAUZE","qty":90,"loc":"AMN/STORE"}]'::jsonb)), 'issue 90');
   perform tests.code(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r3->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_QTY', 'receipt', jsonb_build_object('supplier_id', v_supplier,
-    'doc_type', 'INVOICE', 'invoice_no', 'Q-3', 'invoice_date', tests.today(),
+    'invoice_no', 'Q-3', 'invoice_date', tests.today(),
     'lines', tests.lines('[{"sku":"GAUZE","qty":50,"unit_cost":1.00}]')))), 'NEGATIVE_STOCK_CONFIRM', 'net -50 on 10 on hand');
   -- wrong product: GAUZE line was really GLOVES (pool of each product netted separately)
   r3 := tests.ok(tests.receipt('amn', 'AMN', 'Q-4', '[{"sku":"MILK","qty":10,"unit_cost":20.00}]'), 'R4 as MILK');
   perform tests.ok(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r3->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_PRODUCT', 'receipt', jsonb_build_object('supplier_id', v_supplier,
-    'doc_type', 'INVOICE', 'invoice_no', 'Q-4', 'invoice_date', tests.today(),
+    'invoice_no', 'Q-4', 'invoice_date', tests.today(),
     'lines', tests.lines('[{"sku":"NEWPROD","qty":10,"unit_cost":20.00}]')))), 'product correction');
   perform tests.eq((tests.pool('AMN','MILK')).qty::text || '/' || (tests.pool('AMN','MILK')).value, '0.0000/0.0000', 'MILK pool emptied');
   perform tests.eq((tests.pool('AMN','NEWPROD')).qty::text || '/' || (tests.pool('AMN','NEWPROD')).wac, '10.0000/20.000000', 'NEWPROD pool filled');
@@ -704,7 +704,6 @@ begin
     jsonb_build_object('received_by_staff', 'HQ-ND')), 'HQ Nursing Director may be attributed');
   perform tests.code(tests.receipt('amn', 'AMN', 'v-1', '[{"sku":"GLOVES","qty":1,"unit_cost":1}]'), 'DUPLICATE_INVOICE', 'normalised invoice key');
   perform tests.code(tests.receipt('amn', 'AMN', 'V2', '[{"sku":"GLOVES","qty":1,"unit_cost":1}]', '{"invoice_no":null}'), 'INVOICE_REQUIRED', 'invoice mandatory (D-138)');
-  perform tests.code(tests.receipt('amn', 'AMN', 'V2', '[{"sku":"GLOVES","qty":1,"unit_cost":1}]', '{"doc_type":"DO"}'), 'INVALID_DOC_TYPE', 'no DO receipts');
   perform tests.code(tests.receipt('amn', 'AMN', 'V2', '[{"sku":"GLOVES","qty":1.5,"unit_cost":1}]'), 'QTY_NOT_INTEGRAL', 'EA is whole');
   perform tests.code(tests.receipt('amn', 'AMN', 'V2', '[{"sku":"GLOVES","qty":1,"unit_cost":1},{"sku":"GLOVES","qty":2,"unit_cost":1}]'), 'DUPLICATE_LINE', 'duplicate');
   perform tests.code(tests.receipt('amn', 'AMN', 'V2', '[{"sku":"GLOVES","qty":2000000,"unit_cost":1}]'), 'QTY_TOO_LARGE', 'hard qty cap');
@@ -1132,7 +1131,7 @@ begin
   r := tests.ok(tests.receipt('amn', 'AMN', 'P110C', '[{"sku":"GAUZE","qty":10,"unit_cost":1.00}]'), 'receipt');
   c := tests.ok(tests.call('hqmod', 'inv_correct_receipt', jsonb_build_object('receipt_id', r->'receipt_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'WRONG_COST', 'receipt', jsonb_build_object(
-      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null), 'doc_type', 'INVOICE',
+      'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null),
       'invoice_no', 'P110C', 'invoice_date', tests.today(), 'lines', tests.lines('[{"sku":"GAUZE","qty":10,"unit_cost":1.20}]')))), 'correct');
   perform tests.ok(tests.call('hqmod', 'inv_reverse_txn', jsonb_build_object('txn_id', c->'txn_id',
     'performed_by_staff', 'HQ-ND', 'reason_code', 'DATA_ENTRY')), 'reverse the corrected receipt');

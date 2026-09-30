@@ -28,6 +28,18 @@ type Props = {
   emptyMessage?: string;
   id?: string;
   className?: string;
+  /**
+   * Keep `label` as the input's accessible name but render no visible label
+   * text -- for layouts that already say what the field is (a card heading,
+   * a placeholder, a toolbar row) and would grow an extra line otherwise.
+   */
+  hideLabel?: boolean;
+  /**
+   * Reports the raw text in the box, including text that matches no option.
+   * For pickers that can also create what the user typed ("add new supplier"),
+   * where the option list alone cannot express the new value.
+   */
+  onQueryChange?: (query: string) => void;
 };
 
 /**
@@ -48,6 +60,8 @@ export function Combobox({
   emptyMessage,
   id,
   className,
+  hideLabel,
+  onQueryChange,
 }: Props) {
   const t = useTranslation();
   const generatedId = useId();
@@ -122,6 +136,7 @@ export function Combobox({
     setQuery(text);
     setIsOpen(true);
     setActiveIndex(-1);
+    onQueryChange?.(text);
     // Typing over an existing selection invalidates it -- otherwise the old
     // patient would stay selected while the user searches for a different one.
     if (selected) onChange("");
@@ -172,7 +187,10 @@ export function Combobox({
 
   return (
     <div data-combobox-root className={className}>
-      <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-fg-secondary">
+      <label
+        htmlFor={inputId}
+        className={`mb-1 block text-sm font-medium text-fg-secondary ${hideLabel ? "sr-only" : ""}`}
+      >
         {label}
       </label>
       <div className="relative">

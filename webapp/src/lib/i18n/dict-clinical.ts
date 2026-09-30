@@ -115,6 +115,16 @@ export const dictClinical: Record<string, string> = {
   "Dressing Plan": "Pelan Pembalutan",
   "Physio Plan": "Pelan Fisioterapi",
   "Entered By": "Dicatat Oleh",
+  "Latest Clinical Status": "Status Klinikal Terkini",
+  "Latest note": "Nota terkini",
+  "No information recorded": "Tiada maklumat direkodkan",
+  "View full note": "Lihat nota penuh",
+  "Note Details": "Butiran Nota",
+  "1 Month": "1 Bulan",
+  "3 Months": "3 Bulan",
+  "6 Months": "6 Bulan",
+  "1 Year": "1 Tahun",
+  "All History": "Semua Sejarah",
 
   // Nursing chart module
   "Diaper checks": "Pemeriksaan lampin",

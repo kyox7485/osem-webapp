@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { formatDateTime } from "@/lib/format-date";
 import { NewProgressNoteForm } from "./new-progress-note-form";
 import { useNavPush } from "@/components/nav-loading";
 import type { LookupOption } from "@/lib/types";
@@ -10,10 +9,10 @@ import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { ListChecks, Plus } from "lucide-react";
-import { PdfDownloadLink } from "@/components/pdf-download-link";
-import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
+import { useIsHqAdmin } from "@/components/admin-record-controls";
 import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
+import { ProgressNotesTimeline, type ProgressNoteRow } from "./progress-notes-timeline";
 
 type ProgressNote = {
   id: number;
@@ -56,15 +55,38 @@ type Props = {
   truncated?: boolean;
 };
 
-const PLAN_LABELS: [keyof ProgressNote, string][] = [
-  ["physical_examination", "Physical examination"],
-  ["medical_plan", "Medical / treatment plan"],
-  ["nursing_plan", "Nursing plan"],
-  ["feeding_plan", "Feeding / diet plan"],
-  ["dressing_plan", "Dressing plan"],
-  ["monitoring_plan", "Monitoring plan"],
-  ["physio_plan", "Physio plan"],
+type DurPreset = "1m" | "3m" | "6m" | "1y" | "all" | "custom";
+
+const DUR_PRESETS: { key: DurPreset; label: string }[] = [
+  { key: "1m", label: "1 Month" },
+  { key: "3m", label: "3 Months" },
+  { key: "6m", label: "6 Months" },
+  { key: "1y", label: "1 Year" },
+  { key: "all", label: "All History" },
+  { key: "custom", label: "Custom" },
 ];
+
+function getMytToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
+}
+
+function subtractMonths(months: number, fromDate: string): string {
+  const [y, m, d] = fromDate.split("-").map(Number);
+  const date = new Date(y, m - 1 - months, d);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(date);
+}
+
+function detectPreset(start: string, end: string): DurPreset {
+  if (!start && !end) return "all";
+  const today = getMytToday();
+  if (end && end !== today) return "custom";
+  const effectiveEnd = end || today;
+  if (start === subtractMonths(1, effectiveEnd)) return "1m";
+  if (start === subtractMonths(3, effectiveEnd)) return "3m";
+  if (start === subtractMonths(6, effectiveEnd)) return "6m";
+  if (start === subtractMonths(12, effectiveEnd)) return "1y";
+  return "custom";
+}
 
 export function ProgressNotesModule({
   notes,
@@ -84,7 +106,9 @@ export function ProgressNotesModule({
   const isHqAdmin = useIsHqAdmin();
   const { guardedAction } = useSafeNavigation();
   const [innerTab, setInnerTab] = useState<"review" | "new">("review");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const hasAppliedDefault = useRef(false);
+
+  const activeDur = detectPreset(currentStart, currentEnd);
 
   function applyFilters(residentId: string, start: string, end: string, branchId: string) {
     const params = new URLSearchParams();
@@ -96,10 +120,61 @@ export function ProgressNotesModule({
     push(`/clinical?${params.toString()}`);
   }
 
+  function applyPreset(preset: DurPreset) {
+    const today = getMytToday();
+    if (preset === "all") {
+      applyFilters(currentResident, "", "", currentBranch);
+    } else if (preset === "1m") {
+      applyFilters(currentResident, subtractMonths(1, today), today, currentBranch);
+    } else if (preset === "3m") {
+      applyFilters(currentResident, subtractMonths(3, today), today, currentBranch);
+    } else if (preset === "6m") {
+      applyFilters(currentResident, subtractMonths(6, today), today, currentBranch);
+    } else if (preset === "1y") {
+      applyFilters(currentResident, subtractMonths(12, today), today, currentBranch);
+    }
+    // "custom" — no auto-apply; user edits dates manually via the inputs
+  }
+
+  // Apply 3-month default on mount when no date filter is set in the URL yet
+  useEffect(() => {
+    if (hasAppliedDefault.current) return;
+    hasAppliedDefault.current = true;
+    if (!currentStart && !currentEnd) {
+      applyPreset("3m");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const noteRows: ProgressNoteRow[] = notes.map((note) => ({
+    id: note.id,
+    entry_timestamp: note.entry_timestamp,
+    progress_note: note.progress_note,
+    physical_examination: note.physical_examination,
+    medical_plan: note.medical_plan,
+    nursing_plan: note.nursing_plan,
+    feeding_plan: note.feeding_plan,
+    monitoring_plan: note.monitoring_plan,
+    dressing_plan: note.dressing_plan,
+    physio_plan: note.physio_plan,
+    reviewed_by: note.reviewed_by,
+    reviewed_by_other: note.reviewed_by_other,
+    created_by: note.created_by,
+    created_by_other: note.created_by_other,
+    reviewer: note.reviewer,
+    author: note.author,
+    residentName: note.tbl_residents?.resident_name ?? undefined,
+  }));
+
   return (
     <div className="space-y-4">
       <TabRow>
-        <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => guardedAction(() => setInnerTab("review"))}>
+        <TabButton
+          icon={ListChecks}
+          size="sm"
+          active={innerTab === "review"}
+          onClick={() => guardedAction(() => setInnerTab("review"))}
+        >
           {t("Review Notes")}
         </TabButton>
         <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>
@@ -111,7 +186,7 @@ export function ProgressNotesModule({
         <>
           {/* Filters */}
           <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
-            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-3 ${isHqAdmin ? "lg:grid-cols-4" : ""}`}>
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isHqAdmin ? "lg:grid-cols-3" : ""}`}>
               <BranchFilterSelect
                 branches={branches}
                 currentBranch={currentBranch}
@@ -136,118 +211,62 @@ export function ProgressNotesModule({
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div>
-                <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-fg-secondary">
-                  {t("Start date")}
-                </label>
-                <input
-                  type="date"
-                  id="start-date"
-                  value={currentStart}
-                  onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd, currentBranch)}
-                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-fg-secondary">
-                  {t("End date")}
-                </label>
-                <input
-                  type="date"
-                  id="end-date"
-                  value={currentEnd}
-                  onChange={(e) => applyFilters(currentResident, currentStart, e.target.value, currentBranch)}
-                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
+            {/* Duration selector */}
+            <div className="mt-4">
+              <div className="flex flex-wrap gap-2">
+                {DUR_PRESETS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => applyPreset(key)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      activeDur === key
+                        ? "bg-indigo-600 text-white"
+                        : "bg-surface-muted text-fg-secondary hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300"
+                    }`}
+                  >
+                    {t(label)}
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Error */}
-          <ResultNotice error={error} truncated={truncated} />
-
-          {/* Notes List */}
-          <div className="space-y-3">
-            {notes.length === 0 ? (
-              <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">
-                {t("No progress notes yet.")}
+            {/* Custom date inputs — only visible in custom mode */}
+            {activeDur === "custom" && (
+              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="start-date" className="mb-1 block text-sm font-medium text-fg-secondary">
+                    {t("Start date")}
+                  </label>
+                  <input
+                    type="date"
+                    id="start-date"
+                    value={currentStart}
+                    onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd, currentBranch)}
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="end-date" className="mb-1 block text-sm font-medium text-fg-secondary">
+                    {t("End date")}
+                  </label>
+                  <input
+                    type="date"
+                    id="end-date"
+                    value={currentEnd}
+                    onChange={(e) => applyFilters(currentResident, currentStart, e.target.value, currentBranch)}
+                    className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
-            ) : (
-              notes.map((note) => {
-                const isExpanded = expandedId === note.id;
-                const details = PLAN_LABELS.filter(([key]) => note[key]);
-                const recordedCount = (note.progress_note ? 1 : 0) + details.length;
-                return (
-                  <div
-                    key={note.id}
-                    onClick={() => setExpandedId(isExpanded ? null : note.id)}
-                    className="cursor-pointer rounded-md border border-line bg-surface p-4 shadow-sm transition-colors hover:border-indigo-200 dark:hover:border-indigo-700"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold text-fg">{note.tbl_residents?.resident_name}</span>
-                      <span className="flex items-center gap-2 text-xs text-fg-faint">
-                        {formatDateTime(note.entry_timestamp)}
-                        <PdfDownloadLink href={`/api/reports/progress-note?id=${note.id}`} />
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          className={`text-fg-faint transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                        >
-                          <path
-                            d="M6 3.5L10.5 8L6 12.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </span>
-                    </div>
-                    {!isExpanded && (
-                      <p className="text-sm text-fg-secondary">
-                        {recordedCount > 0 ? (
-                          <span className="text-fg-faint">
-                            {recordedCount} {t(recordedCount > 1 ? "fields" : "field")} {t("recorded -- click to view")}
-                          </span>
-                        ) : (
-                          <span className="text-fg-faint">{t("Click to view")}</span>
-                        )}
-                      </p>
-                    )}
-
-                    {isExpanded && (
-                      <div className="mt-3 space-y-2 border-t border-line-subtle pt-3">
-                        {note.progress_note && (
-                          <p className="whitespace-pre-wrap text-sm text-fg-muted">
-                            <span className="font-medium text-fg-subtle">{t("Progress note")}: </span>
-                            {note.progress_note}
-                          </p>
-                        )}
-                        {details.map(([key, label]) => (
-                          <p key={key} className="text-sm text-fg-muted">
-                            <span className="font-medium text-fg-subtle">{t(label)}: </span>
-                            {note[key] as string}
-                          </p>
-                        ))}
-                        {recordedCount === 0 && <p className="text-sm text-fg-faint">{t("No fields recorded.")}</p>}
-                      </div>
-                    )}
-
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs text-fg-faint">
-                        {t("Reviewed by")}: {note.reviewer?.staff_name || note.reviewed_by_other || note.author?.staff_name || note.created_by_other || "--"}
-                      </span>
-                      <AdminRecordControls kind="progress_note" id={note.id} />
-                    </div>
-                  </div>
-                );
-              })
             )}
           </div>
+
+          <ResultNotice error={error} truncated={truncated} />
+
+          <ProgressNotesTimeline notes={noteRows} t={t} />
         </>
       ) : (
         <NewProgressNoteForm

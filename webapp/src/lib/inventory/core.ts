@@ -165,11 +165,6 @@ export const ISSUE_TARGET_OPTIONS = [
   { value: "OSEM_EXPENSE", label: "OSEM expense" },
 ] as const;
 
-export const DOC_TYPE_OPTIONS = [
-  { value: "INVOICE", label: "Invoice" },
-  { value: "CASH_BILL", label: "Cash bill" },
-] as const;
-
 export const WRITE_OFF_REASON_OPTIONS = [
   { value: "DAMAGED", label: "Damaged" },
   { value: "EXPIRED", label: "Expired" },
@@ -368,7 +363,6 @@ const CODE_MESSAGES: Record<string, string> = {
   DUPLICATE_LINE: "The same product appears twice. Merge the lines.",
   INVALID_LOCATIONS: "These locations cannot be used for this movement.",
   INVALID_REASON: "Please choose a reason.",
-  INVALID_DOC_TYPE: "Please choose the document type.",
   INVOICE_REQUIRED: "The invoice number is required.",
   INVALID_INVOICE_DATE: "Please enter a valid invoice date.",
   INVALID_TOTALS: "Please check the invoice totals.",

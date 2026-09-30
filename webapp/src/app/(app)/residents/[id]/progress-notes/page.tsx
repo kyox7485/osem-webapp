@@ -108,8 +108,17 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       id: note.id,
       entry_timestamp: note.entry_timestamp,
       progress_note: note.progress_note,
+      physical_examination: note.physical_examination ?? null,
       medical_plan: note.medical_plan,
       nursing_plan: note.nursing_plan,
+      feeding_plan: note.feeding_plan ?? null,
+      monitoring_plan: note.monitoring_plan ?? null,
+      dressing_plan: note.dressing_plan ?? null,
+      physio_plan: note.physio_plan ?? null,
+      reviewed_by: note.reviewed_by ?? null,
+      reviewed_by_other: note.reviewed_by_other ?? null,
+      created_by: note.created_by ?? null,
+      created_by_other: note.created_by_other ?? null,
       authorName: author?.staff_name ?? (note as any).created_by_other ?? t("Unknown"),
     };
   });

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "@/components/language-provider";
+import { Combobox } from "@/components/combobox";
 import {
-  DOC_TYPE_OPTIONS,
   formatMoney,
   uomLabel,
   parseMoney,
@@ -17,14 +17,15 @@ import {
   type InvStaff,
   type InvSupplier,
 } from "@/lib/inventory/core";
+import type { LookupOption } from "@/lib/types";
+import { runInventoryRpc } from "../actions";
 import { useInvSubmit } from "../components/use-inv-submit";
 import { LineEditor, newLine, type EditorLine } from "../components/line-editor";
-import { CARD_CLS, EmptyState, Field, FormStatus, INPUT_CLS, SMALL_INPUT_CLS, StaffSelect, SubmitButton } from "../components/form-bits";
+import { CARD_CLS, EmptyState, ErrorNotice, Field, FormStatus, INPUT_CLS, SECONDARY_BTN_CLS, SMALL_INPUT_CLS, Spinner, StaffSelect, SubmitButton } from "../components/form-bits";
 
 type Header = {
   requestId: string;
   supplierId: string;
-  docType: string;
   invoiceNo: string;
   invoiceDate: string;
   receivedDate: string;
@@ -40,7 +41,6 @@ type Header = {
 const emptyHeader = (): Header => ({
   requestId: "",
   supplierId: "",
-  docType: "INVOICE",
   invoiceNo: "",
   invoiceDate: todayKL(),
   receivedDate: todayKL(),
@@ -61,6 +61,8 @@ export function ReceiveForm({
   residents,
   openRequests = [],
   costHints = [],
+  canCreateSupplier = false,
+  needsSupplierStaff = false,
 }: {
   storeId: number | null;
   /** Approved / ordered stock requests with outstanding lines (optional link, schema/017). */
@@ -71,15 +73,67 @@ export function ReceiveForm({
   suppliers: InvSupplier[];
   staff: InvStaff[];
   residents: InvResident[];
+  /** May this login register a supplier that is not in the list yet? */
+  canCreateSupplier?: boolean;
+  /** A real-branch login must attribute the new supplier to a senior staff member. */
+  needsSupplierStaff?: boolean;
 }) {
   const t = useTranslation();
   const [h, setH] = useState<Header>(emptyHeader);
   const [lines, setLines] = useState<EditorLine[]>([]);
+  // Suppliers added from this form. Kept in local state so the new one is
+  // selectable immediately, without waiting for the page to re-query.
+  const [extraSuppliers, setExtraSuppliers] = useState<LookupOption[]>([]);
+  const [newName, setNewName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const state = useInvSubmit("inv_post_receipt", "inv-receive", () => {
     setH(emptyHeader());
     setLines([]);
   });
   const set = (k: keyof Header) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setH({ ...h, [k]: e.target.value });
+
+  const supplierOptions = useMemo<LookupOption[]>(
+    () =>
+      [...suppliers.map((s) => ({ id: s.id, label: s.name })), ...extraSuppliers].sort((a, b) =>
+        a.label.localeCompare(b.label)
+      ),
+    [suppliers, extraSuppliers]
+  );
+
+  // A name the user typed that matches nothing in the list, case- and
+  // whitespace-insensitively -- the same key inv_save_supplier enforces.
+  const canCreateName =
+    canCreateSupplier &&
+    newName.trim() !== "" &&
+    !supplierOptions.some((o) => o.label.trim().toLowerCase() === newName.trim().toLowerCase());
+
+  /**
+   * Register a supplier the user typed but that does not exist yet, so a
+   * delivery from an unregistered supplier can still be received in one go.
+   * Posted on its own key and its own RPC -- the receipt below is untouched
+   * until it succeeds, so a failure here never half-posts anything.
+   */
+  async function createSupplier() {
+    const name = newName.trim();
+    if (!name) return;
+    setIsCreating(true);
+    setCreateError(null);
+    const result = await runInventoryRpc(
+      "inv_save_supplier",
+      { name, performed_by_staff: needsSupplierStaff ? h.staffId || null : null },
+      crypto.randomUUID()
+    );
+    setIsCreating(false);
+    if (!result.ok) {
+      setCreateError(result.code);
+      return;
+    }
+    const id = Number(result.data?.supplier_id);
+    setExtraSuppliers((prev) => (prev.some((p) => p.id === id) ? prev : [...prev, { id, label: name }]));
+    setNewName("");
+    setH((prev) => ({ ...prev, supplierId: String(id) }));
+  }
 
   // Picking a request prefills its outstanding lines (purchase UOM when it divides evenly)
   // and the supplier; everything stays editable. Products are still added only by barcode / SKU.
@@ -136,7 +190,6 @@ export function ReceiveForm({
     state.submit({
       location_id: storeId,
       supplier_id: h.supplierId ? Number(h.supplierId) : null,
-      doc_type: h.docType,
       invoice_no: h.invoiceNo,
       invoice_date: h.invoiceDate,
       received_date: h.receivedDate,
@@ -168,25 +221,33 @@ export function ReceiveForm({
             </select>
           </Field>
         )}
-        <Field label={t("Supplier")} required>
-          <select className={INPUT_CLS} value={h.supplierId} onChange={set("supplierId")}>
-            <option value="">{t("Select supplier")}</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("Document type")} required>
-          <select className={INPUT_CLS} value={h.docType} onChange={set("docType")}>
-            {DOC_TYPE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {t(o.label)}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <div className="sm:col-span-2">
+          <Combobox
+            id="receive-supplier"
+            label={t("Supplier")}
+            placeholder={t("Type to search or add a new supplier")}
+            emptyMessage={t("Not found")}
+            value={h.supplierId}
+            // The Combobox clears the value to "" on every keystroke so the old
+            // supplier stops being selected while the user re-types; that is a
+            // search, not a deselection, so only a real pick updates the header.
+            onChange={(id) => id && setH({ ...h, supplierId: id })}
+            onQueryChange={setNewName}
+            options={supplierOptions}
+          />
+          {canCreateName && (
+            <div className="mt-1 space-y-1">
+              <button type="button" className={SECONDARY_BTN_CLS} disabled={isCreating} onClick={createSupplier}>
+                {isCreating && <Spinner />}
+                {t('Register "{name}" as a new supplier', { name: newName.trim() })}
+              </button>
+              {needsSupplierStaff && !h.staffId && (
+                <p className="text-xs text-fg-subtle">{t("Choose who received this first, so the new supplier is attributed to them.")}</p>
+              )}
+            </div>
+          )}
+          <ErrorNotice code={createError} />
+        </div>
         <Field label={t("Invoice / bill no.")} required>
           <input className={INPUT_CLS} maxLength={60} value={h.invoiceNo} onChange={set("invoiceNo")} />
         </Field>

@@ -227,7 +227,7 @@ begin
   v_payload := jsonb_build_object(
          'location_id', tests.loc(p_branch, 'STORE'),
          'supplier_id', (select id from public.tbl_inv_suppliers where owner_branch_id is null limit 1),
-         'doc_type', 'INVOICE', 'invoice_no', p_invoice, 'invoice_date', tests.today(),
+         'invoice_no', p_invoice, 'invoice_date', tests.today(),
          'received_date', tests.today(), 'received_by_staff', p_branch || '-HN',
          'lines', tests.lines(p_lines)) || p_extra;
   perform tests.login(p_user);
