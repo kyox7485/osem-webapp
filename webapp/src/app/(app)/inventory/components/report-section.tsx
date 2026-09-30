@@ -51,7 +51,7 @@ export async function ReportSection({
   const { params, error } = readReportParams(report, raw);
   const [options, result] = await Promise.all([
     loadFilterOptions(ctx, branchId, report, language),
-    error ? Promise.resolve(null) : loadReport(report, { sb: ctx.supabase, branchId, rank: ctx.rank, t, cap: SCREEN_ROW_CAP, params }),
+    error ? Promise.resolve(null) : loadReport(report, { sb: ctx.supabase, branchId, rank: ctx.rank, isHqAdmin: ctx.isHqAdmin, t, cap: SCREEN_ROW_CAP, params }),
   ]);
 
   return (

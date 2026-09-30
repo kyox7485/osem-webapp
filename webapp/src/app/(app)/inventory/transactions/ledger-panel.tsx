@@ -56,7 +56,7 @@ export async function LedgerPanel({ ctx, raw }: { ctx: InventoryContext; raw: Ra
   let failed = false;
   if (!error) {
     try {
-      ({ lines, truncated } = await queryLedger({ sb: ctx.supabase, branchId, rank: ctx.rank, t, cap: SCREEN_ROW_CAP, params }));
+      ({ lines, truncated } = await queryLedger({ sb: ctx.supabase, branchId, rank: ctx.rank, isHqAdmin: ctx.isHqAdmin, t, cap: SCREEN_ROW_CAP, params }));
     } catch (e) {
       failed = true;
       console.error("inventory ledger failed", e instanceof ReportQueryError ? e.message : e);

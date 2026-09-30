@@ -14,6 +14,7 @@ export type ReportCtx = {
   sb: Sb;
   branchId: number;
   rank: number;
+  isHqAdmin: boolean;
   t: Translate;
   /** rows the result may hold; loaders read one more to detect truncation */
   cap: number;

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const { t } = await getServerTranslator();
   const cap = format === "pdf" ? PDF_ROW_CAP : CSV_ROW_CAP;
-  const result = await loadReport(report, { sb: ctx.supabase, branchId: ctx.branchId, rank: ctx.rank, t, cap, params: parsed.params });
+  const result = await loadReport(report, { sb: ctx.supabase, branchId: ctx.branchId, rank: ctx.rank, isHqAdmin: ctx.isHqAdmin, t, cap, params: parsed.params });
   if (result.error) return fail(result.error, 500);
 
   const branchLabel = ctx.branches.find((b) => b.id === ctx.branchId)?.label ?? String(ctx.branchId);
