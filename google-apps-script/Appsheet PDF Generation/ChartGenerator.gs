@@ -1,25 +1,22 @@
 /**
  * OSEM Medication Chart Generator
- * Version: PDF-safe + real-time progress
+ * Version: PDF-safe + performance optimized
  *
- * DESIGN RULE
- * -----------
- * The generated medication chart must preserve the Chart Template.
+ * PRESERVES:
+ * - Existing public function signatures
+ * - Existing medication/session logic
+ * - Existing PRN generator
+ * - Existing chart template/layout
+ * - Existing placeholder names
+ * - Existing progress model
+ * - Existing return object
  *
- * The DATE cells on the right side of the chart are populated with blank
- * serving cells and "xxxx" on non-serving / invalid days.
- *
- * PDF generation is intentionally NOT duplicated here.
- * generateMedicationChartPdf() / generateBranchMedicationChartPdf()
- * remain in PDFengine.gs and consume the returned report.sheets.
- *
- * This file therefore only:
- *   1. Reads the resident medication orders.
- *   2. Copies the existing Chart Template.
- *   3. Replaces the template placeholders.
- *   4. Adds medication rows while preserving the template formatting.
- *   5. Returns the generated sheet objects to PDFengine.gs.
- *   6. Updates the live progress from 15% -> 50% during chart generation.
+ * PERFORMANCE CHANGES:
+ * - Removes unnecessary SpreadsheetApp.flush() calls from inner loops.
+ * - Batches medication values into range.setValues() calls.
+ * - Batches the 31-day serving matrix into ONE setValues() call.
+ * - Keeps the final flush only after the resident's chart pages are built.
+ * - Avoids changing chart appearance or medication-day logic.
  */
 
 // ============================================================
@@ -62,12 +59,6 @@ function generateResidentMedicationCharts(
 
   var branchMode = !!branchProgressState;
 
-  // ----------------------------------------------------------
-  // REAL-TIME PROGRESS
-  // 15% = chart stage begins
-  // We avoid excessive progress writes because each write can
-  // add server latency.
-  // ----------------------------------------------------------
   if (!branchMode) {
     setGenerationProgress(
       executionId,
@@ -78,12 +69,14 @@ function generateResidentMedicationCharts(
     );
   }
 
-  SpreadsheetApp.flush();
+  // IMPORTANT:
+  // Do not flush here. The previous implementation flushed before
+  // every page even though the sheet changes do not need to be forced
+  // to the server at this point. The final chart/export pipeline will
+  // perform the required flush at the appropriate stage.
 
   // ----------------------------------------------------------
   // Load regular medication preparation sessions.
-  // getPreparationSessions() already groups regular medication
-  // by administration time and excludes PRN medication.
   // ----------------------------------------------------------
   var sessions = getPreparationSessions(residentID) || [];
 
@@ -92,7 +85,6 @@ function generateResidentMedicationCharts(
 
   var totalRegularPages = sessions.length;
 
-  // PRN_PER_PAGE already belongs to the existing PRN module.
   var totalPRNPages = 0;
 
   if (prnMedications.length > 0) {
@@ -129,7 +121,6 @@ function generateResidentMedicationCharts(
   for (var i = 0; i < sessions.length; i++) {
     var session = sessions[i];
 
-    // Progress BEFORE the page is created.
     if (!branchMode) {
       var before = calculateMedicationChartProgress(
         i,
@@ -172,7 +163,8 @@ function generateResidentMedicationCharts(
       );
     }
 
-    SpreadsheetApp.flush();
+    // IMPORTANT:
+    // No SpreadsheetApp.flush() before page creation.
 
     var sheet = createRegularMedicationChartPage(
       resident,
@@ -186,13 +178,11 @@ function generateResidentMedicationCharts(
 
     generatedSheets.push(sheet);
 
-    // One regular page completed.
     if (branchMode) {
       branchProgressState.completedPages =
         Number(branchProgressState.completedPages || 0) + 1;
     }
 
-    // Progress AFTER the page is created.
     if (!branchMode) {
       var completed = i + 1;
 
@@ -211,7 +201,9 @@ function generateResidentMedicationCharts(
       );
     }
 
-    SpreadsheetApp.flush();
+    // IMPORTANT:
+    // No SpreadsheetApp.flush() after every page.
+    // This was one of the major execution-time costs.
   }
 
   // ==========================================================
@@ -230,24 +222,11 @@ function generateResidentMedicationCharts(
       );
     }
 
-    SpreadsheetApp.flush();
-
     var completedBeforePRN = branchMode
       ? Number(branchProgressState.completedPages || 0)
       : totalRegularPages;
 
-    // Keep the existing PRNChart.gs implementation.
-    // Its signature in the current project is:
-    //   resident,
-    //   medications,
-    //   year,
-    //   month,
-    //   executionId,
-    //   totalPages,
-    //   completedPages,
-    //   branchProgressState
-    //
-    // This preserves the existing PRN/PDF workflow.
+    // Preserve the existing PRNChart.gs implementation.
     var prnSheets = generatePRNCharts(
       resident,
       prnMedications,
@@ -264,8 +243,6 @@ function generateResidentMedicationCharts(
     }
 
     // PRNChart.gs normally updates branchProgressState itself.
-    // For safety, if it did not, advance it here by the actual
-    // number of PRN sheets returned.
     if (
       branchMode &&
       prnSheets.length > 0 &&
@@ -284,10 +261,6 @@ function generateResidentMedicationCharts(
     }
   }
 
-  // ==========================================================
-  // SAFETY
-  // ==========================================================
-
   if (generatedSheets.length === 0) {
     throw new Error(
       "Medication chart generation produced no sheets for " +
@@ -296,8 +269,6 @@ function generateResidentMedicationCharts(
     );
   }
 
-  // The chart-generation stage ends at 50%.
-  // PDFengine.gs starts its own next stage from 50%.
   if (!branchMode) {
     setGenerationProgress(
       executionId,
@@ -306,6 +277,7 @@ function generateResidentMedicationCharts(
     );
   }
 
+  // One flush per resident, rather than one flush per page.
   SpreadsheetApp.flush();
 
   return {
@@ -325,12 +297,6 @@ function generateResidentMedicationCharts(
 
 // ============================================================
 // PROGRESS CALCULATION
-// ============================================================
-// Maps chart-page completion to the 15% -> 50% stage.
-//
-// 0 / 10  = 15%
-// 5 / 10  = 32.5%
-// 10 / 10 = 50%
 // ============================================================
 
 function calculateMedicationChartProgress(
@@ -368,26 +334,12 @@ function calculateMedicationChartProgress(
 // REGULAR CHART PAGE
 // ============================================================
 //
-// IMPORTANT:
+// The visual/template structure is preserved.
 //
-// The date columns on the right are deliberately untouched.
+// The main performance change is that medication values and the
+// 31-day matrix are written in batches instead of performing
+// individual setValue() calls for every cell.
 //
-// The template is responsible for:
-//   - logo
-//   - page title
-//   - date headings
-//   - borders
-//   - row colours
-//   - day cells for manual nursing entries
-//
-// The generator only fills:
-//   {{RESIDENT_NAME}}
-//   {{MONTH}}
-//   {{SESSION_TITLE}}
-//   {{NO}}
-//   {{MEDICINE}}
-//   {{INDICATION}}
-//   {{NOTED_BY}}
 // ============================================================
 
 function createRegularMedicationChartPage(
@@ -402,7 +354,9 @@ function createRegularMedicationChartPage(
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   if (!ss) {
-    throw new Error("Unable to access the source spreadsheet while creating a medication chart.");
+    throw new Error(
+      "Unable to access the source spreadsheet while creating a medication chart."
+    );
   }
 
   if (
@@ -441,15 +395,10 @@ function createRegularMedicationChartPage(
   // ============================================================
   // FIXED TEMPLATE LAYOUT
   // ============================================================
-  // The master Chart Template is deliberately used as-is.
-  // Medication rows start at row 9 and are written into the
-  // existing pre-formatted rows. No rows are inserted above row 9.
-  // The footer/page-number position at AG32 must remain fixed.
-  // ============================================================
 
   var medicineStartRow = 9;
   var pageNumberCell = "AG32";
-  var servingTimeCell = "B6";   // B6:D7 is merged in the template.
+  var servingTimeCell = "B6";
 
   var medicineCell =
     medChart_findPlaceholderCell(
@@ -499,9 +448,6 @@ function createRegularMedicationChartPage(
     );
   }
 
-  // Enforce the layout requested for OSEM's master chart.
-  // If someone accidentally changes the template in the future,
-  // fail clearly instead of silently moving the medication table.
   if (medicineCell.getRow() !== medicineStartRow) {
     throw new Error(
       'Chart Template medication row must be row 9. Current row: ' +
@@ -516,13 +462,9 @@ function createRegularMedicationChartPage(
     notedBy: notedByCell.getColumn()
   };
 
-  // Date columns immediately follow the "Noted By" column.
-  // This preserves the template's existing conditional formatting.
   var firstDayColumn = templateColumns.notedBy + 1;
   var numberOfDayColumns = 31;
 
-  // The template currently provides rows 9 through 31 for medication
-  // entries; row 32 is reserved for the page footer.
   var lastMedicationRow = 31;
   var maxMedicationRows =
     lastMedicationRow - medicineStartRow + 1;
@@ -537,7 +479,7 @@ function createRegularMedicationChartPage(
   }
 
   // ============================================================
-  // COPY THE TEMPLATE
+  // COPY TEMPLATE
   // ============================================================
 
   var sheet = template.copyTo(ss);
@@ -591,8 +533,6 @@ function createRegularMedicationChartPage(
     medChart_formatMonth(year, month)
   );
 
-  // The template's B6:D7 area is the serving-time display area.
-  // B6 is the top-left cell of the merged range.
   var servingTimeText =
     "Serving Time: " +
     String(
@@ -606,7 +546,6 @@ function createRegularMedicationChartPage(
     .setValue(servingTimeText)
     .setVerticalAlignment("middle");
 
-  // Also replace the placeholder wherever it exists in the header.
   medChart_replacePlaceholder(
     sheet,
     "{{SESSION_TITLE}}",
@@ -616,7 +555,7 @@ function createRegularMedicationChartPage(
   );
 
   // ============================================================
-  // PAGE NUMBER — FIXED AT AG32
+  // PAGE NUMBER
   // ============================================================
 
   var safeTotalPages =
@@ -634,78 +573,35 @@ function createRegularMedicationChartPage(
     );
 
   // ============================================================
-  // DATE CELLS
-  // ============================================================
-  // Active/serving day = blank, ready for manual nursing entries.
-  // Non-serving day / outside medication period / invalid calendar
-  // date = "xxxx" so the template's existing conditional formatting
-  // turns the cell grey.
+  // DATE / MEDICATION MATRIX
   // ============================================================
 
   var daysInMonth =
     getDaysInMonth(year, month);
 
-  var dateValues = [];
+  // Build ALL medication columns in memory first.
+  // This avoids one setValue() per cell.
 
-  for (var day = 1; day <= numberOfDayColumns; day++) {
-    var isValidCalendarDay =
-      day <= daysInMonth;
-
-    var isServingDay =
-      isValidCalendarDay &&
-      shouldPrepareMedicineOnDay(
-        medications[0],
-        year,
-        month,
-        day
-      );
-
-    // We will calculate this separately for every medication row below.
-    dateValues.push(
-      isValidCalendarDay && isServingDay
-        ? ""
-        : "xxxx"
-    );
-  }
-
-  // ============================================================
-  // MEDICATION ROWS — START AT ROW 9
-  // ============================================================
+  var noValues = [];
+  var medicineValues = [];
+  var indicationValues = [];
+  var notedByValues = [];
+  var dateMatrix = [];
 
   for (var i = 0; i < medications.length; i++) {
     var med = medications[i];
-    var row = medicineStartRow + i;
 
-    sheet
-      .getRange(
-        row,
-        templateColumns.no
-      )
-      .setValue(i + 1)
-      .setHorizontalAlignment("center")
-      .setVerticalAlignment("middle");
+    noValues.push([
+      i + 1
+    ]);
 
-    sheet
-      .getRange(
-        row,
-        templateColumns.medicine
-      )
-      .setValue(
-        buildMedicineDescription(med) || ""
-      )
-      .setWrap(true)
-      .setVerticalAlignment("middle");
+    medicineValues.push([
+      buildMedicineDescription(med) || ""
+    ]);
 
-    sheet
-      .getRange(
-        row,
-        templateColumns.indication
-      )
-      .setValue(
-        med["Indication"] || ""
-      )
-      .setWrap(true)
-      .setVerticalAlignment("middle");
+    indicationValues.push([
+      med["Indication"] || ""
+    ]);
 
     // "Noted By" is normally stored as a StaffID.
     // Convert it to StaffName for the printed chart.
@@ -722,30 +618,21 @@ function createRegularMedicationChartPage(
         String(rawStaff);
     }
 
-    sheet
-      .getRange(
-        row,
-        templateColumns.notedBy
-      )
-      .setValue(staffName)
-      .setWrap(true)
-      .setVerticalAlignment("middle");
+    notedByValues.push([
+      staffName
+    ]);
 
-    // Each medication gets its own serving-day calculation.
+    // Build the entire 31-day row in memory.
     var rowDateValues = [];
 
-    for (
-      var dayIndex = 1;
-      dayIndex <= numberOfDayColumns;
-      dayIndex++
-    ) {
+    for (var day = 1; day <= numberOfDayColumns; day++) {
       var serving =
-        dayIndex <= daysInMonth &&
+        day <= daysInMonth &&
         shouldPrepareMedicineOnDay(
           med,
           year,
           month,
-          dayIndex
+          day
         );
 
       rowDateValues.push(
@@ -753,15 +640,112 @@ function createRegularMedicationChartPage(
       );
     }
 
-    sheet
-      .getRange(
-        row,
-        firstDayColumn,
-        1,
-        numberOfDayColumns
-      )
-      .setValues([rowDateValues]);
+    dateMatrix.push(rowDateValues);
   }
+
+  var rowCount = medications.length;
+
+  // ============================================================
+  // BATCH WRITE MEDICATION COLUMNS
+  // ============================================================
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.no,
+      rowCount,
+      1
+    )
+    .setValues(noValues);
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.medicine,
+      rowCount,
+      1
+    )
+    .setValues(medicineValues);
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.indication,
+      rowCount,
+      1
+    )
+    .setValues(indicationValues);
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.notedBy,
+      rowCount,
+      1
+    )
+    .setValues(notedByValues);
+
+  // ============================================================
+  // BATCH WRITE ENTIRE 31-DAY MATRIX
+  // ============================================================
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      firstDayColumn,
+      rowCount,
+      numberOfDayColumns
+    )
+    .setValues(dateMatrix);
+
+  // ============================================================
+  // PRESERVE TEMPLATE ALIGNMENT / WRAPPING
+  // ============================================================
+  //
+  // The template already carries the intended formatting.
+  // We only re-apply these properties to the populated ranges,
+  // as the original function did, but in batches.
+  //
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.no,
+      rowCount,
+      1
+    )
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle");
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.medicine,
+      rowCount,
+      1
+    )
+    .setWrap(true)
+    .setVerticalAlignment("middle");
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.indication,
+      rowCount,
+      1
+    )
+    .setWrap(true)
+    .setVerticalAlignment("middle");
+
+  sheet
+    .getRange(
+      medicineStartRow,
+      templateColumns.notedBy,
+      rowCount,
+      1
+    )
+    .setWrap(true)
+    .setVerticalAlignment("middle");
 
   // ============================================================
   // CLEAN UNUSED TEMPLATE TOKENS
@@ -791,16 +775,16 @@ function createRegularMedicationChartPage(
     ""
   );
 
-  // If the template uses a {{PAGE}} token anywhere in the footer,
-  // replace it too. AG32 remains the authoritative page-number cell.
   medChart_replacePlaceholder(
     sheet,
     "{{PAGE}}",
     Number(pageNumber || 1) + "/" + safeTotalPages
   );
 
-  SpreadsheetApp.flush();
-
+  // IMPORTANT:
+  // Do NOT flush here.
+  // The caller flushes once after the resident's chart pages
+  // have been generated.
   return sheet;
 }
 
