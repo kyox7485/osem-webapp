@@ -14,11 +14,6 @@ import {
 } from "./report-core";
 import type { ReportColumn, ReportResult } from "./types";
 
-// Format a qty number with its UOM code, e.g. "10 EA", "5 Tab".
-function qtyWithUnit(qty: number, uomCode: string): string {
-  return `${qty} ${uomCode}`;
-}
-
 // Stock balance, Movement (ledger) and Suggested order.
 
 const MAX_SOURCE_ROWS = 20000;
@@ -31,7 +26,6 @@ type BalanceRow = {
   sku: string;
   product_name: string;
   qty: number;
-  effective_max: number | null;
   pool_wac: number | null;
   value_at_wac: number | null;
 };
@@ -72,6 +66,7 @@ function matchesProductFilters(ctx: ReportCtx, productId: number, meta: Map<numb
 export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
   const { sb, branchId, rank, t, params } = ctx;
   const showCost = rank >= INV_TIER.VIEW_COST;
+  const showCostCols = ctx.isHqAdmin;
   const [meta, matches, categories, suppliersData] = await Promise.all([
     loadProductMeta(sb),
     params.q ? resolveProductIds(sb, params.q) : Promise.resolve(null),
@@ -84,7 +79,7 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     () =>
       sb
         .from("v_inv_stock_balance")
-        .select("location_kind, product_id, sku, product_name, qty, effective_max, pool_wac, value_at_wac")
+        .select("location_kind, product_id, sku, product_name, qty, pool_wac, value_at_wac")
         .eq("branch_id", branchId)
         .neq("qty", 0)
         .order("product_name")
@@ -93,12 +88,13 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     MAX_SOURCE_ROWS
   );
   const kept = balances.filter((b) => matchesProductFilters(ctx, Number(b.product_id), meta, matches));
-  // max and WAC are per product, so the first row of a product is authoritative
-  // for sku/name/max/wac/value; only the quantities are summed across locations.
+  // WAC is per product, so the first row of a product is authoritative for
+  // sku/name/wac/value; only the quantities are summed across locations.
   const grouped = groupQtyByProduct(kept);
   const shown = [...grouped.entries()]
     .map(([pid, q]) => {
       const first = kept.find((b) => Number(b.product_id) === pid)!;
+      const m = meta.get(pid);
       return {
         product_id: pid,
         sku: first.sku,
@@ -107,28 +103,35 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
         floor: q.floor,
         transit: q.transit,
         total: q.total,
-        unit: meta.get(pid)?.baseUomCode ?? "",
-        max: first.effective_max === null ? null : Number(first.effective_max),
+        unit: m?.baseUomCode ?? "",
+        // Category drives the row order and the group headings the table draws
+        // between the rows. A product with no category (or a category that was
+        // deleted) sorts last under this label, so it sorts on -1 while the
+        // heading still reads the same.
+        categoryName: categoryName.get(m ? m.categoryId : -1) ?? t("Uncategorised"),
+        catSort: m ? m.categoryId : -1,
         wac: first.pool_wac === null ? null : Number(first.pool_wac),
         value: kept
           .filter((b) => Number(b.product_id) === pid)
           .reduce((sum, b) => sum + (b.value_at_wac === null ? 0 : Number(b.value_at_wac)), 0),
       };
     })
+    // Grouped by category: categories in name order, then the uncategorised
+    // bucket last, products A-Z inside each group.
+    .sort((a, b) => a.catSort - b.catSort || a.categoryName.localeCompare(b.categoryName) || a.product_name.localeCompare(b.product_name))
     .slice(0, ctx.cap + 1);
 
   const columns: ReportColumn[] = [
     { key: "sku", label: t("SKU"), kind: "text" },
     { key: "product", label: t("Product"), kind: "text" },
-    { key: "storeWithUnit", label: t("Store"), kind: "text" },
-    { key: "floorWithUnit", label: t("Floor Stock"), kind: "text" },
-    { key: "transitWithUnit", label: t("Transit"), kind: "text" },
-    { key: "totalWithUnit", label: t("Total"), kind: "text" },
+    { key: "store", label: t("Store"), kind: "qty" },
+    { key: "floor", label: t("Floor Stock"), kind: "qty" },
+    { key: "transit", label: t("Transit"), kind: "qty" },
+    { key: "total", label: t("Total"), kind: "qty" },
     { key: "unit", label: t("Unit"), kind: "text" },
-    { key: "max", label: t("Max"), kind: "qty" },
   ];
-  if (showCost) {
-    columns.push({ key: "wac", label: t("WAC"), kind: "money4" }, { key: "value", label: t("Value (indicative)"), kind: "money" });
+  if (showCostCols) {
+    columns.push({ key: "wac", label: t("Average Cost (RM)"), kind: "money" }, { key: "value", label: t("Value (indicative)"), kind: "money" });
   }
   const rows = shown.map((b) => {
     const m = meta.get(b.product_id);
@@ -136,15 +139,16 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
       id: b.product_id,
       sku: b.sku,
       product: b.product_name,
-      storeWithUnit: qtyWithUnit(b.store, b.unit),
-      floorWithUnit: qtyWithUnit(b.floor, b.unit),
-      transitWithUnit: qtyWithUnit(b.transit, b.unit),
-      totalWithUnit: qtyWithUnit(b.total, b.unit),
+      store: b.store,
+      floor: b.floor,
+      transit: b.transit,
+      total: b.total,
       unit: b.unit,
-      max: b.max,
       wac: b.wac,
       value: b.value,
-      // Hidden fields used by the detail modal — not in `columns`, so never rendered as table cells
+      // Hidden fields used by the table's group headings and the detail modal —
+      // not in `columns`, so never rendered as ordinary table cells
+      _group: b.categoryName,
       _categoryName: m ? (categoryName.get(m.categoryId) ?? null) : null,
       _supplierName: m?.supplierId != null ? (supplierName.get(m.supplierId) ?? null) : null,
       _isActive: m ? (m.isActive ? 1 : 0) : null,
@@ -156,7 +160,7 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     columns,
     rows,
     truncated: kept.length >= MAX_SOURCE_ROWS,
-    notes: showCost ? [t("Values are indicative: quantity times the branch cost. See Valuation for the official figures.")] : [],
+    notes: showCostCols ? [t("Values are indicative: quantity times the branch cost. See Valuation for the official figures.")] : [],
   });
 }
 

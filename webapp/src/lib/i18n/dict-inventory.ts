@@ -22,6 +22,7 @@ export const dictInventory: Record<string, string> = {
   // locations, vocabularies
   Store: "Stor",
   "Floor Stock": "Stok Lantai",
+  Uncategorised: "Tiada kategori",
   Transit: "Transit",
   "OSEM expense": "Perbelanjaan OSEM",
   Invoice: "Invois",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { formatCell, type ReportResult } from "@/lib/inventory/reports/types";
 import { StockItemDetailModal } from "./stock-detail-modal";
 
@@ -29,23 +29,43 @@ export function ReportTable({ report, truncatedText, emptyText }: { report: Repo
             </tr>
           </thead>
           <tbody className="divide-y divide-line-subtle">
-            {report.rows.map((row, i) => (
-              <tr key={i} className="hover:bg-hover cursor-pointer" onClick={() => { if (row.id) setOpenId(Number(row.id)); }}>
-                {report.columns.map((c) => {
-                  const value = row[c.key] ?? null;
-                  const numeric = NUMERIC.has(c.kind);
-                  const negative = numeric && typeof value === "number" && value < 0;
-                  return (
-                    <td
-                      key={c.key}
-                      className={`px-3 py-2 ${numeric ? "text-right tabular-nums" : ""} ${negative ? "text-red-600 dark:text-red-400" : "text-fg-secondary"}`}
-                    >
-                      {formatCell(c.kind, value)}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {report.rows.map((row, i) => {
+              // Group heading above the first row of each category. A category
+              // name that is not a column of the report arrives as the hidden
+              // `_group` field; reports without one render as a plain table.
+              // The Fragment carries the row's key so the clickable <tr> and
+              // its modal keep their identity.
+              const group = row._group != null ? String(row._group) : null;
+              const previous = report.rows[i - 1];
+              const previousGroup = previous?._group != null ? String(previous._group) : null;
+              const showGroup = group !== null && group !== previousGroup;
+              return (
+                <Fragment key={i}>
+                  {showGroup && (
+                    <tr className="bg-surface-muted">
+                      <td colSpan={report.columns.length} className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-fg">
+                        {group}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="hover:bg-hover cursor-pointer" onClick={() => { if (row.id) setOpenId(Number(row.id)); }}>
+                    {report.columns.map((c) => {
+                      const value = row[c.key] ?? null;
+                      const numeric = NUMERIC.has(c.kind);
+                      const negative = numeric && typeof value === "number" && value < 0;
+                      return (
+                        <td
+                          key={c.key}
+                          className={`px-3 py-2 ${numeric ? "text-right tabular-nums" : ""} ${negative ? "text-red-600 dark:text-red-400" : "text-fg-secondary"}`}
+                        >
+                          {formatCell(c.kind, value)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </Fragment>
+              );
+            })}
           </tbody>
           {report.totals && (
             <tfoot>
@@ -80,10 +100,10 @@ export function ReportTable({ report, truncatedText, emptyText }: { report: Repo
           isActive={openRow._isActive != null ? openRow._isActive === 1 : null}
           costPrice={typeof openRow._costPrice === "number" ? openRow._costPrice : null}
           sellingPrice={typeof openRow._sellingPrice === "number" ? openRow._sellingPrice : null}
-          storeQty={Number(openRow.storeWithUnit?.toString().split(" ")[0]) || 0}
-          floorQty={Number(openRow.floorWithUnit?.toString().split(" ")[0]) || 0}
-          transitQty={Number(openRow.transitWithUnit?.toString().split(" ")[0]) || 0}
-          totalQty={Number(openRow.totalWithUnit?.toString().split(" ")[0]) || 0}
+          storeQty={typeof openRow.store === "number" ? openRow.store : 0}
+          floorQty={typeof openRow.floor === "number" ? openRow.floor : 0}
+          transitQty={typeof openRow.transit === "number" ? openRow.transit : 0}
+          totalQty={typeof openRow.total === "number" ? openRow.total : 0}
           unit={String(openRow.unit ?? "")}
           onClose={() => setOpenId(null)}
           onQuickEdit={() => { window.open(`/inventory/setup/products?product=${openRow.id}`, "_blank"); setOpenId(null); }}
