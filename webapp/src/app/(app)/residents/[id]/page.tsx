@@ -8,9 +8,17 @@ import { getServerTranslator } from "@/lib/i18n/server";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
 import { DischargeButton } from "./discharge-button";
 
-export default async function ResidentViewPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ResidentViewPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ med_fail?: string }>;
+}) {
   const { t } = await getServerTranslator();
   const { id } = await params;
+  const sp = await searchParams;
+  const medFailCount = sp.med_fail ? Number(sp.med_fail) : 0;
   const supabase = await createClient();
 
   const { data: resident } = await supabase
@@ -36,6 +44,13 @@ export default async function ResidentViewPage({ params }: { params: Promise<{ i
   return (
     <div>
       <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${t(resident.status)}`} />
+      {medFailCount > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            {t("Resident created, but {n} medication order(s) could not be submitted. Please add them manually via the Medication Orders module.").replace("{n}", String(medFailCount))}
+          </p>
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-end">
         <div className="flex gap-2">
           <PdfDownloadLink href={`/api/reports/resident?id=${resident.id}`} label={t("Print PDF")} />

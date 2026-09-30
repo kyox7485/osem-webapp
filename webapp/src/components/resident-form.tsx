@@ -24,6 +24,7 @@ import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
 import { useTranslation } from "@/components/language-provider";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useDirtyForm } from "@/lib/dirty-form-context";
+import { AdmissionMedicationsSection, type MedicationDraft } from "@/components/admission-medications";
 
 type StaffOption = LookupOption & { branch_id: number };
 
@@ -349,6 +350,14 @@ export function ResidentForm({
     parsedAssessment ?? EMPTY_ASSESSMENT,
   );
 
+  // Admission date (controlled so it can be passed to AdmissionMedicationsSection)
+  const [admissionDate, setAdmissionDate] = useState(
+    resident?.admission_date ?? new Date().toISOString().split("T")[0],
+  );
+
+  // Admission medication drafts (new-resident mode only)
+  const [medicationDrafts, setMedicationDrafts] = useState<MedicationDraft[]>([]);
+
   // Arrival vital signs (new-resident mode only — not shown on edit)
   const [arrivalSystolic, setArrivalSystolic] = useState("");
   const [arrivalDiastolic, setArrivalDiastolic] = useState("");
@@ -620,7 +629,8 @@ export function ResidentForm({
             <input
               name="admission_date"
               type="date"
-              defaultValue={resident?.admission_date ?? new Date().toISOString().split("T")[0]}
+              value={admissionDate}
+              onChange={(e) => { setAdmissionDate(e.target.value); markDirty(); }}
               className={inputCls}
             />
           </Field>
@@ -828,6 +838,24 @@ export function ResidentForm({
               )}
             </div>
           </Field>
+
+          {/* Current Medications / Supplements (new resident only) */}
+          {!resident && (
+            <>
+              <AdmissionMedicationsSection
+                drafts={medicationDrafts}
+                onDraftsChange={(d) => { setMedicationDrafts(d); markDirty(); }}
+                allStaff={allStaff}
+                branchId={branchId}
+                admissionDate={admissionDate}
+              />
+              <input
+                type="hidden"
+                name="medication_drafts"
+                value={JSON.stringify(medicationDrafts)}
+              />
+            </>
+          )}
 
           {/* Assessment and Summary */}
           <Field label={t("Assessment and Summary")} full>

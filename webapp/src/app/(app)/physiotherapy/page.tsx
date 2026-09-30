@@ -8,6 +8,7 @@ import {
   EMPTY_BALANCE,
   EMPTY_COORDINATION,
   EMPTY_FUNCTIONAL,
+  scoreStoredAssessment,
   type BalanceScores,
   type CoordinationScores,
   type ExamRow,
@@ -23,11 +24,12 @@ import { BranchPicker } from "./branch-picker";
 import { NewOpPatientForm } from "./new-op-patient-form";
 import type { PreviousAssessment } from "./new-physio-assessment-form";
 import type { ReviewAssessment } from "./assessment-review";
+import type { ReviewScores, ReviewScoresByAssessment } from "./review-scores";
 import { PageTitle } from "@/components/page-header";
 
 // These rows come from `select("*")`, which also carries id/branch_id/
 // assessment_id -- pick only the named score fields so those extra numeric
-// columns can never leak into computePhysioScore (it sums every value in
+// columns can never leak into the scoring pass (it walks every value in
 // these objects).
 function pickFunctional(row: any): FunctionalScores {
   if (!row) return EMPTY_FUNCTIONAL;
@@ -232,7 +234,7 @@ async function AllPatientsReview({
     id: number;
     entry_timestamp: string;
     treatment_type: string | null;
-    total_score: number | null;
+    credit_hours: number | null;
     chief_complaint: string | null;
     current_history: string | null;
     past_medical_history: string | null;
@@ -255,7 +257,7 @@ async function AllPatientsReview({
       id: a.id,
       entry_timestamp: a.entry_timestamp,
       treatment_type: a.treatment_type,
-      total_score: a.total_score,
+      credit_hours: a.credit_hours,
       documented_by_name: author?.staff_name ?? a.documented_by_other ?? "--",
       patient_name: patient ? ("patient_name" in patient ? patient.patient_name : patient.resident_name) : "--",
       chief_complaint: a.chief_complaint,
@@ -266,16 +268,17 @@ async function AllPatientsReview({
       plan_intervention: a.plan_intervention,
       evaluation: a.evaluation,
       treatment_compliance: a.treatment_compliance,
-      // Body chart / exam grid aren't fetched here -- pulling those for
-      // every assessment across every patient in scope would be a much
-      // heavier query for a list that's mostly used to spot an entry and
-      // then open that one patient. The narrative fields above (and the
-      // summary line) are enough to identify it; switching to that
-      // specific patient shows the full detail.
-      examRows: [],
-      bodyChart: [],
     };
   });
+
+  // Deliberately empty in the unfiltered view. The exam grid, body chart and
+  // the three score tables are NOT fetched here: pulling them for every
+  // assessment across every patient in scope would be a much heavier query
+  // for a list whose job is to spot an entry and then open that one patient.
+  // `score: null` makes the score cells read "—" instead of implying a zero.
+  const scoresByAssessment: ReviewScoresByAssessment = Object.fromEntries(
+    reviewAssessments.map((a) => [a.id, { score: null, examRows: [], bodyChart: [] } satisfies ReviewScores])
+  );
 
   return (
     <>
@@ -293,6 +296,7 @@ async function AllPatientsReview({
         treatmentTypeOptions={[]}
         previous={null}
         reviewAssessments={reviewAssessments}
+        scoresByAssessment={scoresByAssessment}
       />
     </>
   );
@@ -396,13 +400,33 @@ async function PhysiotherapyContent({
   const balanceByAssessment = new Map((balanceRaw ?? []).map((r: any) => [r.assessment_id, r]));
   const coordinationByAssessment = new Map((coordinationRaw ?? []).map((r: any) => [r.assessment_id, r]));
 
+  // Score every assessment once, here, from the child rows already fetched
+  // above -- the client receives the finished bundle rather than a formula to
+  // re-run. Scored against the FULL exam grid (scoreStoredAssessment merges
+  // the persisted rows into it) so Assessment Coverage is measured against
+  // the same denominator a freshly-composed form uses.
+  const scoresByAssessment: ReviewScoresByAssessment = {};
+  for (const a of assessments ?? []) {
+    const examRows = examByAssessment.get(a.id) ?? [];
+    scoresByAssessment[a.id] = {
+      score: scoreStoredAssessment({
+        assessedExamRows: examRows,
+        functional: pickFunctional(functionalByAssessment.get(a.id)),
+        balance: pickBalance(balanceByAssessment.get(a.id)),
+        coordination: pickCoordination(coordinationByAssessment.get(a.id)),
+      }),
+      examRows,
+      bodyChart: bodyChartByAssessment.get(a.id) ?? [],
+    };
+  }
+
   const reviewAssessments: ReviewAssessment[] = (assessments ?? []).map((a: any) => {
     const author = Array.isArray(a.tbl_staff) ? a.tbl_staff[0] : a.tbl_staff;
     return {
       id: a.id,
       entry_timestamp: a.entry_timestamp,
       treatment_type: a.treatment_type,
-      total_score: a.total_score,
+      credit_hours: a.credit_hours,
       documented_by_name: author?.staff_name ?? a.documented_by_other ?? "--",
       chief_complaint: a.chief_complaint,
       current_history: a.current_history,
@@ -412,12 +436,11 @@ async function PhysiotherapyContent({
       plan_intervention: a.plan_intervention,
       evaluation: a.evaluation,
       treatment_compliance: a.treatment_compliance,
-      examRows: examByAssessment.get(a.id) ?? [],
-      bodyChart: bodyChartByAssessment.get(a.id) ?? [],
     };
   });
 
   const latest = assessments && assessments.length > 0 ? assessments[0] : null;
+  const latestScores = latest ? scoresByAssessment[latest.id] : undefined;
   const previous: PreviousAssessment | null = latest
     ? {
         chief_complaint: latest.chief_complaint,
@@ -425,11 +448,11 @@ async function PhysiotherapyContent({
         social_history: latest.social_history,
         treatment_type: latest.treatment_type,
         credit_hours: latest.credit_hours,
-        total_score: latest.total_score,
         examRows: examByAssessment.get(latest.id) ?? [],
         functional: pickFunctional(functionalByAssessment.get(latest.id)),
         balance: pickBalance(balanceByAssessment.get(latest.id)),
         coordination: pickCoordination(coordinationByAssessment.get(latest.id)),
+        previousScore: latestScores?.score ?? null,
       }
     : null;
 
@@ -450,6 +473,7 @@ async function PhysiotherapyContent({
         treatmentTypeOptions={treatmentTypeOptions}
         previous={previous}
         reviewAssessments={reviewAssessments}
+        scoresByAssessment={scoresByAssessment}
       />
     </>
   );

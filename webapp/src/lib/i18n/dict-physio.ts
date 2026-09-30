@@ -51,6 +51,33 @@ export const dictPhysio: Record<string, string> = {
   "No physiotherapy assessments yet.": "Belum ada penilaian fisioterapi.",
   "Documented by": "Didokumenkan oleh",
   Score: "Skor",
+  "Normalized Impairment": "Keweighan Normal",
+  "Normalized Impairment Trend": "Trend Keweighan Normal",
+  "Raw Impairment": "Keweighan Mentah",
+  "Items Assessed": "Item Dinilai",
+  "Assessment Coverage": "Liputan Penilaian",
+  "Latest Assessment Summary": "Ringkasan Penilaian Terkini",
+  "Clinical Timeline": "Garis Masa Klinikal",
+  "Category Breakdown": "Pecahan Kategori",
+  // Kept on ONE line each: check-i18n.mjs parses the dictionary
+  // line-by-line, so a key/value pair wrapped across two lines reads as
+  // missing even though TypeScript resolves it fine.
+  "Not enough scored assessments in this period to draw a trend.": "Tidak cukup penilaian bertokok dalam tempoh ini untuk melukis trend.",
+  "Higher normalized impairment = greater impairment among the fields assessed. Coverage is descriptive only.": "Keweighan normal yang lebih tinggi = lebih banyak keweighan di antara medan yang dinilai. Liputan adalah penerangan sahaja.",
+  "Coverage is partial — some fields in this assessment have no recorded value.": "Liputan separa — sesetengah medan dalam penilaian ini tiada nilai direkodkan.",
+  "Assessment Detail": "Butiran Penilaian",
+  "Date / Time": "Tarikh / Masa",
+  Treatment: "Rawatan",
+  Normalized: "Normal",
+  Coverage: "Liputan",
+  "Raw Score": "Skor Mentah",
+  "Clinical Note": "Nota Klinikal",
+  "Functional / Balance / Coordination Scores": "Skor Fungsian / Keseimbangan / Koordinasi",
+  // "Start date" (dict-common), "End date", "Close" and the duration pills
+  // ("1 Month"/"3 Months"/"6 Months"/"1 Year"/"All History"/"Custom") are
+  // deliberately NOT repeated here -- dict-common.ts and dict-clinical.ts
+  // already define them with identical values for the same controls, and
+  // duplicating the keys only makes check:i18n report a conflicting duplicate.
   "Current History": "Sejarah Semasa",
   "Past Medical History": "Sejarah Perubatan Lampau",
   "Social History": "Sejarah Sosial",
@@ -190,6 +217,7 @@ export const dictPhysio: Record<string, string> = {
 
   // sections/coordination-section.tsx
   Coordination: "Koordinasi",
+  Functional: "Fungsian",
   "Upper Limb": "Anggota Atas",
   "Lower Limb": "Anggota Bawah",
   Right: "Kanan",
@@ -253,9 +281,8 @@ export const dictPhysio: Record<string, string> = {
   "Credit Hours": "Jam Kredit",
 
   // sections/score-summary.tsx
-  "Score Summary": "Ringkasan Skor",
-  "Current Score": "Skor Semasa",
-  "Previous Score": "Skor Sebelumnya",
+  "Current Assessment": "Penilaian Semasa",
+  "Previous Assessment": "Penilaian Sebelumnya",
 
   // sections/subjective-section.tsx
   "Subjective Assessment": "Penilaian Subjektif",

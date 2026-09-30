@@ -266,7 +266,9 @@ export function ProgressNotesModule({
 
           <ResultNotice error={error} truncated={truncated} />
 
-          <ProgressNotesTimeline notes={noteRows} t={t} />
+          {/* Latest Clinical Status summarises a single resident's newest note, so
+              it is only meaningful when the picker has narrowed to one resident. */}
+          <ProgressNotesTimeline notes={noteRows} t={t} showLatestStatus={Boolean(currentResident)} />
         </>
       ) : (
         <NewProgressNoteForm

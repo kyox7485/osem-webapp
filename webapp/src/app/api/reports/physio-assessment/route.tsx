@@ -6,7 +6,7 @@ import { getPhysioIpBranchIds } from "@/lib/lookups";
 import { getReportBranchInfo } from "@/lib/pdf/branch-info";
 import { getLogoPath } from "@/lib/pdf/logo-path";
 import { PhysioAssessmentDocument, type PhysioAssessmentReportData } from "@/lib/pdf/documents/physio-assessment-document";
-import { EMPTY_BALANCE, EMPTY_COORDINATION, EMPTY_FUNCTIONAL } from "@/lib/physio-scoring";
+import { EMPTY_BALANCE, EMPTY_COORDINATION, EMPTY_FUNCTIONAL, scoreStoredAssessment, type ExamRow } from "@/lib/physio-scoring";
 
 export const runtime = "nodejs";
 
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       care_setting,
       entry_timestamp,
       treatment_type,
+      credit_hours,
       chief_complaint,
       current_history,
       past_medical_history,
@@ -69,6 +70,41 @@ export async function GET(request: NextRequest) {
     supabase.from("physio_coordination_assessments").select("*").eq("assessment_id", id).maybeSingle(),
   ]);
 
+  // Same canonical scoring pass the app uses, run on the rows already fetched
+  // below -- the PDF never re-derives a score by its own arithmetic.
+  const functional = functionalRaw
+    ? {
+        supine_to_side_lying: functionalRaw.supine_to_side_lying,
+        side_lying_to_sitting: functionalRaw.side_lying_to_sitting,
+        sitting_to_standing: functionalRaw.sitting_to_standing,
+        sit_at_edge_of_bed: functionalRaw.sit_at_edge_of_bed,
+        ambulation: functionalRaw.ambulation,
+      }
+    : EMPTY_FUNCTIONAL;
+  const balance = balanceRaw
+    ? {
+        sitting_static: balanceRaw.sitting_static,
+        sitting_dynamic: balanceRaw.sitting_dynamic,
+        standing_static: balanceRaw.standing_static,
+        standing_dynamic: balanceRaw.standing_dynamic,
+      }
+    : EMPTY_BALANCE;
+  const coordination = coordinationRaw
+    ? {
+        upper_limb_right: coordinationRaw.upper_limb_right,
+        upper_limb_left: coordinationRaw.upper_limb_left,
+        lower_limb_right: coordinationRaw.lower_limb_right,
+        lower_limb_left: coordinationRaw.lower_limb_left,
+      }
+    : EMPTY_COORDINATION;
+
+  const score = scoreStoredAssessment({
+    assessedExamRows: (examRowsRaw ?? []) as unknown as ExamRow[],
+    functional,
+    balance,
+    coordination,
+  });
+
   const reportData: PhysioAssessmentReportData = {
     entry_timestamp: assessment.entry_timestamp,
     patient_name: patientName,
@@ -77,7 +113,14 @@ export async function GET(request: NextRequest) {
     age: patient?.age ?? null,
     care_setting: assessment.care_setting,
     treatment_type: assessment.treatment_type,
+    credit_hours: assessment.credit_hours,
     total_score: assessment.total_score,
+    raw_score: score.rawScore,
+    raw_max: score.maxPossibleScore,
+    normalized_score: score.normalizedScore,
+    coverage_percent: score.coveragePercent,
+    assessed_item_count: score.assessedItemCount,
+    available_item_count: score.availableItemCount,
     chief_complaint: assessment.chief_complaint,
     current_history: assessment.current_history,
     past_medical_history: assessment.past_medical_history,
@@ -89,31 +132,9 @@ export async function GET(request: NextRequest) {
     documented_by_name: author?.staff_name ?? "--",
     examRows: examRowsRaw ?? [],
     bodyChart: bodyChartRaw ?? [],
-    functional: functionalRaw
-      ? {
-          supine_to_side_lying: functionalRaw.supine_to_side_lying,
-          side_lying_to_sitting: functionalRaw.side_lying_to_sitting,
-          sitting_to_standing: functionalRaw.sitting_to_standing,
-          sit_at_edge_of_bed: functionalRaw.sit_at_edge_of_bed,
-          ambulation: functionalRaw.ambulation,
-        }
-      : EMPTY_FUNCTIONAL,
-    balance: balanceRaw
-      ? {
-          sitting_static: balanceRaw.sitting_static,
-          sitting_dynamic: balanceRaw.sitting_dynamic,
-          standing_static: balanceRaw.standing_static,
-          standing_dynamic: balanceRaw.standing_dynamic,
-        }
-      : EMPTY_BALANCE,
-    coordination: coordinationRaw
-      ? {
-          upper_limb_right: coordinationRaw.upper_limb_right,
-          upper_limb_left: coordinationRaw.upper_limb_left,
-          lower_limb_right: coordinationRaw.lower_limb_right,
-          lower_limb_left: coordinationRaw.lower_limb_left,
-        }
-      : EMPTY_COORDINATION,
+    functional,
+    balance,
+    coordination,
   };
 
   const branch = await getReportBranchInfo(assessment.branch_id);

@@ -126,6 +126,11 @@ export async function createPhysioAssessment(
     return { success: false, error: "Access denied" };
   }
 
+  // total_score keeps its historical meaning -- the raw sum of assessed
+  // impairment points -- so the column stays comparable across every row
+  // already in the database. Normalized Impairment and Assessment Coverage
+  // are derived from the child rows on read rather than stored, so no
+  // existing score is ever rewritten.
   const totalScore = computePhysioScore(input.examRows, input.functional, input.balance, input.coordination);
 
   const { data: assessment, error: assessmentError } = await supabase

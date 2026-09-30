@@ -12,7 +12,19 @@ export type PhysioAssessmentReportData = {
   age: number | null;
   care_setting: "IP" | "OP";
   treatment_type: string | null;
+  credit_hours: number | null;
+  // Raw sum, kept verbatim from physio_assessments.total_score so every
+  // report already issued stays comparable.
   total_score: number | null;
+  // Raw impairment against the maximum possible for the fields assessed.
+  raw_score: number;
+  raw_max: number;
+  // Derived from the same child rows the app scores from, via the canonical
+  // scoring pass -- not a second formula living in the PDF layer.
+  normalized_score: number | null;
+  coverage_percent: number | null;
+  assessed_item_count: number;
+  available_item_count: number;
   chief_complaint: string | null;
   current_history: string | null;
   past_medical_history: string | null;
@@ -111,8 +123,22 @@ export function PhysioAssessmentDocument({
           items={[
             { label: "Gender", value: data.gender ?? "--" },
             { label: "Age", value: data.age !== null ? String(data.age) : "--" },
-            { label: "Total Score", value: data.total_score !== null ? String(data.total_score) : "--" },
+            { label: "Credit Hours", value: data.credit_hours !== null ? String(data.credit_hours) : "--" },
             { label: "Documented By", value: data.documented_by_name },
+          ]}
+        />
+
+        {/* Score block: the normalized impairment percentage is the primary
+            metric; the raw total_score is kept alongside it for continuity
+            with previously issued reports. Coverage is stated separately and
+            never folded into either number. */}
+        <InfoGrid
+          columns={4}
+          items={[
+            { label: "Normalized Impairment", value: data.normalized_score !== null ? `${data.normalized_score}%` : "--" },
+            { label: "Assessment Coverage", value: data.coverage_percent !== null ? `${data.coverage_percent}%` : "--" },
+            { label: "Raw Impairment", value: `${data.raw_score} / ${data.raw_max}` },
+            { label: "Items Assessed", value: `${data.assessed_item_count} / ${data.available_item_count}` },
           ]}
         />
 

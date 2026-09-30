@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  buildEmptyExamRows,
-  computePhysioScore,
+  buildFullExamGrid,
+  computePhysioScoreResult,
   EMPTY_BALANCE,
   EMPTY_COORDINATION,
   EMPTY_FUNCTIONAL,
@@ -13,6 +13,7 @@ import {
   type ExamRow,
   type FunctionalScores,
   type PhysioCareSetting,
+  type PhysioScoreResult,
   standardCreditHours,
   type TreatmentTypeOption,
 } from "@/lib/physio-scoring";
@@ -34,15 +35,8 @@ import { useTranslation } from "@/components/language-provider";
 import { OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 
 // previous.examRows only contains movements that actually had a score
-// (see actions.ts's filter before insert) -- merge those values into the
-// full grid so every movement/side still has a row to edit, not just the
-// ones previously assessed.
-function mergeExamRows(previousRows: ExamRow[] | undefined): ExamRow[] {
-  const empty = buildEmptyExamRows();
-  if (!previousRows || previousRows.length === 0) return empty;
-  const byKey = new Map(previousRows.map((r) => [`${r.limb}|${r.region}|${r.movement}|${r.side}`, r]));
-  return empty.map((row) => byKey.get(`${row.limb}|${row.region}|${row.movement}|${row.side}`) ?? row);
-}
+// (see actions.ts's filter before insert) -- buildFullExamGrid merges those
+// values into the full grid so every movement/side still has a row to edit.
 
 export type PreviousAssessment = {
   chief_complaint: string | null;
@@ -50,11 +44,15 @@ export type PreviousAssessment = {
   social_history: string | null;
   treatment_type: string | null;
   credit_hours: number | null;
-  total_score: number | null;
   examRows: ExamRow[];
   functional: FunctionalScores;
   balance: BalanceScores;
   coordination: CoordinationScores;
+  // The previous visit's full score bundle, so "Previous Assessment" in the
+  // score summary shows that visit's Normalized Impairment and Coverage
+  // rather than a bare raw total. Scored server-side from the stored child
+  // rows -- never reconstructed from the raw total_score column.
+  previousScore: PhysioScoreResult | null;
 };
 
 type Props = {
@@ -110,7 +108,7 @@ export function NewPhysioAssessmentForm({
   const [currentHistory, setCurrentHistory] = useState(previous?.current_history ?? "");
   const [socialHistory, setSocialHistory] = useState(previous?.social_history ?? "");
   const [bodyChart, setBodyChart] = useState<BodyChartEntry[]>([]);
-  const [examRows, setExamRows] = useState<ExamRow[]>(() => mergeExamRows(previous?.examRows));
+  const [examRows, setExamRows] = useState<ExamRow[]>(() => buildFullExamGrid(previous?.examRows));
   const [functional, setFunctional] = useState<FunctionalScores>(previous?.functional ?? EMPTY_FUNCTIONAL);
   const [balance, setBalance] = useState<BalanceScores>(previous?.balance ?? EMPTY_BALANCE);
   const [coordination, setCoordination] = useState<CoordinationScores>(previous?.coordination ?? EMPTY_COORDINATION);
@@ -124,7 +122,7 @@ export function NewPhysioAssessmentForm({
   const [isSaving, setIsSaving] = useState(false);
 
   const currentScore = useMemo(
-    () => computePhysioScore(examRows, functional, balance, coordination),
+    () => computePhysioScoreResult(examRows, functional, balance, coordination),
     [examRows, functional, balance, coordination]
   );
 
@@ -273,7 +271,7 @@ export function NewPhysioAssessmentForm({
 
       <FunctionalSection value={functional} onChange={setFunctional} />
 
-      <ScoreSummary currentScore={currentScore} previousScore={previous?.total_score ?? null} />
+      <ScoreSummary current={currentScore} previous={previous?.previousScore ?? null} />
 
       <NarrativeSection
         impression={impression}

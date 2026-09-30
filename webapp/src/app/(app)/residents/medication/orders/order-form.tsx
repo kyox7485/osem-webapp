@@ -7,57 +7,19 @@ import { createOrderAction, updateOrderAction, type OrderFormValues } from "./or
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import type { LookupOption } from "@/lib/types";
 import { useDirtyForm } from "@/lib/dirty-form-context";
-
-// ── Constants ────────────────────────────────────────────────────────────────
-
-const DOSAGE_FORM_OPTIONS = [
-  "Tablet", "Capsule", "Powder", "Syrup", "Cream", "Ointment", "Lotion",
-  "Gel", "Patch", "Ear Drop", "Eye Drop", "S/C Injection", "I/M Injection", "Neb.", "Inhaler",
-];
-
-const UNIT_OPTIONS = ["Tablet", "Capsule", "ml", "Sachet", "Unit", "Application", "Ampoule", "Puff", "Drop"];
-
-const FREQUENCY_OPTIONS = ["OD", "BD", "TDS", "QID", "ON", "EOD", "Every 3 Days", "PRN", "Selected Days", "Others"];
-
-const DAY_OPTIONS = ["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-const TIME_SLOTS = [
-  "1200AM", "0100AM", "0200AM", "0300AM", "0400AM", "0500AM",
-  "0600AM", "0700AM", "0800AM", "0900AM", "1000AM", "1100AM",
-  "1200PM", "0100PM", "0200PM", "0300PM", "0400PM", "0500PM",
-  "0600PM", "0700PM", "0800PM", "0900PM", "1000PM", "1100PM",
-];
-
-const FREQ_TIME_DEFAULTS: Record<string, string[]> = {
-  OD:  ["0800AM"],
-  BD:  ["0800AM", "0600PM"],
-  TDS: ["0800AM", "1200PM", "0600PM"],
-  QID: ["0800AM", "1200PM", "0600PM", "1000PM"],
-  ON:  ["1000PM"],
-};
-
-const DOSAGE_FORM_TO_UNIT_MAP: Record<string, string> = {
-  "Tablet": "Tablet",
-  "Capsule": "Capsule",
-  "Powder": "Sachet",
-  "Syrup": "ml",
-  "Cream": "Application",
-  "Ointment": "Application",
-  "Lotion": "Application",
-  "Gel": "Application",
-  "Patch": "Unit",
-  "Ear Drop": "Drop",
-  "Eye Drop": "Drop",
-  "S/C Injection": "Unit",
-  "I/M Injection": "Unit",
-  "Neb.": "Unit",
-  "Inhaler": "Puff",
-  "Others": "Unit",
-};
-
-function getDefaultUnitForDosageForm(dosageForm: string): string | null {
-  return DOSAGE_FORM_TO_UNIT_MAP[dosageForm] ?? null;
-}
+import {
+  DOSAGE_FORM_OPTIONS,
+  UNIT_OPTIONS,
+  FREQUENCY_OPTIONS,
+  DAY_OPTIONS,
+  TIME_SLOTS,
+  FREQ_TIME_DEFAULTS,
+  getDefaultUnitForDosageForm,
+  medInputCls as inputCls,
+  medLabelCls as labelCls,
+  ToggleGroup,
+  ChipSelector,
+} from "@/components/medication-form-shared";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -93,11 +55,6 @@ const NO_RESIDENTS: ResidentOption[] = [];
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-const inputCls =
-  "w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg placeholder-fg-faint focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-surface-muted disabled:text-fg-faint";
-
-const labelCls = "block text-xs font-medium text-fg-muted mb-1";
-
 function Field({
   label,
   required,
@@ -127,77 +84,6 @@ function SectionHeading({ title }: { title: string }) {
     <h3 className="col-span-full text-xs font-semibold uppercase tracking-wide text-fg-faint mt-2 mb-1 border-b border-line-subtle pb-1">
       {title}
     </h3>
-  );
-}
-
-function ToggleGroup({
-  options,
-  value,
-  onChange,
-  disabled,
-  t,
-}: {
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-  t: (text: string) => string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          disabled={disabled}
-          className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50
-            ${value === opt
-              ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
-              : "border-line-strong bg-surface text-fg-muted hover:bg-hover"
-            }`}
-        >
-          {t(opt)}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ChipSelector({
-  options,
-  selected,
-  onToggle,
-  disabled,
-  t,
-}: {
-  options: string[];
-  selected: string[];
-  onToggle: (v: string) => void;
-  disabled?: boolean;
-  t: (text: string) => string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((opt) => {
-        const isSelected = selected.includes(opt);
-        return (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onToggle(opt)}
-            disabled={disabled}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40
-              ${isSelected
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-line bg-surface text-fg-muted hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
-              }`}
-          >
-            {t(opt)}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

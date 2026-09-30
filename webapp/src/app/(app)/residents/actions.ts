@@ -5,6 +5,18 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { createMedicationOrder } from "@/lib/medication-orders-script";
+import crypto from "crypto";
+import type { MedicationDraft } from "@/components/admission-medications";
+
+async function generateRxOrderId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const id = crypto.randomBytes(4).toString("hex");
+    const { data } = await supabase.from("tbl_medication_orders").select("id").eq("external_ref_id", id).maybeSingle();
+    if (!data) return id;
+  }
+  throw new Error("Failed to generate unique RxOrderID after 10 attempts");
+}
 
 function optional(value: FormDataEntryValue | null): string | null {
   const s = value?.toString().trim();
@@ -186,8 +198,58 @@ export async function createResident(formData: FormData) {
 
   await sendTelegramMessage(lines, branchChatId);
 
+  // Create admission medication orders via Apps Script bridge
+  let medFailCount = 0;
+  const medicationDraftsJson = formData.get("medication_drafts");
+  if (typeof medicationDraftsJson === "string" && medicationDraftsJson) {
+    try {
+      const drafts = JSON.parse(medicationDraftsJson) as Array<Omit<MedicationDraft, "draftId">>;
+      if (drafts.length > 0) {
+        const { data: residentRow } = await supabase
+          .from("tbl_residents")
+          .select("ResidentID")
+          .eq("id", data.id)
+          .single();
+        if (residentRow?.ResidentID) {
+          for (const draft of drafts) {
+            try {
+              const rxOrderId = await generateRxOrderId(supabase);
+              await createMedicationOrder({
+                RxOrderID: rxOrderId,
+                ResidentID: residentRow.ResidentID,
+                "Dosage Form": draft.dosageForm,
+                "Brand Name": draft.brandName,
+                "Active Ingredient": draft.activeIngredient,
+                Dose: draft.dose,
+                Unit: draft.unit,
+                Frequency: draft.frequency,
+                "Administration Times": draft.administrationTimes,
+                "Dosing Days": draft.dosingDays,
+                Indication: draft.indication,
+                Instruction: draft.instruction,
+                "Duration Type": draft.durationType,
+                "Start Date": draft.startDate,
+                "End Date": draft.endDate,
+                "Noted By": draft.notedBy,
+                "Ordered By": draft.orderedBy,
+                "Supplied By": draft.suppliedBy,
+                Status: draft.status || "Active",
+                PreviousRxOrderID: "",
+              });
+            } catch (err) {
+              console.error("[createResident] Failed to create admission medication order:", err);
+              medFailCount++;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[createResident] Failed to parse medication_drafts:", err);
+    }
+  }
+
   revalidatePath("/residents");
-  redirect(`/residents/${data.id}`);
+  redirect(medFailCount > 0 ? `/residents/${data.id}?med_fail=${medFailCount}` : `/residents/${data.id}`);
 }
 
 export async function dischargeResident(residentId: number, formData: FormData) {

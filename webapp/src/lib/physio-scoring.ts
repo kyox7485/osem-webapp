@@ -162,6 +162,43 @@ export function buildEmptyExamRows(): ExamRow[] {
   return rows;
 }
 
+/**
+ * The complete exam grid with `assessedRows`' values merged in, everything
+ * else left null.
+ *
+ * Two callers need exactly this, which is why it lives here rather than
+ * being written twice:
+ *
+ *  - The New Entry form, to carry the previous assessment's values forward
+ *    into a full grid of movements to edit (the stored rows only cover the
+ *    movements that were actually scored).
+ *  - The review/analytics readers, so a stored assessment is scored against
+ *    the SAME available-item count as a fresh one -- Assessment Coverage
+ *    would otherwise be meaningless if the denominator shrank with the
+ *    number of rows that happened to be persisted.
+ */
+export function buildFullExamGrid(assessedRows: ExamRow[] | undefined): ExamRow[] {
+  const empty = buildEmptyExamRows();
+  if (!assessedRows || assessedRows.length === 0) return empty;
+  const byKey = new Map(assessedRows.map((r) => [`${r.limb}|${r.region}|${r.movement}|${r.side}`, r]));
+  return empty.map((row) => byKey.get(`${row.limb}|${row.region}|${row.movement}|${row.side}`) ?? row);
+}
+
+/** Scores one persisted assessment against the full grid. The read-side twin of the form's live score. */
+export function scoreStoredAssessment(input: {
+  assessedExamRows: ExamRow[] | undefined;
+  functional: FunctionalScores;
+  balance: BalanceScores;
+  coordination: CoordinationScores;
+}): PhysioScoreResult {
+  return computePhysioScoreResult(
+    buildFullExamGrid(input.assessedExamRows),
+    input.functional,
+    input.balance,
+    input.coordination
+  );
+}
+
 export type FunctionalScores = {
   supine_to_side_lying: number | null;
   side_lying_to_sitting: number | null;
@@ -206,35 +243,186 @@ export const EMPTY_COORDINATION: CoordinationScores = {
   lower_limb_left: null,
 };
 
-function sumDefined(values: (number | null)[]): number {
-  return values.reduce((total: number, v) => (v === null ? total : total + v), 0);
+// Maximum impairment each scale can express. These are the real per-field
+// ceilings from the option lists above -- deliberately NOT one flat
+// denominator, because an assessment with 100 recorded fields and one with
+// 20 recorded fields must both normalize to the same 0-100% range.
+export const SCORE_MAX = {
+  power: 5,
+  tone: 4,
+  rom: 4,
+  reflexes: 4,
+  functional: 4,
+  balance: 3,
+  coordination: 4,
+} as const;
+
+export const PHYSIO_CATEGORY_KEYS = ["examination", "functional", "balance", "coordination"] as const;
+export type PhysioCategoryKey = (typeof PHYSIO_CATEGORY_KEYS)[number];
+
+export const PHYSIO_CATEGORY_LABELS: Record<PhysioCategoryKey, string> = {
+  examination: "Physical Examination",
+  functional: "Functional",
+  balance: "Balance",
+  coordination: "Coordination",
+};
+
+// One category's slice of the score. normalizedScore is null when nothing in
+// that category was assessed -- never 0, which is a real reading.
+export type PhysioCategoryScore = {
+  rawScore: number;
+  maxPossibleScore: number;
+  assessedItemCount: number;
+  normalizedScore: number | null;
+};
+
+// The result of one canonical scoring pass, shared verbatim by the client
+// (live "Current Assessment" preview) and the server action (the value
+// actually persisted), so the two can never disagree.
+export type PhysioScoreResult = {
+  /** Sum of assessed impairment points -- what physio_assessments.total_score stores. */
+  rawScore: number;
+  /** Sum of the maxima of every field that actually holds a value. */
+  maxPossibleScore: number;
+  /** rawScore / maxPossibleScore * 100, rounded to 1dp. null when nothing is assessed. */
+  normalizedScore: number | null;
+  /** How many scorable fields carry a value. */
+  assessedItemCount: number;
+  /** How many scorable fields exist in the grid this assessment was scored against. */
+  availableItemCount: number;
+  /** assessedItemCount / availableItemCount * 100, rounded to 1dp. null when there are no fields at all. */
+  coveragePercent: number | null;
+  categories: Record<PhysioCategoryKey, PhysioCategoryScore>;
+};
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
 }
 
-// Pure, synchronous, no I/O -- imported by both the client (live "Current
-// Score" preview) and the server action (the value actually persisted), so
-// the two can never disagree. Every null/unassessed field is skipped
-// entirely, never coerced to 0. Power is inverted (5 - power) to match the
-// Excel's hidden score column: it's the only field whose raw grade runs
-// 0=worst..5=normal, opposite of every other field's 0=normal..higher=worse
-// direction, so it has to be flipped before summing with the rest.
+function normalize(raw: number, max: number): number | null {
+  if (max <= 0) return null;
+  return round1((raw / max) * 100);
+}
+
+type FieldAccumulator = {
+  rawScore: number;
+  maxPossibleScore: number;
+  assessedItemCount: number;
+};
+
+// `impairment` maps a stored grade to its impairment points (Power is
+// inverted, everything else already increases with impairment) and `max` is
+// that field's ceiling. A null grade contributes to neither accumulator --
+// "not assessed" is never 0.
+function accumulateField(
+  acc: FieldAccumulator,
+  grade: number | null,
+  impairment: (grade: number) => number,
+  max: number
+): void {
+  if (grade === null) return;
+  acc.rawScore += impairment(grade);
+  acc.maxPossibleScore += max;
+  acc.assessedItemCount += 1;
+}
+
+function finishCategory(acc: FieldAccumulator): PhysioCategoryScore {
+  return {
+    rawScore: acc.rawScore,
+    maxPossibleScore: acc.maxPossibleScore,
+    assessedItemCount: acc.assessedItemCount,
+    normalizedScore: normalize(acc.rawScore, acc.maxPossibleScore),
+  };
+}
+
+function emptyAccumulator(): FieldAccumulator {
+  return { rawScore: 0, maxPossibleScore: 0, assessedItemCount: 0 };
+}
+
+function accumulateGroup(acc: FieldAccumulator, values: (number | null)[], max: number): void {
+  for (const value of values) {
+    accumulateField(acc, value, (v) => v, max);
+  }
+}
+
+/**
+ * THE canonical physio scoring pass. Pure, synchronous, no I/O.
+ *
+ * The historical `total_score` column is a raw sum of assessed impairment
+ * points and stays that way -- it is kept verbatim for audit/history. But a
+ * raw sum is not comparable across assessments, because two assessments can
+ * have very different numbers of assessed fields (20 fields scoring 20 looks
+ * "better" than 100 fields scoring 50 purely on volume). The primary
+ * longitudinal metric is therefore `normalizedScore`:
+ *
+ *     raw impairment / maximum possible impairment x 100
+ *
+ * with the maximum built per-field from the real scale ceilings, over only
+ * the fields that actually hold a value. Higher = greater impairment among
+ * the fields assessed. `coveragePercent` is a SEPARATE descriptive metric --
+ * how much of the grid carries a value -- and is deliberately not folded into
+ * the impairment score.
+ */
+export function computePhysioScoreResult(
+  examRows: ExamRow[],
+  functional: FunctionalScores,
+  balance: BalanceScores,
+  coordination: CoordinationScores
+): PhysioScoreResult {
+  const exam = emptyAccumulator();
+
+  for (const row of examRows) {
+    accumulateField(exam, row.power, (power) => SCORE_MAX.power - power, SCORE_MAX.power);
+    accumulateField(exam, row.tone, (tone) => tone, SCORE_MAX.tone);
+    accumulateField(exam, row.rom, (rom) => rom, SCORE_MAX.rom);
+    accumulateField(exam, row.reflexes, (reflexes) => reflexes, SCORE_MAX.reflexes);
+  }
+
+  const functionalAcc = emptyAccumulator();
+  accumulateGroup(functionalAcc, Object.values(functional), SCORE_MAX.functional);
+
+  const balanceAcc = emptyAccumulator();
+  accumulateGroup(balanceAcc, Object.values(balance), SCORE_MAX.balance);
+
+  const coordinationAcc = emptyAccumulator();
+  accumulateGroup(coordinationAcc, Object.values(coordination), SCORE_MAX.coordination);
+
+  const rawScore = exam.rawScore + functionalAcc.rawScore + balanceAcc.rawScore + coordinationAcc.rawScore;
+  const maxPossibleScore =
+    exam.maxPossibleScore + functionalAcc.maxPossibleScore + balanceAcc.maxPossibleScore + coordinationAcc.maxPossibleScore;
+  const assessedItemCount =
+    exam.assessedItemCount + functionalAcc.assessedItemCount + balanceAcc.assessedItemCount + coordinationAcc.assessedItemCount;
+
+  // Coverage is measured against the grid this assessment was actually scored
+  // against: 4 exam fields per row, plus the fixed functional/balance/
+  // coordination field counts.
+  const availableItemCount = examRows.length * 4 + 5 + 4 + 4;
+
+  return {
+    rawScore,
+    maxPossibleScore,
+    normalizedScore: normalize(rawScore, maxPossibleScore),
+    assessedItemCount,
+    availableItemCount,
+    coveragePercent: availableItemCount > 0 ? round1((assessedItemCount / availableItemCount) * 100) : null,
+    categories: {
+      examination: finishCategory(exam),
+      functional: finishCategory(functionalAcc),
+      balance: finishCategory(balanceAcc),
+      coordination: finishCategory(coordinationAcc),
+    },
+  };
+}
+
+/**
+ * The raw sum only -- what physio_assessments.total_score stores. Kept as the
+ * exported name the server action already calls; identical value to before.
+ */
 export function computePhysioScore(
   examRows: ExamRow[],
   functional: FunctionalScores,
   balance: BalanceScores,
   coordination: CoordinationScores
 ): number {
-  let total = 0;
-
-  for (const row of examRows) {
-    if (row.power !== null) total += 5 - row.power;
-    if (row.tone !== null) total += row.tone;
-    if (row.rom !== null) total += row.rom;
-    if (row.reflexes !== null) total += row.reflexes;
-  }
-
-  total += sumDefined(Object.values(functional));
-  total += sumDefined(Object.values(balance));
-  total += sumDefined(Object.values(coordination));
-
-  return total;
+  return computePhysioScoreResult(examRows, functional, balance, coordination).rawScore;
 }

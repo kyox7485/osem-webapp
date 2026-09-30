@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { NewPhysioAssessmentForm, type PreviousAssessment } from "./new-physio-assessment-form";
 import { PhysioAssessmentReview, type ReviewAssessment } from "./assessment-review";
+import type { ReviewScoresByAssessment } from "./review-scores";
 import type { LookupOption } from "@/lib/types";
 import type { PhysioCareSetting, TreatmentTypeOption } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
@@ -28,6 +29,8 @@ type Props = {
   treatmentTypeOptions: TreatmentTypeOption[];
   previous: PreviousAssessment | null;
   reviewAssessments: ReviewAssessment[];
+  /** Per-assessment score bundles, computed server-side. */
+  scoresByAssessment: ReviewScoresByAssessment;
 };
 
 export function PhysioAssessmentTabs({
@@ -43,6 +46,7 @@ export function PhysioAssessmentTabs({
   treatmentTypeOptions,
   previous,
   reviewAssessments,
+  scoresByAssessment,
 }: Props) {
   const t = useTranslation();
   const { guardedAction } = useSafeNavigation();
@@ -63,7 +67,11 @@ export function PhysioAssessmentTabs({
       </TabRow>
 
       {tab === "review" ? (
-        <PhysioAssessmentReview assessments={reviewAssessments} />
+        <PhysioAssessmentReview
+          assessments={reviewAssessments}
+          scoresByAssessment={scoresByAssessment}
+          residentId={residentId}
+        />
       ) : residentId && residentName ? (
         <NewPhysioAssessmentForm
           residentId={residentId}

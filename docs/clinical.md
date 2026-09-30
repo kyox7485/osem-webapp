@@ -65,6 +65,52 @@ confirming navigates to `/accounts/[id]/edit`. The view page
 from the list. The modal is implemented in `accounts/accounts-table.tsx`
 (client component), keeping the list page itself a server component.
 
+## Physiotherapy scoring — Normalized Impairment Score
+
+`webapp/src/lib/physio-scoring.ts` holds the **single canonical scoring
+pass**, `computePhysioScoreResult()`, imported by both the client (the live
+"Current Assessment" preview) and the server (the PDF route), so the two can
+never disagree. Do not re-implement the arithmetic anywhere else.
+
+Two distinct metrics come out of one pass, and they are **never combined**:
+
+- **Normalized Impairment Score** — `raw impairment / maximum possible
+  impairment × 100`, over only the fields that hold a value. Higher = greater
+  impairment among the fields assessed. `null` when nothing is assessed.
+  Without it, two assessments with different numbers of assessed fields
+  aren't comparable (20 fields scoring 20 vs 100 fields scoring 50).
+- **Assessment Coverage** — how many available scorable fields carry a
+  value. Purely descriptive. It does **not** mean "reassessed this visit":
+  the New Entry form carries the previous assessment's values forward and
+  the data model has no per-field "newly reassessed" flag.
+
+Per-field maxima (never one flat denominator): Power 5, Tone 4, ROM 4,
+Reflexes 4, Functional 4, Balance 3, Coordination 4. Power is inverted
+(`5 - power`) because it is the only scale running 0=worst..5=normal; every
+other scale already increases with impairment. `null` means *Not assessed*
+and contributes to **neither** numerator nor denominator — it is never 0.
+
+`physio_assessments.total_score` keeps its historical meaning (the raw sum)
+and no historical row is rewritten. Normalized score and coverage are derived
+from the child rows on read (`scoreStoredAssessment()`), so no duplicated
+columns were added.
+
+Read-side scoring runs against `buildFullExamGrid()` — the persisted exam
+rows merged into the full 76-row grid — because only scored movements are
+actually persisted. The same helper backs the form's carry-forward, so the
+coverage denominator is identical for a fresh form and a stored note.
+
+Review Notes (`assessment-review.tsx`) shows a Normalized Impairment trend,
+the latest assessment summary with a category breakdown, and a clinical
+timeline that opens the full detail in a modal. Trend and summary render only
+when one patient is selected; the all-patients list deliberately loads **no**
+child rows (`score: null`, cells read "—") to stay lightweight.
+
+**Wording rule:** no invented clinical thresholds and no
+improved/worsened/delta commentary. This is an impairment measure over the
+fields assessed; it is not a dependency score and does not represent overall
+patient dependency on its own.
+
 ## Physiotherapy dirty-tracking bridge
 
 Physiotherapy had a pre-existing module-local dirty-tracking
