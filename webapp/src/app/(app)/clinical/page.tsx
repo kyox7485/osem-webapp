@@ -336,7 +336,7 @@ export default async function ClinicalPage({
         ? await Promise.all([
             supabase
               .from("tbl_nursing_chart_meals")
-              .select("chart_entry_id, meal_type_id, meal_type_other, meal_portion_id, meal_portion_other, feeding_time_id, feeding_volume")
+              .select("chart_entry_id, meal_type_id, meal_type_other, meal_portion_id, meal_portion_other, feeding_time_id, feeding_volume, aspirate_amount")
               .in("chart_entry_id", entryIds),
             supabase
               .from("tbl_nursing_chart_hygiene_episodes")
@@ -362,6 +362,7 @@ export default async function ClinicalPage({
     const feedingTimeById = byId(nursingChartLookups.feedingTimes);
 
     const mealsByEntry = new Map<number, string[]>();
+    const rawMealsByEntry = new Map<number, any[]>();
     (mealsRaw ?? []).forEach((m: any) => {
       const parts = [
         m.meal_type_other || mealTypeById.get(m.meal_type_id),
@@ -372,24 +373,35 @@ export default async function ClinicalPage({
       const list = mealsByEntry.get(m.chart_entry_id) ?? [];
       list.push(parts.join(" - "));
       mealsByEntry.set(m.chart_entry_id, list);
+      const rawList = rawMealsByEntry.get(m.chart_entry_id) ?? [];
+      rawList.push(m);
+      rawMealsByEntry.set(m.chart_entry_id, rawList);
     });
 
     const hygieneByEntry = new Map<number, string[]>();
+    const rawHygieneByEntry = new Map<number, any[]>();
     (hygieneRaw ?? []).forEach((h: any) => {
       const activities = (h.activity_ids ?? []).map((id: number) => hygieneActivityById.get(id)).filter(Boolean);
       if (activities.length === 0) return;
       const list = hygieneByEntry.get(h.chart_entry_id) ?? [];
       list.push(`${h.assistance_level}: ${activities.join(", ")}`);
       hygieneByEntry.set(h.chart_entry_id, list);
+      const rawList = rawHygieneByEntry.get(h.chart_entry_id) ?? [];
+      rawList.push(h);
+      rawHygieneByEntry.set(h.chart_entry_id, rawList);
     });
 
     const eliminationByEntry = new Map<number, string[]>();
+    const rawEliminationByEntry = new Map<number, any[]>();
     (eliminationRaw ?? []).forEach((ep: any) => {
       const parts = [...(ep.bowel_output_ids ?? []).map((id: number) => bowelById.get(id)), urineById.get(ep.pass_urine_id)].filter(Boolean);
       if (parts.length === 0) return;
       const list = eliminationByEntry.get(ep.chart_entry_id) ?? [];
       list.push(parts.join(", "));
       eliminationByEntry.set(ep.chart_entry_id, list);
+      const rawList = rawEliminationByEntry.get(ep.chart_entry_id) ?? [];
+      rawList.push(ep);
+      rawEliminationByEntry.set(ep.chart_entry_id, rawList);
     });
 
     const mapIds = (ids: number[] | null, table: Map<number, string>) => (ids ?? []).map((id) => table.get(id)).filter((v): v is string => !!v);
@@ -429,6 +441,13 @@ export default async function ClinicalPage({
         hygiene_labels: hygieneByEntry.get(e.id) ?? [],
         resident_name: resident?.resident_name ?? "--",
         entered_by_name: author?.staff_name ?? e.created_by_other ?? "--",
+        raw_meals: rawMealsByEntry.get(e.id) ?? [],
+        raw_hygiene: rawHygieneByEntry.get(e.id) ?? [],
+        raw_elimination: rawEliminationByEntry.get(e.id) ?? [],
+        activity_ids: e.activity_ids ?? null,
+        disturbance_level_ids: e.disturbance_level_ids ?? null,
+        psycho_social_behaviour_ids: e.psycho_social_behaviour_ids ?? null,
+        active_complaint_ids: e.active_complaint_ids ?? null,
       };
     });
   } else if (currentTab === "hospital-referral") {
