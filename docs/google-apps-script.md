@@ -411,6 +411,99 @@ its own duplicate-global-name hazards (e.g. `writeFamilyReminderRows` and
 `testFamilyReminderList` are defined in both `FamilyReminder.gs` and
 `FamilyReminderResident.gs` with different signatures).
 
+### Branch chart batching — beating the 6-minute limit
+
+Apps Script caps a single execution at **6 minutes**. A branch medication
+chart builds one page-set *per resident* and then exports the whole
+workbook to PDF, so a large branch reliably overran the cap and the job
+died mid-run, leaving a temporary workbook in Drive and the browser
+spinning forever. `action=branchchart` is therefore **resumable** — see
+[Resumable branch charts](#resumable-branch-charts) below.
+
+Every other action (`chart`, `purchase`, `family`, `familyrequest`,
+`familyconsumable`, `medsummary`) is still a single synchronous call.
+
+#### Resumable branch charts
+
+The live implementation is the **browser-driven** one in `PDFengine.gs`.
+`generateReportForWeb()` short-circuits `branchchart` to
+`processBranchMedicationChartWebBatch()` and returns; every other action
+falls through to the original synchronous `switch`.
+
+One call does a bounded amount of work, then hands control back:
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `BRANCH_WEB_BATCH_MAX_RESIDENTS` | `3` | residents per web call |
+| `BRANCH_WEB_BATCH_MAX_RUNTIME_MS` | `150 * 1000` | wall-clock cap per web call, well under the 6-min execution limit |
+| `BRANCH_WEB_BATCH_PREFIX` | `OSEM_BRANCH_WEB_BATCH_` | Script Properties key prefix for job state |
+
+The loop stops on whichever of the two caps hits first, so one slow
+resident cannot blow the budget by itself.
+
+State lives in `PropertiesService` under
+`OSEM_BRANCH_WEB_BATCH_<executionId>` and holds only primitives and the
+`residentIds` array — `residentIndex`, `completedPages`, `totalPages`,
+`totalResidents`, `tempFileId`, `tempSpreadsheetId`, `sourceSpreadsheetId`,
+`status`. It is saved **after every resident**, so an abandoned run resumes
+rather than restarting. `Loading.html` drives the loop: on
+`result.async === true` it calls `scheduleNextBranchBatch()` and fires the
+next `generateReportForWeb()`; when a call finally returns `success` +
+`pdfUrl` it stops the loop and shows the PDF.
+
+The PDF workbook is created **once**, by `initializeBranchWebBatchState()`,
+and lives in Drive for the whole job. Each resident's finished pages are
+copied into it with `copyBranchChartSheetsToTemporaryWorkbook()`, then
+`deleteBranchWebBatchSourceSheets()` removes them from the source workbook
+— otherwise a 30-resident run accumulates 30 page-sets in the source sheet.
+
+Two properties make the browser-driven design the deliberate choice over a
+time-driven trigger, and both are load-bearing:
+
+- **The active spreadsheet.** Every batch call runs
+  `SpreadsheetApp.getActiveSpreadsheet()` and throws if it does not match
+  `state.sourceSpreadsheetId`. That is only reliable in the Web App's
+  context, which binds the container spreadsheet — a time-driven trigger
+  has no active spreadsheet.
+- **No trigger authorisation.** Because the browser drives the loop there
+  is no `ScriptApp.newTrigger()` call and so no permission prompt to
+  pre-grant before first live use.
+
+A failed resident is **skipped, not fatal** — its partial sheets are
+cleaned up, `residentIndex` advances, progress reports "skipped", and the
+branch PDF still finishes with the remaining residents. That matches the
+pre-batching behaviour and is deliberate.
+
+`cleanupStaleBranchWebBatchStates()` reclaims abandoned jobs: any state
+older than 6 hours has its temporary Drive workbook deleted and its
+property removed. **It currently has no caller** — see Gotcha 16.
+
+#### `BranchChartBatch.gs` — the superseded trigger-based worker
+
+This file is an **earlier, alternative implementation** of the same
+batching idea, using one-shot time-driven triggers
+(`processBranchMedicationChartJob`) chained off each other with
+`BRANCH_BATCH_MAX_RESIDENTS = 5` / `BRANCH_BATCH_MAX_RUNTIME_MS = 4 min`
+and a `OSEM_BRANCH_CHART_JOB_` state prefix. **Nothing calls into it** —
+`generateReportForWeb()` routes to the `PDFengine.gs` web-batch path
+instead. It is kept only as a reference for the trigger-chaining pattern
+and for `authorizeBranchChartBatchTriggers()`. Prefer editing the
+`PDFengine.gs` path; do not wire this one up without first resolving the
+`getActiveSpreadsheet()` constraint noted above.
+
+#### `ChartGenerator.gs` — what got faster
+
+Independently of batching, the per-page write cost came down:
+
+- `SpreadsheetApp.flush()` was called **before and after every chart page**.
+  Those flushes are gone; one flush per resident remains.
+- Medication values and the whole 31-day serving matrix are written with
+  batched `setValues()` calls instead of cell-by-cell writes.
+
+Chart layout, the template, the `xxxx` non-serving-day rule and the PRN
+generator are untouched — see `docs/medication-chart-dosing-days.md` for the
+one `shouldPrepareMedicineOnDay` rule that must stay shared.
+
 ---
 
 ## Deployment
@@ -436,6 +529,11 @@ Per project:
   `setupMedicationStockTriggers()`.
 - **wound-photo-drive** — paste as `Code.gs`, replace `SHARED_SECRET`, deploy
   as "Me" / "Anyone".
+- **Appsheet PDF Generation** — same paste-and-redeploy rule per file. The
+  branch chart batching needs **no** setup step (the browser drives it), but
+  `ChartGenerator.gs`, `PDFengine.gs` and `Loading.html` must all be pasted
+  **in the same deploy** or the resumable loop and the client that drives it
+  will disagree.
 
 The Apps Script project's real source of truth is the separate
 `osemmedicare/test` repo; this folder is the reference copy used for
@@ -560,6 +658,17 @@ Ordered roughly by how likely they are to bite.
     frozen. Test helpers hard-code real resident codes (`AMN-138`,
     `BMN-0145`) and a live `/exec` URL — useful, but do not copy them into
     new code.
+
+16. **An abandoned branch chart job leaks a Drive workbook.** If the user
+    closes the `Loading.html` tab mid-run, the browser-driven loop simply
+    stops — no execution is left running to notice that. The
+    `OSEM_BRANCH_WEB_BATCH_*` Script Property and its temporary workbook in
+    Drive both persist. `cleanupStaleBranchWebBatchStates()` exists to
+    reclaim them after 6 hours but is **never called**, so the leak is real
+    until it is wired to something. When adding a caller, note it deletes
+    the temp workbook of anything older than 6 hours — including a
+    legitimately long branch job, so the cutoff must stay above the worst
+    realistic run time.
 
 ---
 

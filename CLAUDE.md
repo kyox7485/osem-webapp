@@ -134,7 +134,11 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   projects and their **opposite** directions (Supabase→Sheets mirror vs.
   Sheets→Supabase source of truth), all webhook routes, trigger cadences,
   the webapp↔script contract, redeploy requirement, and the known gaps
-  (unauthenticated staff webhook, duplicate function definitions).
+  (unauthenticated staff webhook, duplicate function definitions). Also
+  covers the **resumable branch medication chart** that works around
+  Apps Script's 6-minute execution cap (browser-driven batches of 3
+  residents, `PropertiesService` job state, `BranchChartBatch.gs`
+  superseded).
 - `docs/integrations.md` — Google Drive (wound photos) and Apps Script
   redeploy mechanics; Telegram per-branch setup.
 - `docs/clinical.md` — modules-at-a-glance, Wound Photo body-chart,
