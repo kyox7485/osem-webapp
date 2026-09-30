@@ -75,6 +75,12 @@ export type ProductMeta = {
   baseUomCode: string;
 };
 
+/** UOM id -> code, for the products' base units. */
+async function loadUomCodes(sb: Sb, ids: number[]): Promise<Map<number, string>> {
+  const rows = await fetchByIds<{ id: number; code: string }>(sb, "tbl_inv_uoms", "id, code", "id", ids);
+  return new Map(rows.map((u) => [Number(u.id), u.code]));
+}
+
 /** Every product the caller can see (RLS), keyed by id. */
 export async function loadProductMeta(sb: Sb): Promise<Map<number, ProductMeta>> {
   const rows = await fetchRows<{
@@ -84,8 +90,12 @@ export async function loadProductMeta(sb: Sb): Promise<Map<number, ProductMeta>>
     category_id: number;
     is_active: boolean;
     default_supplier_id: number | null;
-    base_uom: { code: string } | null;
-  }>(() => sb.from("tbl_inv_products").select("id, sku, name, category_id, is_active, default_supplier_id, base_uom(code)").order("id"), 20000);
+    base_uom_id: number;
+  }>(() => sb.from("tbl_inv_products").select("id, sku, name, category_id, is_active, default_supplier_id, base_uom_id").order("id"), 20000);
+  // base_uom_id is joined separately: tbl_inv_products has two FKs to
+  // tbl_inv_uoms (base + purchase), so PostgREST cannot resolve an embedded
+  // `base_uom(...)` and fails with "could not find a relationship".
+  const uoms = await loadUomCodes(sb, rows.map((p) => Number(p.base_uom_id)));
   return new Map(
     rows.map((p) => [
       Number(p.id),
@@ -96,7 +106,7 @@ export async function loadProductMeta(sb: Sb): Promise<Map<number, ProductMeta>>
         categoryId: Number(p.category_id),
         isActive: p.is_active,
         supplierId: p.default_supplier_id === null ? null : Number(p.default_supplier_id),
-        baseUomCode: p.base_uom?.code ?? "",
+        baseUomCode: uoms.get(Number(p.base_uom_id)) ?? "",
       },
     ])
   );
