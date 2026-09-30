@@ -59,6 +59,7 @@ export const dictInventory: Record<string, string> = {
   // common form words
   Product: "Produk",
   Qty: "Kuantiti",
+  Unit: "Unit",
   "Qty (base unit)": "Kuantiti (unit asas)",
   Location: "Lokasi",
   Max: "Maksimum",

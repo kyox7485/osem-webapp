@@ -25,12 +25,31 @@ type BalanceRow = {
   product_id: number;
   sku: string;
   product_name: string;
-  resident_id: number | null;
   qty: number;
   effective_max: number | null;
   pool_wac: number | null;
   value_at_wac: number | null;
 };
+
+// TRANSIT is a location, not a per-resident row (the resident column is
+// deliberately not shown here): one TRANSIT line per product/location, with
+// quantities summed across that location's resident buckets. Without this,
+// N residents holding the same product would render as N identical rows.
+function collapseByProductAndLocation(rows: BalanceRow[]): BalanceRow[] {
+  const merged = new Map<string, BalanceRow>();
+  for (const row of rows) {
+    const key = `${row.product_id}:${row.location_kind}`;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, { ...row });
+      continue;
+    }
+    // max and WAC are per product/location, so the first row is authoritative;
+    // only the quantity accumulates across resident buckets.
+    merged.set(key, { ...existing, qty: existing.qty + row.qty });
+  }
+  return [...merged.values()];
+}
 
 function matchesProductFilters(ctx: ReportCtx, productId: number, meta: Map<number, ProductMeta>, matches: Set<number> | null): boolean {
   const { category, status, supplier } = ctx.params;
@@ -53,25 +72,23 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     () =>
       sb
         .from("v_inv_stock_balance")
-        .select("location_kind, product_id, sku, product_name, resident_id, qty, effective_max, pool_wac, value_at_wac")
+        .select("location_kind, product_id, sku, product_name, qty, effective_max, pool_wac, value_at_wac")
         .eq("branch_id", branchId)
         .neq("qty", 0)
         .order("product_name")
         .order("product_id")
-        .order("location_kind")
-        .order("resident_id"),
+        .order("location_kind"),
     MAX_SOURCE_ROWS
   );
   const kept = balances.filter((b) => matchesProductFilters(ctx, Number(b.product_id), meta, matches));
-  const shown = kept.slice(0, ctx.cap + 1);
-  const residents = await loadResidentNames(sb, shown.map((r) => r.resident_id));
+  const shown = collapseByProductAndLocation(kept).slice(0, ctx.cap + 1);
 
   const columns: ReportColumn[] = [
     { key: "sku", label: t("SKU"), kind: "text" },
     { key: "product", label: t("Product"), kind: "text" },
     { key: "location", label: t("Location"), kind: "text" },
-    { key: "resident", label: t("Resident"), kind: "text" },
-    { key: "qty", label: t("Qty (base unit)"), kind: "qty" },
+    { key: "qty", label: t("Qty"), kind: "qty" },
+    { key: "unit", label: t("Unit"), kind: "text" },
     { key: "max", label: t("Max"), kind: "qty" },
   ];
   if (showCost) {
@@ -81,8 +98,8 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     sku: b.sku,
     product: b.product_name,
     location: t(labelOf(LOCATION_KIND_OPTIONS, b.location_kind)),
-    resident: b.resident_id === null ? "" : (residents.get(Number(b.resident_id)) ?? `#${b.resident_id}`),
     qty: Number(b.qty),
+    unit: meta.get(Number(b.product_id))?.baseUomCode ?? "",
     max: b.effective_max === null ? null : Number(b.effective_max),
     wac: b.pool_wac === null ? null : Number(b.pool_wac),
     value: b.value_at_wac === null ? null : Number(b.value_at_wac),
