@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check:i18n": "node scripts/check-i18n.mjs",
-    "test:inventory": "node scripts/test-inventory.mjs"
+    "test:inventory": "node scripts/test-inventory.mjs",
+    "test:inventory:migration": "node scripts/test-inventory-master-migration.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

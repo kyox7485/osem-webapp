@@ -1,0 +1,51 @@
+{
+  "_comment": "Reference ids the workbook resolves against, captured read-only from the live Supabase project. Regenerate by re-running the capture SELECTs in the SQL editor and pasting the result -- service_role has no privileges on tbl_inv_* (D-146), so this cannot be fetched over PostgREST.",
+  "captured_on": "2026-09-30",
+  "categories": {
+    "CONSUMABLES": 1,
+    "DRESSING": 2,
+    "MEDICINE": 3,
+    "SERVICE": 4,
+    "OTHERS": 5
+  },
+  "uoms": {
+    "EA": 1,
+    "PCS": 2,
+    "TAB": 3,
+    "CAP": 4,
+    "STRIP": 5,
+    "BOX": 6,
+    "PACK": 7,
+    "BOTTLE": 8,
+    "TUBE": 9,
+    "ROLL": 10,
+    "SET": 11,
+    "PAIR": 12,
+    "SACHET": 13,
+    "ML": 14,
+    "JOB": 15
+  },
+  "suppliers": {},
+  "branches": {
+    "AMN": 1,
+    "AMP": 2,
+    "BMN": 3,
+    "BGN": 4,
+    "HQ": 5,
+    "DEMO": 6
+  },
+  "locations": {
+    "6|STORE": 1,
+    "6|FLOOR": 2,
+    "6|TRANSIT": 3,
+    "3|STORE": 4,
+    "3|FLOOR": 5,
+    "3|TRANSIT": 6,
+    "1|STORE": 7,
+    "1|FLOOR": 8,
+    "1|TRANSIT": 9,
+    "4|STORE": 10,
+    "4|FLOOR": 11,
+    "4|TRANSIT": 12
+  }
+}
