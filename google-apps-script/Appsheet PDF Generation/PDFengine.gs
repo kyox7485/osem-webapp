@@ -1299,7 +1299,7 @@ function finishBranchWebBatchJob(
     const previewUrl =
         "https://drive.google.com/file/d/" +
         file.getId() +
-        "/preview";
+        "/view";
 
     setGenerationProgress(
         state.executionId,
@@ -1889,7 +1889,7 @@ function generateReportForWeb(
         const previewUrl =
             "https://drive.google.com/file/d/" +
             file.getId() +
-            "/preview";
+            "/view";
 
         setGenerationProgress(
             executionId,
