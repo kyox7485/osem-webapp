@@ -157,6 +157,7 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     };
   });
   return buildResult(ctx, "stock", t("Stock balance"), {
+    pdfTitle: t("Stock Balance Report"),
     columns,
     rows,
     truncated: kept.length >= MAX_SOURCE_ROWS,

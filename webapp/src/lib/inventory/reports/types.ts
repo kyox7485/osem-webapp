@@ -146,6 +146,8 @@ export type ReportRow = Record<string, ReportCell>;
 export type ReportResult = {
   key: ReportKey;
   title: string;
+  /** printed instead of `title` in the PDF, when the export is named differently from the on-screen heading */
+  pdfTitle?: string | null;
   columns: ReportColumn[];
   rows: ReportRow[];
   totals: ReportRow | null;

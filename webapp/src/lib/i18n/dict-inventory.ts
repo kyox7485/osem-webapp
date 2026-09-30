@@ -529,6 +529,7 @@ export const dictInventory: Record<string, string> = {
   "Please choose a valid month.": "Sila pilih bulan yang sah.",
   // Phase 7: reports (Stock / Ledger filters, /inventory/reports, PDF and CSV exports)
   "Reports": "Laporan",
+  "Stock Balance Report": "Laporan Baki Stok",
   "Movement": "Pergerakan",
   "Valuation": "Penilaian",
   "Receiving history": "Sejarah penerimaan",

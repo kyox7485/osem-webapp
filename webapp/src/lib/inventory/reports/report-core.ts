@@ -186,6 +186,8 @@ export type ReportBody = {
   /** the source query itself hit its limit */
   truncated?: boolean;
   notes?: string[];
+  /** the PDF's own heading, when it differs from the on-screen `title` */
+  pdfTitle?: string;
 };
 
 /** Applies the row cap and wraps a loader's rows in the result envelope. */
@@ -194,6 +196,7 @@ export function buildResult(ctx: ReportCtx, key: ReportKey, title: string, body:
   return {
     key,
     title,
+    pdfTitle: body.pdfTitle ?? null,
     columns: body.columns,
     rows: body.rows.slice(0, ctx.cap),
     totals: body.totals ?? null,

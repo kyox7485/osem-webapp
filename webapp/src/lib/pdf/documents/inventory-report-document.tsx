@@ -18,6 +18,8 @@ const s = StyleSheet.create({
   head: { flexDirection: "row", backgroundColor: pdfColors.bandStrong, borderBottomWidth: 1, borderBottomColor: pdfColors.borderStrong },
   headCell: { fontSize: 7, fontFamily: branding.fontFamilyBold, color: pdfColors.ink700, paddingVertical: 5, paddingHorizontal: 4 },
   row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: pdfColors.border },
+  groupRow: { flexDirection: "row", backgroundColor: pdfColors.bandStrong, borderBottomWidth: 1, borderBottomColor: pdfColors.borderStrong },
+  groupCell: { fontSize: 7.5, fontFamily: branding.fontFamilyBold, color: pdfColors.ink900, paddingVertical: 4, paddingHorizontal: 4 },
   cell: { fontSize: 7.5, color: pdfColors.ink700, paddingVertical: 4, paddingHorizontal: 4 },
   negative: { color: pdfColors.critical },
   totalRow: { flexDirection: "row", backgroundColor: pdfColors.band, borderTopWidth: 1, borderTopColor: pdfColors.borderStrong },
@@ -74,9 +76,12 @@ export function InventoryReportDocument({
   const widths = columnWidths(report);
   const info = [...report.filters, { label: labels.generatedBy, value: generatedBy }, { label: labels.generatedAt, value: generatedAt }];
   const landscape = report.columns.length >= LANDSCAPE_FROM_COLUMNS;
+  // Some exports are named differently from the on-screen heading; `pdfTitle`
+  // overrides it for the PDF alone.
+  const title = pdfSafe(report.pdfTitle ?? report.title);
   return (
-    <Document title={pdfSafe(report.title)}>
-      <ReportPage title={pdfSafe(report.title)} branch={branch} logoSrc={logoSrc} landscape={landscape}>
+    <Document title={title}>
+      <ReportPage title={title} branch={branch} logoSrc={logoSrc} landscape={landscape}>
         <InfoGrid items={info.map((i) => ({ label: pdfSafe(i.label), value: pdfSafe(i.value) }))} columns={Math.min(4, info.length)} />
         <View style={s.table}>
           <View style={s.head} fixed>
@@ -87,15 +92,29 @@ export function InventoryReportDocument({
             ))}
           </View>
           {report.rows.length === 0 && <Text style={s.empty}>{pdfSafe(labels.noRows)}</Text>}
-          {report.rows.map((row, r) => (
-            <View key={r} style={s.row} wrap={false}>
-              {report.columns.map((c, i) => (
-                <Text key={c.key} style={[...cellStyle(c, row[c.key] ?? null, s.cell), { width: widths[i] }]}>
-                  {pdfSafe(formatCell(c.kind, row[c.key] ?? null))}
-                </Text>
-              ))}
-            </View>
-          ))}
+          {report.rows.map((row, r) => {
+            // Category band above the first row of each group, mirroring the
+            // on-screen table. A report whose rows carry no hidden `_group`
+            // field renders exactly as before.
+            const group = row._group != null ? pdfSafe(String(row._group)) : null;
+            const previousGroup = report.rows[r - 1]?._group != null ? String(report.rows[r - 1]._group) : null;
+            return (
+              <View key={r}>
+                {group !== null && group !== previousGroup && (
+                  <View style={s.groupRow} wrap={false}>
+                    <Text style={s.groupCell}>{group}</Text>
+                  </View>
+                )}
+                <View style={s.row} wrap={false}>
+                  {report.columns.map((c, i) => (
+                    <Text key={c.key} style={[...cellStyle(c, row[c.key] ?? null, s.cell), { width: widths[i] }]}>
+                      {pdfSafe(formatCell(c.kind, row[c.key] ?? null))}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
           {report.totals && (
             <View style={s.totalRow} wrap={false}>
               {report.columns.map((c, i) => (
