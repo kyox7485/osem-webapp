@@ -31,24 +31,24 @@ type BalanceRow = {
   value_at_wac: number | null;
 };
 
-// TRANSIT is a location, not a per-resident row (the resident column is
-// deliberately not shown here): one TRANSIT line per product/location, with
-// quantities summed across that location's resident buckets. Without this,
-// N residents holding the same product would render as N identical rows.
-function collapseByProductAndLocation(rows: BalanceRow[]): BalanceRow[] {
-  const merged = new Map<string, BalanceRow>();
+// One row per product: quantities summed across location kinds, so the
+// stock balance shows Store / Floor Stock / Transit / Total side by side
+// instead of one row per location. The location column is dropped in favour
+// of the breakdown columns.
+function groupQtyByProduct(rows: BalanceRow[]): Map<number, { store: number; floor: number; transit: number; total: number }> {
+  const byProduct = new Map<number, { store: number; floor: number; transit: number }>();
   for (const row of rows) {
-    const key = `${row.product_id}:${row.location_kind}`;
-    const existing = merged.get(key);
-    if (!existing) {
-      merged.set(key, { ...row });
-      continue;
-    }
-    // max and WAC are per product/location, so the first row is authoritative;
-    // only the quantity accumulates across resident buckets.
-    merged.set(key, { ...existing, qty: existing.qty + row.qty });
+    const existing = byProduct.get(row.product_id) || { store: 0, floor: 0, transit: 0 };
+    if (row.location_kind === "STORE") existing.store += row.qty;
+    if (row.location_kind === "FLOOR") existing.floor += row.qty;
+    if (row.location_kind === "TRANSIT") existing.transit += row.qty;
+    byProduct.set(row.product_id, existing);
   }
-  return [...merged.values()];
+  const result = new Map<number, { store: number; floor: number; transit: number; total: number }>();
+  for (const [pid, q] of byProduct) {
+    result.set(pid, { ...q, total: q.store + q.floor + q.transit });
+  }
+  return result;
 }
 
 function matchesProductFilters(ctx: ReportCtx, productId: number, meta: Map<number, ProductMeta>, matches: Set<number> | null): boolean {
@@ -81,13 +81,37 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     MAX_SOURCE_ROWS
   );
   const kept = balances.filter((b) => matchesProductFilters(ctx, Number(b.product_id), meta, matches));
-  const shown = collapseByProductAndLocation(kept).slice(0, ctx.cap + 1);
+  // max and WAC are per product, so the first row of a product is authoritative
+  // for sku/name/max/wac/value; only the quantities are summed across locations.
+  const grouped = groupQtyByProduct(kept);
+  const shown = [...grouped.entries()]
+    .map(([pid, q]) => {
+      const first = kept.find((b) => Number(b.product_id) === pid)!;
+      return {
+        product_id: pid,
+        sku: first.sku,
+        product_name: first.product_name,
+        store: q.store,
+        floor: q.floor,
+        transit: q.transit,
+        total: q.total,
+        unit: meta.get(pid)?.baseUomCode ?? "",
+        max: first.effective_max === null ? null : Number(first.effective_max),
+        wac: first.pool_wac === null ? null : Number(first.pool_wac),
+        value: kept
+          .filter((b) => Number(b.product_id) === pid)
+          .reduce((sum, b) => sum + (b.value_at_wac === null ? 0 : Number(b.value_at_wac)), 0),
+      };
+    })
+    .slice(0, ctx.cap + 1);
 
   const columns: ReportColumn[] = [
     { key: "sku", label: t("SKU"), kind: "text" },
     { key: "product", label: t("Product"), kind: "text" },
-    { key: "location", label: t("Location"), kind: "text" },
-    { key: "qty", label: t("Qty"), kind: "qty" },
+    { key: "store", label: t("Store"), kind: "qty" },
+    { key: "floor", label: t("Floor Stock"), kind: "qty" },
+    { key: "transit", label: t("Transit"), kind: "qty" },
+    { key: "total", label: t("Total"), kind: "qty" },
     { key: "unit", label: t("Unit"), kind: "text" },
     { key: "max", label: t("Max"), kind: "qty" },
   ];
@@ -97,17 +121,19 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
   const rows = shown.map((b) => ({
     sku: b.sku,
     product: b.product_name,
-    location: t(labelOf(LOCATION_KIND_OPTIONS, b.location_kind)),
-    qty: Number(b.qty),
-    unit: meta.get(Number(b.product_id))?.baseUomCode ?? "",
-    max: b.effective_max === null ? null : Number(b.effective_max),
-    wac: b.pool_wac === null ? null : Number(b.pool_wac),
-    value: b.value_at_wac === null ? null : Number(b.value_at_wac),
+    store: b.store,
+    floor: b.floor,
+    transit: b.transit,
+    total: b.total,
+    unit: b.unit,
+    max: b.max,
+    wac: b.wac,
+    value: b.value,
   }));
   return buildResult(ctx, "stock", t("Stock balance"), {
     columns,
     rows,
-    truncated: balances.length >= MAX_SOURCE_ROWS,
+    truncated: kept.length >= MAX_SOURCE_ROWS,
     notes: showCost ? [t("Values are indicative: quantity times the branch cost. See Valuation for the official figures.")] : [],
   });
 }
