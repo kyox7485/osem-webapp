@@ -124,6 +124,7 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
     columns.push({ key: "wac", label: t("WAC"), kind: "money4" }, { key: "value", label: t("Value (indicative)"), kind: "money" });
   }
   const rows = shown.map((b) => ({
+    id: b.product_id,
     sku: b.sku,
     product: b.product_name,
     storeWithUnit: qtyWithUnit(b.store, b.unit),

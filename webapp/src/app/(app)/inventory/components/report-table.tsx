@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { formatCell, type ReportResult } from "@/lib/inventory/reports/types";
+import { StockItemDetailModal } from "./stock-detail-modal";
 
 // Read-only table for any ReportResult (already translated by the loader).
 // Server component; negative quantities and amounts are red with a dark: partner.
@@ -6,6 +10,8 @@ import { formatCell, type ReportResult } from "@/lib/inventory/reports/types";
 const NUMERIC = new Set(["int", "qty", "money", "money4"]);
 
 export function ReportTable({ report, truncatedText, emptyText }: { report: ReportResult; truncatedText: string; emptyText: string }) {
+  const [openId, setOpenId] = useState<number | null>(null);
+  const openRow = report.rows.find((r) => (r.id as number | undefined) === openId);
   if (report.rows.length === 0) {
     return <p className="rounded-lg border border-line bg-surface px-4 py-6 text-center text-sm text-fg-subtle">{emptyText}</p>;
   }
@@ -24,7 +30,7 @@ export function ReportTable({ report, truncatedText, emptyText }: { report: Repo
           </thead>
           <tbody className="divide-y divide-line-subtle">
             {report.rows.map((row, i) => (
-              <tr key={i} className="hover:bg-hover">
+              <tr key={i} className="hover:bg-hover cursor-pointer" onClick={() => { if (row.id) setOpenId(Number(row.id)); }}>
                 {report.columns.map((c) => {
                   const value = row[c.key] ?? null;
                   const numeric = NUMERIC.has(c.kind);
@@ -64,6 +70,18 @@ export function ReportTable({ report, truncatedText, emptyText }: { report: Repo
           {n}
         </p>
       ))}
+      {openRow && openRow.id && (
+        <StockItemDetailModal
+          product={openRow as unknown as import("@/lib/inventory/core").InvProduct}
+          storeQty={Number(openRow.storeWithUnit?.toString().split(" ")[0]) || 0}
+          floorQty={Number(openRow.floorWithUnit?.toString().split(" ")[0]) || 0}
+          transitQty={Number(openRow.transitWithUnit?.toString().split(" ")[0]) || 0}
+          totalQty={Number(openRow.totalWithUnit?.toString().split(" ")[0]) || 0}
+          unit={String(openRow.unit ?? "")}
+          onClose={() => setOpenId(null)}
+          onQuickEdit={() => { window.open(`/inventory/setup/products?product=${openRow.id}`, "_blank"); setOpenId(null); }}
+        />
+      )}
     </div>
   );
 }
