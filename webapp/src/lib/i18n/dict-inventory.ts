@@ -624,4 +624,9 @@ export const dictInventory: Record<string, string> = {
   "Last receipt": "Resit terakhir",
   "Average cost (WAC)": "Kos purata (WAC)",
   none: "tiada",
+  // Stock balance detail modal
+  "Quick edit": "Edit pantas",
+  "Stock by location": "Stok mengikut lokasi",
+  "Cost price": "Harga kos",
+  "Selling price": "Harga jualan",
 };

@@ -73,6 +73,8 @@ export type ProductMeta = {
   supplierId: number | null;
   /** code of the product's base UOM — the unit stock qty is counted in */
   baseUomCode: string;
+  standardUnitCost: number | null;
+  chargePrice: number | null;
 };
 
 /** UOM id -> code, for the products' base units. */
@@ -91,7 +93,9 @@ export async function loadProductMeta(sb: Sb): Promise<Map<number, ProductMeta>>
     is_active: boolean;
     default_supplier_id: number | null;
     base_uom_id: number;
-  }>(() => sb.from("tbl_inv_products").select("id, sku, name, category_id, is_active, default_supplier_id, base_uom_id").order("id"), 20000);
+    standard_unit_cost: number | null;
+    charge_price: number | null;
+  }>(() => sb.from("tbl_inv_products").select("id, sku, name, category_id, is_active, default_supplier_id, base_uom_id, standard_unit_cost, charge_price").order("id"), 20000);
   // base_uom_id is joined separately: tbl_inv_products has two FKs to
   // tbl_inv_uoms (base + purchase), so PostgREST cannot resolve an embedded
   // `base_uom(...)` and fails with "could not find a relationship".
@@ -107,6 +111,8 @@ export async function loadProductMeta(sb: Sb): Promise<Map<number, ProductMeta>>
         isActive: p.is_active,
         supplierId: p.default_supplier_id === null ? null : Number(p.default_supplier_id),
         baseUomCode: uoms.get(Number(p.base_uom_id)) ?? "",
+        standardUnitCost: p.standard_unit_cost === null ? null : Number(p.standard_unit_cost),
+        chargePrice: p.charge_price === null ? null : Number(p.charge_price),
       },
     ])
   );

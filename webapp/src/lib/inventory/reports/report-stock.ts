@@ -72,7 +72,14 @@ function matchesProductFilters(ctx: ReportCtx, productId: number, meta: Map<numb
 export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
   const { sb, branchId, rank, t, params } = ctx;
   const showCost = rank >= INV_TIER.VIEW_COST;
-  const [meta, matches] = await Promise.all([loadProductMeta(sb), params.q ? resolveProductIds(sb, params.q) : Promise.resolve(null)]);
+  const [meta, matches, categories, suppliersData] = await Promise.all([
+    loadProductMeta(sb),
+    params.q ? resolveProductIds(sb, params.q) : Promise.resolve(null),
+    fetchRows<{ id: number; name: string }>(() => sb.from("tbl_inv_categories").select("id, name").order("name"), 500),
+    loadSuppliers(sb, { includeInactive: true }),
+  ]);
+  const categoryName = new Map(categories.map((c) => [Number(c.id), c.name]));
+  const supplierName = new Map(suppliersData.map((s) => [s.id, s.name]));
   const balances = await fetchRows<BalanceRow>(
     () =>
       sb
@@ -123,19 +130,28 @@ export async function loadStockReport(ctx: ReportCtx): Promise<ReportResult> {
   if (showCost) {
     columns.push({ key: "wac", label: t("WAC"), kind: "money4" }, { key: "value", label: t("Value (indicative)"), kind: "money" });
   }
-  const rows = shown.map((b) => ({
-    id: b.product_id,
-    sku: b.sku,
-    product: b.product_name,
-    storeWithUnit: qtyWithUnit(b.store, b.unit),
-    floorWithUnit: qtyWithUnit(b.floor, b.unit),
-    transitWithUnit: qtyWithUnit(b.transit, b.unit),
-    totalWithUnit: qtyWithUnit(b.total, b.unit),
-    unit: b.unit,
-    max: b.max,
-    wac: b.wac,
-    value: b.value,
-  }));
+  const rows = shown.map((b) => {
+    const m = meta.get(b.product_id);
+    return {
+      id: b.product_id,
+      sku: b.sku,
+      product: b.product_name,
+      storeWithUnit: qtyWithUnit(b.store, b.unit),
+      floorWithUnit: qtyWithUnit(b.floor, b.unit),
+      transitWithUnit: qtyWithUnit(b.transit, b.unit),
+      totalWithUnit: qtyWithUnit(b.total, b.unit),
+      unit: b.unit,
+      max: b.max,
+      wac: b.wac,
+      value: b.value,
+      // Hidden fields used by the detail modal — not in `columns`, so never rendered as table cells
+      _categoryName: m ? (categoryName.get(m.categoryId) ?? null) : null,
+      _supplierName: m?.supplierId != null ? (supplierName.get(m.supplierId) ?? null) : null,
+      _isActive: m ? (m.isActive ? 1 : 0) : null,
+      _costPrice: showCost && m ? m.standardUnitCost : null,
+      _sellingPrice: showCost && m ? m.chargePrice : null,
+    };
+  });
   return buildResult(ctx, "stock", t("Stock balance"), {
     columns,
     rows,

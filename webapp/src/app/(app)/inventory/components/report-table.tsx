@@ -72,7 +72,14 @@ export function ReportTable({ report, truncatedText, emptyText }: { report: Repo
       ))}
       {openRow && openRow.id && (
         <StockItemDetailModal
-          product={openRow as unknown as import("@/lib/inventory/core").InvProduct}
+          productId={Number(openRow.id)}
+          productName={String(openRow.product ?? "")}
+          sku={String(openRow.sku ?? "")}
+          categoryName={openRow._categoryName != null ? String(openRow._categoryName) : null}
+          supplierName={openRow._supplierName != null ? String(openRow._supplierName) : null}
+          isActive={openRow._isActive != null ? openRow._isActive === 1 : null}
+          costPrice={typeof openRow._costPrice === "number" ? openRow._costPrice : null}
+          sellingPrice={typeof openRow._sellingPrice === "number" ? openRow._sellingPrice : null}
           storeQty={Number(openRow.storeWithUnit?.toString().split(" ")[0]) || 0}
           floorQty={Number(openRow.floorWithUnit?.toString().split(" ")[0]) || 0}
           transitQty={Number(openRow.transitWithUnit?.toString().split(" ")[0]) || 0}
