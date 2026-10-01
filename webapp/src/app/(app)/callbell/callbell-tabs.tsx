@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BellOff, BellRing, BarChart3, Users, Wifi, Pencil, Check, X, RefreshCw, Download } from "lucide-react";
 import { TabRow, TabButton } from "@/components/tabs";
@@ -137,12 +137,23 @@ export function CallbellTabs({
   const push = useNavPush();
   const [tab, setTab] = useState<Tab>(initialTab);
 
+  // When the URL tells us we're on the dashboard tab (from server render)
+  useEffect(() => {
+    if (initialTab === "dashboard" && tab !== "dashboard") {
+      setTab("dashboard");
+    }
+  }, [initialTab, tab]);
+
   // The analytics tab re-aggregates on the server, so switching to it must go
   // through the URL (?tab=dashboard) rather than a local state toggle.
   function selectTab(next: Tab) {
     if (next === "dashboard") {
       push(`/callbell?tab=dashboard&branch=${branch}`);
-      return;
+      return; // Will sync via render once the push settles
+    }
+    // Clean up the URL if coming from the dashboard
+    if (tab === "dashboard") {
+      push(`/callbell?branch=${branch}`);
     }
     setTab(next);
   }
