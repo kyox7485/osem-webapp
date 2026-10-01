@@ -14,7 +14,6 @@ export type CallLogRow = {
   call_type: string;
   call_time_display: string;
   response_time_display: string;
-  duration: string;
 };
 
 export type KnownDevice = {
@@ -42,11 +41,37 @@ export type ResidentOption = {
 
 type Tab = "logs" | "assignments" | "receivers";
 
-// ── Assignment edit state per device ──
 type EditState = {
-  resident_id: string; // "" = unassigned
+  resident_id: string;
   room_label: string;
 };
+
+type LogFilters = {
+  device: string;
+  resident: string;
+  call_type: string;
+  receiver: string;
+};
+
+function FilterInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder ?? "Filter…"}
+      className="mt-1 block w-full rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-normal text-fg placeholder:text-fg-faint focus:outline-none focus:ring-1 focus:ring-indigo-500/40 normal-case tracking-normal"
+    />
+  );
+}
 
 export function CallbellTabs({
   logs,
@@ -62,11 +87,36 @@ export function CallbellTabs({
   const t = useTranslation();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("logs");
+
+  // ── Assignments edit ──
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>({ resident_id: "", room_label: "" });
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // ── Call log filters ──
+  const [filters, setFilters] = useState<LogFilters>({
+    device: "",
+    resident: "",
+    call_type: "",
+    receiver: "",
+  });
+
+  function setFilter(key: keyof LogFilters, value: string) {
+    setFilters((f) => ({ ...f, [key]: value }));
+  }
+
+  const filteredLogs = logs.filter((row) => {
+    if (filters.device && !row.device_num.toLowerCase().includes(filters.device.toLowerCase())) return false;
+    if (filters.resident && !row.resident_name.toLowerCase().includes(filters.resident.toLowerCase())) return false;
+    if (filters.call_type && !row.call_type.toLowerCase().includes(filters.call_type.toLowerCase())) return false;
+    if (filters.receiver && !row.receiver_label.toLowerCase().includes(filters.receiver.toLowerCase())) return false;
+    return true;
+  });
+
+  const hasFilters = filters.device || filters.resident || filters.call_type || filters.receiver;
+
+  // ── Assignment helpers ──
   function deviceKey(d: KnownDevice) {
     return `${d.receiver_id}:${d.device_num}`;
   }
@@ -124,40 +174,64 @@ export function CallbellTabs({
 
       {/* ── Call Logs ── */}
       {tab === "logs" && (
-        <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
-              <tr>
-                <th className="px-4 py-2">{t("Call Time")}</th>
-                <th className="px-4 py-2">{t("Device")}</th>
-                <th className="px-4 py-2">{t("Resident")}</th>
-                <th className="px-4 py-2">{t("Call Type")}</th>
-                <th className="px-4 py-2">{t("Duration")}</th>
-                <th className="px-4 py-2">{t("Response Time")}</th>
-                <th className="px-4 py-2">{t("Receiver")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-subtle">
-              {logs.map((row) => (
-                <tr key={row.id} className="hover:bg-hover">
-                  <td className="px-4 py-2 font-medium text-fg">{row.call_time_display}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-fg-muted">{row.device_num || "—"}</td>
-                  <td className="px-4 py-2 text-fg-muted">{row.resident_name || "—"}</td>
-                  <td className="px-4 py-2 text-fg-muted">{row.call_type || "—"}</td>
-                  <td className="px-4 py-2 text-fg-muted">{row.duration || "—"}</td>
-                  <td className="px-4 py-2 text-fg-muted">{row.response_time_display}</td>
-                  <td className="px-4 py-2 text-fg-muted">{row.receiver_label}</td>
-                </tr>
-              ))}
-              {logs.length === 0 && (
+        <div>
+          {hasFilters && (
+            <p className="mb-2 text-xs text-fg-subtle">
+              {t("Showing")} {filteredLogs.length} / {logs.length} {t("records")}
+              <button
+                type="button"
+                onClick={() => setFilters({ device: "", resident: "", call_type: "", receiver: "" })}
+                className="ml-2 text-indigo-500 underline hover:text-indigo-700"
+              >
+                {t("Clear filters")}
+              </button>
+            </p>
+          )}
+          <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-fg-faint">
-                    {t("No call logs found.")}
-                  </td>
+                  <th className="px-4 py-2">{t("Call Time")}</th>
+                  <th className="px-4 py-2 min-w-[110px]">
+                    {t("Device")}
+                    <FilterInput value={filters.device} onChange={(v) => setFilter("device", v)} />
+                  </th>
+                  <th className="px-4 py-2 min-w-[130px]">
+                    {t("Resident")}
+                    <FilterInput value={filters.resident} onChange={(v) => setFilter("resident", v)} />
+                  </th>
+                  <th className="px-4 py-2 min-w-[100px]">
+                    {t("Call Type")}
+                    <FilterInput value={filters.call_type} onChange={(v) => setFilter("call_type", v)} />
+                  </th>
+                  <th className="px-4 py-2">{t("Response Time")}</th>
+                  <th className="px-4 py-2 min-w-[110px]">
+                    {t("Receiver")}
+                    <FilterInput value={filters.receiver} onChange={(v) => setFilter("receiver", v)} />
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-line-subtle">
+                {filteredLogs.map((row) => (
+                  <tr key={row.id} className="hover:bg-hover">
+                    <td className="px-4 py-2 font-medium text-fg">{row.call_time_display}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-fg-muted">{row.device_num || "—"}</td>
+                    <td className="px-4 py-2 text-fg-muted">{row.resident_name || "—"}</td>
+                    <td className="px-4 py-2 text-fg-muted">{row.call_type || "—"}</td>
+                    <td className="px-4 py-2 text-fg-muted">{row.response_time_display}</td>
+                    <td className="px-4 py-2 text-fg-muted">{row.receiver_label}</td>
+                  </tr>
+                ))}
+                {filteredLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-fg-faint">
+                      {hasFilters ? t("No records match the current filters.") : t("No call logs found.")}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -171,7 +245,6 @@ export function CallbellTabs({
             <table className="w-full text-sm">
               <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
                 <tr>
-                  <th className="px-4 py-2">{t("Receiver")}</th>
                   <th className="px-4 py-2">{t("Device")}</th>
                   <th className="px-4 py-2">{t("Resident")}</th>
                   <th className="px-4 py-2">{t("Room")}</th>
@@ -186,7 +259,6 @@ export function CallbellTabs({
                   if (isEditing) {
                     return (
                       <tr key={key} className="bg-surface-muted">
-                        <td className="px-4 py-2 text-fg-muted">{d.receiver_label}</td>
                         <td className="px-4 py-2 font-mono text-xs text-fg">{d.device_num}</td>
                         <td className="px-4 py-2">
                           <select
@@ -242,7 +314,6 @@ export function CallbellTabs({
 
                   return (
                     <tr key={key} className="hover:bg-hover">
-                      <td className="px-4 py-2 text-fg-muted">{d.receiver_label}</td>
                       <td className="px-4 py-2 font-mono text-xs text-fg">{d.device_num}</td>
                       <td className="px-4 py-2 text-fg-muted">
                         {d.resident_name || (
@@ -265,7 +336,7 @@ export function CallbellTabs({
                 })}
                 {devices.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-fg-faint">
+                    <td colSpan={4} className="px-4 py-6 text-center text-fg-faint">
                       {t("No devices seen in call logs yet.")}
                     </td>
                   </tr>

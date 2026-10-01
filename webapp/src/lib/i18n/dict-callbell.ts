@@ -24,4 +24,8 @@ export const dictCallbell: Record<string, string> = {
   "Save": "Simpan",
   "Cancel": "Batal",
   "Devices seen in call logs. Click Edit to assign a resident.": "Peranti yang dilihat dalam log panggilan. Klik Edit untuk tugaskan penghuni.",
+  "Showing": "Menunjukkan",
+  "records": "rekod",
+  "Clear filters": "Kosongkan penapis",
+  "No records match the current filters.": "Tiada rekod sepadan dengan penapis semasa.",
 };

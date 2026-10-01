@@ -40,10 +40,19 @@ function fmtLastSeen(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-function fmtResponseTime(val: string | number | null): string {
-  const n = val ? Number(val) : 0;
-  if (!n || n <= 0) return "—";
-  return `${n}s`;
+function fmtResponseDuration(
+  callTimeMs: string | number | null,
+  responseTimeMs: string | number | null
+): string {
+  const ct = callTimeMs ? Number(callTimeMs) : 0;
+  const rt = responseTimeMs ? Number(responseTimeMs) : 0;
+  if (!ct || !rt || rt <= ct) return "—";
+  const totalSec = Math.round((rt - ct) / 1000);
+  if (totalSec <= 0) return "—";
+  if (totalSec < 60) return `${totalSec}s`;
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
 }
 
 export default async function CallbellPage() {
@@ -81,7 +90,7 @@ export default async function CallbellPage() {
   const [logsResult, assignmentsResult, deviceLogsResult, residentsResult] = await Promise.all([
     adminClient
       .from("cb_call_logs")
-      .select("id, receiver_id, device_num, resident_name_snapshot, call_type, call_time, response_time, duration")
+      .select("id, receiver_id, device_num, resident_name_snapshot, call_type, call_time, response_time")
       .in("receiver_id", receiverIds)
       .order("call_time", { ascending: false, nullsFirst: false })
       .limit(200),
@@ -104,6 +113,7 @@ export default async function CallbellPage() {
       .from("tbl_residents")
       .select("id, resident_name")
       .in("branch_id", branchIds)
+      .eq("status", "ACTIVE")
       .order("resident_name"),
   ]);
 
@@ -144,8 +154,10 @@ export default async function CallbellPage() {
     resident_name: (row.resident_name_snapshot as string) ?? "",
     call_type: (row.call_type as string) ?? "",
     call_time_display: fmtCallTime(row.call_time as string | number | null),
-    response_time_display: fmtResponseTime(row.response_time as string | number | null),
-    duration: (row.duration as string) ?? "",
+    response_time_display: fmtResponseDuration(
+      row.call_time as string | number | null,
+      row.response_time as string | number | null
+    ),
   }));
 
   // ── Receivers display ──
