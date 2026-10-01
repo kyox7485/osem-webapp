@@ -10,26 +10,21 @@ function checkSecret(req: NextRequest): boolean {
 /**
  * POST /api/callbell/devices
  *
- * Sent by the OSEMLoRaSync APK (Phase 2B) after reading DEVICES_BEAN.
- * Body: { receiver_id, schema_probe, devices: [{device_num, room_label, user_name, _room_col, _name_col}] }
+ * Device inventory from the OSEMLoRaSync APK, read from the Wenze receiver's
+ * own /manager/getalldevices API (the source of truth for which bells exist).
+ * Body: { receiver_id, complete: true, devices: [{ device_num, call_number, nick_name }] }
  *
- * For each device with a non-empty room_label:
- *   - Inserts a cb_assignments row if none exists (resident_id NULL).
- *   - Updates room_label on any existing row, leaving resident_id untouched.
- *
- * The schema_probe is logged to Vercel so we can inspect DEVICES_BEAN
- * column names without shipping a separate diagnostic tool.
+ * cb_assignments holds one row per paired bell:
+ *   - room_label  = receiver NAME (call number) — always overwritten from the receiver
+ *   - resident_id = OSEM assignment — never touched here
+ * When the list is complete, rows for bells no longer paired on the receiver are removed.
  */
 export async function POST(request: NextRequest) {
   if (!checkSecret(request)) {
     return NextResponse.json({ ok: false, code: "UNAUTHORIZED" }, { status: 401 });
   }
 
-  let body: {
-    receiver_id?: unknown;
-    schema_probe?: unknown;
-    devices?: unknown;
-  };
+  let body: { receiver_id?: unknown; complete?: unknown; devices?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -40,52 +35,56 @@ export async function POST(request: NextRequest) {
   if (!receiverId || isNaN(receiverId)) {
     return NextResponse.json({ ok: false, code: "MISSING_RECEIVER_ID" }, { status: 400 });
   }
+  if (!Array.isArray(body.devices)) {
+    return NextResponse.json({ ok: false, code: "MISSING_DEVICES" }, { status: 400 });
+  }
 
   const adminClient = createAdminClient();
 
-  // Verify receiver exists
   const { data: receiver } = await adminClient
     .from("cb_receivers")
     .select("id")
     .eq("id", receiverId)
     .maybeSingle();
-
   if (!receiver) {
     return NextResponse.json({ ok: false, code: "RECEIVER_NOT_FOUND" }, { status: 404 });
   }
 
-  // Log schema probe so Vercel logs show DEVICES_BEAN structure
-  if (body.schema_probe) {
-    console.log(
-      `[callbell/devices] schema_probe receiver_id=${receiverId}`,
-      JSON.stringify(body.schema_probe)
-    );
-  }
-
-  const devices = Array.isArray(body.devices) ? body.devices : [];
-  let upserted = 0;
-
-  for (const device of devices) {
+  const now = new Date().toISOString();
+  const byNum = new Map<string, { receiver_id: number; device_num: string; room_label: string | null; updated_at: string }>();
+  for (const device of body.devices) {
     const d = device as Record<string, unknown>;
-    const deviceNum = String(d.device_num ?? "").trim();
-    const roomLabel = String(d.room_label ?? "").trim();
+    const deviceNum = String(d.device_num ?? "").trim().toUpperCase();
+    if (!deviceNum) continue;
+    const callNumber = String(d.call_number ?? "").trim();
+    byNum.set(deviceNum, { receiver_id: receiverId, device_num: deviceNum, room_label: callNumber || null, updated_at: now });
+  }
+  const rows = [...byNum.values()];
 
-    if (!deviceNum || !roomLabel) continue; // skip devices with no room label
-
-    // Upsert: insert if new, update only room_label if exists.
-    // resident_id is NOT included so it is never cleared on conflict.
-    const { error } = await adminClient.from("cb_assignments").upsert(
-      {
-        receiver_id: receiverId,
-        device_num: deviceNum,
-        room_label: roomLabel,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "receiver_id,device_num" }
-    );
-
-    if (!error) upserted++;
+  if (rows.length > 0) {
+    // resident_id is omitted, so existing assignments survive the upsert.
+    const { error } = await adminClient
+      .from("cb_assignments")
+      .upsert(rows, { onConflict: "receiver_id,device_num" });
+    if (error) {
+      return NextResponse.json({ ok: false, code: "DB_ERROR", error: error.message }, { status: 500 });
+    }
   }
 
-  return NextResponse.json({ ok: true, upserted, total: devices.length });
+  // Remove bells that are no longer paired on the receiver. Guarded by
+  // `complete` + a non-empty list so a failed/partial read never wipes inventory.
+  let removed = 0;
+  if (body.complete === true && rows.length > 0) {
+    const { data: existing } = await adminClient
+      .from("cb_assignments")
+      .select("id, device_num")
+      .eq("receiver_id", receiverId);
+    const stale = (existing ?? []).filter((r) => !byNum.has(String(r.device_num).toUpperCase())).map((r) => r.id);
+    if (stale.length > 0) {
+      const { error } = await adminClient.from("cb_assignments").delete().in("id", stale);
+      if (!error) removed = stale.length;
+    }
+  }
+
+  return NextResponse.json({ ok: true, upserted: rows.length, removed });
 }

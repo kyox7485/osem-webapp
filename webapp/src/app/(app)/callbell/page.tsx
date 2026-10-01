@@ -2,10 +2,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
+import { formatBranch } from "@/lib/lookups";
 import {
   CallbellTabs,
   type CallLogRow,
-  type KnownDevice,
+  type BellDevice,
+  type BranchOption,
   type ReceiverRow,
   type ResidentOption,
 } from "./callbell-tabs";
@@ -87,7 +89,10 @@ export default async function CallbellPage() {
   }
 
   // ── All data in parallel ──
-  const [logsResult, assignmentsResult, deviceLogsResult, residentsResult] = await Promise.all([
+  // Assignment tab = receiver device inventory (cb_assignments rows written by
+  // /api/callbell/devices from the Wenze getalldevices API) + resident assignment.
+  // Call logs are NOT used to discover devices.
+  const [logsResult, inventoryResult, residentsResult, branchesResult] = await Promise.all([
     adminClient
       .from("cb_call_logs")
       .select("id, receiver_id, device_num, resident_name_snapshot, call_type, call_time, response_time")
@@ -97,54 +102,45 @@ export default async function CallbellPage() {
 
     adminClient
       .from("cb_assignments")
-      .select("id, receiver_id, device_num, resident_id, room_label, tbl_residents(resident_name)")
-      .in("receiver_id", receiverIds)
-      .order("device_num"),
-
-    // Distinct devices via call logs — deduplicated in JS below
-    adminClient
-      .from("cb_call_logs")
-      .select("receiver_id, device_num")
-      .in("receiver_id", receiverIds)
-      .order("device_num")
-      .limit(2000),
+      .select("receiver_id, device_num, resident_id, room_label, tbl_residents(resident_name)")
+      .in("receiver_id", receiverIds),
 
     adminClient
       .from("tbl_residents")
-      .select("id, resident_name")
+      .select("id, resident_name, branch_id")
       .in("branch_id", branchIds)
       .eq("status", "ACTIVE")
       .order("resident_name"),
+
+    adminClient
+      .from("tbl_branches")
+      .select("BranchID, locale:BranchLocale, code:BranchCode")
+      .in("BranchID", branchIds),
   ]);
 
-  // ── Map: "{receiver_id}:{device_num}" -> assignment row ──
-  type AssignmentDbRow = { id: number; receiver_id: number; device_num: string; resident_id: number | null; room_label: string | null; tbl_residents: { resident_name: string } | { resident_name: string }[] | null };
-  const assignmentMap = new Map<string, AssignmentDbRow>();
-  for (const row of (assignmentsResult.data ?? []) as AssignmentDbRow[]) {
-    assignmentMap.set(`${row.receiver_id}:${row.device_num}`, row);
-  }
+  const branchIdByReceiver = Object.fromEntries(receiverList.map((r) => [r.id, r.branch_id]));
 
-  // ── Deduplicated known devices ──
-  const seenDevices = new Set<string>();
-  const devices: KnownDevice[] = [];
-  for (const row of (deviceLogsResult.data ?? []) as { receiver_id: number; device_num: string }[]) {
-    const key = `${row.receiver_id}:${row.device_num}`;
-    if (seenDevices.has(key)) continue;
-    seenDevices.add(key);
-    const asgn = assignmentMap.get(key);
-    const res = asgn
-      ? (Array.isArray(asgn.tbl_residents) ? asgn.tbl_residents[0] : asgn.tbl_residents)
-      : null;
-    devices.push({
-      receiver_id: row.receiver_id,
-      receiver_label: receiverLabelById[row.receiver_id] ?? "—",
-      device_num: row.device_num,
-      assignment_id: asgn?.id ?? null,
-      resident_id: asgn?.resident_id ?? null,
-      resident_name: res?.resident_name ?? "",
-      room_label: asgn?.room_label ?? "",
-    });
-  }
+  type InventoryDbRow = { receiver_id: number; device_num: string; resident_id: number | null; room_label: string | null; tbl_residents: { resident_name: string } | { resident_name: string }[] | null };
+  const devices: BellDevice[] = ((inventoryResult.data ?? []) as InventoryDbRow[])
+    .map((row) => {
+      const res = Array.isArray(row.tbl_residents) ? row.tbl_residents[0] : row.tbl_residents;
+      return {
+        receiver_id: row.receiver_id,
+        branch_id: branchIdByReceiver[row.receiver_id],
+        device_num: row.device_num,
+        call_number: row.room_label ?? "",
+        resident_id: row.resident_id,
+        resident_name: res?.resident_name ?? "",
+      };
+    })
+    .sort((a, b) =>
+      a.call_number.localeCompare(b.call_number, undefined, { numeric: true }) ||
+      a.device_num.localeCompare(b.device_num)
+    );
+
+  const branches: BranchOption[] = ((branchesResult.data ?? []) as { BranchID: number; locale: string | null; code: string }[])
+    .map((b) => ({ id: b.BranchID, name: formatBranch(b) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // ── Call logs ──
   const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => ({
@@ -172,6 +168,7 @@ export default async function CallbellPage() {
   // ── Residents picker options ──
   const residents: ResidentOption[] = (residentsResult.data ?? []).map((r) => ({
     id: r.id as number,
+    branch_id: r.branch_id as number,
     resident_name: (r.resident_name as string) ?? "",
   }));
 
@@ -181,6 +178,7 @@ export default async function CallbellPage() {
       <CallbellTabs
         logs={logs}
         devices={devices}
+        branches={branches}
         receivers={receivers}
         residents={residents}
       />

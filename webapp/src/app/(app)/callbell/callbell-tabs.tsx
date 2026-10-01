@@ -16,14 +16,20 @@ export type CallLogRow = {
   response_time_display: string;
 };
 
-export type KnownDevice = {
+// One paired bell from the receiver inventory (Wenze getalldevices).
+// device_num and call_number come from the receiver and are read-only here.
+export type BellDevice = {
   receiver_id: number;
-  receiver_label: string;
+  branch_id: number;
   device_num: string;
-  assignment_id: number | null;
+  call_number: string;
   resident_id: number | null;
   resident_name: string;
-  room_label: string;
+};
+
+export type BranchOption = {
+  id: number;
+  name: string;
 };
 
 export type ReceiverRow = {
@@ -36,15 +42,11 @@ export type ReceiverRow = {
 
 export type ResidentOption = {
   id: number;
+  branch_id: number;
   resident_name: string;
 };
 
 type Tab = "logs" | "assignments" | "receivers";
-
-type EditState = {
-  resident_id: string;
-  room_label: string;
-};
 
 type LogFilters = {
   device: string;
@@ -76,11 +78,13 @@ function FilterInput({
 export function CallbellTabs({
   logs,
   devices,
+  branches,
   receivers,
   residents,
 }: {
   logs: CallLogRow[];
-  devices: KnownDevice[];
+  devices: BellDevice[];
+  branches: BranchOption[];
   receivers: ReceiverRow[];
   residents: ResidentOption[];
 }) {
@@ -90,7 +94,8 @@ export function CallbellTabs({
 
   // ── Assignments edit ──
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editState, setEditState] = useState<EditState>({ resident_id: "", room_label: "" });
+  const [editResidentId, setEditResidentId] = useState("");
+  const [branchId, setBranchId] = useState<number | null>(branches[0]?.id ?? null);
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -117,16 +122,15 @@ export function CallbellTabs({
   const hasFilters = filters.device || filters.resident || filters.call_type || filters.receiver;
 
   // ── Assignment helpers ──
-  function deviceKey(d: KnownDevice) {
+  const branchDevices = branchId === null ? devices : devices.filter((d) => d.branch_id === branchId);
+
+  function deviceKey(d: BellDevice) {
     return `${d.receiver_id}:${d.device_num}`;
   }
 
-  function startEdit(d: KnownDevice) {
+  function startEdit(d: BellDevice) {
     setEditingKey(deviceKey(d));
-    setEditState({
-      resident_id: d.resident_id ? String(d.resident_id) : "",
-      room_label: d.room_label,
-    });
+    setEditResidentId(d.resident_id ? String(d.resident_id) : "");
     setSaveError(null);
   }
 
@@ -135,7 +139,7 @@ export function CallbellTabs({
     setSaveError(null);
   }
 
-  function saveEdit(d: KnownDevice) {
+  function saveEdit(d: BellDevice) {
     setSaveError(null);
     startSaving(async () => {
       const res = await fetch("/api/callbell/assign", {
@@ -144,8 +148,7 @@ export function CallbellTabs({
         body: JSON.stringify({
           receiver_id: d.receiver_id,
           device_num: d.device_num,
-          resident_id: editState.resident_id ? Number(editState.resident_id) : null,
-          room_label: editState.room_label || null,
+          resident_id: editResidentId ? Number(editResidentId) : null,
         }),
       });
       if (!res.ok) {
@@ -238,52 +241,68 @@ export function CallbellTabs({
       {/* ── Assignments ── */}
       {tab === "assignments" && (
         <div>
-          <p className="mb-3 text-xs text-fg-subtle">
-            {t("Devices seen in call logs. Click Edit to assign a resident.")}
-          </p>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            {branches.length > 1 && (
+              <select
+                value={branchId ?? ""}
+                onChange={(e) => {
+                  setBranchId(e.target.value ? Number(e.target.value) : null);
+                  setEditingKey(null);
+                }}
+                className="rounded border border-line bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+              >
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <p className="text-xs text-fg-subtle">
+              {t("Call bells paired on the receiver. Select a resident for each bell.")}
+            </p>
+          </div>
           <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
                 <tr>
-                  <th className="px-4 py-2">{t("Device")}</th>
+                  <th className="px-4 py-2">{t("Device ID")}</th>
+                  <th className="px-4 py-2">{t("Call Number")}</th>
                   <th className="px-4 py-2">{t("Resident")}</th>
-                  <th className="px-4 py-2">{t("Room")}</th>
-                  <th className="px-4 py-2" />
+                  <th className="px-4 py-2">{t("Action")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-subtle">
-                {devices.map((d) => {
+                {branchDevices.map((d) => {
                   const key = deviceKey(d);
                   const isEditing = editingKey === key;
-
-                  if (isEditing) {
-                    return (
-                      <tr key={key} className="bg-surface-muted">
-                        <td className="px-4 py-2 font-mono text-xs text-fg">{d.device_num}</td>
-                        <td className="px-4 py-2">
+                  return (
+                    <tr key={key} className={isEditing ? "bg-surface-muted" : "hover:bg-hover"}>
+                      <td className="px-4 py-2 font-mono text-xs text-fg">{d.device_num}</td>
+                      <td className="px-4 py-2 font-medium text-fg">{d.call_number || "—"}</td>
+                      <td className="px-4 py-2 text-fg-muted">
+                        {isEditing ? (
                           <select
-                            value={editState.resident_id}
-                            onChange={(e) => setEditState((s) => ({ ...s, resident_id: e.target.value }))}
+                            value={editResidentId}
+                            onChange={(e) => setEditResidentId(e.target.value)}
+                            autoFocus
                             className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                           >
                             <option value="">{t("Unassigned")}</option>
-                            {residents.map((r) => (
-                              <option key={r.id} value={String(r.id)}>
-                                {r.resident_name}
-                              </option>
-                            ))}
+                            {residents
+                              .filter((r) => r.branch_id === d.branch_id)
+                              .map((r) => (
+                                <option key={r.id} value={String(r.id)}>
+                                  {r.resident_name}
+                                </option>
+                              ))}
                           </select>
-                        </td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={editState.room_label}
-                            onChange={(e) => setEditState((s) => ({ ...s, room_label: e.target.value }))}
-                            placeholder={t("Room")}
-                            className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                          />
-                        </td>
-                        <td className="px-4 py-2">
+                        ) : (
+                          d.resident_name || <span className="italic text-fg-faint">{t("Unassigned")}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
@@ -303,41 +322,26 @@ export function CallbellTabs({
                               <X className="h-3 w-3" />
                               {t("Cancel")}
                             </button>
-                            {saveError && (
-                              <span className="text-xs text-red-500">{saveError}</span>
-                            )}
+                            {saveError && <span className="text-xs text-red-500">{saveError}</span>}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  return (
-                    <tr key={key} className="hover:bg-hover">
-                      <td className="px-4 py-2 font-mono text-xs text-fg">{d.device_num}</td>
-                      <td className="px-4 py-2 text-fg-muted">
-                        {d.resident_name || (
-                          <span className="italic text-fg-faint">{t("Unassigned")}</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(d)}
+                            className="flex items-center gap-1 rounded border border-line px-2.5 py-1 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            {d.resident_id ? t("Edit") : t("Assign")}
+                          </button>
                         )}
-                      </td>
-                      <td className="px-4 py-2 text-fg-muted">{d.room_label || "—"}</td>
-                      <td className="px-4 py-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(d)}
-                          className="flex items-center gap-1 rounded border border-line px-2.5 py-1 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          {d.resident_id ? t("Edit") : t("Assign")}
-                        </button>
                       </td>
                     </tr>
                   );
                 })}
-                {devices.length === 0 && (
+                {branchDevices.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-6 text-center text-fg-faint">
-                      {t("No devices seen in call logs yet.")}
+                      {t("No call bells received from the receiver yet. On the receiver, open OSEM LoRa Sync and press SYNC DEVICES + ASSIGNMENTS.")}
                     </td>
                   </tr>
                 )}

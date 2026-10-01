@@ -24,7 +24,7 @@
        ├─ /ingest     — receives call log batches
        ├─ /config     — returns assignments + disarms to APK
        ├─ /assign     — web UI saves resident ↔ device assignment
-       └─ /devices    — Phase 2B: receives DEVICES_BEAN device list
+       └─ /devices    — receiver inventory from Wenze getalldevices
 
 [Supabase]
   ├─ cb_receivers     — one row per physical Wenze L5070
@@ -43,7 +43,7 @@
 - Web dashboard uses `createAdminClient()` in server components (bypasses RLS, scoped in code)
 - `/api/callbell/*` routes are exempted from auth middleware (`middleware.ts`)
 - Do NOT modify original Wenze APK (`com.wenze.callsystem`)
-- Do NOT directly modify `DEVICES_BEAN` unless no viable alternative (Phase 2B uses it for name push — HTTP API format still unknown)
+- Do NOT directly modify `DEVICES_BEAN` — use the Wenze HTTP API (/manager/updateDevices)
 - Do NOT update a device in a way that clears an active call
 - Only operate on existing devices — do not auto-add or withdraw
 
@@ -160,53 +160,35 @@ HQ admin users see nothing through the user-scoped client — solved by using `c
 
 ---
 
-## Phase 2B — DEVICES_BEAN Sync + Name Push 🔄 IN PROGRESS
+## Phase 2B — Assignment tab from receiver inventory ✅ IMPLEMENTED (2026-10-01, pending on-device test)
 
-**Goal:**
-1. Auto-populate `room_label` from Wenze device configuration (no manual typing)
-2. Push assigned resident names back to Wenze so the receiver display shows the correct name
+Replaces the earlier SQLite-based attempt. That attempt wrote resident names into DEVICES_BEAN.NAME, which would have overwritten the call number. `WenzeDbSync.kt` has been deleted.
 
-### New server route
-`webapp/src/app/api/callbell/devices/route.ts`
-- POST `{ receiver_id, schema_probe, devices: [{device_num, room_label, user_name}] }`
-- Upserts `cb_assignments` with `room_label` — only updates room_label, never touches `resident_id`
-- Logs `schema_probe` to Vercel console (inspect actual DEVICES_BEAN column names)
+Three separate concepts:
+| Concept | Source | Supabase |
+|---|---|---|
+| Device inventory | Wenze `/manager/getalldevices` | `cb_assignments.device_num`, `room_label` (= NAME / call number) |
+| Assignment | Web UI | `cb_assignments.resident_id` (nullable) |
+| Call log | CALL_RECORDING_BEAN | `cb_call_logs` (not used by the Assignment tab) |
 
-### New APK file
-`WenzeDbSync.kt` — standalone object:
-- `getSchema()` — runs `PRAGMA table_info(DEVICES_BEAN)`, returns column names + 3 sample rows
-- `readDevices()` — reads all DEVICES_BEAN rows, maps to `{device_num, room_label, user_name}`
-  - Discovers room column: tries `PHONE_NUM`, `ROOM_NUM`, `CALL_NUM`, `BED_NUM`, `ROOM_NO`, `CALL_NO`, `CONTACT_NUMBER`, `LOCATION`
-  - Discovers name column: tries `USER_NAME`, `NAME`, `RESIDENT_NAME`, `OWNER_NAME`, `PATIENT_NAME`, `PERSON_NAME`, `BED_USER`
-- `writeResidentName(deviceNum, name)` — writes resident name to DEVICES_BEAN so Wenze display updates
+**Wenze HTTP API** (`http://127.0.0.1:8080`, from the APK on the receiver itself)
+- POST, body/response DES-CBC/PKCS5, key `NynqZXv9`, IV `vL8uzNYi`, Base64
+- Envelope `{errorCode, errorMsg, data}`; fields: `deviceNum`, `name` (call no.), `nickName` (resident), `isCall`
+- `updateDevices` takes the full device object; OSEM round-trips it and changes only `nickName`
 
-### APK changes (Phase 2B)
-- `SyncService.kt`:
-  - `fetchAndApplyConfig()` — after fetching config, calls `pushNamesToDevice(assignments)`
-  - `pushNamesToDevice()` — for each assignment, calls `WenzeDbSync.writeResidentName()`
-  - `syncDevices()` — reads DEVICES_BEAN, POSTs to `/api/callbell/devices`
-  - New interval: `DEVICE_SYNC_INTERVAL_MS = 30min`
-  - New action: `ACTION_DEVICE_SYNC`
-- `SupabaseApiClient.kt` — adds `syncDevices(receiverId, schemaProbe, devices)`
-- `MainActivity.kt` — adds "SYNC DEVICES (ROOM LABELS)" button
+**APK** (`WenzeHttpApi.kt`, `SyncService.kt`, `SupabaseApiClient.kt`)
+- Every 10 min (and when **SYNC DEVICES + ASSIGNMENTS** is pressed): getalldevices, then POST `/api/callbell/devices` `{complete:true, devices:[{device_num, call_number, nick_name}]}`
+- Every 5 min: GET `/config`, then set NICK_NAME via updateDevices
+  - skipped while `isCall` is active (retried next cycle)
+  - NAME is never written
+  - on unassign, NICK_NAME is cleared only if OSEM set it earlier (tracked in the `osem_applied_names` prefs), so names typed on the receiver survive
 
-### Phase 2B test sequence
-1. Build and install updated APK on Wenze L5070
-2. Press **SYNC DEVICES (ROOM LABELS)** in the app
-3. Check Assignments tab — room labels should auto-fill
-4. Check Vercel logs for `[callbell/devices] schema_probe` line → shows actual column names
-5. If `_room_col` or `_name_col` is empty, DEVICES_BEAN uses different column names → update `WenzeDbSync.ROOM_COLS` / `NAME_COLS` lists
+**Web**
+- `/api/callbell/devices`: upserts device_num + room_label and never touches resident_id. On a complete, non-empty list it removes bells that are no longer paired.
+- `/api/callbell/assign`: updates resident_id only, on an existing inventory row. Unassign sets it to NULL; the row is kept. The resident must be ACTIVE and in the receiver's branch, and the branch check uses canAccessAllBranches.
+- Assignment tab columns: Device ID | Call Number (read-only) | Resident (picker) | Action. A branch filter appears only when the user can see more than one branch.
 
-### Phase 2B full loop (after setup)
-```
-Web UI: assign "Lee Ah Kow" → device F58480
-        ↓ saved to cb_assignments
-APK (every 5 min): GET /api/callbell/config
-        ↓ receives { device_num: "F58480", resident_name: "Lee Ah Kow" }
-        ↓ WenzeDbSync.writeResidentName("F58480", "Lee Ah Kow")
-        ↓ DEVICES_BEAN updated
-Wenze display: shows "Lee Ah Kow" on next call from Room 121A
-```
+No schema change.
 
 ---
 
@@ -215,9 +197,9 @@ Wenze display: shows "Lee Ah Kow" on next call from Room 121A
 | Item | Status | Notes |
 |------|--------|-------|
 | HQ all-branch view | ⚠️ Partial | Page uses adminClient + code-level scope; RLS not updated |
-| Phase 2B HTTP API | 🔜 Deferred | Wenze port 8080 (DES-CBC) — format unknown; direct SQLite write used for now |
+| Phase 2B HTTP API | ✅ Done | getalldevices / updateDevices used via 127.0.0.1:8080 |
 | Disarm management UI | 🔜 Not built | `cb_disarm_events` table exists; no web UI yet |
-| Assignment management — room auto-populate | 🔄 Phase 2B | Requires first DEVICES_BEAN sync to confirm column names |
+| Assignment tab from inventory | ✅ Built | Awaiting on-device test |
 | Assignment history / audit | 🔜 Not built | — |
 | Real-time push (WebSocket) | 🔜 Not built | Currently browser must refresh to see new calls |
 
