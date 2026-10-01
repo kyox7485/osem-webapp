@@ -38,6 +38,14 @@ export const INV_TIER = {
   EXCEPTIONS_REVIEW: 3,
   PERIOD_LOCK: 3,
   PERIOD_REOPEN: 4,
+  /**
+   * Quick edit from a read-only report into the product master. Deliberately
+   * not an fn_inv_action_tier() case: that table has no PRODUCT_EDIT, and the
+   * products page itself only lets an owner-branch product be edited by the
+   * owner or an HQ ADMIN. This gates the *entry point*, so a MODERATOR
+   * (rank 3) or ADMIN (rank 4) is the floor, not rank 5.
+   */
+  PRODUCT_EDIT: 3,
 } as const;
 
 export type LocationKind = "STORE" | "FLOOR" | "TRANSIT";

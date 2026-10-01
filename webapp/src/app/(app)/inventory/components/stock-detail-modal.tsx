@@ -36,7 +36,8 @@ export function StockItemDetailModal({
   totalQty: number;
   unit: string;
   onClose: () => void;
-  onQuickEdit: () => void;
+  /** Omitted for logins below MODERATOR -- the Quick edit action is hidden. */
+  onQuickEdit?: () => void;
 }) {
   const t = useTranslation();
   useEffect(() => {
@@ -121,11 +122,13 @@ export function StockItemDetailModal({
         </div>
 
         {/* Actions */}
-        <div className="border-t border-line px-6 py-4">
-          <button type="button" onClick={onQuickEdit} className={SECONDARY_BTN_CLS + " flex items-center gap-2"}>
-            <Pencil className="h-4 w-4" /> {t("Quick edit")}
-          </button>
-        </div>
+        {onQuickEdit && (
+          <div className="border-t border-line px-6 py-4">
+            <button type="button" onClick={onQuickEdit} className={SECONDARY_BTN_CLS + " flex items-center gap-2"}>
+              <Pencil className="h-4 w-4" /> {t("Quick edit")}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

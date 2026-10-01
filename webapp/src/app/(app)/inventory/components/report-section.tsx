@@ -1,5 +1,5 @@
 import { getServerTranslator } from "@/lib/i18n/server";
-import { currentMonthKL } from "@/lib/inventory/core";
+import { currentMonthKL, INV_TIER } from "@/lib/inventory/core";
 import type { InventoryContext } from "@/lib/inventory/server";
 import { loadReport } from "@/lib/inventory/reports";
 import { loadFilterOptions } from "@/lib/inventory/reports/filter-options";
@@ -79,6 +79,7 @@ export async function ReportSection({
             report={result}
             emptyText={t("No rows for these filters.")}
             truncatedText={t("Showing the first {count} rows. Narrow the filters, or export to see more.", { count: SCREEN_ROW_CAP })}
+            canQuickEdit={ctx.rank >= INV_TIER.PRODUCT_EDIT}
           />
         </>
       )}

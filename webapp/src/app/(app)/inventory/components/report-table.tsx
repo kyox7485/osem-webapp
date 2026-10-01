@@ -9,7 +9,18 @@ import { StockItemDetailModal } from "./stock-detail-modal";
 
 const NUMERIC = new Set(["int", "qty", "money", "money4"]);
 
-export function ReportTable({ report, truncatedText, emptyText }: { report: ReportResult; truncatedText: string; emptyText: string }) {
+export function ReportTable({
+  report,
+  truncatedText,
+  emptyText,
+  canQuickEdit = false,
+}: {
+  report: ReportResult;
+  truncatedText: string;
+  emptyText: string;
+  /** MODERATOR/ADMIN only -- opening the product editor is a setup change. */
+  canQuickEdit?: boolean;
+}) {
   const [openId, setOpenId] = useState<number | null>(null);
   const openRow = report.rows.find((r) => (r.id as number | undefined) === openId);
   if (report.rows.length === 0) {
@@ -106,7 +117,7 @@ export function ReportTable({ report, truncatedText, emptyText }: { report: Repo
           totalQty={typeof openRow.total === "number" ? openRow.total : 0}
           unit={String(openRow.unit ?? "")}
           onClose={() => setOpenId(null)}
-          onQuickEdit={() => { window.open(`/inventory/setup/products?product=${openRow.id}`, "_blank"); setOpenId(null); }}
+          onQuickEdit={canQuickEdit ? () => { window.open(`/inventory/setup/products?product=${openRow.id}`, "_blank"); setOpenId(null); } : undefined}
         />
       )}
     </div>
