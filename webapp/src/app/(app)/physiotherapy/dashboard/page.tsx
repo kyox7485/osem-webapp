@@ -48,7 +48,7 @@ export default async function PhysioDashboardPage({
   const { t } = await getServerTranslator();
   const sp = await searchParams;
 
-  const period = (["week", "month", "quarter", "custom"].includes(sp.period ?? "") ? sp.period : "month") as PeriodKey;
+  const period = (["week", "month", "lastmonth", "custom"].includes(sp.period ?? "") ? sp.period : "month") as PeriodKey;
   const start = sp.start ?? "";
   const end = sp.end ?? "";
   const branchFilter = sp.branch ? Number(sp.branch) : null;

@@ -19,7 +19,7 @@ type Props = {
 const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: "week", label: "This week" },
   { key: "month", label: "This month" },
-  { key: "quarter", label: "Last 3 months" },
+  { key: "lastmonth", label: "Last month" },
   { key: "custom", label: "Custom" },
 ];
 

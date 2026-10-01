@@ -12,7 +12,7 @@ export const dictPhysio: Record<string, string> = {
   "Workload analytics": "Analitik Beban Kerja",
   "This week": "Minggu ini",
   "This month": "Bulan ini",
-  "Last 3 months": "3 bulan lepas",
+  "Last month": "Bulan lepas",
   Custom: "Tersuai",
   "Team view": "Paparan Pasukan",
   "Individual view": "Paparan Individu",

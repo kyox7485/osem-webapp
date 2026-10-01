@@ -15,7 +15,7 @@ export const PATIENT_TYPE_LABELS: Record<PatientTypeKey, string> = {
 // "over" is rendered as neutral/positive rather than a warning.
 export const WEEKLY_BASELINE_HOURS = 45;
 
-export type PeriodKey = "week" | "month" | "quarter" | "custom";
+export type PeriodKey = "week" | "month" | "lastmonth" | "custom";
 
 export type DateRange = { start: Date; end: Date };
 
@@ -50,10 +50,15 @@ export function resolveDateRange(period: PeriodKey, customStart: string, customE
   if (period === "week") {
     return { start: startOfWeek(today), end: today };
   }
-  if (period === "quarter") {
-    const start = startOfDay(new Date(today));
-    start.setDate(start.getDate() - 90);
-    return { start, end: today };
+  // The previous full calendar month -- a clean counterpart to "This month"
+  // (which is month-to-date), rather than a rolling N days back from today.
+  // Day 0 of the current month is the last day of the previous one, which is
+  // how the end date is derived without a hardcoded month-length table.
+  if (period === "lastmonth") {
+    return {
+      start: startOfDay(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+      end: endOfDay(new Date(today.getFullYear(), today.getMonth(), 0)),
+    };
   }
   // month (default)
   const start = startOfDay(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -258,7 +263,7 @@ export type WeekBucket = {
 };
 
 // Buckets by day for a single-week view, otherwise by Monday-start week --
-// keeps the trend chart legible whether the range is 7 days or 90.
+// keeps the trend chart legible whether the range is a week or a month.
 export function bucketByPeriod(rows: AssessmentRow[], range: DateRange, period: PeriodKey): WeekBucket[] {
   const byDay = period === "week";
   const buckets = new Map<string, WeekBucket>();
