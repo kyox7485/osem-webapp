@@ -1,8 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
-import { CallbellTabs, type CallLogRow, type AssignmentRow, type ReceiverRow } from "./callbell-tabs";
+import {
+  CallbellTabs,
+  type CallLogRow,
+  type KnownDevice,
+  type ReceiverRow,
+  type ResidentOption,
+} from "./callbell-tabs";
 
 const TZ = "Asia/Kuala_Lumpur";
 
@@ -42,53 +48,108 @@ function fmtResponseTime(val: string | number | null): string {
 
 export default async function CallbellPage() {
   const { t } = await getServerTranslator();
-  const supabase = await createClient();
+  const account = await getCurrentUser();
+  const adminClient = createAdminClient();
 
-  const [logsResult, assignmentsResult, receiversResult] = await Promise.all([
-    supabase
+  // ── Receivers scoped to branch (or all branches for HQ/admin) ──
+  type ReceiverDbRow = { id: number; branch_id: number; receiver_label: string; android_id: string | null; apk_version: string | null; last_seen_at: string | null };
+  let receiversQuery = adminClient
+    .from("cb_receivers")
+    .select("id, branch_id, receiver_label, android_id, apk_version, last_seen_at")
+    .order("receiver_label");
+
+  if (account && !canAccessAllBranches(account)) {
+    receiversQuery = receiversQuery.eq("branch_id", account.branch_id);
+  }
+
+  const { data: receiverRows } = await receiversQuery;
+  const receiverList = (receiverRows ?? []) as ReceiverDbRow[];
+  const receiverIds = receiverList.map((r) => r.id);
+  const branchIds = [...new Set(receiverList.map((r) => r.branch_id))];
+  const receiverLabelById = Object.fromEntries(receiverList.map((r) => [r.id, r.receiver_label]));
+
+  if (receiverIds.length === 0) {
+    return (
+      <div>
+        <PageTitle title={t("Call Bell")} />
+        <p className="mt-6 text-sm text-fg-faint">{t("No receivers found.")}</p>
+      </div>
+    );
+  }
+
+  // ── All data in parallel ──
+  const [logsResult, assignmentsResult, deviceLogsResult, residentsResult] = await Promise.all([
+    adminClient
       .from("cb_call_logs")
-      .select("id, device_num, resident_name_snapshot, call_type, call_time, response_time, duration, cb_receivers(receiver_label)")
+      .select("id, receiver_id, device_num, resident_name_snapshot, call_type, call_time, response_time, duration")
+      .in("receiver_id", receiverIds)
       .order("call_time", { ascending: false, nullsFirst: false })
       .limit(200),
 
-    supabase
+    adminClient
       .from("cb_assignments")
-      .select("id, device_num, room_label, cb_receivers(receiver_label), tbl_residents(resident_name)")
+      .select("id, receiver_id, device_num, resident_id, room_label, tbl_residents(resident_name)")
+      .in("receiver_id", receiverIds)
       .order("device_num"),
 
-    supabase
-      .from("cb_receivers")
-      .select("id, receiver_label, android_id, apk_version, last_seen_at")
-      .order("receiver_label"),
+    // Distinct devices via call logs — deduplicated in JS below
+    adminClient
+      .from("cb_call_logs")
+      .select("receiver_id, device_num")
+      .in("receiver_id", receiverIds)
+      .order("device_num")
+      .limit(2000),
+
+    adminClient
+      .from("tbl_residents")
+      .select("id, resident_name")
+      .in("branch_id", branchIds)
+      .order("resident_name"),
   ]);
 
-  const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => {
-    const rec = Array.isArray(row.cb_receivers) ? row.cb_receivers[0] : row.cb_receivers;
-    return {
-      id: row.id,
-      receiver_label: rec?.receiver_label ?? "—",
-      device_num: row.device_num ?? "",
-      resident_name: row.resident_name_snapshot ?? "",
-      call_type: row.call_type ?? "",
-      call_time_display: fmtCallTime(row.call_time),
-      response_time_display: fmtResponseTime(row.response_time),
-      duration: row.duration ?? "",
-    };
-  });
+  // ── Map: "{receiver_id}:{device_num}" -> assignment row ──
+  type AssignmentDbRow = { id: number; receiver_id: number; device_num: string; resident_id: number | null; room_label: string | null; tbl_residents: { resident_name: string } | { resident_name: string }[] | null };
+  const assignmentMap = new Map<string, AssignmentDbRow>();
+  for (const row of (assignmentsResult.data ?? []) as AssignmentDbRow[]) {
+    assignmentMap.set(`${row.receiver_id}:${row.device_num}`, row);
+  }
 
-  const assignments: AssignmentRow[] = (assignmentsResult.data ?? []).map((row) => {
-    const rec = Array.isArray(row.cb_receivers) ? row.cb_receivers[0] : row.cb_receivers;
-    const res = Array.isArray(row.tbl_residents) ? row.tbl_residents[0] : row.tbl_residents;
-    return {
-      id: row.id,
-      receiver_label: rec?.receiver_label ?? "—",
-      device_num: row.device_num ?? "",
-      resident_name: (res as { resident_name?: string } | null)?.resident_name ?? "",
-      room_label: row.room_label ?? "",
-    };
-  });
+  // ── Deduplicated known devices ──
+  const seenDevices = new Set<string>();
+  const devices: KnownDevice[] = [];
+  for (const row of (deviceLogsResult.data ?? []) as { receiver_id: number; device_num: string }[]) {
+    const key = `${row.receiver_id}:${row.device_num}`;
+    if (seenDevices.has(key)) continue;
+    seenDevices.add(key);
+    const asgn = assignmentMap.get(key);
+    const res = asgn
+      ? (Array.isArray(asgn.tbl_residents) ? asgn.tbl_residents[0] : asgn.tbl_residents)
+      : null;
+    devices.push({
+      receiver_id: row.receiver_id,
+      receiver_label: receiverLabelById[row.receiver_id] ?? "—",
+      device_num: row.device_num,
+      assignment_id: asgn?.id ?? null,
+      resident_id: asgn?.resident_id ?? null,
+      resident_name: res?.resident_name ?? "",
+      room_label: asgn?.room_label ?? "",
+    });
+  }
 
-  const receivers: ReceiverRow[] = (receiversResult.data ?? []).map((row) => ({
+  // ── Call logs ──
+  const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => ({
+    id: row.id as number,
+    receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
+    device_num: (row.device_num as string) ?? "",
+    resident_name: (row.resident_name_snapshot as string) ?? "",
+    call_type: (row.call_type as string) ?? "",
+    call_time_display: fmtCallTime(row.call_time as string | number | null),
+    response_time_display: fmtResponseTime(row.response_time as string | number | null),
+    duration: (row.duration as string) ?? "",
+  }));
+
+  // ── Receivers display ──
+  const receivers: ReceiverRow[] = receiverList.map((row) => ({
     id: row.id,
     receiver_label: row.receiver_label,
     android_id: row.android_id ?? "",
@@ -96,10 +157,21 @@ export default async function CallbellPage() {
     last_seen_display: fmtLastSeen(row.last_seen_at),
   }));
 
+  // ── Residents picker options ──
+  const residents: ResidentOption[] = (residentsResult.data ?? []).map((r) => ({
+    id: r.id as number,
+    resident_name: (r.resident_name as string) ?? "",
+  }));
+
   return (
     <div>
       <PageTitle title={t("Call Bell")} />
-      <CallbellTabs logs={logs} assignments={assignments} receivers={receivers} />
+      <CallbellTabs
+        logs={logs}
+        devices={devices}
+        receivers={receivers}
+        residents={residents}
+      />
     </div>
   );
 }

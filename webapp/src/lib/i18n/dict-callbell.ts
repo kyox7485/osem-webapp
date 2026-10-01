@@ -17,5 +17,11 @@ export const dictCallbell: Record<string, string> = {
   "No call logs found.": "Tiada log panggilan ditemui.",
   "No assignments found.": "Tiada tugasan ditemui.",
   "No receivers found.": "Tiada penerima ditemui.",
+  "No devices seen in call logs yet.": "Tiada peranti dilihat dalam log panggilan.",
   "Unassigned": "Tidak Ditugaskan",
+  "Assign": "Tugaskan",
+  "Edit": "Edit",
+  "Save": "Simpan",
+  "Cancel": "Batal",
+  "Devices seen in call logs. Click Edit to assign a resident.": "Peranti yang dilihat dalam log panggilan. Klik Edit untuk tugaskan penghuni.",
 };
