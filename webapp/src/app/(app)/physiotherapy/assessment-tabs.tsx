@@ -50,10 +50,12 @@ export function PhysioAssessmentTabs({
 }: Props) {
   const t = useTranslation();
   const { guardedAction } = useSafeNavigation();
-  // Starts on New Entry once a patient is picked -- that should go
-  // straight to a clean entry form, not the review list. With no patient
-  // picked yet, there's no entry form to show, so start on Review Notes.
-  const [tab, setTab] = useState<"review" | "new">(residentId ? "new" : "review");
+  // Always opens on Review Notes -- picking a resident only changes which
+  // patient's history is listed, never which tab is showing. The component is
+  // remounted on every resident switch (page.tsx keys on the patient id), so
+  // a conditional initializer here would yank the user off the list they're
+  // reading and onto a blank entry form. Same convention as ProgressNotesTabs.
+  const [tab, setTab] = useState<"review" | "new">("review");
 
   return (
     <div>
