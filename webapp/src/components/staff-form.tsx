@@ -5,6 +5,7 @@ import type { Staff, LookupOption } from "@/lib/types";
 import { STAFF_ROLE_OPTIONS, DEPARTMENT_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { isRedirectSignal } from "@/lib/redirect-signal";
 
 type Props = {
   staff?: Staff;
@@ -31,7 +32,21 @@ export function StaffForm({ staff, positions, branches, isAdmin, action }: Props
   async function handleSubmit(formData: FormData): Promise<{ success: boolean; error?: string }> {
     setSubmitting(true);
     setError(null);
-    const result = await action(formData);
+    let result: { error?: string } | void;
+    try {
+      result = await action(formData);
+    } catch (err) {
+      // createStaff/updateStaff end with redirect(), which surfaces here as a
+      // rejected promise even though the save succeeded -- see redirect-signal.ts.
+      if (isRedirectSignal(err)) {
+        markClean();
+        return { success: true };
+      }
+      const message = t("Save failed. Please try again.");
+      setError(message);
+      setSubmitting(false);
+      return { success: false, error: message };
+    }
     if (result?.error) {
       setError(result.error);
       setSubmitting(false);

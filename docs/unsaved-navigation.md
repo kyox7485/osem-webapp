@@ -57,3 +57,22 @@ timing — this was a real, shipped bug (the guard intermittently failed to
 fire) fixed by calling `registerDirty()` directly in the handler and
 `setLocalDirty(true)` as a separate plain call, not nested inside the
 updater.
+
+**Known footgun — save handlers backed by a redirecting Server Action.**
+The `onSaveAndExit` handler a form registers must **always settle** its
+promise with `{ success }`. When the Server Action ends with `redirect()`,
+the client-side `await action(...)` *rejects* with a `NEXT_REDIRECT` error
+even though the save succeeded. Two shipped bugs came from this:
+- `resident-form.tsx` wrapped the action in `new Promise` + `startTransition`
+  and never resolved on a redirect, so the global dialog sat on
+  "Saving..." forever (all buttons disabled, Escape blocked, surviving the
+  navigation because `DirtyFormProvider` lives in the root layout).
+- `staff-form.tsx` / `account-form.tsx` let the rejection reach the dialog's
+  `.catch`, which showed a false "Save failed" — and a second click saved
+  the record twice.
+Fix pattern: `try { result = await action(fd) } catch (err) { if
+(isRedirectSignal(err)) { markClean(); return { success: true }; } ... }`
+using `src/lib/redirect-signal.ts`. Inside a `startTransition`, resolve
+first and then re-throw the redirect error so Next.js finishes navigating.
+Actions that return normally on success (e.g. `createProgressNote`) don't
+need this.

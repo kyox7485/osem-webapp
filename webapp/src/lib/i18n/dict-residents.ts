@@ -209,4 +209,7 @@ export const dictResidents: Record<string, string> = {
 
   // Module tab label
   "Resident's Particular": "Butiran Penghuni",
+
+  // New Resident save-in-progress note (resident-form.tsx)
+  "Saving the resident and {count} admission medication order(s). This can take up to a minute per medication. Please keep this page open.": "Menyimpan penghuni dan {count} pesanan ubat kemasukan. Ini boleh mengambil masa sehingga seminit bagi setiap ubat. Sila kekalkan halaman ini terbuka.",
 };

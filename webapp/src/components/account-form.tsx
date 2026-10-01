@@ -5,6 +5,7 @@ import type { UserAccount, LookupOption } from "@/lib/types";
 import { RIGHTS_OPTIONS, STAFF_STATUS_OPTIONS } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { isRedirectSignal } from "@/lib/redirect-signal";
 
 type Props = {
   account?: UserAccount;
@@ -39,7 +40,13 @@ export function AccountForm({ account, branches, action }: Props) {
       // On success the server action redirects; stay in submitting state until navigation
       markClean();
       return { success: true };
-    } catch {
+    } catch (err) {
+      // createAccount/updateAccount end with redirect(), which surfaces here as
+      // a rejected promise even though the save succeeded -- see redirect-signal.ts.
+      if (isRedirectSignal(err)) {
+        markClean();
+        return { success: true };
+      }
       setError("An unexpected error occurred. Please try again.");
       setSubmitting(false);
       return { success: false, error: "An unexpected error occurred. Please try again." };

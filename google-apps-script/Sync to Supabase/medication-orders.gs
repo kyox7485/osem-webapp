@@ -103,6 +103,21 @@ function buildColumnMap(headerRow) {
   return map;
 }
 
+// True if a row with exactly this RxOrderID is already on the sheet. Uses a
+// TextFinder on the RxOrderID column only (exact whole-cell match), so it
+// stays fast on a large sheet and can't match an id inside another column.
+function orderRowExists_(sheet, colMap, rxOrderId) {
+  const idx = colMap["RxOrderID"];
+  const lastRow = sheet.getLastRow();
+  if (!rxOrderId || idx === undefined || lastRow < 2) return false;
+  return sheet
+    .getRange(2, idx + 1, lastRow - 1, 1)
+    .createTextFinder(String(rxOrderId))
+    .matchEntireCell(true)
+    .matchCase(true)
+    .findNext() !== null;
+}
+
 // Appends a new row. All COLUMNS fields are placed in the correct column
 // based on the live header; unmapped payload keys are silently ignored.
 // Syncs to Supabase and rebuilds the resident's medication summary before
@@ -119,6 +134,19 @@ function createOrder(order) {
     : [];
 
   const colMap = buildColumnMap(header);
+
+  // Idempotent on RxOrderID: the webapp's callScript() retries a request that
+  // came back non-2xx, and that can happen AFTER this function already
+  // appended the row (e.g. the sync below ran long). Without this check the
+  // retry appends the same order a second time. A repeat just re-runs the
+  // sync for the existing row.
+  if (orderRowExists_(sheet, colMap, order["RxOrderID"])) {
+    return Object.assign(
+      { success: true, alreadyExisted: true },
+      syncOrderAndSummary_(order["RxOrderID"], order["ResidentID"])
+    );
+  }
+
   const row = new Array(Math.max(header.length, COLUMNS.length)).fill("");
 
   for (const col of COLUMNS) {

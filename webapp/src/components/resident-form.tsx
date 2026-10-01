@@ -24,6 +24,7 @@ import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
 import { useTranslation } from "@/components/language-provider";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useDirtyForm } from "@/lib/dirty-form-context";
+import { isRedirectSignal } from "@/lib/redirect-signal";
 import { AdmissionMedicationsSection, type MedicationDraft } from "@/components/admission-medications";
 
 type StaffOption = LookupOption & { branch_id: number };
@@ -256,9 +257,13 @@ export function ResidentForm({
   // Pin the first value — a later server re-render must not hand this form a new key.
   const [stableSubmissionId] = useState(submissionId);
 
-  // Warn on browser-level navigation (tab close, external link, browser back) when dirty
+  // Warn on browser-level navigation (tab close, refresh, external link) when
+  // dirty -- and also while a save is in flight: the resident row is written
+  // early in the save, so a refresh mid-save followed by a re-submit is how
+  // duplicate admissions happened. In-app redirects are client-side and
+  // don't fire beforeunload, so a successful save never triggers this.
   useEffect(() => {
-    if (!isDirty || isPending) return;
+    if (!isDirty && !isPending) return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
@@ -405,17 +410,34 @@ export function ResidentForm({
     setAssessmentQ((prev) => ({ ...prev, [key]: val }));
   }
 
+  // Must ALWAYS settle: the unsaved-changes dialog's Save & Exit awaits this
+  // promise and stays on "Saving..." until it does.
   function submitForm(formData: FormData): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
       startTransition(async () => {
         setError(null);
-        const result = await action(formData);
+        let result: { error?: string } | void;
+        try {
+          result = await action(formData);
+        } catch (err) {
+          if (isRedirectSignal(err)) {
+            // Success: createResident/updateResident end with redirect().
+            setIsDirty(false);
+            markGlobalClean();
+            resolve({ success: true });
+            throw err; // let Next.js finish the navigation, as before
+          }
+          console.error("[ResidentForm] save failed:", err);
+          const message = t("Save failed. Please try again.");
+          setError(message);
+          resolve({ success: false, error: message });
+          return;
+        }
         if (result?.error) {
           setError(result.error);
           resolve({ success: false, error: result.error });
           return;
         }
-        // On success the server action calls redirect() so isDirty resets implicitly
         setIsDirty(false);
         markGlobalClean();
         resolve({ success: true });
@@ -1287,6 +1309,16 @@ export function ResidentForm({
             </button>
           )}
         </div>
+        {/* Admission medications are sent to the Medication Orders sheet one
+            by one before the save finishes, so this save can take a while --
+            say so, so staff don't refresh or re-submit mid-save. */}
+        {isPending && !resident && medicationDrafts.length > 0 && (
+          <p role="status" className="text-xs text-fg-muted">
+            {t("Saving the resident and {count} admission medication order(s). This can take up to a minute per medication. Please keep this page open.", {
+              count: medicationDrafts.length,
+            })}
+          </p>
+        )}
       </form>
     </>
   );
