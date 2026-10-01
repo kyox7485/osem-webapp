@@ -22,6 +22,7 @@ interface CallRecord {
   LEVEL: string
   REMARK: string
   CONTACT_NUMBER: string
+  NICK_NAME?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -71,15 +72,34 @@ export async function POST(req: NextRequest) {
     level: r.LEVEL || null,
     remark: r.REMARK || null,
     contact_number: r.CONTACT_NUMBER || null,
+    // Resident name the receiver recorded at call time (immutable history).
+    resident_nickname: r.NICK_NAME || null,
   }))
 
   const { error } = await supabase
     .from('cb_call_logs')
-    .upsert(rows, { onConflict: 'receiver_id,local_id,call_time', ignoreDuplicates: true })
+    // Merge (not ignore): the receiver fills RESPONSE_TIME in later on the
+    // same record and the APK re-sends it, and a FULL DATABASE SYNC backfills.
+    .upsert(rows, { onConflict: 'receiver_id,local_id,call_time' })
 
   if (error) {
     return NextResponse.json({ ok: false, code: 'DB_ERROR', detail: error.message }, { status: 500 })
   }
+
+  // Pressing a bell again while its call is still open makes the receiver move
+  // CALL_TIME on the same record, so an earlier unanswered copy (same local_id,
+  // older call_time) is left behind — remove it.
+  const latestCallTime = new Map(rows.map((r) => [r.local_id, r.call_time ?? 0]))
+  const { data: openRows } = await supabase
+    .from('cb_call_logs')
+    .select('id, local_id, call_time')
+    .eq('receiver_id', body.receiver_id)
+    .in('local_id', [...latestCallTime.keys()])
+    .is('response_time', null)
+  const stale = (openRows ?? [])
+    .filter((o) => Number(o.call_time) < (latestCallTime.get(Number(o.local_id)) ?? 0))
+    .map((o) => o.id)
+  if (stale.length > 0) await supabase.from('cb_call_logs').delete().in('id', stale)
 
   await supabase
     .from('cb_receivers')

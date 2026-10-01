@@ -2,15 +2,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
+import { formatBranch } from "@/lib/lookups";
 import {
   CallbellTabs,
   type CallLogRow,
-  type KnownDevice,
+  type BellDevice,
+  type BranchOption,
   type ReceiverRow,
   type ResidentOption,
 } from "./callbell-tabs";
+import { CallbellBranchPicker } from "./branch-picker";
+import { CallbellDashboard } from "./analytics/dashboard";
+import { buildBranchStats, buildDashboard, fetchBellResidents } from "./analytics/queries";
+import { resolveDateRange, type PeriodKey } from "./analytics/data";
 
 const TZ = "Asia/Kuala_Lumpur";
+const SLOW_RESPONSE_MS = 15 * 60_000; // response slower than 15 min is flagged red
 
 function fmtCallTime(ms: string | number | null): string {
   const n = ms ? Number(ms) : 0;
@@ -55,110 +62,232 @@ function fmtResponseDuration(
   return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
 }
 
-export default async function CallbellPage() {
+export default async function CallbellPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    branch?: string;
+    tab?: string;
+    period?: string;
+    from?: string;
+    to?: string;
+  }>;
+}) {
+  const { branch, tab, period, from, to } = await searchParams;
+  const showDashboard = tab === "dashboard";
+  const periodKey = (["today", "7d", "30d", "custom"].includes(period ?? "")
+    ? period
+    : "7d") as PeriodKey;
   const { t } = await getServerTranslator();
   const account = await getCurrentUser();
   const adminClient = createAdminClient();
 
-  // ── Receivers scoped to branch (or all branches for HQ/admin) ──
+  // ── Receivers the account may see (all branches for HQ/admin) ──
   type ReceiverDbRow = { id: number; branch_id: number; receiver_label: string; android_id: string | null; apk_version: string | null; last_seen_at: string | null };
   let receiversQuery = adminClient
     .from("cb_receivers")
     .select("id, branch_id, receiver_label, android_id, apk_version, last_seen_at")
     .order("receiver_label");
 
-  if (account && !canAccessAllBranches(account)) {
+  const allBranchAccount = canAccessAllBranches(account);
+  if (!account) {
+    receiversQuery = receiversQuery.eq("branch_id", -1);
+  } else if (!allBranchAccount) {
     receiversQuery = receiversQuery.eq("branch_id", account.branch_id);
   }
-
   const { data: receiverRows } = await receiversQuery;
-  const receiverList = (receiverRows ?? []) as ReceiverDbRow[];
+  const scopedReceivers = (receiverRows ?? []) as ReceiverDbRow[];
+
+  // ── Branch picker (all-branch accounts only) ──
+  // Nursing branches only; the DEMO branch is hidden unless the account
+  // itself is based there. Defaults to the first branch that has a receiver.
+  let branchOptions: BranchOption[] = [];
+  let selectedBranchId = account?.branch_id ?? -1;
+  if (account && allBranchAccount) {
+    const { data: branchRows } = await adminClient
+      .from("tbl_branches")
+      .select("BranchID, locale:BranchLocale, code:BranchCode")
+      .eq("Function", "NUR")
+      .order("BranchCode");
+    branchOptions = ((branchRows ?? []) as { BranchID: number; locale: string | null; code: string }[])
+      .filter((b) => b.code !== "DEMO" || b.BranchID === account.branch_id)
+      .map((b) => ({ id: Number(b.BranchID), name: formatBranch(b) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const withReceiver = new Set(scopedReceivers.map((r) => r.branch_id));
+    const requested = Number(branch);
+    selectedBranchId =
+      branchOptions.find((b) => b.id === requested)?.id ??
+      branchOptions.find((b) => withReceiver.has(b.id))?.id ??
+      branchOptions[0]?.id ??
+      -1;
+  }
+
+  const receiverList = scopedReceivers.filter((r) => r.branch_id === selectedBranchId);
   const receiverIds = receiverList.map((r) => r.id);
-  const branchIds = [...new Set(receiverList.map((r) => r.branch_id))];
+  const branchIds = [selectedBranchId];
   const receiverLabelById = Object.fromEntries(receiverList.map((r) => [r.id, r.receiver_label]));
+
+  const picker = branchOptions.length > 1 && (
+    <CallbellBranchPicker
+      branches={branchOptions}
+      currentBranch={selectedBranchId}
+      tab={showDashboard ? "dashboard" : undefined}
+    />
+  );
+
+  const nowMs = new Date().getTime();
+
+  // ── Analytics dashboard ───────────────────────────────────────────────────
+  // Aggregated server-side for the selected branch × date range only; the raw
+  // rows never reach the browser.
+  let dashboard: React.ReactNode = null;
+  if (showDashboard) {
+    const range = resolveDateRange(periodKey, from ?? "", to ?? "");
+    const branchLabelById = new Map(branchOptions.map((b) => [b.id, b.name]));
+    const bellByKey = await fetchBellResidents(adminClient, receiverIds);
+    const result = await buildDashboard(adminClient, receiverIds, range, bellByKey);
+    // All-branch accounts additionally get the same range compared per branch.
+    const branchStats =
+      allBranchAccount && branchOptions.length > 1
+        ? await buildBranchStats(adminClient, scopedReceivers, branchLabelById, range)
+        : [];
+    const fmtDay = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    dashboard = (
+      <CallbellDashboard
+        t={t}
+        kpis={result.kpis}
+        buckets={result.buckets}
+        hourRows={result.hourRows}
+        bellRows={result.bellRows}
+        patternRows={result.patternRows}
+        disarms={result.disarms}
+        disarmSummary={result.disarmSummary}
+        branchStats={branchStats}
+        rangeLabel={`${fmtDay(range.start)} – ${fmtDay(range.end)}`}
+        period={periodKey}
+        from={from ?? ""}
+        to={to ?? ""}
+        branch={selectedBranchId}
+        branchOptions={branchOptions.map((b) => ({ id: b.id, label: b.name }))}
+        nowMs={nowMs}
+      />
+    );
+  }
 
   if (receiverIds.length === 0) {
     return (
       <div>
         <PageTitle title={t("Call Bell")} />
+        {picker}
         <p className="mt-6 text-sm text-fg-faint">{t("No receivers found.")}</p>
       </div>
     );
   }
 
   // ── All data in parallel ──
-  const [logsResult, assignmentsResult, deviceLogsResult, residentsResult] = await Promise.all([
+  // Assignment tab = receiver device inventory (cb_assignments rows written by
+  // /api/callbell/devices from the Wenze getalldevices API) + resident assignment.
+  // Call logs are NOT used to discover devices.
+  // Disarms from the last 30 days: active ones for the Assignment tab, older
+  // ones to label calls that came in while their bell was disarmed.
+  const disarmSince = new Date(nowMs - 30 * 24 * 60 * 60_000).toISOString();
+  const [logsResult, inventoryResult, residentsResult, disarmsResult] = await Promise.all([
     adminClient
       .from("cb_call_logs")
-      .select("id, receiver_id, device_num, resident_name_snapshot, call_type, call_time, response_time")
+      .select("id, receiver_id, device_num, resident_name_snapshot, resident_nickname, call_time, response_time")
       .in("receiver_id", receiverIds)
+      // Cancel-button presses on the bell are stored by the receiver as their
+      // own record (NAME "<bell> x", IS_CANCEL_CALL=1); they are the response
+      // to the call before them, not a call, so they are not listed.
+      .or("is_cancel_call.is.null,is_cancel_call.neq.1")
       .order("call_time", { ascending: false, nullsFirst: false })
       .limit(200),
 
     adminClient
       .from("cb_assignments")
-      .select("id, receiver_id, device_num, resident_id, room_label, tbl_residents(resident_name)")
-      .in("receiver_id", receiverIds)
-      .order("device_num"),
-
-    // Distinct devices via call logs — deduplicated in JS below
-    adminClient
-      .from("cb_call_logs")
-      .select("receiver_id, device_num")
-      .in("receiver_id", receiverIds)
-      .order("device_num")
-      .limit(2000),
+      .select("receiver_id, device_num, resident_id, room_label, tbl_residents(resident_name)")
+      .in("receiver_id", receiverIds),
 
     adminClient
       .from("tbl_residents")
-      .select("id, resident_name")
+      .select("id, resident_name, branch_id")
       .in("branch_id", branchIds)
       .eq("status", "ACTIVE")
       .order("resident_name"),
+
+    adminClient
+      .from("cb_disarm_events")
+      .select("receiver_id, device_num, disarm_start, disarm_end, reason, authorized_by")
+      .in("receiver_id", receiverIds)
+      .gt("disarm_end", disarmSince)
+      .order("disarm_start", { ascending: false }),
   ]);
 
-  // ── Map: "{receiver_id}:{device_num}" -> assignment row ──
-  type AssignmentDbRow = { id: number; receiver_id: number; device_num: string; resident_id: number | null; room_label: string | null; tbl_residents: { resident_name: string } | { resident_name: string }[] | null };
-  const assignmentMap = new Map<string, AssignmentDbRow>();
-  for (const row of (assignmentsResult.data ?? []) as AssignmentDbRow[]) {
-    assignmentMap.set(`${row.receiver_id}:${row.device_num}`, row);
+  type DisarmDbRow = { receiver_id: number; device_num: string; disarm_start: string; disarm_end: string; reason: string | null; authorized_by: string | null };
+  const disarmRows = ((disarmsResult.data ?? []) as DisarmDbRow[]).map((e) => ({
+    ...e,
+    key: `${e.receiver_id}:${e.device_num.toUpperCase()}`,
+    startMs: Date.parse(e.disarm_start),
+    endMs: Date.parse(e.disarm_end),
+  }));
+  const activeDisarmByKey = new Map<string, (typeof disarmRows)[number]>();
+  for (const e of disarmRows) {
+    if (e.endMs > nowMs && e.startMs <= nowMs && !activeDisarmByKey.has(e.key)) activeDisarmByKey.set(e.key, e);
+  }
+  function wasDisarmed(receiverId: number, deviceNum: string, callMs: number): boolean {
+    if (!callMs) return false;
+    const key = `${receiverId}:${deviceNum.toUpperCase()}`;
+    return disarmRows.some((e) => e.key === key && callMs >= e.startMs && callMs <= e.endMs);
   }
 
-  // ── Deduplicated known devices ──
-  const seenDevices = new Set<string>();
-  const devices: KnownDevice[] = [];
-  for (const row of (deviceLogsResult.data ?? []) as { receiver_id: number; device_num: string }[]) {
-    const key = `${row.receiver_id}:${row.device_num}`;
-    if (seenDevices.has(key)) continue;
-    seenDevices.add(key);
-    const asgn = assignmentMap.get(key);
-    const res = asgn
-      ? (Array.isArray(asgn.tbl_residents) ? asgn.tbl_residents[0] : asgn.tbl_residents)
-      : null;
-    devices.push({
-      receiver_id: row.receiver_id,
-      receiver_label: receiverLabelById[row.receiver_id] ?? "—",
-      device_num: row.device_num,
-      assignment_id: asgn?.id ?? null,
-      resident_id: asgn?.resident_id ?? null,
-      resident_name: res?.resident_name ?? "",
-      room_label: asgn?.room_label ?? "",
-    });
-  }
+  const branchIdByReceiver = Object.fromEntries(receiverList.map((r) => [r.id, r.branch_id]));
+
+  type InventoryDbRow = { receiver_id: number; device_num: string; resident_id: number | null; room_label: string | null; tbl_residents: { resident_name: string } | { resident_name: string }[] | null };
+  const devices: BellDevice[] = ((inventoryResult.data ?? []) as InventoryDbRow[])
+    .map((row) => {
+      const res = Array.isArray(row.tbl_residents) ? row.tbl_residents[0] : row.tbl_residents;
+      const disarm = activeDisarmByKey.get(`${row.receiver_id}:${row.device_num.toUpperCase()}`);
+      return {
+        receiver_id: row.receiver_id,
+        branch_id: branchIdByReceiver[row.receiver_id],
+        device_num: row.device_num,
+        call_number: row.room_label ?? "",
+        resident_id: row.resident_id,
+        resident_name: res?.resident_name ?? "",
+        disarmed_until: disarm ? fmtLastSeen(disarm.disarm_end) : null,
+        disarm_note: disarm ? [disarm.reason, disarm.authorized_by].filter(Boolean).join(" · ") : "",
+      };
+    })
+    .sort((a, b) =>
+      a.call_number.localeCompare(b.call_number, undefined, { numeric: true }) ||
+      a.device_num.localeCompare(b.device_num)
+    );
 
   // ── Call logs ──
-  const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => ({
-    id: row.id as number,
-    receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
-    device_num: (row.device_num as string) ?? "",
-    resident_name: (row.resident_name_snapshot as string) ?? "",
-    call_type: (row.call_type as string) ?? "",
-    call_time_display: fmtCallTime(row.call_time as string | number | null),
-    response_time_display: fmtResponseDuration(
-      row.call_time as string | number | null,
-      row.response_time as string | number | null
-    ),
-  }));
+  // bell_no  = CALL_RECORDING_BEAN.NAME (call number)
+  // resident = CALL_RECORDING_BEAN.NICK_NAME as recorded at call time — never
+  //            looked up from current assignments, so history is stable.
+  const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => {
+    const ct = Number(row.call_time) || 0;
+    const rt = Number(row.response_time) || 0;
+    // Calls on a disarmed bell are withdrawn by the receiver APK straight away,
+    // so their response time is meaningless; show "Disarmed" instead.
+    const disarmed = wasDisarmed(row.receiver_id as number, (row.device_num as string) ?? "", ct);
+    return {
+      id: row.id as number,
+      receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
+      device_num: (row.device_num as string) ?? "",
+      bell_no: ((row.resident_name_snapshot as string) ?? "").trim(),
+      resident_name: (row.resident_nickname as string) ?? "",
+      call_time_display: fmtCallTime(row.call_time as string | number | null),
+      response_time_display: fmtResponseDuration(
+        row.call_time as string | number | null,
+        row.response_time as string | number | null
+      ),
+      slow_response: !disarmed && ct > 0 && rt > ct && rt - ct > SLOW_RESPONSE_MS,
+      disarmed,
+    };
+  });
 
   // ── Receivers display ──
   const receivers: ReceiverRow[] = receiverList.map((row) => ({
@@ -172,17 +301,23 @@ export default async function CallbellPage() {
   // ── Residents picker options ──
   const residents: ResidentOption[] = (residentsResult.data ?? []).map((r) => ({
     id: r.id as number,
+    branch_id: r.branch_id as number,
     resident_name: (r.resident_name as string) ?? "",
   }));
 
   return (
     <div>
       <PageTitle title={t("Call Bell")} />
+      {picker}
       <CallbellTabs
         logs={logs}
         devices={devices}
         receivers={receivers}
         residents={residents}
+        canDisarm={account?.rights === "ADMIN" || account?.rights === "MODERATOR"}
+        dashboard={dashboard}
+        branch={selectedBranchId}
+        initialTab={showDashboard ? "dashboard" : "assignments"}
       />
     </div>
   );

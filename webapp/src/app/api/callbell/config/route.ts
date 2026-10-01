@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
     device_num: d.device_num,
     disarm_start: d.disarm_start,
     disarm_end: d.disarm_end,
+    // Epoch ms for the APK (Android 6 has no java.time ISO parser).
+    disarm_end_ms: Date.parse(String(d.disarm_end)),
     reason: d.reason,
   }))
 
