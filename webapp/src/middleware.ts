@@ -34,7 +34,8 @@ export async function middleware(request: NextRequest) {
   const isPublicPage =
     isLoginPage ||
     request.nextUrl.pathname.startsWith("/forgot-password") ||
-    request.nextUrl.pathname.startsWith("/reset-password");
+    request.nextUrl.pathname.startsWith("/reset-password") ||
+    request.nextUrl.pathname.startsWith("/api/callbell/");
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone();
