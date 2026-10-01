@@ -179,6 +179,7 @@ export const dictResidents: Record<string, string> = {
   "Occupancy %": "Penghunian %",
   "Occupancy Trend": "Trend Penghunian",
   "Residents occupying a bed at month-end": "Penghuni yang menduduki katil pada akhir bulan",
+  "Residents occupying a bed each day": "Penghuni yang menduduki katil setiap hari",
   "Age × Gender": "Umur × Jantina",
   "Current active residents": "Penghuni aktif semasa",
   "All residents (completed + active)": "Semua penghuni (tamat + aktif)",

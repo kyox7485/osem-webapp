@@ -7,7 +7,12 @@ import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { TabRow, TabButton } from "@/components/tabs";
 import { Users, BarChart3, Pill, Package } from "lucide-react";
 
-export function ResidentsModuleTabs() {
+// `showAnalytics` comes from the server (an HQ-account check) so the tab is
+// hidden for branch/physio accounts rather than shown-then-refused. The page
+// itself re-checks server-side; this only decides whether the tab is offered.
+// Required rather than optional so every call site has to make that decision
+// explicitly, instead of silently hiding the tab where it was forgotten.
+export function ResidentsModuleTabs({ showAnalytics }: { showAnalytics: boolean }) {
   const push = useNavPush();
   const { guardedAction } = useSafeNavigation();
   const pathname = usePathname();
@@ -32,9 +37,11 @@ export function ResidentsModuleTabs() {
       <TabButton icon={Package} active={onConsumables} onClick={() => go("/residents/consumables")}>
         {t("Consumables")}
       </TabButton>
-      <TabButton icon={BarChart3} active={onAnalytics} onClick={() => go("/residents/admission-analytics")}>
-        {t("Admission Analytics")}
-      </TabButton>
+      {showAnalytics && (
+        <TabButton icon={BarChart3} active={onAnalytics} onClick={() => go("/residents/admission-analytics")}>
+          {t("Admission Analytics")}
+        </TabButton>
+      )}
     </TabRow>
   );
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canAccessAdmissionAnalytics } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { getBranchesWithCapacity, getDemoBranchIds } from "@/lib/lookups";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -16,6 +16,7 @@ import {
   computeOccupancyPercentage,
   computeAvgLOS,
   computeOccupancyTrend,
+  trendGranularity,
   computeAgeGender,
   computeCategories,
   computeLOSDistribution,
@@ -38,8 +39,11 @@ export default async function AdmissionAnalyticsPage({
   const account = await getCurrentUser();
   if (!account) redirect("/login");
 
-  // ── Access control: Admission Analytics is NUR/HQ only ────────────────────
-  if (account.branch_function && !["NUR", "HQ"].includes(account.branch_function)) {
+  // ── Access control: Admission Analytics is HQ-only ─────────────────────────
+  // Org-wide occupancy / bed-capacity / length-of-stay reporting. Server-side
+  // so a branch account cannot reach it by typing the URL, even though the tab
+  // that links here is hidden for them (see ResidentsModuleTabs).
+  if (!canAccessAdmissionAnalytics(account)) {
     redirect("/residents");
   }
 
@@ -109,6 +113,7 @@ export default async function AdmissionAnalyticsPage({
   const netGrowth = admissions - discharges;
   const avgLos = computeAvgLOS(residents);
   const trendPoints = computeOccupancyTrend(residents, range);
+  const trendIsDaily = trendGranularity(range) === "day";
   const ageGenderRows = computeAgeGender(residents);
   const mobilityRows = computeCategories(residents, (r) => r.mobility);
   const feedingRows = computeCategories(residents, (r) =>
@@ -156,7 +161,7 @@ export default async function AdmissionAnalyticsPage({
       />
 
       <div className="mb-4">
-        <ResidentsModuleTabs />
+        <ResidentsModuleTabs showAnalytics />
       </div>
 
       <AnalyticsFilters
@@ -195,7 +200,11 @@ export default async function AdmissionAnalyticsPage({
       <div className="mb-4 rounded-md border border-line bg-surface p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-fg">{t("Occupancy Trend")}</h3>
-          <span className="text-xs text-fg-faint">{t("Residents occupying a bed at month-end")}</span>
+          <span className="text-xs text-fg-faint">
+            {trendIsDaily
+              ? t("Residents occupying a bed each day")
+              : t("Residents occupying a bed at month-end")}
+          </span>
         </div>
         <OccupancyTrendChart points={trendPoints} t={t} />
       </div>

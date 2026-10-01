@@ -165,15 +165,95 @@ export function computeAvgLOS(residents: ResidentRow[]): number | null {
 
 // ─── Occupancy trend ─────────────────────────────────────────────────────────
 
-export type TrendPoint = { label: string; occupied: number };
+export type TrendPoint = {
+  /** Short axis label — a day number in daily mode, "Oct 26" in monthly. */
+  label: string;
+  /** Full date for the hover tooltip. Falls back to `label` when absent. */
+  title?: string;
+  occupied: number;
+};
 
-// One snapshot per month: the last day of each month (or range.end if the
-// month hasn't ended yet). A resident "occupies" on a snapshot date if
-// admission_date <= date AND (discharge_date IS NULL OR discharge_date >= date).
+// A daily series longer than this switches back to month-end sampling, so a
+// multi-month range can't flood the chart (and the x-axis) with points.
+const MAX_DAILY_POINTS = 62;
+
+// A resident "occupies" on a snapshot date if admission_date <= date AND
+// (discharge_date IS NULL OR discharge_date >= date), both compared at day
+// granularity — so a same-day admission counts, and a resident discharged on
+// the snapshot day still counts as occupying it.
+function isOccupiedOn(r: ResidentRow, snap: Date): boolean {
+  if (!r.admission_date) return false;
+  if (new Date(r.admission_date) > snap) return false;
+  if (!r.discharge_date) return true;
+  const dis = new Date(r.discharge_date);
+  dis.setHours(0, 0, 0, 0);
+  const snapDay = new Date(snap);
+  snapDay.setHours(0, 0, 0, 0);
+  return dis >= snapDay;
+}
+
+// How densely a range is sampled. Exported so the chart card can describe
+// itself accurately instead of guessing from the point count.
+export type TrendGranularity = "day" | "month";
+
+function spanDayCount(range: DateRange): number {
+  const startDay = new Date(range.start);
+  startDay.setHours(0, 0, 0, 0);
+  const endDay = new Date(range.end);
+  endDay.setHours(0, 0, 0, 0);
+  return Math.round((endDay.getTime() - startDay.getTime()) / 86_400_000) + 1;
+}
+
+export function trendGranularity(range: DateRange): TrendGranularity {
+  return spanDayCount(range) <= MAX_DAILY_POINTS ? "day" : "month";
+}
+
+// One point per day for short ranges ("this month", "last month", a custom
+// window of a few weeks); one point per month-end for longer ones.
+//
+// The daily mode exists because month-end sampling degenerates on a one-month
+// range: "this month" has no month-end yet and "last month" is a single
+// month, so both collapsed the whole period into one lone dot. Per-day points
+// show how occupancy actually moved across the month instead. Days are only
+// plotted up to today — the future tail of the current month is not invented.
 export function computeOccupancyTrend(
   residents: ResidentRow[],
   range: DateRange
 ): TrendPoint[] {
+  if (spanDayCount(range) <= MAX_DAILY_POINTS) {
+    const startDay = new Date(range.start);
+    startDay.setHours(0, 0, 0, 0);
+    const endDay = new Date(range.end);
+    endDay.setHours(0, 0, 0, 0);
+    const points: TrendPoint[] = [];
+    const cur = new Date(startDay);
+    let lastMonth = -1;
+
+    while (cur <= endDay) {
+      const occupied = residents.filter((r) => isOccupiedOn(r, toEndOfDay(cur))).length;
+      // Plain day numbers read best on the axis; spell out the month only
+      // where the bare number would be ambiguous (a range crossing a month
+      // edge, where "1" would otherwise appear twice with no anchor).
+      const crossesMonth = cur.getMonth() !== lastMonth;
+      const label = crossesMonth
+        ? cur.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+        : String(cur.getDate());
+
+      points.push({
+        label,
+        title: cur.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+        occupied,
+      });
+
+      lastMonth = cur.getMonth();
+      // setDate (not +86400000) so the walk stays on calendar days across a
+      // DST boundary rather than drifting to 23:00/01:00.
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return points;
+  }
+
   const points: TrendPoint[] = [];
   const cur = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
 
@@ -183,18 +263,7 @@ export function computeOccupancyTrend(
     monthEnd.setHours(23, 59, 59, 999);
     const snap = monthEnd < range.end ? monthEnd : range.end;
 
-    const occupied = residents.filter((r) => {
-      if (!r.admission_date) return false;
-      const adm = new Date(r.admission_date);
-      if (adm > snap) return false;
-      if (!r.discharge_date) return true;
-      const dis = new Date(r.discharge_date);
-      dis.setHours(0, 0, 0, 0);
-      const snapDay = new Date(snap);
-      snapDay.setHours(0, 0, 0, 0);
-      return dis >= snapDay;
-    }).length;
-
+    const occupied = residents.filter((r) => isOccupiedOn(r, snap)).length;
     const label = snap.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
     points.push({ label, occupied });
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canAccessAdmissionAnalytics } from "@/lib/current-user";
 import { getDemoBranchIds } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -95,7 +95,7 @@ export default async function NewMedicationOrderPage() {
     <div>
       <PageTitle title={t("Medication")} />
       <div className="mb-4">
-        <ResidentsModuleTabs />
+        <ResidentsModuleTabs showAnalytics={canAccessAdmissionAnalytics(currentUser)} />
       </div>
       <div className="mb-6">
         <MedicationSubTabs />

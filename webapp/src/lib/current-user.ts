@@ -69,6 +69,21 @@ export function isHqAdmin(account: { rights: string; branch_function: string | n
   return account?.rights === "ADMIN" && account.branch_function === "HQ";
 }
 
+// True for any account based at an HQ-function branch, whatever its rights
+// tier. Gates Admission Analytics, which reports occupancy, bed capacity and
+// length-of-stay across every nursing branch at once -- meaningful only at
+// head-office level, so branch (NUR) and physio-hub (PHY) accounts are out
+// even when they hold all-branch data scope via canAccessAllBranches.
+//
+// Deliberately NOT isHqAdmin(): that one is the record-correction gate and
+// additionally requires ADMIN rights. Analytics is read-only reporting, so any
+// HQ login may see it.
+export function canAccessAdmissionAnalytics(account: {
+  branch_function: string | null;
+} | null): boolean {
+  return account?.branch_function === "HQ";
+}
+
 // True when this account may see data across every real branch.
 //
 // The rule is driven by the branch's Function, NOT the rights tier:

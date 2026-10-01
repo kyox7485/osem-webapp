@@ -11,7 +11,9 @@ type T = (text: string, params?: TranslateParams) => string;
 // ─── Occupancy trend chart ────────────────────────────────────────────────────
 
 // SVG line + area chart with improved hover interaction.
-// One data point per month-end snapshot.
+// One data point per day for short ranges, per month-end for longer ones --
+// see computeOccupancyTrend. Renders any point count; marker sizes and label
+// density adapt to how crowded the series is.
 export function OccupancyTrendChart({ points, t }: { points: TrendPoint[]; t: T }) {
   if (points.length === 0) {
     return (
@@ -36,6 +38,13 @@ export function OccupancyTrendChart({ points, t }: { points: TrendPoint[]; t: T 
     points.length === 1 ? PAD_L + CW / 2 : PAD_L + (i / (points.length - 1)) * CW;
   const yOf = (v: number) => PAD_T + CH - (v / niceMax) * CH;
 
+  // Horizontal gap between neighbouring points. A daily series packs ~18px per
+  // point, so the fixed 8px hover target and 4px dot of the monthly case would
+  // overlap into a smear -- scale both to the available gap instead.
+  const gap = points.length > 1 ? CW / (points.length - 1) : CW;
+  const hoverR = Math.max(2.5, Math.min(8, gap / 2));
+  const dotR = Math.max(1.5, Math.min(4, gap / 4));
+
   const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${xOf(i)} ${yOf(p.occupied)}`).join(" ");
 
   const areaD = [
@@ -47,6 +56,13 @@ export function OccupancyTrendChart({ points, t }: { points: TrendPoint[]; t: T 
 
   // Y-axis grid lines (0, 25%, 50%, 75%, 100% of niceMax)
   const gridValues = [0, Math.round(niceMax * 0.25), Math.round(niceMax * 0.5), Math.round(niceMax * 0.75), niceMax];
+
+  // X-axis labels: thin them to roughly 8 visible marks on a crowded axis.
+  // A label carrying a month name (daily series crossing a month edge) is
+  // always kept, so the day numbers around it stay anchored to a date.
+  const labelStep = points.length <= 8 ? 1 : Math.ceil(points.length / 8);
+  const showLabel = (i: number) =>
+    i === points.length - 1 || i % labelStep === 0 || /\D/.test(points[i].label);
 
   return (
     <div className="relative">
@@ -101,7 +117,7 @@ export function OccupancyTrendChart({ points, t }: { points: TrendPoint[]; t: T 
             <circle
               cx={xOf(i)}
               cy={yOf(p.occupied)}
-              r="8"
+              r={hoverR}
               fill="transparent"
               style={{ cursor: "pointer" }}
               className="hover-target"
@@ -110,21 +126,19 @@ export function OccupancyTrendChart({ points, t }: { points: TrendPoint[]; t: T 
             <circle
               cx={xOf(i)}
               cy={yOf(p.occupied)}
-              r="4"
+              r={dotR}
               fill="#6366f1"
               stroke="white"
-              strokeWidth="1.5"
+              strokeWidth={dotR > 2 ? 1.5 : 0}
               className="dark:stroke-surface"
             />
-            <title>{t("{point}\nOccupancy: {count} residents", { point: p.label, count: p.occupied })}</title>
+            <title>{t("{point}\nOccupancy: {count} residents", { point: p.title ?? p.label, count: p.occupied })}</title>
           </g>
         ))}
 
         {/* X-axis labels */}
         {points.map((p, i) => {
-          // Show every label when ≤ 8 points, otherwise every 3rd
-          const skip = points.length > 8 && i % 3 !== 0 && i !== points.length - 1;
-          if (skip) return null;
+          if (!showLabel(i)) return null;
           return (
             <text
               key={i}

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canAccessAdmissionAnalytics } from "@/lib/current-user";
 import { getBranches, formatBranch, getDemoBranchIds, getNursingStaff } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
@@ -84,7 +84,7 @@ export default async function ResidentsPage({
     <div>
       <PageTitle title={t("Residents")} />
       <div className="mb-4">
-        <ResidentsModuleTabs />
+        <ResidentsModuleTabs showAnalytics={canAccessAdmissionAnalytics(currentUser)} />
       </div>
       <div className="mb-6 flex items-center justify-end">
         <NavButton
