@@ -63,6 +63,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(inventoryVisible
       ? ([{ href: "/inventory", label: t("Inventory"), icon: "Package", tint: "bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300" }] as SidebarItem[])
       : []),
+    ...(account.branch_function !== "PHY"
+      ? ([{ href: "/callbell", label: t("Call Bell"), icon: "Bell", tint: "bg-pink-50 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300" }] as SidebarItem[])
+      : []),
     { href: "/staff", label: t("Staff"), icon: "IdCard", tint: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" },
     { href: "/external-links", label: t("External Links"), icon: "Link2", tint: "bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300" },
     ...(isAdmin(account) ? ([{ href: "/accounts", label: t("Accounts"), icon: "ShieldCheck", tint: "bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300" }] as SidebarItem[]) : []),

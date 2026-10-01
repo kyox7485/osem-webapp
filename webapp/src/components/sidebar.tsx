@@ -13,13 +13,14 @@ import {
   ShieldCheck,
   Link2,
   Package,
+  Bell,
   PanelLeftClose,
   PanelLeftOpen,
   type LucideIcon,
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
 
-const ICONS = { Users, Stethoscope, Activity, IdCard, ShieldCheck, Link2, Package } satisfies Record<string, LucideIcon>;
+const ICONS = { Users, Stethoscope, Activity, IdCard, ShieldCheck, Link2, Package, Bell } satisfies Record<string, LucideIcon>;
 
 export type SidebarItem = {
   href: string;
