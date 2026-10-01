@@ -311,6 +311,4 @@ export const dictMedication: Record<string, string> = {
   "Stock unit is required when a quantity is entered": "Unit stok diperlukan apabila kuantiti dimasukkan",
   "Registered By is required for stock entry": "Pengisi stok diperlukan untuk rekod stok",
   "Stock received": "Stok diterima",
-  "Resident created, but {n} stock entr{y} could not be recorded. Please record them later via Medication > Stock.":
-    "Penghuni berjaya dibuat, tetapi {n} rekod stok tidak dapat didaftarkan. Sila rekodkan kemudian di Ubat > Stok.",
 };

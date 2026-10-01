@@ -1309,16 +1309,6 @@ export function ResidentForm({
             </button>
           )}
         </div>
-        {/* Admission medications are sent to the Medication Orders sheet one
-            by one before the save finishes, so this save can take a while --
-            say so, so staff don't refresh or re-submit mid-save. */}
-        {isPending && !resident && medicationDrafts.length > 0 && (
-          <p role="status" className="text-xs text-fg-muted">
-            {t("Saving the resident and {count} admission medication order(s). This can take up to a minute per medication. Please keep this page open.", {
-              count: medicationDrafts.length,
-            })}
-          </p>
-        )}
       </form>
     </>
   );

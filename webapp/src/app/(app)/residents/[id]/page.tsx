@@ -8,19 +8,20 @@ import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
 import { DischargeButton } from "./discharge-button";
+import { AdmissionMedicationsStatus } from "./admission-medications-status";
+import { loadAdmissionMedicationQueue } from "@/lib/admission-medication-queue";
 
 export default async function ResidentViewPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ med_fail?: string; stock_fail?: string }>;
+  searchParams: Promise<{ med_fail?: string }>;
 }) {
   const { t, language } = await getServerTranslator();
   const { id } = await params;
   const sp = await searchParams;
   const medFailCount = sp.med_fail ? Number(sp.med_fail) : 0;
-  const stockFailCount = sp.stock_fail ? Number(sp.stock_fail) : 0;
   const supabase = await createClient();
 
   const { data: resident } = await supabase
@@ -48,9 +49,10 @@ export default async function ResidentViewPage({
   // past_medical_condition is still worth showing when set: it's a separate
   // free-text narrative field, kept deliberately distinct from the coded list
   // (see schema/001_init.sql) and populated by the Access import.
-  const [diagnosisOptions, residentDiagnoses] = await Promise.all([
+  const [diagnosisOptions, residentDiagnoses, admissionMedQueue] = await Promise.all([
     getDiagnosisOptions(),
     getResidentDiagnoses(Number(id)),
+    loadAdmissionMedicationQueue(supabase, resident.id),
   ]);
   const pastMedicalHistory = formatMedicalHistory({
     diagnoses: residentDiagnoses,
@@ -65,15 +67,11 @@ export default async function ResidentViewPage({
   return (
     <div>
       <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${t(resident.status)}`} />
-      {stockFailCount > 0 && (
-        <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            {t("Resident created, but {n} stock entr{y} could not be recorded. Please record them later via Medication > Stock.")
-              .replace("{n}", String(stockFailCount))
-              .replace("{y}", stockFailCount === 1 ? "y" : "ies")}
-          </p>
-        </div>
-      )}
+      <AdmissionMedicationsStatus
+        residentId={resident.id}
+        residentName={resident.resident_name}
+        initialItems={admissionMedQueue}
+      />
       {medFailCount > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
           <p className="text-sm text-amber-800 dark:text-amber-200">

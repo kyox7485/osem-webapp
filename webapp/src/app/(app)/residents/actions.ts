@@ -5,19 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { sendTelegramMessage } from "@/lib/telegram";
-import { createMedicationOrder } from "@/lib/medication-orders-script";
-import { recordStockEntryAction } from "@/app/(app)/residents/medication/stock/stock-actions";
-import crypto from "crypto";
+import { enqueueAdmissionMedications } from "@/lib/admission-medication-queue";
 import type { MedicationDraft } from "@/components/admission-medications";
-
-async function generateRxOrderId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const id = crypto.randomBytes(4).toString("hex");
-    const { data } = await supabase.from("tbl_medication_orders").select("id").eq("external_ref_id", id).maybeSingle();
-    if (!data) return id;
-  }
-  throw new Error("Failed to generate unique RxOrderID after 10 attempts");
-}
 
 function optional(value: FormDataEntryValue | null): string | null {
   const s = value?.toString().trim();
@@ -221,85 +210,38 @@ export async function createResident(formData: FormData) {
 
   await sendTelegramMessage(lines, branchChatId);
 
-  // Create admission medication orders via Apps Script bridge
+  // Admission medications are NOT created here any more: each one is an Apps
+  // Script round trip (order + initial stock, up to ~1 min each under Sheet
+  // lock contention), and doing them inline made a 5-medication admission
+  // outlive the function limit. They are queued instead and the browser works
+  // through them after the redirect (lib/admission-medication-queue.ts).
   let medFailCount = 0;
-  let stockFailCount = 0;
   const medicationDraftsJson = formData.get("medication_drafts");
   if (typeof medicationDraftsJson === "string" && medicationDraftsJson) {
+    let drafts: Array<Omit<MedicationDraft, "draftId">> = [];
     try {
-      const drafts = JSON.parse(medicationDraftsJson) as Array<Omit<MedicationDraft, "draftId">>;
-      if (drafts.length > 0) {
-        const { data: residentRow } = await supabase
-          .from("tbl_residents")
-          .select("ResidentID")
-          .eq("id", data.id)
-          .single();
-        if (residentRow?.ResidentID) {
-          for (const draft of drafts) {
-            let rxOrderId: string | null = null;
-            try {
-              rxOrderId = await generateRxOrderId(supabase);
-              await createMedicationOrder({
-                RxOrderID: rxOrderId,
-                ResidentID: residentRow.ResidentID,
-                "Dosage Form": draft.dosageForm,
-                "Brand Name": draft.brandName,
-                "Active Ingredient": draft.activeIngredient,
-                Dose: draft.dose,
-                Unit: draft.unit,
-                Frequency: draft.frequency,
-                "Administration Times": draft.administrationTimes,
-                "Dosing Days": draft.dosingDays,
-                Indication: draft.indication,
-                Instruction: draft.instruction,
-                "Duration Type": draft.durationType,
-                "Start Date": draft.startDate,
-                "End Date": draft.endDate,
-                "Noted By": draft.notedBy,
-                "Ordered By": draft.orderedBy,
-                "Supplied By": draft.suppliedBy,
-                Status: draft.status || "Active",
-                PreviousRxOrderID: "",
-              });
-            } catch (err) {
-              console.error("[createResident] Failed to create admission medication order:", err);
-              medFailCount++;
-              continue; // Don't attempt stock if order failed
-            }
-
-            // Record initial stock if provided for this medication
-            const stockQty = draft.stockQuantity ? parseFloat(draft.stockQuantity) : NaN;
-            if (rxOrderId && isFinite(stockQty) && stockQty > 0 && draft.stockUnit && draft.stockRegisteredBy) {
-              try {
-                const stockResult = await recordStockEntryAction({
-                  rxOrderId,
-                  entryType: "Stock Received",
-                  quantity: stockQty,
-                  unit: draft.stockUnit,
-                  registeredBy: draft.stockRegisteredBy,
-                  entryDate: draft.stockEntryDate,
-                });
-                if (!stockResult.success) {
-                  console.error(`[createResident] Stock entry failed for ${rxOrderId}:`, stockResult.error);
-                  stockFailCount++;
-                }
-              } catch (err) {
-                console.error(`[createResident] Stock entry exception for ${rxOrderId}:`, err);
-                stockFailCount++;
-              }
-            }
-          }
-        }
-      }
+      const parsed = JSON.parse(medicationDraftsJson);
+      if (Array.isArray(parsed)) drafts = parsed;
     } catch (err) {
       console.error("[createResident] Failed to parse medication_drafts:", err);
+    }
+    if (drafts.length > 0) {
+      const { error: queueError } = await enqueueAdmissionMedications(supabase, {
+        residentId: data.id,
+        branchId: payload.branch_id,
+        accountId: account.id,
+        drafts,
+      });
+      if (queueError) {
+        console.error("[createResident] Failed to queue admission medications:", queueError);
+        medFailCount = drafts.length;
+      }
     }
   }
 
   revalidatePath("/residents");
   const failParams = new URLSearchParams();
   if (medFailCount > 0) failParams.set("med_fail", String(medFailCount));
-  if (stockFailCount > 0) failParams.set("stock_fail", String(stockFailCount));
   const failQuery = failParams.toString();
   redirect(failQuery ? `/residents/${data.id}?${failQuery}` : `/residents/${data.id}`);
 }

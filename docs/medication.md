@@ -88,6 +88,41 @@ must match Vercel's `MEDICATION_ORDER_SCRIPT_SECRET`).
   missing from the Sheet falls back to a direct Supabase update. Rule: any
   webapp change to a medication order must be written Sheet-first.
 
+## Admission medications (New Resident form) — background queue
+
+Medications entered on the New Resident form are **not** created inside
+`createResident`. Doing them inline (one Apps Script round trip per order
+plus one per initial stock entry, each up to ~1 min under Sheet-lock
+contention) made a 5-medication admission run ~4 min, outlive Vercel's
+function limit, show "This page couldn't load" and silently drop a stock
+entry (production test, 2026-10-01).
+
+- `createResident` saves the resident, writes one row per medication to
+  `tbl_admission_medication_queue` (`schema/023_admission_medication_queue.sql`)
+  and redirects at once. If the queue insert fails, the drafts are lost and
+  the resident page shows the existing `med_fail` banner ("add them
+  manually").
+- `AdmissionMedicationRunner` (mounted in the `(app)` layout, so it survives
+  client navigation) calls `POST /api/residents/admission-medications`
+  once per medication. Each call claims one row (compare-and-swap on
+  `attempts`), creates the order Sheet-first, then the initial stock entry.
+  The nurse can keep working anywhere in the app; a corner panel shows
+  progress and the browser warns before the tab is closed mid-queue.
+- **Route Handler, not Server Action, on purpose.** Next.js runs a tab's
+  Server Actions one at a time and discards a pending one's result on
+  navigation — a 1-minute Server Action would hold up every other save.
+- **Retry-safe:** `rx_order_id` is fixed at enqueue time, so re-sending an
+  order that already reached the Sheet hits `createOrder`'s duplicate-
+  RxOrderID guard (`alreadyExisted`). The stock step is skipped when a
+  `Stock Received` row for that order is already in Supabase. A row stuck in
+  `processing` (tab closed mid-call) is reclaimable after 6 minutes.
+- **Closing the tab loses nothing:** open rows are resumed when anyone
+  opens the resident's page (status card + Retry on
+  `residents/[id]/admission-medications-status.tsx`), or when the admitting
+  account next loads the app.
+- Until the queue finishes, the resident exists **without** those orders
+  in the Sheet/medication chart — the status card says so.
+
 ## Medication Stock (`/residents/medication/stock`)
 
 Stock forecast + audit trail and the Family Medication Reminder PDF are

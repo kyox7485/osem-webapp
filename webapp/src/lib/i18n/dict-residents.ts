@@ -210,6 +210,23 @@ export const dictResidents: Record<string, string> = {
   // Module tab label
   "Resident's Particular": "Butiran Penghuni",
 
-  // New Resident save-in-progress note (resident-form.tsx)
-  "Saving the resident and {count} admission medication order(s). This can take up to a minute per medication. Please keep this page open.": "Menyimpan penghuni dan {count} pesanan ubat kemasukan. Ini boleh mengambil masa sehingga seminit bagi setiap ubat. Sila kekalkan halaman ini terbuka.",
+  // Admission medications background queue (admission-medication-runner.tsx,
+  // residents/[id]/admission-medications-status.tsx)
+  "Saving admission medicines": "Menyimpan ubat kemasukan",
+  "Some admission medicines failed": "Sebahagian ubat kemasukan gagal disimpan",
+  "Admission medicines saved": "Ubat kemasukan telah disimpan",
+  "{done}/{total} saved": "{done}/{total} disimpan",
+  "{count} failed": "{count} gagal",
+  "You can keep working. Keep this browser tab open until it finishes.": "Anda boleh terus bekerja. Biarkan tab pelayar ini terbuka sehingga selesai.",
+  "Open resident": "Buka penghuni",
+  "Admission medications": "Ubat kemasukan",
+  "Saving to Medication Orders in the background. You can keep working; this updates by itself.": "Sedang disimpan ke Pesanan Ubat di latar belakang. Anda boleh terus bekerja; paparan ini dikemas kini sendiri.",
+  "Some medications could not be saved. Press Retry, or add them in Medication Orders.": "Sebahagian ubat tidak dapat disimpan. Tekan Cuba semula, atau tambahkannya di Pesanan Ubat.",
+  "All admission medications saved.": "Semua ubat kemasukan telah disimpan.",
+  "Initial stock": "Stok awal",
+  // Status chips. "Saved" is dict-clinical.ts's key, "Saving..." dict-common.ts's.
+  Waiting: "Menunggu",
+  Failed: "Gagal",
+  Retry: "Cuba semula",
+  Dismiss: "Tutup",
 };

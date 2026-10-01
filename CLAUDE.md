@@ -80,6 +80,11 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   `useSafeNavigation()` — the global `<a>`-click interceptor cannot see a
   plain state toggle, so an unguarded tab switch silently discards dirty
   data.
+- **Never put slow external calls (Apps Script, Drive) in a Server Action
+  the user waits on in bulk.** A tab runs its Server Actions one at a time
+  and navigation discards a pending one's result. For multi-minute work use
+  a queue table + a Route Handler driven by `fetch()` — see the admission
+  medication queue in `docs/medication.md`.
 - Google-Drive-synced folders can misbehave with some tools — verify file
   existence before assuming a path is wrong.
 - **All user-visible text must go through the i18n system** (`t()` /

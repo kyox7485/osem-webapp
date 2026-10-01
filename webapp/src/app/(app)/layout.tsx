@@ -10,6 +10,9 @@ import { Sidebar, type SidebarItem, type SidebarFooterInfo } from "@/components/
 import { PageHeaderProvider, PageHeaderSlot } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { hasInventoryAccess } from "@/lib/inventory/server";
+import { createClient } from "@/lib/supabase/server";
+import { loadOpenQueueResidents } from "@/lib/admission-medication-queue";
+import { AdmissionMedicationRunner } from "@/components/admission-medication-runner";
 
 // Treatment-type name -> standard credit hours, for the admin dialog's
 // Credit-hours link. IP and OP bind the same name to the same number
@@ -83,6 +86,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? { physio_assessment: creditHoursByTreatmentType(await getPhysioTreatmentTypes()) }
     : {};
 
+  // Admission medications this account queued but that never finished
+  // (tab closed mid-queue) -- the runner resumes them on load.
+  const openAdmissionQueues = await loadOpenQueueResidents(await createClient(), account.id);
+
   const footer: SidebarFooterInfo = {
     branchName: account.branch_name || t("All branches"),
     rights: account.rights,
@@ -114,7 +121,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6 sm:px-6">
               {/* Edit/Delete record buttons are shown to HQ ADMIN logins only. */}
               <AdminRecordProvider enabled={hqAdmin} linkValues={linkValues}>
-                {children}
+                <AdmissionMedicationRunner initial={openAdmissionQueues}>{children}</AdmissionMedicationRunner>
               </AdminRecordProvider>
             </main>
           </div>
