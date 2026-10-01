@@ -141,6 +141,10 @@ export default async function CallbellPage({
       .from("cb_call_logs")
       .select("id, receiver_id, device_num, resident_name_snapshot, resident_nickname, call_time, response_time")
       .in("receiver_id", receiverIds)
+      // Cancel-button presses on the bell are stored by the receiver as their
+      // own record (NAME "<bell> x", IS_CANCEL_CALL=1); they are the response
+      // to the call before them, not a call, so they are not listed.
+      .or("is_cancel_call.is.null,is_cancel_call.neq.1")
       .order("call_time", { ascending: false, nullsFirst: false })
       .limit(200),
 
@@ -218,7 +222,7 @@ export default async function CallbellPage({
       id: row.id as number,
       receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
       device_num: (row.device_num as string) ?? "",
-      bell_no: (row.resident_name_snapshot as string) ?? "",
+      bell_no: ((row.resident_name_snapshot as string) ?? "").trim(),
       resident_name: (row.resident_nickname as string) ?? "",
       call_time_display: fmtCallTime(row.call_time as string | number | null),
       response_time_display: fmtResponseDuration(

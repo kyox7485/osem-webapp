@@ -245,3 +245,16 @@ Verified 2026-10-01: 50 bells synced from receiver 1 (e.g. F58480 = 121A). Name 
 - **Config API:** each disarm now also carries `disarm_end_ms` (APK can't parse ISO on Android 6).
 - **Call Logs:** a call whose time falls inside a disarm window for that bell shows "Disarmed" instead of a
   response time and is never flagged red; CSV "Over 15 min" column shows "Disarmed".
+
+## Call log fixes (2026-10-01)
+
+- **"<bell> x" rows** = the bell's cancel button (CUSTOM_BEAN key 1 "x", IS_CANCEL_CALL=1). The receiver stores the
+  press as its own record; it *is* the response to the call before it. Call Logs now hides `is_cancel_call = '1'`.
+  Bell No. is trimmed (receiver stores "117A ").
+- **Missing response time:** the APK synced a call while it was still ringing (RESPONSE_TIME empty) and the `_id`
+  watermark never revisited it. APK now remembers such rows (prefs `osem_open_calls`, 48 h) and re-sends them once
+  answered. A one-time full re-sync runs after the update (`BACKFILL_VERSION = 2`): 15 → 2 missing (1 genuinely
+  unanswered on the receiver, 1 stale duplicate below).
+- **Repeated press while ringing:** the receiver moves CALL_TIME on the open record, so the old unanswered copy stayed
+  (unique key includes call_time). Ingest now deletes the older unanswered copy of the same local_id. Existing stale
+  row: local_id 552, call_time 1790865149343 (not deleted — awaiting approval).
