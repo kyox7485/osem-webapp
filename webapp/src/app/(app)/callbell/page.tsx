@@ -11,6 +11,7 @@ import {
   type ReceiverRow,
   type ResidentOption,
 } from "./callbell-tabs";
+import { CallbellBranchPicker } from "./branch-picker";
 
 const TZ = "Asia/Kuala_Lumpur";
 const SLOW_RESPONSE_MS = 15 * 60_000; // response slower than 15 min is flagged red
@@ -58,32 +59,70 @@ function fmtResponseDuration(
   return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
 }
 
-export default async function CallbellPage() {
+export default async function CallbellPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branch?: string }>;
+}) {
+  const { branch } = await searchParams;
   const { t } = await getServerTranslator();
   const account = await getCurrentUser();
   const adminClient = createAdminClient();
 
-  // ── Receivers scoped to branch (or all branches for HQ/admin) ──
+  // ── Receivers the account may see (all branches for HQ/admin) ──
   type ReceiverDbRow = { id: number; branch_id: number; receiver_label: string; android_id: string | null; apk_version: string | null; last_seen_at: string | null };
   let receiversQuery = adminClient
     .from("cb_receivers")
     .select("id, branch_id, receiver_label, android_id, apk_version, last_seen_at")
     .order("receiver_label");
 
-  if (account && !canAccessAllBranches(account)) {
+  const allBranchAccount = canAccessAllBranches(account);
+  if (!account) {
+    receiversQuery = receiversQuery.eq("branch_id", -1);
+  } else if (!allBranchAccount) {
     receiversQuery = receiversQuery.eq("branch_id", account.branch_id);
   }
-
   const { data: receiverRows } = await receiversQuery;
-  const receiverList = (receiverRows ?? []) as ReceiverDbRow[];
+  const scopedReceivers = (receiverRows ?? []) as ReceiverDbRow[];
+
+  // ── Branch picker (all-branch accounts only) ──
+  // Nursing branches only; the DEMO branch is hidden unless the account
+  // itself is based there. Defaults to the first branch that has a receiver.
+  let branchOptions: BranchOption[] = [];
+  let selectedBranchId = account?.branch_id ?? -1;
+  if (account && allBranchAccount) {
+    const { data: branchRows } = await adminClient
+      .from("tbl_branches")
+      .select("BranchID, locale:BranchLocale, code:BranchCode")
+      .eq("Function", "NUR")
+      .order("BranchCode");
+    branchOptions = ((branchRows ?? []) as { BranchID: number; locale: string | null; code: string }[])
+      .filter((b) => b.code !== "DEMO" || b.BranchID === account.branch_id)
+      .map((b) => ({ id: Number(b.BranchID), name: formatBranch(b) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const withReceiver = new Set(scopedReceivers.map((r) => r.branch_id));
+    const requested = Number(branch);
+    selectedBranchId =
+      branchOptions.find((b) => b.id === requested)?.id ??
+      branchOptions.find((b) => withReceiver.has(b.id))?.id ??
+      branchOptions[0]?.id ??
+      -1;
+  }
+
+  const receiverList = scopedReceivers.filter((r) => r.branch_id === selectedBranchId);
   const receiverIds = receiverList.map((r) => r.id);
-  const branchIds = [...new Set(receiverList.map((r) => r.branch_id))];
+  const branchIds = [selectedBranchId];
   const receiverLabelById = Object.fromEntries(receiverList.map((r) => [r.id, r.receiver_label]));
+
+  const picker = branchOptions.length > 1 && (
+    <CallbellBranchPicker branches={branchOptions} currentBranch={selectedBranchId} />
+  );
 
   if (receiverIds.length === 0) {
     return (
       <div>
         <PageTitle title={t("Call Bell")} />
+        {picker}
         <p className="mt-6 text-sm text-fg-faint">{t("No receivers found.")}</p>
       </div>
     );
@@ -93,7 +132,7 @@ export default async function CallbellPage() {
   // Assignment tab = receiver device inventory (cb_assignments rows written by
   // /api/callbell/devices from the Wenze getalldevices API) + resident assignment.
   // Call logs are NOT used to discover devices.
-  const [logsResult, inventoryResult, residentsResult, branchesResult] = await Promise.all([
+  const [logsResult, inventoryResult, residentsResult] = await Promise.all([
     adminClient
       .from("cb_call_logs")
       .select("id, receiver_id, device_num, resident_name_snapshot, resident_nickname, call_time, response_time")
@@ -112,11 +151,6 @@ export default async function CallbellPage() {
       .in("branch_id", branchIds)
       .eq("status", "ACTIVE")
       .order("resident_name"),
-
-    adminClient
-      .from("tbl_branches")
-      .select("BranchID, locale:BranchLocale, code:BranchCode")
-      .in("BranchID", branchIds),
   ]);
 
   const branchIdByReceiver = Object.fromEntries(receiverList.map((r) => [r.id, r.branch_id]));
@@ -138,10 +172,6 @@ export default async function CallbellPage() {
       a.call_number.localeCompare(b.call_number, undefined, { numeric: true }) ||
       a.device_num.localeCompare(b.device_num)
     );
-
-  const branches: BranchOption[] = ((branchesResult.data ?? []) as { BranchID: number; locale: string | null; code: string }[])
-    .map((b) => ({ id: b.BranchID, name: formatBranch(b) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
 
   // ── Call logs ──
   // bell_no  = CALL_RECORDING_BEAN.NAME (call number)
@@ -184,10 +214,10 @@ export default async function CallbellPage() {
   return (
     <div>
       <PageTitle title={t("Call Bell")} />
+      {picker}
       <CallbellTabs
         logs={logs}
         devices={devices}
-        branches={branches}
         receivers={receivers}
         residents={residents}
       />

@@ -35,4 +35,7 @@ export const dictCallbell: Record<string, string> = {
   "Refresh": "Muat Semula",
   "Export CSV": "Eksport CSV",
   "Response slower than 15 minutes": "Respons melebihi 15 minit",
+  "Type a name to search...": "Taip nama untuk cari...",
+  "No matching unassigned resident": "Tiada penghuni belum ditugaskan yang sepadan",
+  "Unassign": "Nyahtugas",
 };

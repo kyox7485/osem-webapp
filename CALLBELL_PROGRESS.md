@@ -132,6 +132,12 @@ const isPublicPage =
 - `dict-callbell.ts` — English ↔ BM translations for call bell module
 - `translations.ts` — imports and spreads `dictCallbell`
 
+### Page layout (updated 2026-10-01)
+- Tab order: Assignments | Call Logs | Receivers. Assignments opens by default.
+- **Branch picker** at the top, for all-branch (HQ/admin) accounts only. It is driven by `?branch=` and scopes every tab. It lists NUR branches and hides DEMO unless the account is based there. The default is the first branch that has a receiver. Accounts at one nursing branch get no picker and see only their own branch.
+- **Assignments:** the resident field is the shared `Combobox` (type to search). Residents already assigned to another bell are hidden. There is an explicit Unassign button.
+- **One bell per resident:** enforced by `/assign` (409 response) and by the unique index `cb_assignments_resident_unique` (`schema/024_callbell_one_bell_per_resident.sql`).
+
 ### Call Logs tab (updated 2026-10-01)
 - Columns: Call Time | Device | Bell No. | Resident | Response Time | Receiver (Call Type removed)
 - Bell No. = `resident_name_snapshot` (receiver CALL_RECORDING_BEAN.NAME = call number)

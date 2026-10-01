@@ -58,6 +58,21 @@ export async function POST(request: NextRequest) {
     if (!resident) {
       return NextResponse.json({ error: "Resident is not an active resident of this branch" }, { status: 400 });
     }
+
+    // One bell per resident (also enforced by cb_assignments_resident_unique).
+    const { data: taken } = await adminClient
+      .from("cb_assignments")
+      .select("device_num, room_label")
+      .eq("resident_id", residentId)
+      .not("device_num", "eq", deviceNum)
+      .limit(1)
+      .maybeSingle();
+    if (taken) {
+      return NextResponse.json(
+        { error: `Resident is already assigned to bell ${taken.room_label || taken.device_num}` },
+        { status: 409 }
+      );
+    }
   }
 
   const { data: updated, error } = await adminClient

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Bell, Users, Wifi, Pencil, Check, X, RefreshCw, Download } from "lucide-react";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useTranslation } from "@/components/language-provider";
+import { Combobox } from "@/components/combobox";
+import type { LookupOption } from "@/lib/types";
 
 export type CallLogRow = {
   id: number;
@@ -96,24 +98,21 @@ function FilterInput({
 export function CallbellTabs({
   logs,
   devices,
-  branches,
   receivers,
   residents,
 }: {
   logs: CallLogRow[];
   devices: BellDevice[];
-  branches: BranchOption[];
   receivers: ReceiverRow[];
   residents: ResidentOption[];
 }) {
   const t = useTranslation();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("logs");
+  const [tab, setTab] = useState<Tab>("assignments");
 
   // ── Assignments edit ──
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editResidentId, setEditResidentId] = useState("");
-  const [branchId, setBranchId] = useState<number | null>(branches[0]?.id ?? null);
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -153,7 +152,15 @@ export function CallbellTabs({
   }
 
   // ── Assignment helpers ──
-  const branchDevices = branchId === null ? devices : devices.filter((d) => d.branch_id === branchId);
+  // Devices/residents arrive already scoped to the selected branch (page ?branch=).
+  const branchDevices = devices;
+  // A resident can hold only one bell: hide residents already on another bell.
+  const takenResidentIds = new Set(devices.filter((d) => d.resident_id).map((d) => d.resident_id as number));
+  function residentOptionsFor(d: BellDevice): LookupOption[] {
+    return residents
+      .filter((r) => r.branch_id === d.branch_id && (r.id === d.resident_id || !takenResidentIds.has(r.id)))
+      .map((r) => ({ id: r.id, label: r.resident_name }));
+  }
 
   function deviceKey(d: BellDevice) {
     return `${d.receiver_id}:${d.device_num}`;
@@ -170,7 +177,7 @@ export function CallbellTabs({
     setSaveError(null);
   }
 
-  function saveEdit(d: BellDevice) {
+  function saveEdit(d: BellDevice, residentId: string = editResidentId) {
     setSaveError(null);
     startSaving(async () => {
       const res = await fetch("/api/callbell/assign", {
@@ -179,7 +186,7 @@ export function CallbellTabs({
         body: JSON.stringify({
           receiver_id: d.receiver_id,
           device_num: d.device_num,
-          resident_id: editResidentId ? Number(editResidentId) : null,
+          resident_id: residentId ? Number(residentId) : null,
         }),
       });
       if (!res.ok) {
@@ -195,11 +202,11 @@ export function CallbellTabs({
   return (
     <div>
       <TabRow className="mb-4">
-        <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon={Bell}>
-          {t("Call Logs")}
-        </TabButton>
         <TabButton active={tab === "assignments"} onClick={() => setTab("assignments")} icon={Users}>
           {t("Assignments")}
+        </TabButton>
+        <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon={Bell}>
+          {t("Call Logs")}
         </TabButton>
         <TabButton active={tab === "receivers"} onClick={() => setTab("receivers")} icon={Wifi}>
           {t("Receivers")}
@@ -308,27 +315,12 @@ export function CallbellTabs({
       {tab === "assignments" && (
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-3">
-            {branches.length > 1 && (
-              <select
-                value={branchId ?? ""}
-                onChange={(e) => {
-                  setBranchId(e.target.value ? Number(e.target.value) : null);
-                  setEditingKey(null);
-                }}
-                className="rounded border border-line bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            )}
             <p className="text-xs text-fg-subtle">
               {t("Call bells paired on the receiver. Select a resident for each bell.")}
             </p>
           </div>
-          <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
+          {/* overflow-visible so the resident combobox popup is not clipped */}
+          <div className="rounded-md border border-line bg-surface shadow-sm">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
                 <tr>
@@ -348,21 +340,17 @@ export function CallbellTabs({
                       <td className="px-4 py-2 font-medium text-fg">{d.call_number || "—"}</td>
                       <td className="px-4 py-2 text-fg-muted">
                         {isEditing ? (
-                          <select
+                          <Combobox
+                            id={`resident-${d.device_num}`}
                             value={editResidentId}
-                            onChange={(e) => setEditResidentId(e.target.value)}
-                            autoFocus
-                            className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                          >
-                            <option value="">{t("Unassigned")}</option>
-                            {residents
-                              .filter((r) => r.branch_id === d.branch_id)
-                              .map((r) => (
-                                <option key={r.id} value={String(r.id)}>
-                                  {r.resident_name}
-                                </option>
-                              ))}
-                          </select>
+                            onChange={setEditResidentId}
+                            options={residentOptionsFor(d)}
+                            label={t("Resident")}
+                            hideLabel
+                            placeholder={t("Type a name to search...")}
+                            emptyMessage={t("No matching unassigned resident")}
+                            className="min-w-[220px]"
+                          />
                         ) : (
                           d.resident_name || <span className="italic text-fg-faint">{t("Unassigned")}</span>
                         )}
@@ -388,6 +376,16 @@ export function CallbellTabs({
                               <X className="h-3 w-3" />
                               {t("Cancel")}
                             </button>
+                            {d.resident_id && (
+                              <button
+                                type="button"
+                                onClick={() => saveEdit(d, "")}
+                                disabled={saving}
+                                className="rounded border border-line px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                              >
+                                {t("Unassign")}
+                              </button>
+                            )}
                             {saveError && <span className="text-xs text-red-500">{saveError}</span>}
                           </div>
                         ) : (
