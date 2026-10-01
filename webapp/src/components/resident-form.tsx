@@ -42,6 +42,10 @@ type Props = {
   isAdmin: boolean;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
   backHref?: string;
+  // Idempotency key for createResident (new-resident mode only) — generated
+  // once per page load, so retries of the same form can't create a second
+  // resident. See schema/021_add_resident_submission_id.sql.
+  submissionId?: string;
 };
 
 // ── Questionnaire state types ─────────────────────────────────────────────────
@@ -238,6 +242,7 @@ export function ResidentForm({
   isAdmin,
   action,
   backHref,
+  submissionId,
 }: Props) {
   const t = useTranslation();
   const router = useRouter();
@@ -248,6 +253,8 @@ export function ResidentForm({
   const formRef = useRef<HTMLFormElement>(null);
 
   const markDirty = () => setIsDirty(true);
+  // Pin the first value — a later server re-render must not hand this form a new key.
+  const [stableSubmissionId] = useState(submissionId);
 
   // Warn on browser-level navigation (tab close, external link, browser back) when dirty
   useEffect(() => {
@@ -615,7 +622,10 @@ export function ResidentForm({
               </select>
             </Field>
           ) : (
-            <input type="hidden" name="status" value="ACTIVE" />
+            <>
+              <input type="hidden" name="status" value="ACTIVE" />
+              {stableSubmissionId && <input type="hidden" name="submission_id" value={stableSubmissionId} />}
+            </>
           )}
           <Field label={t("Care type")}>
             <select name="care_type" defaultValue={p?.care_type ?? ""} className={inputCls}>
@@ -1168,6 +1178,7 @@ export function ResidentForm({
                     <select
                       value={arrivalSpo2Condition}
                       onChange={(e) => { markDirty(); setArrivalSpo2Condition(e.target.value); }}
+                      required
                       className={inputCls}
                     >
                       <option value="">{t("Select condition")}</option>
@@ -1204,6 +1215,7 @@ export function ResidentForm({
                     <select
                       value={arrivalDxtRemark}
                       onChange={(e) => { markDirty(); setArrivalDxtRemark(e.target.value); }}
+                      required
                       className={inputCls}
                     >
                       <option value="">{t("Select remark")}</option>

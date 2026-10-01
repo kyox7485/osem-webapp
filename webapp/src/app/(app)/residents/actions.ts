@@ -98,9 +98,47 @@ export async function createResident(formData: FormData) {
     return { error: "Discharge date is required when status is not Active" };
   }
 
-  const { data, error } = await supabase.from("tbl_residents").insert(payload).select("id").single();
+  // Validate arrival vital signs before inserting anything — an early return
+  // after the insert leaves an orphan resident and each retry mints a new ResidentID.
+  const arrivalSystolic = optionalFloat(formData.get("arrival_systolic_bp"));
+  const arrivalDiastolic = optionalFloat(formData.get("arrival_diastolic_bp"));
+  const arrivalHr = optionalFloat(formData.get("arrival_heart_rate"));
+  const arrivalTemp = optionalFloat(formData.get("arrival_temperature"));
+  const arrivalSpo2 = optionalFloat(formData.get("arrival_spo2"));
+  const arrivalSpo2Condition = optional(formData.get("arrival_spo2_condition"));
+  const arrivalDxt = optionalFloat(formData.get("arrival_dxt"));
+  const arrivalDxtRemark = optional(formData.get("arrival_dxt_remark"));
+
+  if (arrivalSpo2 !== null && !arrivalSpo2Condition) {
+    return { error: "SpO2 condition is required when SpO2 is recorded" };
+  }
+  if (arrivalDxt !== null && !arrivalDxtRemark) {
+    return { error: "DXT remark is required when DXT is recorded" };
+  }
+
+  // One UUID per New Resident form instance — a repeat of the same submission
+  // hits the unique index and is sent to the resident already created.
+  const submissionIdRaw = optional(formData.get("submission_id"));
+  const submissionId =
+    submissionIdRaw && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(submissionIdRaw)
+      ? submissionIdRaw
+      : null;
+
+  const { data, error } = await supabase
+    .from("tbl_residents")
+    .insert({ ...payload, submission_id: submissionId })
+    .select("id")
+    .single();
 
   if (error) {
+    if (error.code === "23505" && submissionId && error.message.includes("submission_id")) {
+      const { data: existing } = await supabase
+        .from("tbl_residents")
+        .select("id")
+        .eq("submission_id", submissionId)
+        .maybeSingle();
+      if (existing) redirect(`/residents/${existing.id}`);
+    }
     // Translate the unique-constraint violation into a user-friendly message
     if (error.code === "23505" && error.message.includes("residentid")) {
       return { error: "A Resident ID could not be generated — please try again." };
@@ -121,22 +159,6 @@ export async function createResident(formData: FormData) {
   }
 
   // Insert arrival vital signs if any field was provided
-  const arrivalSystolic = optionalFloat(formData.get("arrival_systolic_bp"));
-  const arrivalDiastolic = optionalFloat(formData.get("arrival_diastolic_bp"));
-  const arrivalHr = optionalFloat(formData.get("arrival_heart_rate"));
-  const arrivalTemp = optionalFloat(formData.get("arrival_temperature"));
-  const arrivalSpo2 = optionalFloat(formData.get("arrival_spo2"));
-  const arrivalSpo2Condition = optional(formData.get("arrival_spo2_condition"));
-  const arrivalDxt = optionalFloat(formData.get("arrival_dxt"));
-  const arrivalDxtRemark = optional(formData.get("arrival_dxt_remark"));
-
-  if (arrivalSpo2 !== null && !arrivalSpo2Condition) {
-    return { error: "SpO2 condition is required when SpO2 is recorded" };
-  }
-  if (arrivalDxt !== null && !arrivalDxtRemark) {
-    return { error: "DXT remark is required when DXT is recorded" };
-  }
-
   if (arrivalSystolic !== null || arrivalDiastolic !== null || arrivalHr !== null || arrivalTemp !== null || arrivalSpo2 !== null || arrivalDxt !== null) {
     await supabase.from("tbl_vital").insert({
       branch_id: payload.branch_id,

@@ -82,6 +82,7 @@ export default async function NewResidentPage({ searchParams }: { searchParams: 
         isAdmin={effectiveIsAdmin}
         action={createResident}
         backHref="/residents"
+        submissionId={crypto.randomUUID()}
       />
     </div>
   );
