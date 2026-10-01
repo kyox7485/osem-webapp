@@ -42,6 +42,8 @@ type MedicationScriptResponse = {
   };
 };
 
+const RETRY_ON_LOST_RESPONSE = new Set(["create", "stockCreate"]);
+
 async function callScript(
   payload: Record<string, unknown>,
   attempt = 1
@@ -71,6 +73,21 @@ async function callScript(
   }
 
   const json = (await res.json()) as MedicationScriptResponse;
+  // Every request here names an action, so "Unknown action: " (empty) is
+  // never a real answer: Apps Script ran the POST, but the 302 echo page it
+  // redirected to served a body-less execution's output instead. Seen ~1 in 4
+  // calls in a 2026-10-01 probe -- and the create HAD reached the Sheet.
+  // Only re-sent for actions that are idempotent on their id (create on
+  // RxOrderID, stockCreate on StockID), so a repeat can't duplicate a row.
+  if (
+    !json.success &&
+    json.error?.trim() === "Unknown action:" &&
+    RETRY_ON_LOST_RESPONSE.has(String(payload.action)) &&
+    attempt < 3
+  ) {
+    await sleep(1000 * attempt);
+    return callScript(payload, attempt + 1);
+  }
   if (!json.success) throw new Error(json.error || "Apps Script request failed");
 
   if (json.supabaseSync && json.supabaseSync.success === false) {

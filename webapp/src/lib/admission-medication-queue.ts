@@ -29,6 +29,9 @@ const TABLE = "tbl_admission_medication_queue";
 // live request can never have its row taken from under it.
 const STALE_CLAIM_MS = 6 * 60 * 1000;
 
+// Order-step attempts before a row is left "failed" for a manual Retry.
+const MAX_AUTO_ORDER_ATTEMPTS = 3;
+
 type QueueRow = {
   id: number;
   resident_id: number;
@@ -226,7 +229,20 @@ export async function processNextAdmissionMedication(supabase: Supabase, residen
       });
     } catch (err) {
       console.error(`[admission-med-queue] order ${row.rx_order_id} failed:`, err);
-      await markRow(supabase, row.id, { status: "failed", last_error: `Order: ${errorText(err)}` });
+      // Re-sending the order is safe (fixed RxOrderID), so a transient
+      // Apps Script/network failure goes back in the queue on its own a few
+      // times before it needs a person to press Retry.
+      await markRow(supabase, row.id, {
+        status: row.attempts < MAX_AUTO_ORDER_ATTEMPTS ? "pending" : "failed",
+        last_error: `Order: ${errorText(err)}`,
+      });
+      return true;
+    }
+    if (row.stock_status === "pending" || row.stock_status === "failed") {
+      // Stock goes in the next request: one Apps Script round trip per
+      // request keeps each well under the ~30 s at which responses were
+      // seen to be cut off (the work itself still completed).
+      await markRow(supabase, row.id, { order_done: true, status: "pending", last_error: null });
       return true;
     }
     await markRow(supabase, row.id, { order_done: true });

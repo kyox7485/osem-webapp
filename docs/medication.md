@@ -116,6 +116,18 @@ entry (production test, 2026-10-01).
   RxOrderID guard (`alreadyExisted`). The stock step is skipped when a
   `Stock Received` row for that order is already in Supabase. A row stuck in
   `processing` (tab closed mid-call) is reclaimable after 6 minutes.
+- **One Apps Script round trip per request:** the order and its initial
+  stock are separate requests. In the 2026-10-01 production test, requests
+  over ~30 s came back `502 upstream request failed` even though the work
+  had completed server-side (source not pinned down — the queue recovers
+  either way: the row is already marked done and the runner moves on).
+- **Lost Apps Script responses:** ~1 in 4 calls, Apps Script ran the POST
+  but its 302 echo page served `{"success":false,"error":"Unknown action: "}`
+  (a body-less execution's output) — the order *had* been written.
+  `callScript` re-sends that response for `create`/`stockCreate` only
+  (both idempotent on their id); a failed order step is also re-queued
+  automatically up to 3 attempts. A failed stock step waits for Retry, since
+  a queue-level retry mints a new StockID.
 - **Closing the tab loses nothing:** open rows are resumed when anyone
   opens the resident's page (status card + Retry on
   `residents/[id]/admission-medications-status.tsx`), or when the admitting
