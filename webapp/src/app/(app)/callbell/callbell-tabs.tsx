@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Users, Wifi, Pencil, Check, X } from "lucide-react";
+import { Bell, Users, Wifi, Pencil, Check, X, RefreshCw, Download } from "lucide-react";
 import { TabRow, TabButton } from "@/components/tabs";
 import { useTranslation } from "@/components/language-provider";
 
@@ -10,10 +10,11 @@ export type CallLogRow = {
   id: number;
   receiver_label: string;
   device_num: string;
+  bell_no: string;
   resident_name: string;
-  call_type: string;
   call_time_display: string;
   response_time_display: string;
+  slow_response: boolean;
 };
 
 // One paired bell from the receiver inventory (Wenze getalldevices).
@@ -50,10 +51,27 @@ type Tab = "logs" | "assignments" | "receivers";
 
 type LogFilters = {
   device: string;
+  bell_no: string;
   resident: string;
-  call_type: string;
   receiver: string;
 };
+
+const EMPTY_FILTERS: LogFilters = { device: "", bell_no: "", resident: "", receiver: "" };
+
+function csvCell(v: string): string {
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+function downloadCsv(filename: string, header: string[], rows: string[][]) {
+  // BOM so Excel opens UTF-8 names correctly.
+  const csv = "﻿" + [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function FilterInput({
   value,
@@ -100,12 +118,8 @@ export function CallbellTabs({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // ── Call log filters ──
-  const [filters, setFilters] = useState<LogFilters>({
-    device: "",
-    resident: "",
-    call_type: "",
-    receiver: "",
-  });
+  const [filters, setFilters] = useState<LogFilters>(EMPTY_FILTERS);
+  const [refreshing, startRefresh] = useTransition();
 
   function setFilter(key: keyof LogFilters, value: string) {
     setFilters((f) => ({ ...f, [key]: value }));
@@ -113,13 +127,30 @@ export function CallbellTabs({
 
   const filteredLogs = logs.filter((row) => {
     if (filters.device && !row.device_num.toLowerCase().includes(filters.device.toLowerCase())) return false;
+    if (filters.bell_no && !row.bell_no.toLowerCase().includes(filters.bell_no.toLowerCase())) return false;
     if (filters.resident && !row.resident_name.toLowerCase().includes(filters.resident.toLowerCase())) return false;
-    if (filters.call_type && !row.call_type.toLowerCase().includes(filters.call_type.toLowerCase())) return false;
     if (filters.receiver && !row.receiver_label.toLowerCase().includes(filters.receiver.toLowerCase())) return false;
     return true;
   });
 
-  const hasFilters = filters.device || filters.resident || filters.call_type || filters.receiver;
+  const hasFilters = filters.device || filters.bell_no || filters.resident || filters.receiver;
+
+  function exportLogsCsv() {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(
+      `call-logs-${stamp}.csv`,
+      ["Call Time", "Device", "Bell No.", "Resident", "Response Time", "Over 15 min", "Receiver"],
+      filteredLogs.map((r) => [
+        r.call_time_display,
+        r.device_num,
+        r.bell_no,
+        r.resident_name,
+        r.response_time_display,
+        r.slow_response ? "Yes" : "",
+        r.receiver_label,
+      ])
+    );
+  }
 
   // ── Assignment helpers ──
   const branchDevices = branchId === null ? devices : devices.filter((d) => d.branch_id === branchId);
@@ -178,18 +209,44 @@ export function CallbellTabs({
       {/* ── Call Logs ── */}
       {tab === "logs" && (
         <div>
-          {hasFilters && (
-            <p className="mb-2 text-xs text-fg-subtle">
-              {t("Showing")} {filteredLogs.length} / {logs.length} {t("records")}
-              <button
-                type="button"
-                onClick={() => setFilters({ device: "", resident: "", call_type: "", receiver: "" })}
-                className="ml-2 text-indigo-500 underline hover:text-indigo-700"
-              >
-                {t("Clear filters")}
-              </button>
-            </p>
-          )}
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => startRefresh(() => router.refresh())}
+              disabled={refreshing}
+              className="flex items-center gap-1 rounded border border-line px-2.5 py-1 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
+              {t("Refresh")}
+            </button>
+            <button
+              type="button"
+              onClick={exportLogsCsv}
+              disabled={filteredLogs.length === 0}
+              className="flex items-center gap-1 rounded border border-line px-2.5 py-1 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
+            >
+              <Download className="h-3 w-3" />
+              {t("Export CSV")}
+            </button>
+            <span className="text-xs text-fg-subtle">
+              {hasFilters ? (
+                <>
+                  {t("Showing")} {filteredLogs.length} / {logs.length} {t("records")}
+                  <button
+                    type="button"
+                    onClick={() => setFilters(EMPTY_FILTERS)}
+                    className="ml-2 text-indigo-500 underline hover:text-indigo-700"
+                  >
+                    {t("Clear filters")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {logs.length} {t("records")}
+                </>
+              )}
+            </span>
+          </div>
           <div className="overflow-x-auto rounded-md border border-line bg-surface shadow-sm">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted text-left text-xs font-medium uppercase tracking-wide text-fg-subtle">
@@ -199,13 +256,13 @@ export function CallbellTabs({
                     {t("Device")}
                     <FilterInput value={filters.device} onChange={(v) => setFilter("device", v)} />
                   </th>
-                  <th className="px-4 py-2 min-w-[130px]">
+                  <th className="px-4 py-2 min-w-[100px]">
+                    {t("Bell No.")}
+                    <FilterInput value={filters.bell_no} onChange={(v) => setFilter("bell_no", v)} />
+                  </th>
+                  <th className="px-4 py-2 min-w-[140px]">
                     {t("Resident")}
                     <FilterInput value={filters.resident} onChange={(v) => setFilter("resident", v)} />
-                  </th>
-                  <th className="px-4 py-2 min-w-[100px]">
-                    {t("Call Type")}
-                    <FilterInput value={filters.call_type} onChange={(v) => setFilter("call_type", v)} />
                   </th>
                   <th className="px-4 py-2">{t("Response Time")}</th>
                   <th className="px-4 py-2 min-w-[110px]">
@@ -219,9 +276,18 @@ export function CallbellTabs({
                   <tr key={row.id} className="hover:bg-hover">
                     <td className="px-4 py-2 font-medium text-fg">{row.call_time_display}</td>
                     <td className="px-4 py-2 font-mono text-xs text-fg-muted">{row.device_num || "—"}</td>
+                    <td className="px-4 py-2 font-medium text-fg">{row.bell_no || "—"}</td>
                     <td className="px-4 py-2 text-fg-muted">{row.resident_name || "—"}</td>
-                    <td className="px-4 py-2 text-fg-muted">{row.call_type || "—"}</td>
-                    <td className="px-4 py-2 text-fg-muted">{row.response_time_display}</td>
+                    <td
+                      className={
+                        row.slow_response
+                          ? "px-4 py-2 font-semibold text-red-600 dark:text-red-400"
+                          : "px-4 py-2 text-fg-muted"
+                      }
+                      title={row.slow_response ? t("Response slower than 15 minutes") : undefined}
+                    >
+                      {row.response_time_display}
+                    </td>
                     <td className="px-4 py-2 text-fg-muted">{row.receiver_label}</td>
                   </tr>
                 ))}

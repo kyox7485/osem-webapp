@@ -13,6 +13,7 @@ import {
 } from "./callbell-tabs";
 
 const TZ = "Asia/Kuala_Lumpur";
+const SLOW_RESPONSE_MS = 15 * 60_000; // response slower than 15 min is flagged red
 
 function fmtCallTime(ms: string | number | null): string {
   const n = ms ? Number(ms) : 0;
@@ -95,7 +96,7 @@ export default async function CallbellPage() {
   const [logsResult, inventoryResult, residentsResult, branchesResult] = await Promise.all([
     adminClient
       .from("cb_call_logs")
-      .select("id, receiver_id, device_num, resident_name_snapshot, call_type, call_time, response_time")
+      .select("id, receiver_id, device_num, resident_name_snapshot, resident_nickname, call_time, response_time")
       .in("receiver_id", receiverIds)
       .order("call_time", { ascending: false, nullsFirst: false })
       .limit(200),
@@ -143,18 +144,26 @@ export default async function CallbellPage() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // ── Call logs ──
-  const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => ({
-    id: row.id as number,
-    receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
-    device_num: (row.device_num as string) ?? "",
-    resident_name: (row.resident_name_snapshot as string) ?? "",
-    call_type: (row.call_type as string) ?? "",
-    call_time_display: fmtCallTime(row.call_time as string | number | null),
-    response_time_display: fmtResponseDuration(
-      row.call_time as string | number | null,
-      row.response_time as string | number | null
-    ),
-  }));
+  // bell_no  = CALL_RECORDING_BEAN.NAME (call number)
+  // resident = CALL_RECORDING_BEAN.NICK_NAME as recorded at call time — never
+  //            looked up from current assignments, so history is stable.
+  const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => {
+    const ct = Number(row.call_time) || 0;
+    const rt = Number(row.response_time) || 0;
+    return {
+      id: row.id as number,
+      receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
+      device_num: (row.device_num as string) ?? "",
+      bell_no: (row.resident_name_snapshot as string) ?? "",
+      resident_name: (row.resident_nickname as string) ?? "",
+      call_time_display: fmtCallTime(row.call_time as string | number | null),
+      response_time_display: fmtResponseDuration(
+        row.call_time as string | number | null,
+        row.response_time as string | number | null
+      ),
+      slow_response: ct > 0 && rt > ct && rt - ct > SLOW_RESPONSE_MS,
+    };
+  });
 
   // ── Receivers display ──
   const receivers: ReceiverRow[] = receiverList.map((row) => ({

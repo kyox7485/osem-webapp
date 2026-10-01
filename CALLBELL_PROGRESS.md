@@ -132,12 +132,14 @@ const isPublicPage =
 - `dict-callbell.ts` — English ↔ BM translations for call bell module
 - `translations.ts` — imports and spreads `dictCallbell`
 
-### Call Logs tab
-- Columns: Call Time | Device | Resident | Call Type | Response Time | Receiver
-- Response time = `response_time - call_time` formatted as `"5s"`, `"1m 4s"`, etc.
-- `Duration` column removed (always `"0"` in Wenze data)
-- Per-column filter inputs under headers: Device, Resident, Call Type, Receiver
-- Filter count shown, "Clear filters" link
+### Call Logs tab (updated 2026-10-01)
+- Columns: Call Time | Device | Bell No. | Resident | Response Time | Receiver (Call Type removed)
+- Bell No. = `resident_name_snapshot` (receiver CALL_RECORDING_BEAN.NAME = call number)
+- Resident = `resident_nickname` (CALL_RECORDING_BEAN.NICK_NAME, recorded by the receiver at call time). It is never looked up from current assignments, so reassigning a bell doesn't rewrite history. Added by migration `schema/023_callbell_call_log_resident.sql`.
+- Response time over 15 min is shown in red. Per-column filters cover Device, Bell No., Resident and Receiver.
+- **Refresh** button re-runs the server query. **Export CSV** exports the currently filtered rows (UTF-8 with BOM, opens in Excel).
+- Latency: the APK sends new call records every 10 s. The page shows them on Refresh or reload.
+- `/ingest` now merges on conflict (not ignore), so FULL DATABASE SYNC backfills `resident_nickname` on older rows.
 
 ### Assignments tab
 - Shows every device that has appeared in call logs
@@ -178,7 +180,7 @@ Three separate concepts:
 
 **APK** (`WenzeHttpApi.kt`, `SyncService.kt`, `SupabaseApiClient.kt`)
 - Every 10 min (and when **SYNC DEVICES + ASSIGNMENTS** is pressed): getalldevices, then POST `/api/callbell/devices` `{complete:true, devices:[{device_num, call_number, nick_name}]}`
-- Every 5 min: GET `/config`, then set NICK_NAME via updateDevices
+- Every 10 s: GET `/config`; if the assignment set changed (or every 5 min as a re-check) set NICK_NAME via updateDevices
   - skipped while `isCall` is active (retried next cycle)
   - NAME is never written
   - on unassign, NICK_NAME is cleared only if OSEM set it earlier (tracked in the `osem_applied_names` prefs), so names typed on the receiver survive
@@ -189,6 +191,12 @@ Three separate concepts:
 - Assignment tab columns: Device ID | Call Number (read-only) | Resident (picker) | Action. A branch filter appears only when the user can see more than one branch.
 
 No schema change.
+
+**Operational requirement:** the Wenze HTTP API (port 8080) only exists while `com.wenze.callsystem` is alive. Android 6 kills it once another app is in front, which also stops bell handling. The OSEM app therefore returns to the Wenze screen about 3 s after START, FULL SYNC or SYNC DEVICES. A failed inventory sync or name push retries after 60 s. The sync service also restarts after an APK update (`MY_PACKAGE_REPLACED`).
+
+**Process survival:** SyncService runs in its own process (`com.osem.lorasync:sync`), and a 60 s AlarmManager watchdog restarts it. Two things on this ROM kill processes with the reason "user request after error": clearing the app from Recent Apps, and launching Wenze's SplashActivity (which kills the OSEM UI process). Android does not restart a service killed that way. **Never clear Wenze from Recent Apps** — that stops the call system itself.
+
+Verified 2026-10-01: 50 bells synced from receiver 1 (e.g. F58480 = 121A). Name push verified: F2EE40 / 9999 changed from CHANG CHING CHOONG to LIM SIAM HIOK. Server URL and secret are stripped of whitespace (a stray space in the URL had broken registration).
 
 ---
 

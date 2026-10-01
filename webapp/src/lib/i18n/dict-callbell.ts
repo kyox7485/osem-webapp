@@ -31,4 +31,8 @@ export const dictCallbell: Record<string, string> = {
   "Action": "Tindakan",
   "Call bells paired on the receiver. Select a resident for each bell.": "Loceng panggilan yang dipasangkan pada penerima. Pilih penghuni untuk setiap loceng.",
   "No call bells received from the receiver yet. On the receiver, open OSEM LoRa Sync and press SYNC DEVICES + ASSIGNMENTS.": "Tiada loceng panggilan diterima daripada penerima lagi. Pada penerima, buka OSEM LoRa Sync dan tekan SYNC DEVICES + ASSIGNMENTS.",
+  "Bell No.": "No. Loceng",
+  "Refresh": "Muat Semula",
+  "Export CSV": "Eksport CSV",
+  "Response slower than 15 minutes": "Respons melebihi 15 minit",
 };

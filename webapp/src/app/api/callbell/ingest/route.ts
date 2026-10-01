@@ -22,6 +22,7 @@ interface CallRecord {
   LEVEL: string
   REMARK: string
   CONTACT_NUMBER: string
+  NICK_NAME?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -71,11 +72,15 @@ export async function POST(req: NextRequest) {
     level: r.LEVEL || null,
     remark: r.REMARK || null,
     contact_number: r.CONTACT_NUMBER || null,
+    // Resident name the receiver recorded at call time (immutable history).
+    resident_nickname: r.NICK_NAME || null,
   }))
 
   const { error } = await supabase
     .from('cb_call_logs')
-    .upsert(rows, { onConflict: 'receiver_id,local_id,call_time', ignoreDuplicates: true })
+    // Merge (not ignore) so a FULL DATABASE SYNC backfills resident_nickname on
+    // older rows. Receiver call records are immutable, so re-sent values match.
+    .upsert(rows, { onConflict: 'receiver_id,local_id,call_time' })
 
   if (error) {
     return NextResponse.json({ ok: false, code: 'DB_ERROR', detail: error.message }, { status: 500 })
