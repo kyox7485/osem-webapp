@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { createMedicationOrder } from "@/lib/medication-orders-script";
+import { recordStockEntryAction } from "@/app/(app)/residents/medication/stock/stock-actions";
 import crypto from "crypto";
 import type { MedicationDraft } from "@/components/admission-medications";
 
@@ -200,6 +201,7 @@ export async function createResident(formData: FormData) {
 
   // Create admission medication orders via Apps Script bridge
   let medFailCount = 0;
+  let stockFailCount = 0;
   const medicationDraftsJson = formData.get("medication_drafts");
   if (typeof medicationDraftsJson === "string" && medicationDraftsJson) {
     try {
@@ -212,8 +214,9 @@ export async function createResident(formData: FormData) {
           .single();
         if (residentRow?.ResidentID) {
           for (const draft of drafts) {
+            let rxOrderId: string | null = null;
             try {
-              const rxOrderId = await generateRxOrderId(supabase);
+              rxOrderId = await generateRxOrderId(supabase);
               await createMedicationOrder({
                 RxOrderID: rxOrderId,
                 ResidentID: residentRow.ResidentID,
@@ -239,6 +242,29 @@ export async function createResident(formData: FormData) {
             } catch (err) {
               console.error("[createResident] Failed to create admission medication order:", err);
               medFailCount++;
+              continue; // Don't attempt stock if order failed
+            }
+
+            // Record initial stock if provided for this medication
+            const stockQty = draft.stockQuantity ? parseFloat(draft.stockQuantity) : NaN;
+            if (rxOrderId && isFinite(stockQty) && stockQty > 0 && draft.stockUnit && draft.stockRegisteredBy) {
+              try {
+                const stockResult = await recordStockEntryAction({
+                  rxOrderId,
+                  entryType: "Stock Received",
+                  quantity: stockQty,
+                  unit: draft.stockUnit,
+                  registeredBy: draft.stockRegisteredBy,
+                  entryDate: draft.stockEntryDate,
+                });
+                if (!stockResult.success) {
+                  console.error(`[createResident] Stock entry failed for ${rxOrderId}:`, stockResult.error);
+                  stockFailCount++;
+                }
+              } catch (err) {
+                console.error(`[createResident] Stock entry exception for ${rxOrderId}:`, err);
+                stockFailCount++;
+              }
             }
           }
         }
@@ -249,7 +275,11 @@ export async function createResident(formData: FormData) {
   }
 
   revalidatePath("/residents");
-  redirect(medFailCount > 0 ? `/residents/${data.id}?med_fail=${medFailCount}` : `/residents/${data.id}`);
+  const failParams = new URLSearchParams();
+  if (medFailCount > 0) failParams.set("med_fail", String(medFailCount));
+  if (stockFailCount > 0) failParams.set("stock_fail", String(stockFailCount));
+  const failQuery = failParams.toString();
+  redirect(failQuery ? `/residents/${data.id}?${failQuery}` : `/residents/${data.id}`);
 }
 
 export async function dischargeResident(residentId: number, formData: FormData) {

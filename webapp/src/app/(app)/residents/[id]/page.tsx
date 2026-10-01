@@ -13,12 +13,13 @@ export default async function ResidentViewPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ med_fail?: string }>;
+  searchParams: Promise<{ med_fail?: string; stock_fail?: string }>;
 }) {
   const { t } = await getServerTranslator();
   const { id } = await params;
   const sp = await searchParams;
   const medFailCount = sp.med_fail ? Number(sp.med_fail) : 0;
+  const stockFailCount = sp.stock_fail ? Number(sp.stock_fail) : 0;
   const supabase = await createClient();
 
   const { data: resident } = await supabase
@@ -44,6 +45,15 @@ export default async function ResidentViewPage({
   return (
     <div>
       <PageTitle title={resident.resident_name} description={`${formatBranch(branch)} · ${t(resident.status)}`} />
+      {stockFailCount > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            {t("Resident created, but {n} stock entr{y} could not be recorded. Please record them later via Medication > Stock.")
+              .replace("{n}", String(stockFailCount))
+              .replace("{y}", stockFailCount === 1 ? "y" : "ies")}
+          </p>
+        </div>
+      )}
       {medFailCount > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
           <p className="text-sm text-amber-800 dark:text-amber-200">

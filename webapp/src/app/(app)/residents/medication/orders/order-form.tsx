@@ -20,6 +20,9 @@ import {
   ToggleGroup,
   ChipSelector,
 } from "@/components/medication-form-shared";
+import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/format-date";
+import { STOCK_UNITS, defaultStockUnitForOrderUnit } from "@/lib/medication-stock";
+import { recordStockEntryAction } from "../stock/stock-actions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -182,6 +185,14 @@ export function OrderForm(props: Props) {
     initNotedByIsOther ? init.notedBy : ""
   );
 
+  // ── Initial Stock Received (optional, create mode only) ──────────────────────
+  const [stockDate, setStockDate] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [stockUnit, setStockUnit] = useState(() => defaultStockUnitForOrderUnit(init.unit) ?? "");
+  const [stockUnitManuallySet, setStockUnitManuallySet] = useState(false);
+  const [stockRegisteredBy, setStockRegisteredBy] = useState("");
+  const [stockPartialError, setStockPartialError] = useState<string | null>(null);
+
   // ── Dirty tracking ────────────────────────────────────────────────────────────
   // Local isDirty/showCancelModal above already drive this form's own
   // Cancel-button flow (Save and Exit / Exit Without Saving / Cancel,
@@ -247,6 +258,19 @@ export function OrderForm(props: Props) {
       .filter((s) => s.branchId === staffFilterBranchId)
       .map((s) => ({ id: s.name, label: s.name }));
   }, [props.staffOptions, staffFilterBranchId]);
+
+  const stockStaffOptions = useMemo(() => {
+    if (!staffFilterBranchId) return [];
+    return props.staffOptions.filter((s) => s.branchId === staffFilterBranchId);
+  }, [props.staffOptions, staffFilterBranchId]);
+
+  // Auto-fill stock unit from order unit (unless user manually overrode it).
+  useEffect(() => {
+    if (!stockUnitManuallySet) {
+      setStockUnit(defaultStockUnitForOrderUnit(unit) ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -326,10 +350,30 @@ export function OrderForm(props: Props) {
             resolve({ success: false, error: result.error ?? "Unknown error" });
             return;
           }
+
+          // Optionally record initial stock (order must exist first)
+          const stockQty = parseFloat(stockQuantity.trim() || "");
+          let stockFailed = false;
+          if (isFinite(stockQty) && stockQty > 0 && result.rxOrderId) {
+            const stockResult = await recordStockEntryAction({
+              rxOrderId: result.rxOrderId,
+              entryType: "Stock Received",
+              quantity: stockQty,
+              unit: stockUnit,
+              registeredBy: stockRegisteredBy,
+              entryDate: fromDatetimeLocalValue(stockDate),
+            });
+            if (!stockResult.success) {
+              stockFailed = true;
+              setStockPartialError(stockResult.error ?? "Initial stock could not be recorded");
+              console.error("[createOrderAction] Initial stock entry failed for", result.rxOrderId, ":", stockResult.error);
+            }
+          }
+
           setIsDirty(false);
           markGlobalClean();
           setSuccessId(result.rxOrderId ?? null);
-          setTimeout(() => push("/residents/medication/orders"), 1800);
+          setTimeout(() => push("/residents/medication/orders"), stockFailed ? 5000 : 1800);
           resolve({ success: true });
         } else {
           const { residentId: _rid, ...rest } = buildValues();
@@ -397,6 +441,11 @@ export function OrderForm(props: Props) {
         <p className="mt-1 font-mono text-xs text-green-600 dark:text-green-400">
           {t("Order ID")}: {successId}
         </p>
+        {stockPartialError && (
+          <p className="mt-3 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            {t("Medication order created. Initial stock could not be recorded — you can record it later from Medication > Stock.")}
+          </p>
+        )}
         <p className="mt-2 text-xs text-green-600 dark:text-green-400">{t("Redirecting...")}</p>
       </div>
     );
@@ -817,6 +866,97 @@ export function OrderForm(props: Props) {
                 </p>
               )}
             </Field>
+
+            {/* ── Initial Stock Received (optional, create mode only) ──────────── */}
+            {isCreate && (
+              <>
+                <SectionHeading title={t("Initial Stock Received (Optional)")} />
+
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-fg-muted">
+                    {t("If stock has already been received for this medication, you can record it now. You can also leave this blank and record stock later.")}
+                  </p>
+                </div>
+
+                <Field label={t("Entry Date/Time")}>
+                  <input
+                    type="datetime-local"
+                    value={stockDate}
+                    max={toDatetimeLocalValue(new Date().toISOString())}
+                    onChange={(e) => {
+                      setStockDate(e.target.value);
+                      mark();
+                    }}
+                    className={inputCls + " appearance-none"}
+                  />
+                </Field>
+
+                <Field label={t("Quantity Received")}>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    value={stockQuantity}
+                    onChange={(e) => {
+                      setStockQuantity(e.target.value);
+                      mark();
+                    }}
+                    placeholder=""
+                    className={inputCls}
+                  />
+                  <p className="mt-1 text-xs text-fg-faint">
+                    {t("Leave blank if no stock has been received yet.")}
+                  </p>
+                </Field>
+
+                <Field label={t("Unit")}>
+                  <select
+                    value={stockUnit}
+                    onChange={(e) => {
+                      setStockUnit(e.target.value);
+                      setStockUnitManuallySet(true);
+                      mark();
+                    }}
+                    className={inputCls + " cursor-pointer"}
+                  >
+                    <option value="">{t("Select unit")}</option>
+                    <optgroup label={t("Countable — balance is forecast")}>
+                      {STOCK_UNITS.filter((u) => u.tracking === "Count").map((u) => (
+                        <option key={u.unit} value={u.unit}>{t(u.unit)}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label={t("Estimate — not forecast")}>
+                      {STOCK_UNITS.filter((u) => u.tracking === "Estimate").map((u) => (
+                        <option key={u.unit} value={u.unit}>{t(u.unit)}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </Field>
+
+                <Field label={t("Registered By")}>
+                  <select
+                    value={stockRegisteredBy}
+                    onChange={(e) => {
+                      setStockRegisteredBy(e.target.value);
+                      mark();
+                    }}
+                    disabled={!staffFilterBranchId}
+                    className={inputCls + " cursor-pointer disabled:bg-surface-muted disabled:text-fg-faint"}
+                  >
+                    <option value="">{t("Select staff")}</option>
+                    {stockStaffOptions.map((s) => (
+                      <option key={s.staffId} value={s.staffId}>{s.name}</option>
+                    ))}
+                  </select>
+                  {!residentId && (
+                    <p className="mt-1 text-xs text-fg-faint">
+                      {t("Select a resident first.")}
+                    </p>
+                  )}
+                </Field>
+              </>
+            )}
 
             {/* ── Reference (edit only) ────────────────────────────────────────── */}
             {props.mode === "edit" && (

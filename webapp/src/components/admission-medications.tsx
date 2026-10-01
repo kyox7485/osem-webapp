@@ -18,8 +18,16 @@ import {
   ChipSelector,
 } from "@/components/medication-form-shared";
 import type { OrderFormValues } from "@/app/(app)/residents/medication/orders/order-actions";
+import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/format-date";
+import { STOCK_UNITS, defaultStockUnitForOrderUnit } from "@/lib/medication-stock";
 
-export type MedicationDraft = Omit<OrderFormValues, "residentId"> & { draftId: string };
+export type MedicationDraft = Omit<OrderFormValues, "residentId"> & {
+  draftId: string;
+  stockEntryDate?: string;
+  stockQuantity?: string;
+  stockUnit?: string;
+  stockRegisteredBy?: string;
+};
 
 type StaffOption = LookupOption & { branch_id: number };
 type DraftFormValues = Omit<MedicationDraft, "draftId">;
@@ -81,6 +89,13 @@ function MedicationDraftModal({
   const [notedByOther, setNotedByOther] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
+  // ── Initial Stock Received (optional) ────────────────────────────────────────
+  const [stockDate, setStockDate] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [stockUnit, setStockUnit] = useState("");
+  const [stockUnitManuallySet, setStockUnitManuallySet] = useState(false);
+  const [stockRegisteredBy, setStockRegisteredBy] = useState("");
+
   const filteredStaff = useMemo(
     () => allStaff.filter((s) => String(s.branch_id) === branchId),
     [allStaff, branchId],
@@ -89,6 +104,8 @@ function MedicationDraftModal({
     () => filteredStaff.map((s) => ({ id: String(s.id), label: String(s.label) })),
     [filteredStaff],
   );
+  // Stock staff uses actual StaffID (same list, different field mapping)
+  const stockStaffOptions = filteredStaff;
 
   // Reset when modal opens (false→true transition)
   useEffect(() => {
@@ -126,12 +143,25 @@ function MedicationDraftModal({
         !notedByOptions.some((o) => String(o.id) === initialValues.notedBy);
       setNotedByVal(isOtherNotedBy ? OTHERS_SENTINEL : (initialValues.notedBy || ""));
       setNotedByOther(isOtherNotedBy ? initialValues.notedBy : "");
+      // Stock fields
+      setStockDate(
+        initialValues.stockEntryDate
+          ? toDatetimeLocalValue(initialValues.stockEntryDate)
+          : toDatetimeLocalValue(new Date().toISOString()),
+      );
+      setStockQuantity(initialValues.stockQuantity || "");
+      setStockUnit(initialValues.stockUnit || (defaultStockUnitForOrderUnit(initialValues.unit) ?? ""));
+      setStockUnitManuallySet(!!initialValues.stockUnit);
+      setStockRegisteredBy(initialValues.stockRegisteredBy || "");
     } else {
       setDosageForm(""); setDosageFormOther(""); setBrandName(""); setActiveIngredient("");
       setDose(""); setUnit(""); setFrequency(""); setAdminTimes([]); setDosingDays(["Everyday"]);
       setIndication(""); setInstruction(""); setDurationType("");
       setStartDate(defaultDate); setEndDate("");
       setOrderedBy(""); setSuppliedBy(""); setNotedByVal(""); setNotedByOther("");
+      // Stock fields
+      setStockDate(toDatetimeLocalValue(new Date().toISOString()));
+      setStockQuantity(""); setStockUnit(""); setStockUnitManuallySet(false); setStockRegisteredBy("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -160,6 +190,7 @@ function MedicationDraftModal({
   }
 
   function buildValues(): DraftFormValues {
+    const hasStock = stockQuantity.trim() !== "";
     return {
       dosageForm: dosageForm === "Others" ? dosageFormOther.trim() : dosageForm,
       brandName: brandName.trim(),
@@ -178,6 +209,10 @@ function MedicationDraftModal({
       orderedBy,
       suppliedBy,
       status: "Active",
+      stockEntryDate: hasStock ? fromDatetimeLocalValue(stockDate) : undefined,
+      stockQuantity: hasStock ? stockQuantity.trim() : undefined,
+      stockUnit: hasStock ? stockUnit : undefined,
+      stockRegisteredBy: hasStock ? stockRegisteredBy : undefined,
     };
   }
 
@@ -196,6 +231,22 @@ function MedicationDraftModal({
     if (missing.length > 0) {
       setFormError(`${t("Required")}: ${missing.join(", ")}`);
       return;
+    }
+    // Stock field validation (only when a quantity is entered)
+    if (stockQuantity.trim() !== "") {
+      const qty = parseFloat(stockQuantity);
+      if (isNaN(qty) || qty <= 0) {
+        setFormError(t("Stock quantity must be more than 0"));
+        return;
+      }
+      if (!stockUnit) {
+        setFormError(t("Stock unit is required when a quantity is entered"));
+        return;
+      }
+      if (!stockRegisteredBy) {
+        setFormError(t("Registered By is required for stock entry"));
+        return;
+      }
     }
     setFormError(null);
     onSave(vals);
@@ -306,7 +357,13 @@ function MedicationDraftModal({
               <FL required>{t("Unit")}</FL>
               <select
                 value={unit}
-                onChange={(e) => setUnit(e.target.value)}
+                onChange={(e) => {
+                  const newUnit = e.target.value;
+                  setUnit(newUnit);
+                  if (!stockUnitManuallySet) {
+                    setStockUnit(defaultStockUnitForOrderUnit(newUnit) ?? "");
+                  }
+                }}
                 className={medInputCls + " cursor-pointer"}
               >
                 <option value="">{t("Select unit")}</option>
@@ -458,6 +515,84 @@ function MedicationDraftModal({
                 onValueChange={setNotedByVal}
                 onOtherNameChange={setNotedByOther}
               />
+            </div>
+
+            <SH title={t("Initial Stock Received (Optional)")} />
+
+            <div className="sm:col-span-2">
+              <p className="text-xs text-fg-muted">
+                {t("If stock has already been received for this medication, you can record it now. You can also leave this blank and record stock later.")}
+              </p>
+            </div>
+
+            {/* Entry Date/Time */}
+            <div>
+              <FL>{t("Entry Date/Time")}</FL>
+              <input
+                type="datetime-local"
+                value={stockDate}
+                max={toDatetimeLocalValue(new Date().toISOString())}
+                onChange={(e) => setStockDate(e.target.value)}
+                className={medInputCls + " appearance-none"}
+              />
+            </div>
+
+            {/* Quantity Received */}
+            <div>
+              <FL>{t("Quantity Received")}</FL>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value)}
+                placeholder=""
+                className={medInputCls}
+              />
+              <p className="mt-1 text-xs text-fg-faint">
+                {t("Leave blank if no stock has been received yet.")}
+              </p>
+            </div>
+
+            {/* Stock Unit */}
+            <div>
+              <FL>{t("Unit")}</FL>
+              <select
+                value={stockUnit}
+                onChange={(e) => {
+                  setStockUnit(e.target.value);
+                  setStockUnitManuallySet(true);
+                }}
+                className={medInputCls + " cursor-pointer"}
+              >
+                <option value="">{t("Select unit")}</option>
+                <optgroup label={t("Countable — balance is forecast")}>
+                  {STOCK_UNITS.filter((u) => u.tracking === "Count").map((u) => (
+                    <option key={u.unit} value={u.unit}>{t(u.unit)}</option>
+                  ))}
+                </optgroup>
+                <optgroup label={t("Estimate — not forecast")}>
+                  {STOCK_UNITS.filter((u) => u.tracking === "Estimate").map((u) => (
+                    <option key={u.unit} value={u.unit}>{t(u.unit)}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Registered By (stock) */}
+            <div>
+              <FL>{t("Registered By")}</FL>
+              <select
+                value={stockRegisteredBy}
+                onChange={(e) => setStockRegisteredBy(e.target.value)}
+                className={medInputCls + " cursor-pointer"}
+              >
+                <option value="">{t("Select staff")}</option>
+                {stockStaffOptions.map((s) => (
+                  <option key={String(s.id)} value={String(s.id)}>{String(s.label)}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -626,6 +761,7 @@ export function AdmissionMedicationsSection({
                       <th className="text-left px-4 py-2.5 font-medium">{t("Frequency")}</th>
                       <th className="text-left px-4 py-2.5 font-medium">{t("Dosing Day")}</th>
                       <th className="text-left px-4 py-2.5 font-medium">{t("Duration")}</th>
+                      <th className="text-left px-4 py-2.5 font-medium">{t("Stock Received")}</th>
                       <th className="text-left px-4 py-2.5 font-medium">{t("Actions")}</th>
                     </tr>
                   </thead>
@@ -649,6 +785,11 @@ export function AdmissionMedicationsSection({
                         </td>
                         <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">
                           {draft.durationType || "–"}
+                        </td>
+                        <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">
+                          {draft.stockQuantity
+                            ? `${draft.stockQuantity} ${draft.stockUnit || ""}`.trim()
+                            : "—"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-3">
@@ -684,6 +825,11 @@ export function AdmissionMedicationsSection({
                       {draft.frequency && <span>{draft.frequency}</span>}
                       {draft.dosingDays && <span>{draft.dosingDays}</span>}
                       {draft.durationType && <span>{draft.durationType}</span>}
+                      {draft.stockQuantity && (
+                        <span className="text-indigo-600 dark:text-indigo-400">
+                          {t("Stock received")}: {draft.stockQuantity} {draft.stockUnit}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 pt-0.5">
                       <button

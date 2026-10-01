@@ -297,4 +297,20 @@ export const dictMedication: Record<string, string> = {
   Medicine: "Ubat",
   "Days left": "Baki hari",
   "Qty to order": "Kuantiti untuk ditempah",
+
+  // ── Initial Stock Received (order form + admission form) ────────────────────
+  "Initial Stock Received (Optional)": "Stok Awal Diterima (Pilihan)",
+  "If stock has already been received for this medication, you can record it now. You can also leave this blank and record stock later.":
+    "Jika stok untuk ubat ini telah diterima, anda boleh merekodkannya sekarang. Anda juga boleh biarkan kosong dan rekod stok kemudian.",
+  "Leave blank if no stock has been received yet.": "Biarkan kosong jika tiada stok diterima lagi.",
+  "Quantity Received": "Kuantiti Diterima",
+  "Medication order created. Initial stock could not be recorded — you can record it later from Medication > Stock.":
+    "Pesanan ubat berjaya dibuat. Stok awal tidak dapat direkodkan — anda boleh rekod kemudian di Ubat > Stok.",
+  "Select staff": "Pilih kakitangan",
+  "Stock quantity must be more than 0": "Kuantiti stok mesti lebih daripada 0",
+  "Stock unit is required when a quantity is entered": "Unit stok diperlukan apabila kuantiti dimasukkan",
+  "Registered By is required for stock entry": "Pengisi stok diperlukan untuk rekod stok",
+  "Stock received": "Stok diterima",
+  "Resident created, but {n} stock entr{y} could not be recorded. Please record them later via Medication > Stock.":
+    "Penghuni berjaya dibuat, tetapi {n} rekod stok tidak dapat didaftarkan. Sila rekodkan kemudian di Ubat > Stok.",
 };
