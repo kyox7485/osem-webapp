@@ -258,3 +258,15 @@ Verified 2026-10-01: 50 bells synced from receiver 1 (e.g. F58480 = 121A). Name 
 - **Repeated press while ringing:** the receiver moves CALL_TIME on the open record, so the old unanswered copy stayed
   (unique key includes call_time). Ingest now deletes the older unanswered copy of the same local_id. Existing stale
   row: local_id 552, call_time 1790865149343 (not deleted — awaiting approval).
+
+## Wenze call system patch — loop fix (2026-10-02)
+
+- Source: `E:\My Software\Others\apktool\decoded-v2` (copy of the patched-EN tree). Build: `osem-loopfix-signed.apk`.
+- **Loop Call (循坏呼叫 / `xunhuaicall`):** each round announces every queued call once, then pauses **60 s**
+  (`SoundUtils.osemScheduleRound`, `const-wide/32 v2, 0xea60`). A new call is announced at once even during the
+  pause. Loop off = unchanged (announce once).
+- Translations: remaining hard-coded layout text, 4 missing en-rUS strings, 3 toasts.
+- **New signing key** (old `osem-test.keystore` password lost): `E:\My Software\Others\apktool\osem-wenze.keystore`,
+  password in `osem-wenze.keystore.PASSWORD.txt` next to it. All future Wenze patches must use this key.
+- Reinstall needed uninstall; app data (MMKV settings) restored with root. Backups:
+  `C:\Users\NGF\Downloads\OSEM_CallBell_SafetyBackup\20261002_loopfix\` (old APK, app data tar, licence, call DB).
