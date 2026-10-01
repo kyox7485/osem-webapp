@@ -12,6 +12,9 @@ import {
   type ResidentOption,
 } from "./callbell-tabs";
 import { CallbellBranchPicker } from "./branch-picker";
+import { CallbellDashboard } from "./analytics/dashboard";
+import { buildBranchStats, buildDashboard, fetchBellResidents } from "./analytics/queries";
+import { resolveDateRange, type PeriodKey } from "./analytics/data";
 
 const TZ = "Asia/Kuala_Lumpur";
 const SLOW_RESPONSE_MS = 15 * 60_000; // response slower than 15 min is flagged red
@@ -62,9 +65,19 @@ function fmtResponseDuration(
 export default async function CallbellPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string }>;
+  searchParams: Promise<{
+    branch?: string;
+    tab?: string;
+    period?: string;
+    from?: string;
+    to?: string;
+  }>;
 }) {
-  const { branch } = await searchParams;
+  const { branch, tab, period, from, to } = await searchParams;
+  const showDashboard = tab === "dashboard";
+  const periodKey = (["today", "7d", "30d", "custom"].includes(period ?? "")
+    ? period
+    : "7d") as PeriodKey;
   const { t } = await getServerTranslator();
   const account = await getCurrentUser();
   const adminClient = createAdminClient();
@@ -115,8 +128,51 @@ export default async function CallbellPage({
   const receiverLabelById = Object.fromEntries(receiverList.map((r) => [r.id, r.receiver_label]));
 
   const picker = branchOptions.length > 1 && (
-    <CallbellBranchPicker branches={branchOptions} currentBranch={selectedBranchId} />
+    <CallbellBranchPicker
+      branches={branchOptions}
+      currentBranch={selectedBranchId}
+      tab={showDashboard ? "dashboard" : undefined}
+    />
   );
+
+  const nowMs = new Date().getTime();
+
+  // ── Analytics dashboard ───────────────────────────────────────────────────
+  // Aggregated server-side for the selected branch × date range only; the raw
+  // rows never reach the browser.
+  let dashboard: React.ReactNode = null;
+  if (showDashboard) {
+    const range = resolveDateRange(periodKey, from ?? "", to ?? "");
+    const branchLabelById = new Map(branchOptions.map((b) => [b.id, b.name]));
+    const bellByKey = await fetchBellResidents(adminClient, receiverIds);
+    const result = await buildDashboard(adminClient, receiverIds, range, bellByKey);
+    // All-branch accounts additionally get the same range compared per branch.
+    const branchStats =
+      allBranchAccount && branchOptions.length > 1
+        ? await buildBranchStats(adminClient, scopedReceivers, branchLabelById, range)
+        : [];
+    const fmtDay = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    dashboard = (
+      <CallbellDashboard
+        t={t}
+        kpis={result.kpis}
+        buckets={result.buckets}
+        hourRows={result.hourRows}
+        bellRows={result.bellRows}
+        patternRows={result.patternRows}
+        disarms={result.disarms}
+        disarmSummary={result.disarmSummary}
+        branchStats={branchStats}
+        rangeLabel={`${fmtDay(range.start)} – ${fmtDay(range.end)}`}
+        period={periodKey}
+        from={from ?? ""}
+        to={to ?? ""}
+        branch={selectedBranchId}
+        branchOptions={branchOptions.map((b) => ({ id: b.id, label: b.name }))}
+        nowMs={nowMs}
+      />
+    );
+  }
 
   if (receiverIds.length === 0) {
     return (
@@ -134,7 +190,6 @@ export default async function CallbellPage({
   // Call logs are NOT used to discover devices.
   // Disarms from the last 30 days: active ones for the Assignment tab, older
   // ones to label calls that came in while their bell was disarmed.
-  const nowMs = new Date().getTime();
   const disarmSince = new Date(nowMs - 30 * 24 * 60 * 60_000).toISOString();
   const [logsResult, inventoryResult, residentsResult, disarmsResult] = await Promise.all([
     adminClient
@@ -260,6 +315,9 @@ export default async function CallbellPage({
         receivers={receivers}
         residents={residents}
         canDisarm={account?.rights === "ADMIN" || account?.rights === "MODERATOR"}
+        dashboard={dashboard}
+        branch={selectedBranchId}
+        initialTab={showDashboard ? "dashboard" : "assignments"}
       />
     </div>
   );

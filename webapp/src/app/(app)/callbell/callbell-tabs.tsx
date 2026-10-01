@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, BellOff, BellRing, Users, Wifi, Pencil, Check, X, RefreshCw, Download } from "lucide-react";
+import { Bell, BellOff, BellRing, BarChart3, Users, Wifi, Pencil, Check, X, RefreshCw, Download } from "lucide-react";
 import { TabRow, TabButton } from "@/components/tabs";
+import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { Combobox } from "@/components/combobox";
 import type { LookupOption } from "@/lib/types";
@@ -52,7 +53,7 @@ export type ResidentOption = {
   resident_name: string;
 };
 
-type Tab = "logs" | "assignments" | "receivers";
+type Tab = "logs" | "dashboard" | "assignments" | "receivers";
 
 type LogFilters = {
   device: string;
@@ -117,16 +118,34 @@ export function CallbellTabs({
   receivers,
   residents,
   canDisarm,
+  dashboard,
+  branch,
+  initialTab = "assignments",
 }: {
   logs: CallLogRow[];
   devices: BellDevice[];
   receivers: ReceiverRow[];
   residents: ResidentOption[];
   canDisarm: boolean;
+  /** Pre-aggregated analytics; absent for branch pages with no receivers. */
+  dashboard?: React.ReactNode;
+  branch: number;
+  initialTab?: Tab;
 }) {
   const t = useTranslation();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("assignments");
+  const push = useNavPush();
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // The analytics tab re-aggregates on the server, so switching to it must go
+  // through the URL (?tab=dashboard) rather than a local state toggle.
+  function selectTab(next: Tab) {
+    if (next === "dashboard") {
+      push(`/callbell?tab=dashboard&branch=${branch}`);
+      return;
+    }
+    setTab(next);
+  }
 
   // ── Assignments edit ──
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -261,16 +280,22 @@ export function CallbellTabs({
   return (
     <div>
       <TabRow className="mb-4">
-        <TabButton active={tab === "assignments"} onClick={() => setTab("assignments")} icon={Users}>
-          {t("Assignments")}
-        </TabButton>
-        <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon={Bell}>
+        <TabButton active={tab === "logs"} onClick={() => selectTab("logs")} icon={Bell}>
           {t("Call Logs")}
         </TabButton>
-        <TabButton active={tab === "receivers"} onClick={() => setTab("receivers")} icon={Wifi}>
+        <TabButton active={tab === "dashboard"} onClick={() => selectTab("dashboard")} icon={BarChart3}>
+          {t("Call Bell")}
+        </TabButton>
+        <TabButton active={tab === "assignments"} onClick={() => selectTab("assignments")} icon={Users}>
+          {t("Assignments")}
+        </TabButton>
+        <TabButton active={tab === "receivers"} onClick={() => selectTab("receivers")} icon={Wifi}>
           {t("Receivers")}
         </TabButton>
       </TabRow>
+
+      {/* ── Call Bell analytics ── */}
+      {tab === "dashboard" && <div>{dashboard}</div>}
 
       {/* ── Call Logs ── */}
       {tab === "logs" && (

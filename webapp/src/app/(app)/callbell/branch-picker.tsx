@@ -12,9 +12,12 @@ import type { BranchOption } from "./callbell-tabs";
 export function CallbellBranchPicker({
   branches,
   currentBranch,
+  tab,
 }: {
   branches: BranchOption[];
   currentBranch: number;
+  /** Kept in the URL so switching branch while on the analytics tab stays there. */
+  tab?: string;
 }) {
   const push = useNavPush();
   const t = useTranslation();
@@ -27,7 +30,11 @@ export function CallbellBranchPicker({
       <select
         id="callbell-branch"
         value={currentBranch}
-        onChange={(e) => push(`/callbell?branch=${encodeURIComponent(e.target.value)}`)}
+        onChange={(e) => {
+          const params = new URLSearchParams({ branch: e.target.value });
+          if (tab) params.set("tab", tab);
+          push(`/callbell?${params.toString()}`);
+        }}
         className="w-full max-w-xs rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       >
         {branches.map((b) => (
