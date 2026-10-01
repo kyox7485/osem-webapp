@@ -212,7 +212,7 @@ Verified 2026-10-01: 50 bells synced from receiver 1 (e.g. F58480 = 121A). Name 
 |------|--------|-------|
 | HQ all-branch view | ⚠️ Partial | Page uses adminClient + code-level scope; RLS not updated |
 | Phase 2B HTTP API | ✅ Done | getalldevices / updateDevices used via 127.0.0.1:8080 |
-| Disarm management UI | 🔜 Not built | `cb_disarm_events` table exists; no web UI yet |
+| Disarm management UI | ✅ Built 2026-10-01 | Per-bell Disarm/Re-arm on Assignments (MODERATOR/ADMIN); APK withdraws calls on disarmed bells — awaiting live bell test |
 | Assignment tab from inventory | ✅ Built | Awaiting on-device test |
 | Assignment history / audit | 🔜 Not built | — |
 | Real-time push (WebSocket) | 🔜 Not built | Currently browser must refresh to see new calls |
@@ -228,3 +228,20 @@ Verified 2026-10-01: 50 bells synced from receiver 1 (e.g. F58480 = 121A). Name 
 - **Receiver branch:** BGN (BranchCode), BranchID = 4 (OSEM Rehab Hub, `branch_function = NUR`)
 - **Supabase migration applied:** `schema/022_callbell.sql`
 - **Vercel env var required:** `CALLBELL_API_SECRET`
+
+
+## Disarm (added 2026-10-01)
+
+- **Who:** MODERATOR / ADMIN only (button hidden for STAFF; `/api/callbell/disarm` returns 403).
+- **Web:** Assignments row → Disarm → duration (30 min … 7 days) + optional reason. Active disarm shows an amber
+  "Disarmed until …" badge (hover = reason · user) and a Re-arm button. Re-arm / a new disarm ends any running one
+  (`disarm_end = now`). `authorized_by` = login username.
+- **Receiver mechanism:** Wenze has no per-bell mute flag (`IS_OPEN` is unused in the call path). The APK
+  (`SyncService.disarmThread`) polls `getalldevices` every 1 s **only while a disarm is active**; an active call
+  (`isCall`) on a disarmed bell is ended with `POST /manager/withdrawDevices` (same as cancelling on the receiver).
+  The CALL_RECORDING_BEAN row is kept (RESPONSE_TIME = withdraw time) and syncs normally.
+  Expect ~1 s of announcement before it stops. Withdraw also switches off the receiver's call light (GPIO).
+- **Offline:** active disarms are cached in prefs `osem_disarms` ({DEVICE_NUM: endMs}); refreshed every config poll (10 s).
+- **Config API:** each disarm now also carries `disarm_end_ms` (APK can't parse ISO on Android 6).
+- **Call Logs:** a call whose time falls inside a disarm window for that bell shows "Disarmed" instead of a
+  response time and is never flagged red; CSV "Over 15 min" column shows "Disarmed".

@@ -132,7 +132,11 @@ export default async function CallbellPage({
   // Assignment tab = receiver device inventory (cb_assignments rows written by
   // /api/callbell/devices from the Wenze getalldevices API) + resident assignment.
   // Call logs are NOT used to discover devices.
-  const [logsResult, inventoryResult, residentsResult] = await Promise.all([
+  // Disarms from the last 30 days: active ones for the Assignment tab, older
+  // ones to label calls that came in while their bell was disarmed.
+  const nowMs = new Date().getTime();
+  const disarmSince = new Date(nowMs - 30 * 24 * 60 * 60_000).toISOString();
+  const [logsResult, inventoryResult, residentsResult, disarmsResult] = await Promise.all([
     adminClient
       .from("cb_call_logs")
       .select("id, receiver_id, device_num, resident_name_snapshot, resident_nickname, call_time, response_time")
@@ -151,7 +155,31 @@ export default async function CallbellPage({
       .in("branch_id", branchIds)
       .eq("status", "ACTIVE")
       .order("resident_name"),
+
+    adminClient
+      .from("cb_disarm_events")
+      .select("receiver_id, device_num, disarm_start, disarm_end, reason, authorized_by")
+      .in("receiver_id", receiverIds)
+      .gt("disarm_end", disarmSince)
+      .order("disarm_start", { ascending: false }),
   ]);
+
+  type DisarmDbRow = { receiver_id: number; device_num: string; disarm_start: string; disarm_end: string; reason: string | null; authorized_by: string | null };
+  const disarmRows = ((disarmsResult.data ?? []) as DisarmDbRow[]).map((e) => ({
+    ...e,
+    key: `${e.receiver_id}:${e.device_num.toUpperCase()}`,
+    startMs: Date.parse(e.disarm_start),
+    endMs: Date.parse(e.disarm_end),
+  }));
+  const activeDisarmByKey = new Map<string, (typeof disarmRows)[number]>();
+  for (const e of disarmRows) {
+    if (e.endMs > nowMs && e.startMs <= nowMs && !activeDisarmByKey.has(e.key)) activeDisarmByKey.set(e.key, e);
+  }
+  function wasDisarmed(receiverId: number, deviceNum: string, callMs: number): boolean {
+    if (!callMs) return false;
+    const key = `${receiverId}:${deviceNum.toUpperCase()}`;
+    return disarmRows.some((e) => e.key === key && callMs >= e.startMs && callMs <= e.endMs);
+  }
 
   const branchIdByReceiver = Object.fromEntries(receiverList.map((r) => [r.id, r.branch_id]));
 
@@ -159,6 +187,7 @@ export default async function CallbellPage({
   const devices: BellDevice[] = ((inventoryResult.data ?? []) as InventoryDbRow[])
     .map((row) => {
       const res = Array.isArray(row.tbl_residents) ? row.tbl_residents[0] : row.tbl_residents;
+      const disarm = activeDisarmByKey.get(`${row.receiver_id}:${row.device_num.toUpperCase()}`);
       return {
         receiver_id: row.receiver_id,
         branch_id: branchIdByReceiver[row.receiver_id],
@@ -166,6 +195,8 @@ export default async function CallbellPage({
         call_number: row.room_label ?? "",
         resident_id: row.resident_id,
         resident_name: res?.resident_name ?? "",
+        disarmed_until: disarm ? fmtLastSeen(disarm.disarm_end) : null,
+        disarm_note: disarm ? [disarm.reason, disarm.authorized_by].filter(Boolean).join(" · ") : "",
       };
     })
     .sort((a, b) =>
@@ -180,6 +211,9 @@ export default async function CallbellPage({
   const logs: CallLogRow[] = (logsResult.data ?? []).map((row) => {
     const ct = Number(row.call_time) || 0;
     const rt = Number(row.response_time) || 0;
+    // Calls on a disarmed bell are withdrawn by the receiver APK straight away,
+    // so their response time is meaningless; show "Disarmed" instead.
+    const disarmed = wasDisarmed(row.receiver_id as number, (row.device_num as string) ?? "", ct);
     return {
       id: row.id as number,
       receiver_label: receiverLabelById[row.receiver_id as number] ?? "—",
@@ -191,7 +225,8 @@ export default async function CallbellPage({
         row.call_time as string | number | null,
         row.response_time as string | number | null
       ),
-      slow_response: ct > 0 && rt > ct && rt - ct > SLOW_RESPONSE_MS,
+      slow_response: !disarmed && ct > 0 && rt > ct && rt - ct > SLOW_RESPONSE_MS,
+      disarmed,
     };
   });
 
@@ -220,6 +255,7 @@ export default async function CallbellPage({
         devices={devices}
         receivers={receivers}
         residents={residents}
+        canDisarm={account?.rights === "ADMIN" || account?.rights === "MODERATOR"}
       />
     </div>
   );
