@@ -18,7 +18,7 @@ export type ExternalLink = {
 export const EXTERNAL_LINKS: ExternalLink[] = [
   {
     label: "Grocery Expenses Monitoring System",
-    url: "https://script.google.com/macros/s/AKfycbw8WJ4skH-Y3woN8kl2xxrJSJ_XVuWk4kdtUE9xL2_xKMKgGJ9dte6xXSUxgO3V6tko/exec",
+    url: "https://script.google.com/macros/s/AKfycbw3XFP-ET9pC5l_9LP9KwmjSwE2tHlNMJ9ZbSToibHyM5kXKgFeVVg0vHUvPZEpsaBR/exec",
     description: "Track and monitor grocery expenses across the branch.",
   },
   {
