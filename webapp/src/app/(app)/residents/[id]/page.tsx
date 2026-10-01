@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatBranch, getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
 import { getStaffRoster } from "@/lib/lookups";
+import { formatMedicalHistory } from "@/lib/medical-history";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { PdfDownloadLink } from "@/components/pdf-download-link";
@@ -51,20 +52,12 @@ export default async function ResidentViewPage({
     getDiagnosisOptions(),
     getResidentDiagnoses(Number(id)),
   ]);
-  const diagnosisOptionById = new Map(diagnosisOptions.map((o) => [o.id, o]));
-  const codedHistory = residentDiagnoses
-    .map((d) => {
-      const opt = diagnosisOptionById.get(d.diagnosis_option_id);
-      if (!opt) return null;
-      const label = language === "ms" && opt.name_ms ? opt.name_ms : opt.name_en;
-      return d.remark ? `${label} — ${d.remark}` : label;
-    })
-    .filter((v): v is string => v !== null);
-  const freeTextHistory = resident.past_medical_condition?.trim();
-  // Both sources, in that order: the coded list is what the form actually
-  // collects, the free text is the imported narrative detail.
-  const pastMedicalHistory =
-    [...codedHistory, ...(freeTextHistory ? [freeTextHistory] : [])].join("\n");
+  const pastMedicalHistory = formatMedicalHistory({
+    diagnoses: residentDiagnoses,
+    diagnosisOptions,
+    freeText: resident.past_medical_condition,
+    language,
+  });
 
   const isActive = resident.status === "ACTIVE";
   const isReadmittable = resident.status === "DISCHARGED" || resident.status === "TRANSFERRED OUT";
@@ -141,7 +134,7 @@ export default async function ResidentViewPage({
       <div className="mt-4">
         <InfoCard title={t("Clinical notes")}>
           <Row label={t("Allergy")} value={resident.allergy} empty={t("--")} />
-          <Row label={t("Past medical condition")} value={pastMedicalHistory} multiline empty={t("--")} />
+          <Row label={t("Known history of Medical/Surgical Condition")} value={pastMedicalHistory} multiline empty={t("--")} />
           <Row label={t("Assessment and summary")} value={resident.assessment_and_summary} multiline empty={t("--")} />
           <Row label={t("Current medication list")} value={resident.current_medication_list} multiline empty={t("--")} />
           <Row label={t("TCA notes")} value={resident.tca_notes} multiline empty={t("--")} />

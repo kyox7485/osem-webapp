@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getStaffRoster } from "@/lib/lookups";
+import { getStaffRoster, getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
+import { formatMedicalHistory } from "@/lib/medical-history";
 import { ProgressNotesTabs } from "./progress-notes-tabs";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -33,6 +34,8 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
     staffOptions,
     { data: vitals },
     { data: dxtReadings },
+    diagnosisOptions,
+    residentDiagnoses,
   ] = await Promise.all([
     supabase
       .from("tbl_progress_notes")
@@ -66,6 +69,8 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       .not("dxt", "is", null)
       .order("entry_timestamp", { ascending: false })
       .limit(60),
+    getDiagnosisOptions(),
+    getResidentDiagnoses(Number(id)),
   ]);
 
   // Fold the DXT-only rows into the main vitals array, de-duplicated by
@@ -139,7 +144,11 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
         notesError={notesError?.message ?? null}
         dashboard={{
           allergy: resident.allergy,
-          pastMedicalCondition: resident.past_medical_condition,
+          pastMedicalCondition: formatMedicalHistory({
+            diagnoses: residentDiagnoses,
+            diagnosisOptions,
+            freeText: resident.past_medical_condition,
+          }),
           currentMedicationList: resident.current_medication_list,
           tcaNotes: resident.tca_notes,
           vitals: vitalsForDashboard,

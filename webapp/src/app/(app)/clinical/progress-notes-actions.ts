@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
+import { formatMedicalHistory } from "@/lib/medical-history";
 import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
@@ -50,6 +52,11 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
     .single();
 
   if (!resident) return null;
+
+  const [diagnosisOptions, residentDiagnoses] = await Promise.all([
+    getDiagnosisOptions(),
+    getResidentDiagnoses(residentId),
+  ]);
 
   const [{ data: notes }, { data: vitals }, { data: dxtReadings }] = await Promise.all([
     supabase
@@ -108,7 +115,11 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
 
   return {
     allergy: resident.allergy,
-    pastMedicalCondition: resident.past_medical_condition,
+    pastMedicalCondition: formatMedicalHistory({
+      diagnoses: residentDiagnoses,
+      diagnosisOptions,
+      freeText: resident.past_medical_condition,
+    }),
     currentMedicationList: resident.current_medication_list,
     tcaNotes: resident.tca_notes,
     latestProgressNote: latestNote?.progress_note ?? null,

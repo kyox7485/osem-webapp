@@ -76,7 +76,6 @@ export const dictResidents: Record<string, string> = {
   "Infectious Disease": "Penyakit Berjangkit",
   "Collapse": "Tutup",
   "Expand": "Buka",
-  "Past medical condition": "Sejarah perubatan lampau",
   "Known history of Medical/Surgical Condition": "Sejarah perubatan/pembedahan yang diketahui",
   "Assessment and summary": "Penilaian dan ringkasan",
   "Assessment and Summary": "Penilaian dan Ringkasan",
