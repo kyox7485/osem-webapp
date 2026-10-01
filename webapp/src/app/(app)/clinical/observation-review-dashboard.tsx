@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDateTime, formatDate } from "@/lib/format-date";
 import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { ObservationEntry } from "./observation-chart-actions";
 import type { ObservationStatusRow } from "./observation-status-actions";
+import { EndObservationModal } from "./end-observation-modal";
 import { AdminRecordControls } from "@/components/admin-record-controls";
 import { BranchFilterSelect } from "./branch-filter-select";
 import type { LookupOption } from "@/lib/types";
@@ -20,6 +22,8 @@ type Props = {
   currentStart: string;
   currentEnd: string;
   error: string | null;
+  /** Nursing staff, used by the End Observation picker. */
+  allStaff: (LookupOption & { branch_id: number })[];
 };
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -93,10 +97,12 @@ function buildComparisonRows(latest: ObservationEntry, previous: ObservationEntr
   return rows.filter(([, , latestVal]) => latestVal != null).map(([label, previousVal, latestVal]) => ({ label, previous: previousVal, latest: latestVal }));
 }
 
-export function ObservationReviewDashboard({ entries, activeEpisodes, completedEpisodes, branches, currentBranch, currentStart, currentEnd, error }: Props) {
+export function ObservationReviewDashboard({ entries, activeEpisodes, completedEpisodes, branches, currentBranch, currentStart, currentEnd, error, allStaff }: Props) {
   const push = useNavPush();
+  const router = useRouter();
   const t = useTranslation();
   const [expandedResidentId, setExpandedResidentId] = useState<number | null>(null);
+  const [endingEpisodeId, setEndingEpisodeId] = useState<number | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [customFrom, setCustomFrom] = useState(currentStart || daysAgoMYT(3));
@@ -132,6 +138,8 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
   }
 
   const today = todayMYT();
+
+  const endingEpisode = endingEpisodeId !== null ? activeEpisodes.find((ep) => ep.id === endingEpisodeId) ?? null : null;
 
   return (
     <div className="space-y-4">
@@ -259,13 +267,23 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
                         {t("Under observation for")} {formatDuration(episode.started_at, t)} · {t("started by")} {startedBy}
                       </p>
                     </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        hasReportToday ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
-                      }`}
-                    >
-                      {hasReportToday ? t("Today's report done") : t("No report today yet")}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          hasReportToday ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
+                        }`}
+                      >
+                        {hasReportToday ? t("Today's report done") : t("No report today yet")}
+                      </span>
+                      {/* Same end-observation flow as the Resident List's button. */}
+                      <button
+                        type="button"
+                        onClick={() => setEndingEpisodeId(episode.id)}
+                        className="rounded-full bg-surface-strong px-3 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-red-100 dark:hover:bg-red-950/40 hover:text-red-800 dark:hover:text-red-300"
+                      >
+                        {t("End Observation")}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-subtle">
@@ -381,6 +399,18 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
           </div>
         )}
       </div>
+
+      {endingEpisode !== null && (
+        <EndObservationModal
+          episodeId={endingEpisode.id}
+          staffOptions={allStaff.filter((s) => s.branch_id === endingEpisode.branch_id)}
+          onClose={() => setEndingEpisodeId(null)}
+          onEnded={() => {
+            setEndingEpisodeId(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

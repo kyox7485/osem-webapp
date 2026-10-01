@@ -62,6 +62,7 @@ export function ObservationChartModule({ entries, activeEpisodes, completedEpiso
           currentStart={currentStart}
           currentEnd={currentEnd}
           error={error}
+          allStaff={allStaff}
         />
       ) : activeResidents.length === 0 ? (
         <div className="rounded-md border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">

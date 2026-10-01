@@ -446,6 +446,12 @@ export const dictClinical: Record<string, string> = {
     "Penghuni ini akan muncul dalam Carta Pemerhatian sehingga pemerhatian dihentikan.",
   "Record why observation is ending.": "Rekodkan sebab pemerhatian dihentikan.",
   "Please select a reason": "Sila pilih sebab",
+  // END_REASONS in clinical/end-observation-modal.tsx -- the stored value is
+  // English and stays language-neutral; only the label is translated.
+  "Condition stable": "Keadaan stabil",
+  "Observation completed": "Pemerhatian selesai",
+  "Doctor reviewed": "Doktor telah menyemak",
+  "Transferred to hospital": "Dipindahkan ke hospital",
   Reason: "Sebab",
   "Select reason": "Pilih sebab",
   "Specify reason...": "Nyatakan sebab...",
