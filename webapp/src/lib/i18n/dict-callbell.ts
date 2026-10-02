@@ -1,5 +1,6 @@
 export const dictCallbell: Record<string, string> = {
   "Call Bell": "Loceng Panggilan",
+  "Call Analytics": "Analitik Loceng Panggilan",
   "Call Logs": "Log Panggilan",
   "Assignments": "Tugasan",
   "Receivers": "Penerima",

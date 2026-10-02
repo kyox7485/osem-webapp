@@ -291,14 +291,14 @@ export function CallbellTabs({
   return (
     <div>
       <TabRow className="mb-4">
-        <TabButton active={tab === "logs"} onClick={() => selectTab("logs")} icon={Bell}>
-          {t("Call Logs")}
-        </TabButton>
-        <TabButton active={tab === "dashboard"} onClick={() => selectTab("dashboard")} icon={BarChart3}>
-          {t("Call Bell")}
-        </TabButton>
         <TabButton active={tab === "assignments"} onClick={() => selectTab("assignments")} icon={Users}>
           {t("Assignments")}
+        </TabButton>
+        <TabButton active={tab === "dashboard"} onClick={() => selectTab("dashboard")} icon={BarChart3}>
+          {t("Call Analytics")}
+        </TabButton>
+        <TabButton active={tab === "logs"} onClick={() => selectTab("logs")} icon={Bell}>
+          {t("Call Logs")}
         </TabButton>
         <TabButton active={tab === "receivers"} onClick={() => selectTab("receivers")} icon={Wifi}>
           {t("Receivers")}
