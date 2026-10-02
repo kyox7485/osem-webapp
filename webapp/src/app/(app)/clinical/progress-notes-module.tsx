@@ -177,7 +177,7 @@ export function ProgressNotesModule({
         >
           {t("Review Notes")}
         </TabButton>
-        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => setInnerTab("new")}>
+        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
           {t("New Entry")}
         </TabButton>
       </TabRow>

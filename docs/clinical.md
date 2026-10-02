@@ -56,6 +56,49 @@ grids, and table views, size them equally wide/tall as those two fields —
 clinical feeding/monitoring instructions are long, and narrow fields clip
 them. (Prior feedback, learned the hard way once.)
 
+### Inline resident particulars editors (New Entry tab)
+
+The **New Entry** tab's resident dashboard carries an "Edit these details"
+button on three cards — Medical/surgical history, Known allergy, TCA notes.
+**Current medication list deliberately has none**: medications are owned by
+Medication Orders, where the Google Sheet is the source of truth
+(`docs/medication.md`), and a second free-text editor would be a conflicting
+place to type them.
+
+Writes go through one Server Action,
+`clinical/resident-particulars-actions.ts` → `updateResidentParticulars`,
+discriminated by a `field` argument. Authority matches creating a progress
+note (anyone who can see the resident, plus the symmetric DEMO check) — *not*
+the HQ-ADMIN-only `admin-records.ts` framework.
+
+Four things that are easy to get wrong here:
+
+1. **Allergy is a compiled string, not free text.** `lib/allergy-text.tsx`
+   owns the one `compileAllergy()` / `parseAllergyText()` pair that
+   `resident-form.tsx` and this editor both use. A plain textarea over
+   `tbl_residents.allergy` orphans the questionnaire — the next read parses to
+   null and the resident form silently degrades to its raw-text fallback. The
+   editor reproduces that fallback deliberately for legacy/imported rows.
+2. **Diagnoses are delete-then-reinsert, never upsert.**
+   `tbl_resident_diagnoses` has `unique (resident_id, diagnosis_option_id)`,
+   which an upsert still can't express as "the user unchecked this one". Same
+   shape as `residents/actions.ts`.
+3. **`branch_id` is never sent** for diagnosis rows —
+   `fn_fill_resident_diagnosis_branch()` fills it before insert.
+4. **Single-column patches.** `allergy` / `tca_notes` update only their own
+   column. Reusing `buildResidentPayload()` would write ~20 columns and blank
+   whatever the caller didn't send.
+
+The audit trail is free: both tables are in `fn_audit_trigger()`'s list. There
+is **no `updated_at` auto-touch trigger** on `tbl_residents`, so these edits
+do not bump `updated_at`.
+
+`resident-dashboard.tsx` renders the buttons only when a `residentId` prop is
+passed; the other two call sites stay read-only. Turning them on elsewhere is a
+one-line prop flip. Editors are marked `data-standalone-editor` so the
+progress-note form's `onChangeCapture` skips them — typing in an editor and
+pressing Cancel must not raise an unsaved-changes prompt for the note.
+
 ## Accounts tab UX
 
 Rows are clickable (entire row, not just the username link). Clicking a

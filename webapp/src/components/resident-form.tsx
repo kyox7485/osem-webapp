@@ -21,6 +21,15 @@ import {
   DXT_REMARK_OPTIONS,
 } from "@/lib/types";
 import { ageFromMalaysianIC } from "@/lib/malaysian-ic";
+import {
+  AllergyQuestion,
+  compileAllergy,
+  parseAllergyText,
+  EMPTY_ALLERGY,
+  type AllergyAnswers,
+} from "@/lib/allergy-text";
+import { groupDiagnosisOptions, INFECTIOUS_IDS } from "@/lib/diagnosis-groups";
+import { YesNoButtons } from "@/components/yes-no-buttons";
 import { useTranslation } from "@/components/language-provider";
 import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import { useDirtyForm } from "@/lib/dirty-form-context";
@@ -52,13 +61,6 @@ type Props = {
 
 // ── Questionnaire state types ─────────────────────────────────────────────────
 
-type AllergyAnswers = {
-  foodYN: "yes" | "no" | "";
-  foodReaction: string;
-  medYN: "yes" | "no" | "";
-  medReaction: string;
-};
-
 type AssessmentAnswers = {
   arrivalTime: string;
   modeOfArrival: string;
@@ -78,10 +80,6 @@ type AssessmentAnswers = {
   feedingTubeDate: string;
 };
 
-const EMPTY_ALLERGY: AllergyAnswers = {
-  foodYN: "", foodReaction: "", medYN: "", medReaction: "",
-};
-
 const EMPTY_ASSESSMENT: AssessmentAnswers = {
   arrivalTime: "", modeOfArrival: "", avpu: "",
   cough: "", fever: "", pain: "",
@@ -92,10 +90,6 @@ const EMPTY_ASSESSMENT: AssessmentAnswers = {
 };
 
 const ARRIVAL_MODES = ["Walking", "Wheelchair", "Stretcher"] as const;
-
-const INFECTIOUS_IDS = new Set([18, 19, 20, 21, 22, 23, 24]);
-const BONE_FRACTURE_ID = 17;
-const OTHERS_DIAGNOSIS_ID = 25;
 
 function sortDietTypes(types: Array<{ id: number | string; label: string }>) {
   const PRIORITY: Record<string, number> = { "Normal Diet": 0, "Soft Diet": 1 };
@@ -123,21 +117,6 @@ const AVPU_OPTIONS = [
 ] as const;
 
 // ── Compile questionnaire → stored string (always English) ───────────────────
-
-function compileAllergy(a: AllergyAnswers): string {
-  const lines: string[] = [];
-  if (a.foodYN) {
-    const base = `Food allergy: ${a.foodYN === "yes" ? "Yes" : "No"}`;
-    lines.push(a.foodYN === "yes" && a.foodReaction.trim()
-      ? `${base}; Reaction: ${a.foodReaction.trim()}` : base);
-  }
-  if (a.medYN) {
-    const base = `Medicine allergy: ${a.medYN === "yes" ? "Yes" : "No"}`;
-    lines.push(a.medYN === "yes" && a.medReaction.trim()
-      ? `${base}; Reaction: ${a.medReaction.trim()}` : base);
-  }
-  return lines.join("\n");
-}
 
 function compileAssessment(a: AssessmentAnswers): string {
   const parts: string[] = [];
@@ -175,18 +154,6 @@ function compileAssessment(a: AssessmentAnswers): string {
 }
 
 // ── Parse compiled text back into questionnaire fields (for edit mode) ────────
-
-function parseAllergyText(text: string): AllergyAnswers | null {
-  const foodM = text.match(/^Food allergy: (Yes|No)(?:; Reaction: (.+))?$/m);
-  const medM = text.match(/^Medicine allergy: (Yes|No)(?:; Reaction: (.+))?$/m);
-  if (!foodM && !medM) return null;
-  return {
-    foodYN: foodM ? (foodM[1] === "Yes" ? "yes" : "no") : "",
-    foodReaction: foodM?.[2]?.trim() ?? "",
-    medYN: medM ? (medM[1] === "Yes" ? "yes" : "no") : "",
-    medReaction: medM?.[2]?.trim() ?? "",
-  };
-}
 
 function parseAssessmentText(text: string): AssessmentAnswers | null {
   if (!text) return null;
@@ -327,18 +294,8 @@ export function ResidentForm({
   );
 
   // Diagnosis grouping
-  const mainDiagnosisOptions = (() => {
-    const base = diagnosisOptions.filter((o) => !INFECTIOUS_IDS.has(o.id) && o.id !== OTHERS_DIAGNOSIS_ID);
-    const othersOpt = diagnosisOptions.find((o) => o.id === OTHERS_DIAGNOSIS_ID);
-    const bfIdx = base.findIndex((o) => o.id === BONE_FRACTURE_ID);
-    if (othersOpt !== undefined && bfIdx >= 0) {
-      const result = [...base];
-      result.splice(bfIdx + 1, 0, othersOpt);
-      return result;
-    }
-    return othersOpt ? [...base, othersOpt] : base;
-  })();
-  const infectiousDiagnosisOptions = diagnosisOptions.filter((o) => INFECTIOUS_IDS.has(o.id));
+  const { main: mainDiagnosisOptions, infectious: infectiousDiagnosisOptions } =
+    groupDiagnosisOptions(diagnosisOptions);
   const anyInfectiousSelected = existingDiagnoses.some((d) => INFECTIOUS_IDS.has(d.diagnosis_option_id));
   const [infectiousExpanded, setInfectiousExpanded] = useState(anyInfectiousSelected);
 
@@ -1321,71 +1278,6 @@ export function ResidentForm({
 
 const inputCls =
   "mt-1 w-full rounded-lg border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-colors";
-
-function YesNoButtons({
-  value,
-  onChange,
-  t,
-}: {
-  value: "yes" | "no" | "";
-  onChange: (v: "yes" | "no") => void;
-  t: (s: string) => string;
-}) {
-  return (
-    <div className="mt-1.5 flex gap-2">
-      {(["yes", "no"] as const).map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={`min-w-[72px] px-4 py-2 text-sm rounded-lg border font-medium transition-colors cursor-pointer ${
-            value === opt
-              ? opt === "yes"
-                ? "border-green-500 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 shadow-sm"
-                : "border-fg-faint bg-surface-strong text-fg-secondary shadow-sm"
-              : "border-line-strong bg-surface text-fg-subtle hover:border-fg-faint hover:bg-hover"
-          }`}
-        >
-          {opt === "yes" ? t("Yes") : t("No")}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function AllergyQuestion({
-  label,
-  yn,
-  reaction,
-  reactionPlaceholder,
-  onYN,
-  onReaction,
-  t,
-}: {
-  label: string;
-  yn: "yes" | "no" | "";
-  reaction: string;
-  reactionPlaceholder: string;
-  onYN: (v: "yes" | "no") => void;
-  onReaction: (v: string) => void;
-  t: (s: string) => string;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-sm font-medium text-fg-secondary">{label}</p>
-      <YesNoButtons value={yn} onChange={onYN} t={t} />
-      {yn === "yes" && (
-        <input
-          type="text"
-          value={reaction}
-          onChange={(e) => onReaction(e.target.value)}
-          placeholder={reactionPlaceholder}
-          className={`mt-1 ${inputCls}`}
-        />
-      )}
-    </div>
-  );
-}
 
 function QLabel({ children, small }: { children: React.ReactNode; small?: boolean }) {
   return (

@@ -186,6 +186,15 @@ export const dictClinical: Record<string, string> = {
   "Known allergy": "Alahan diketahui",
   "TCA notes": "Nota TCA",
   "Recent vitals": "Tanda vital terkini",
+  // Inline particulars editors ("Edit" / "Save" / "Cancel" / "Saving..." /
+  // "Please specify..." / "Infectious Disease" live in dict-callbell,
+  // dict-common, dict-medication and dict-residents respectively).
+  "Edit these details": "Sunting butiran ini",
+  "Additional history notes": "Catatan sejarah tambahan",
+  "Any known food allergy?": "Ada alahan makanan yang diketahui?",
+  "Any known medicine allergy?": "Ada alahan ubat yang diketahui?",
+  Reaction: "Reaksi",
+  "Failed to save. Please try again.": "Gagal menyimpan. Sila cuba lagi.",
   "No vitals recorded yet.": "Belum ada tanda vital direkodkan.",
   Date: "Tarikh",
   BP: "BP",

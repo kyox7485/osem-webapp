@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
 import { formatMedicalHistory } from "@/lib/medical-history";
 import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getServerLanguage } from "@/lib/i18n/server";
 import { revalidatePath } from "next/cache";
+import type { DiagnosisOption } from "@/lib/types";
 
 const PLAN_FIELDS = [
   ["medical", "medical_plan"],
@@ -22,6 +24,13 @@ export type ResidentDashboardData = {
   pastMedicalCondition: string | null;
   currentMedicationList: string | null;
   tcaNotes: string | null;
+  // Raw column values behind the three editable particulars, so the inline
+  // editors round-trip what is actually stored rather than re-deriving it from
+  // the display strings above (which are formatted/joined for reading).
+  pastMedicalConditionText: string | null;
+  diagnosisOptions: DiagnosisOption[];
+  selectedDiagnosisIds: number[];
+  diagnosisOthersRemark: string | null;
   latestProgressNote: string | null;
   latestPhysicalExamination: string | null;
   vitals: {
@@ -53,9 +62,10 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
 
   if (!resident) return null;
 
-  const [diagnosisOptions, residentDiagnoses] = await Promise.all([
+  const [diagnosisOptions, residentDiagnoses, language] = await Promise.all([
     getDiagnosisOptions(),
     getResidentDiagnoses(residentId),
+    getServerLanguage(),
   ]);
 
   const [{ data: notes }, { data: vitals }, { data: dxtReadings }] = await Promise.all([
@@ -113,15 +123,23 @@ export async function getResidentDashboardData(residentId: number): Promise<Resi
 
   const latestNote = notes && notes.length > 0 ? notes[0] : null;
 
+  const othersOptionId = diagnosisOptions.find((o) => o.name_en === "Others")?.id;
+
   return {
     allergy: resident.allergy,
     pastMedicalCondition: formatMedicalHistory({
       diagnoses: residentDiagnoses,
       diagnosisOptions,
       freeText: resident.past_medical_condition,
+      language,
     }),
     currentMedicationList: resident.current_medication_list,
     tcaNotes: resident.tca_notes,
+    pastMedicalConditionText: resident.past_medical_condition,
+    diagnosisOptions,
+    selectedDiagnosisIds: residentDiagnoses.map((d) => d.diagnosis_option_id),
+    diagnosisOthersRemark:
+      residentDiagnoses.find((d) => d.diagnosis_option_id === othersOptionId)?.remark ?? null,
     latestProgressNote: latestNote?.progress_note ?? null,
     latestPhysicalExamination: latestNote?.physical_examination ?? null,
     vitals: allVitals,

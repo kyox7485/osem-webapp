@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { createProgressNote, getResidentDashboardData, type ResidentDashboardData } from "./progress-notes-actions";
 import { ResidentDashboard } from "./resident-dashboard";
 import type { LookupOption } from "@/lib/types";
@@ -37,13 +37,18 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
   const [createdBy, setCreatedBy] = useState("");
   const [createdByOtherName, setCreatedByOtherName] = useState("");
   const [error, setError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  // CLAUDE.md: a submitting flag built from useState never paints when the
+  // action ends in a redirect, so the loading state has to come from a
+  // transition.
+  const [isSaving, startSaving] = useTransition();
   const [dashboard, setDashboard] = useState<ResidentDashboardData | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const { markDirty, markClean } = useFormDirtyTracking("progress-note-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
   const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId || s.branch_function === 'HQ');
+
+  const seededFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!residentId) {
@@ -56,19 +61,34 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       .finally(() => setDashboardLoading(false));
   }, [residentId]);
 
+  function reloadDashboard() {
+    if (!residentId) return;
+    setDashboardLoading(true);
+    getResidentDashboardData(parseInt(residentId))
+      .then(setDashboard)
+      .finally(() => setDashboardLoading(false));
+  }
+
+  // Seeds the note fields from the resident's last entry -- once per resident,
+  // not on every dashboard fetch. The inline particulars editors reload the
+  // dashboard after saving; without this guard that reload would overwrite the
+  // note the nurse is halfway through typing.
   useEffect(() => {
-    if (dashboard) {
-      setProgressNote(dashboard.latestProgressNote ?? "");
-      setPhysicalExamination(dashboard.latestPhysicalExamination ?? "");
-      setMedicalPlan(dashboard.plans.medical?.value ?? "");
-      setNursingPlan(dashboard.plans.nursing?.value ?? "");
-      setFeedingPlan(dashboard.plans.diet?.value ?? "");
-      setDressingPlan(dashboard.plans.dressing?.value ?? "");
-      setMonitoringPlan(dashboard.plans.monitoring?.value ?? "");
-      setPhysioPlan(dashboard.plans.physio?.value ?? "");
-    } else {
+    if (!dashboard) {
       resetForm();
+      seededFor.current = null;
+      return;
     }
+    if (seededFor.current === residentId) return;
+    seededFor.current = residentId;
+    setProgressNote(dashboard.latestProgressNote ?? "");
+    setPhysicalExamination(dashboard.latestPhysicalExamination ?? "");
+    setMedicalPlan(dashboard.plans.medical?.value ?? "");
+    setNursingPlan(dashboard.plans.nursing?.value ?? "");
+    setFeedingPlan(dashboard.plans.diet?.value ?? "");
+    setDressingPlan(dashboard.plans.dressing?.value ?? "");
+    setMonitoringPlan(dashboard.plans.monitoring?.value ?? "");
+    setPhysioPlan(dashboard.plans.physio?.value ?? "");
   }, [dashboard]);
 
   function resetForm() {
@@ -86,7 +106,8 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await submitForm();
+    // Wrapped in a transition so the button's loading state actually paints.
+    startSaving(async () => { await submitForm(); });
   }
 
   async function submitForm(): Promise<{ success: boolean; error?: string }> {
@@ -107,8 +128,6 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       return { success: false, error: t("Please select who entered this note") };
     }
 
-    setIsSaving(true);
-
     const result = await createProgressNote({
       residentId: parseInt(residentId),
       progressNote,
@@ -123,8 +142,6 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
       createdByOther: createdBy === OTHERS_SENTINEL ? createdByOtherName.trim() : "",
     });
 
-    setIsSaving(false);
-
     if (!result.success) {
       setError(result.error || t("Failed to save progress note"));
       return { success: false, error: result.error || t("Failed to save progress note") };
@@ -137,7 +154,18 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
   }
 
   return (
-    <div className="space-y-4" onChangeCapture={markDirty}>
+    <div
+      className="space-y-4"
+      onChangeCapture={(e) => {
+        // The dashboard's inline particulars editors carry their own
+        // Save/Cancel. React's capture-phase delegation reaches them from here
+        // too, so without this exclusion typing in an editor and then
+        // cancelling would still raise an "unsaved changes" prompt for the
+        // progress note the nurse never touched.
+        if ((e.target as HTMLElement).closest("[data-standalone-editor]")) return;
+        markDirty();
+      }}
+    >
       <div>
         <label htmlFor="resident" className="mb-1 block text-sm font-medium text-fg-secondary">
           {t("Resident")} <span className="text-red-500">*</span>
@@ -166,7 +194,14 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
         <p className="text-sm text-fg-faint">{t("Loading resident background...")}</p>
       )}
 
-      {residentId && dashboard && <ResidentDashboard {...dashboard} collapsible />}
+      {residentId && dashboard && (
+        <ResidentDashboard
+          {...dashboard}
+          collapsible
+          residentId={parseInt(residentId)}
+          onParticularsChanged={reloadDashboard}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-md border border-line bg-surface p-4 shadow-sm">
         {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300">{error}</div>}
