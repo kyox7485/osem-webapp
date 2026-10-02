@@ -10,6 +10,7 @@ import { Sidebar, type SidebarItem, type SidebarFooterInfo } from "@/components/
 import { PageHeaderProvider, PageHeaderSlot } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { hasInventoryAccess } from "@/lib/inventory/server";
+import { hasCallbellAccess } from "@/lib/callbell";
 import { createClient } from "@/lib/supabase/server";
 import { loadOpenQueueResidents } from "@/lib/admission-medication-queue";
 import { AdmissionMedicationRunner } from "@/components/admission-medication-runner";
@@ -57,6 +58,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // login, and before the inventory migrations are applied) — D-135.
   const inventoryVisible = await hasInventoryAccess();
 
+  // Call Bell: HQ logins always (receivers are registered there, so HQ must
+  // see the module before its own branch has hardware); every other branch only
+  // once it has a registered receiver — a branch with no device hides it.
+  const callbellVisible = await hasCallbellAccess(account);
+
   // One soft accent per module -- makes the rail scannable at a glance
   // instead of a stack of same-colour rows.
   const navItems: SidebarItem[] = [
@@ -66,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(inventoryVisible
       ? ([{ href: "/inventory", label: t("Inventory"), icon: "Package", tint: "bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-300" }] as SidebarItem[])
       : []),
-    ...(account.branch_function !== "PHY"
+    ...(callbellVisible
       ? ([{ href: "/callbell", label: t("Call Bell"), icon: "Bell", tint: "bg-pink-50 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300" }] as SidebarItem[])
       : []),
     { href: "/staff", label: t("Staff"), icon: "IdCard", tint: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" },
