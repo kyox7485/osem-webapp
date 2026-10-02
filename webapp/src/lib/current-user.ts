@@ -59,6 +59,27 @@ export function isAdmin(account: CurrentUser | null): boolean {
   return account?.rights === "ADMIN";
 }
 
+// May this account open the "New staff" form?
+//
+// Every signed-in login may, including a plain STAFF one: a branch adding its
+// own new hire is exactly what a branch-level STAFF login is there to do, and
+// requiring ADMIN made the roster unmaintainable between admin visits.
+//
+// What this does NOT grant is scope. Only isAdmin() may pick the branch --
+// everyone else is pinned to account.branch_id inside createStaff, which
+// re-derives it from the session and ignores whatever the form posted.
+//
+// This is about tbl_staff, the clinical/audit roster, NOT tbl_user_accounts.
+// Creating a staff row grants no login and no rights; that stays ADMIN-only
+// under /accounts. So this widens who can type a name into the roster, not who
+// can log in.
+//
+// MODERATOR is included alongside STAFF on purpose. Leaving it out would mean a
+// supervisor could not add the very records a STAFF login can.
+export function canCreateStaff(account: CurrentUser | null): boolean {
+  return account !== null;
+}
+
 // True only for an ADMIN login based at an HQ-function branch. Gates the
 // record-correction Edit/Delete buttons on every clinical/medication/
 // consumables list (components/admin-record-controls.tsx) and the Server

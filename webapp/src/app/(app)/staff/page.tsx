@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canCreateStaff } from "@/lib/current-user";
 import { getBranches, getPositions, formatBranch } from "@/lib/lookups";
 import { STAFF_STATUS_OPTIONS, STAFF_ROLE_OPTIONS, DEPARTMENT_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
@@ -26,7 +26,13 @@ export default async function StaffPage({
   const { q, position_id, status, branch_id, role, department } = await searchParams;
   const { t } = await getServerTranslator();
   const currentUser = await getCurrentUser();
+  // Two separate questions. `admin` is DATA SCOPE: it decides whether this
+  // login sees the Branch column/filter or is pinned to its own branch, and it
+  // must stay canAccessAllBranches. `canCreateStaff` is AUTHORITY to add a
+  // record, which every login now has. Conflating them would either keep hiding
+  // the button from branch staff or start leaking cross-branch visibility.
   const admin = canAccessAllBranches(currentUser);
+  const canCreate = canCreateStaff(currentUser);
 
   const [branches, positions] = await Promise.all([admin ? getBranches() : Promise.resolve([]), getPositions()]);
 
@@ -87,7 +93,7 @@ export default async function StaffPage({
   return (
     <div>
       <PageTitle title={t("Staff")} />
-      {admin && (
+      {canCreate && (
         <div className="mb-6 flex items-center justify-end">
           <NavButton
             href="/staff/new"
