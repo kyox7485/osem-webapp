@@ -877,9 +877,10 @@ export function ResidentForm({
               <AdmissionMedicationsSection
                 drafts={medicationDrafts}
                 onDraftsChange={(d) => { setMedicationDrafts(d); markDirty(); }}
-                allStaff={allStaff}
                 branchId={branchId}
                 admissionDate={admissionDate}
+                masterStaff={reviewedBy}
+                masterStaffOther={reviewedByOther}
               />
               <input
                 type="hidden"

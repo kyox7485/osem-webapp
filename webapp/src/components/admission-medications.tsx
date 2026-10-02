@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "@/components/language-provider";
-import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
-import type { LookupOption } from "@/lib/types";
+import { OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 import {
   DOSAGE_FORM_OPTIONS,
   UNIT_OPTIONS,
@@ -29,7 +28,6 @@ export type MedicationDraft = Omit<OrderFormValues, "residentId"> & {
   stockRegisteredBy?: string;
 };
 
-type StaffOption = LookupOption & { branch_id: number };
 type DraftFormValues = Omit<MedicationDraft, "draftId">;
 
 // ── Tiny helpers ──────────────────────────────────────────────────────────────
@@ -58,13 +56,14 @@ type ModalProps = {
   onClose: () => void;
   onSave: (values: DraftFormValues) => void;
   initialValues: DraftFormValues | null;
-  allStaff: StaffOption[];
-  branchId: string;
   admissionDate: string;
+  masterStaff: string;
+  masterStaffOther: string;
 };
 
 function MedicationDraftModal({
-  open, onClose, onSave, initialValues, allStaff, branchId, admissionDate,
+  open, onClose, onSave, initialValues, admissionDate,
+  masterStaff, masterStaffOther,
 }: ModalProps) {
   const t = useTranslation();
   const defaultDate = admissionDate || new Date().toISOString().split("T")[0];
@@ -96,17 +95,6 @@ function MedicationDraftModal({
   const [stockUnitManuallySet, setStockUnitManuallySet] = useState(false);
   const [stockRegisteredBy, setStockRegisteredBy] = useState("");
 
-  const filteredStaff = useMemo(
-    () => allStaff.filter((s) => String(s.branch_id) === branchId),
-    [allStaff, branchId],
-  );
-  const notedByOptions: LookupOption[] = useMemo(
-    () => filteredStaff.map((s) => ({ id: String(s.id), label: String(s.label) })),
-    [filteredStaff],
-  );
-  // Stock staff uses actual StaffID (same list, different field mapping)
-  const stockStaffOptions = filteredStaff;
-
   // Reset when modal opens (false→true transition)
   useEffect(() => {
     if (!open) return;
@@ -137,12 +125,8 @@ function MedicationDraftModal({
       setEndDate(initialValues.endDate || "");
       setOrderedBy(initialValues.orderedBy || "");
       setSuppliedBy(initialValues.suppliedBy || "");
-      // notedBy stored as StaffID or free text — detect free text
-      const isOtherNotedBy =
-        !!initialValues.notedBy &&
-        !notedByOptions.some((o) => String(o.id) === initialValues.notedBy);
-      setNotedByVal(isOtherNotedBy ? OTHERS_SENTINEL : (initialValues.notedBy || ""));
-      setNotedByOther(isOtherNotedBy ? initialValues.notedBy : "");
+      // Always use master staff from the registration form
+      setNotedByVal(masterStaff); setNotedByOther(masterStaffOther);
       // Stock fields
       setStockDate(
         initialValues.stockEntryDate
@@ -152,16 +136,19 @@ function MedicationDraftModal({
       setStockQuantity(initialValues.stockQuantity || "");
       setStockUnit(initialValues.stockUnit || (defaultStockUnitForOrderUnit(initialValues.unit) ?? ""));
       setStockUnitManuallySet(!!initialValues.stockUnit);
-      setStockRegisteredBy(initialValues.stockRegisteredBy || "");
+      setStockRegisteredBy(masterStaff !== OTHERS_SENTINEL ? masterStaff : (initialValues.stockRegisteredBy || ""));
     } else {
       setDosageForm(""); setDosageFormOther(""); setBrandName(""); setActiveIngredient("");
       setDose(""); setUnit(""); setFrequency(""); setAdminTimes([]); setDosingDays(["Everyday"]);
       setIndication(""); setInstruction(""); setDurationType("");
       setStartDate(defaultDate); setEndDate("");
-      setOrderedBy(""); setSuppliedBy(""); setNotedByVal(""); setNotedByOther("");
+      setOrderedBy(""); setSuppliedBy("");
+      setNotedByVal(masterStaff); setNotedByOther(masterStaffOther);
       // Stock fields
       setStockDate(toDatetimeLocalValue(new Date().toISOString()));
-      setStockQuantity(""); setStockUnit(""); setStockUnitManuallySet(false); setStockRegisteredBy("");
+      setStockQuantity(""); setStockUnit(""); setStockUnitManuallySet(false);
+      // Only set stock registered-by from master if it's a real staff ID (not free-text)
+      setStockRegisteredBy(masterStaff !== OTHERS_SENTINEL ? masterStaff : "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -506,17 +493,6 @@ function MedicationDraftModal({
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <FL>{t("Noted By")}</FL>
-              <StaffPickerWithOther
-                staffOptions={notedByOptions}
-                value={notedByVal}
-                otherName={notedByOther}
-                onValueChange={setNotedByVal}
-                onOtherNameChange={setNotedByOther}
-              />
-            </div>
-
             <SH title={t("Initial Stock Received (Optional)")} />
 
             <div className="sm:col-span-2">
@@ -580,20 +556,6 @@ function MedicationDraftModal({
               </select>
             </div>
 
-            {/* Registered By (stock) */}
-            <div>
-              <FL>{t("Registered By")}</FL>
-              <select
-                value={stockRegisteredBy}
-                onChange={(e) => setStockRegisteredBy(e.target.value)}
-                className={medInputCls + " cursor-pointer"}
-              >
-                <option value="">{t("Select staff")}</option>
-                {stockStaffOptions.map((s) => (
-                  <option key={String(s.id)} value={String(s.id)}>{String(s.label)}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
 
@@ -631,17 +593,19 @@ function MedicationDraftModal({
 type SectionProps = {
   drafts: MedicationDraft[];
   onDraftsChange: (drafts: MedicationDraft[]) => void;
-  allStaff: StaffOption[];
   branchId: string;
   admissionDate: string;
+  masterStaff: string;
+  masterStaffOther: string;
 };
 
 export function AdmissionMedicationsSection({
   drafts,
   onDraftsChange,
-  allStaff,
   branchId,
   admissionDate,
+  masterStaff,
+  masterStaffOther,
 }: SectionProps) {
   const t = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
@@ -860,9 +824,9 @@ export function AdmissionMedicationsSection({
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         initialValues={modalInitialValues}
-        allStaff={allStaff}
-        branchId={branchId}
         admissionDate={admissionDate}
+        masterStaff={masterStaff}
+        masterStaffOther={masterStaffOther}
       />
     </>
   );
