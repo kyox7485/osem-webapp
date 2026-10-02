@@ -18,7 +18,7 @@ type Props = {
   completedEpisodes: ObservationStatusRow[];
   branches: LookupOption[];
   currentBranch: string;
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   currentStart: string;
   currentEnd: string;
   error: string | null;

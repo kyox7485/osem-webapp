@@ -30,6 +30,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
 
   const isDemoUser = demoBranchIds.includes(currentUser?.branch_id ?? -1);
   const effectiveIsAdmin = canAccessAllBranches(currentUser) && !isDemoUser;
+  const isHqUser = currentUser?.branch_function === "HQ";
   const boundAction = updateResident.bind(null, resident.id);
 
   return (
@@ -46,6 +47,7 @@ export default async function EditResidentPage({ params }: { params: Promise<{ i
         existingDiagnoses={existingDiagnoses}
         defaultBranchId={null}
         isAdmin={effectiveIsAdmin}
+        isHqUser={isHqUser}
         action={boundAction}
         backHref={`/residents/${id}`}
       />

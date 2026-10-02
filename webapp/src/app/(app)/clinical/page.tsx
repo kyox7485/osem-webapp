@@ -81,6 +81,7 @@ export default async function ClinicalPage({
   // also spans branches, but this is the HQ ADMIN browsing aid, and
   // isHqAdmin() is the same gate the Edit/Delete controls use.
   const hqAdmin = isHqAdmin(account);
+  const isHqUser = account.branch_function === "HQ";
   // Read the param but only honour it for an HQ ADMIN: a hand-edited URL
   // must not widen anyone else's view, and everyone else is already pinned
   // to their own branch by the .eq() below.
@@ -554,6 +555,7 @@ export default async function ClinicalPage({
         currentBranch={branchFilter ? String(branchFilter) : ""}
         allStaff={allStaff}
         nursingStaff={nursingStaff}
+        isHqUser={isHqUser}
         vitals={vitals}
         notes={notes}
         nursingChartEntries={nursingChartEntries}

@@ -28,7 +28,7 @@ type Resident = { id: number; resident_name: string; branch_id: number };
 
 type Props = {
   residents: Resident[];
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   presetResidentId?: string;
   onSaved: () => void;
 };
@@ -99,7 +99,7 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
   const { markDirty, markClean } = useFormDirtyTracking("observation-chart-new", submitForm);
 
   const selectedResident = residents.find((r) => String(r.id) === residentId);
-  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id);
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id || s.branch_function === 'HQ');
 
   // Pre-fill vitals when resident is selected
   useEffect(() => {

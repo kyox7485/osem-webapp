@@ -23,7 +23,7 @@ type EliminationEpisode = { bowelOutputIds: number[]; passUrineId: string };
 
 type Props = {
   residents: Resident[];
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   lookups: ClinicalLookups;
   presetResidentId?: string;
   onSaved: () => void;
@@ -88,7 +88,7 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
   const { markDirty, markClean } = useFormDirtyTracking("nursing-chart-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
-  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId || s.branch_function === 'HQ');
   const othersActivityId = lookups.activities.find((o) => isOthersOption(o.label))?.id;
   const othersPsychoSocialId = lookups.psychoSocialBehaviours.find((o) => isOthersOption(o.label))?.id;
   const othersComplaintId = lookups.activeComplaints.find((o) => isOthersOption(o.label))?.id;

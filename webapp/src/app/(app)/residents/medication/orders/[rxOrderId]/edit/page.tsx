@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, canAccessAllBranches, canAccessAdmissionAnalytics } from "@/lib/current-user";
-import { getDemoBranchIds } from "@/lib/lookups";
+import { getDemoBranchIds, getAllStaffWithBranch } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { ResidentsModuleTabs } from "../../../../module-tabs";
@@ -21,6 +21,7 @@ export default async function EditMedicationOrderPage({
   if (!currentUser) redirect("/");
 
   const admin = canAccessAllBranches(currentUser);
+  const isHqUser = currentUser.branch_function === "HQ";
   const supabase = await createClient();
 
   // ── Fetch order from Supabase mirror ──────────────────────────────────────
@@ -62,24 +63,17 @@ export default async function EditMedicationOrderPage({
     ? `${residentRaw.ResidentID ?? ""}${residentRaw.ResidentID ? " – " : ""}${residentRaw.resident_name}`
     : `Resident #${orderRaw.resident_id}`;
 
-  // ── Staff for Noted By picker (filtered to order's branch) ────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const staffQ: any = supabase
-    .from("tbl_staff")
-    .select('staff_name, branch_id, staffId:StaffID')
-    .eq("branch_id", orderRaw.branch_id)
-    .order("staff_name");
-  const { data: staffRaw } = await staffQ;
-
-  type StaffRow = { staff_name: string; branch_id: number; staffId: string };
-
-  const staffOptions: StaffEntry[] = ((staffRaw ?? []) as StaffRow[]).map(
-    (s) => ({
-      staffId: s.staffId,
-      name: s.staff_name,
+  // ── Staff for Noted By picker (filtered to order's branch + HQ for HQ users) ──
+  // getAllStaffWithBranch already excludes Physiotherapy and inactive staff.
+  const allStaff = await getAllStaffWithBranch();
+  const staffOptions: StaffEntry[] = allStaff
+    .filter((s) => s.branch_id === orderRaw.branch_id || (isHqUser && s.branch_function === "HQ"))
+    .map((s) => ({
+      staffId: String(s.id),
+      name: s.label,
       branchId: s.branch_id,
-    })
-  );
+      branchFunction: s.branch_function,
+    }));
 
   // ── Map Supabase columns → form field names ───────────────────────────────
   const initialValues = {

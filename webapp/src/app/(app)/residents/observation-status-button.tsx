@@ -11,7 +11,7 @@ import type { LookupOption } from "@/lib/types";
 type Props = {
   residentId: number;
   activeEpisodeId: number | null;
-  staffOptions: (LookupOption & { branch_id: number })[];
+  staffOptions: (LookupOption & { branch_id: number; branch_function: string })[];
   residentBranchId: number;
 };
 
@@ -25,7 +25,7 @@ export function ObservationStatusButton({ residentId, activeEpisodeId, staffOpti
   const [staffValue, setStaffValue] = useState("");
   const [staffOther, setStaffOther] = useState("");
 
-  const branchStaff = staffOptions.filter((s) => s.branch_id === residentBranchId);
+  const branchStaff = staffOptions.filter((s) => s.branch_id === residentBranchId || s.branch_function === 'HQ');
   const isUnderObservation = activeEpisodeId != null;
 
   function openModal(e: React.MouseEvent) {

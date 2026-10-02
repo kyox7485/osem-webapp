@@ -24,7 +24,7 @@ type Props = {
   residents: Resident[];
   branches: LookupOption[];
   currentBranch: string;
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   bodyParts: WoundBodyPart[];
   currentResident: string;
   currentStart: string;

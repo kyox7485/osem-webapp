@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, canAccessAllBranches, canAccessAdmissionAnalytics } from "@/lib/current-user";
-import { getBranches, formatBranch, getDemoBranchIds, getNursingStaff } from "@/lib/lookups";
+import { getBranches, formatBranch, getDemoBranchIds, getAllStaffWithBranch } from "@/lib/lookups";
 import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { ColumnFilter } from "@/components/column-filter";
 import { ClickableRow } from "@/components/clickable-row";
@@ -75,7 +75,7 @@ export default async function ResidentsPage({
   }
 
   const [nursingStaff, activeObservations] = await Promise.all([
-    getNursingStaff(),
+    getAllStaffWithBranch(),
     getActiveObservationStatuses({ excludedBranchIds }),
   ]);
   const activeObservationByResident = new Map(activeObservations.episodes.map((ep) => [ep.resident_id, ep.id]));

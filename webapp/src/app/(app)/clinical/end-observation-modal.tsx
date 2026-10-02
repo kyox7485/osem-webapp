@@ -20,7 +20,7 @@ export function EndObservationModal({
   onEnded,
 }: {
   episodeId: number;
-  staffOptions: (LookupOption & { branch_id: number })[];
+  staffOptions: (LookupOption & { branch_id: number; branch_function: string })[];
   onClose: () => void;
   /** Called after the episode is closed; typically a router.refresh(). */
   onEnded: () => void;

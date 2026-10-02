@@ -57,7 +57,7 @@ type Props = {
   branches: LookupOption[];
   /** Currently selected branch id as a string, or "" for "All branches". */
   currentBranch: string;
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   lookups: ClinicalLookups;
   currentResident: string;
   currentStart: string;

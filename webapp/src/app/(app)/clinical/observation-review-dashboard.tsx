@@ -23,7 +23,7 @@ type Props = {
   currentEnd: string;
   error: string | null;
   /** Nursing staff, used by the End Observation picker. */
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
 };
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -403,7 +403,7 @@ export function ObservationReviewDashboard({ entries, activeEpisodes, completedE
       {endingEpisode !== null && (
         <EndObservationModal
           episodeId={endingEpisode.id}
-          staffOptions={allStaff.filter((s) => s.branch_id === endingEpisode.branch_id)}
+          staffOptions={allStaff.filter((s) => s.branch_id === endingEpisode.branch_id || s.branch_function === 'HQ')}
           onClose={() => setEndingEpisodeId(null)}
           onEnded={() => {
             setEndingEpisodeId(null);

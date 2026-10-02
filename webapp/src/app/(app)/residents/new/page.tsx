@@ -24,6 +24,7 @@ export default async function NewResidentPage({ searchParams }: { searchParams: 
 
   const isDemoUser = demoBranchIds.includes(currentUser?.branch_id ?? -1);
   const effectiveIsAdmin = canAccessAllBranches(currentUser) && !isDemoUser;
+  const isHqUser = currentUser?.branch_function === "HQ";
 
   // Readmit: fetch source resident + their diagnoses to pre-fill the form
   let prefill: Partial<Resident> | undefined;
@@ -80,6 +81,7 @@ export default async function NewResidentPage({ searchParams }: { searchParams: 
         existingDiagnoses={prefillDiagnoses}
         defaultBranchId={effectiveIsAdmin ? null : currentUser?.branch_id ?? null}
         isAdmin={effectiveIsAdmin}
+        isHqUser={isHqUser}
         action={createResident}
         backHref="/residents"
         submissionId={crypto.randomUUID()}

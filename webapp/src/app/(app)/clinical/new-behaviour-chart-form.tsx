@@ -29,7 +29,7 @@ type Resident = { id: number; resident_name: string; branch_id: number };
 
 type Props = {
   residents: Resident[];
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   presetResidentId?: string;
   onSaved: () => void;
 };
@@ -209,7 +209,7 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
   const { markDirty, markClean } = useFormDirtyTracking("behaviour-chart-new", submitForm);
 
   const selectedResident = residents.find((r) => String(r.id) === residentId);
-  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id);
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResident?.branch_id || s.branch_function === 'HQ');
 
   function toggleBehaviour(
     opt: string,

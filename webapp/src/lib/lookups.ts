@@ -108,30 +108,43 @@ export async function getStaffRoster(branchId: number, allowedRoles?: string[]):
     .from("tbl_staff")
     .select("id:StaffID, staff_name")
     .eq("branch_id", branchId)
-    .eq("status", "ACTIVE");
+    .eq("status", "ACTIVE")
+    .neq("department", "Physiotherapy");
   if (allowedRoles) query = query.in("role", [...new Set([...allowedRoles, "ADMIN"])]);
   const { data } = await query.order("staff_name");
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name }));
 }
 
-// Same idea as getStaffRoster, but unscoped + carries branch_id -- for forms
-// (like resident admission) where the branch itself is also a form field, so
-// filtering has to happen client-side as the user picks a branch.
+// Same idea as getStaffRoster, but unscoped + carries branch_id and
+// branch_function -- for forms (like resident admission) where the branch
+// itself is also a form field, so filtering has to happen client-side as
+// the user picks a branch. branch_function ('NUR'/'PHY'/'HQ') lets client
+// code include HQ-branch staff for HQ-logged-in users without a second fetch.
+// Physiotherapy-department staff are always excluded here; use
+// getPhysiotherapyStaff() for those pickers.
 //
-// department restricts to a single tbl_staff.department (e.g. "Physiotherapy"
-// for the physio assessment's "Documented by" picker) -- ADMIN staff are
-// still always included regardless of department, same "admins can act
-// anywhere" convention as allowedRoles below.
+// department restricts to a single tbl_staff.department -- ADMIN staff are
+// still always included regardless of department.
 export async function getAllStaffWithBranch(
   allowedRoles?: string[],
   department?: string
-): Promise<(LookupOption & { branch_id: number })[]> {
+): Promise<(LookupOption & { branch_id: number; branch_function: string })[]> {
   const supabase = await createClient();
-  let query = supabase.from("tbl_staff").select("id:StaffID, staff_name, branch_id").eq("status", "ACTIVE");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
+    .from("tbl_staff")
+    .select("id:StaffID, staff_name, branch_id, tbl_branches(Function)")
+    .eq("status", "ACTIVE")
+    .neq("department", "Physiotherapy");
   if (allowedRoles) query = query.in("role", [...new Set([...allowedRoles, "ADMIN"])]);
   if (department) query = query.or(`department.eq.${department},role.eq.ADMIN`);
   const { data } = await query.order("staff_name");
-  return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    label: r.staff_name,
+    branch_id: r.branch_id,
+    branch_function: r.tbl_branches?.Function ?? "",
+  }));
 }
 
 // The Physiotherapy module (assessment "Documented by" picker, and the
@@ -150,21 +163,27 @@ export async function getPhysiotherapyStaff(): Promise<LookupOption[]> {
   return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name }));
 }
 
-// The Nursing Chart tab's "entered by" picker is used exclusively by
-// nursing and medical staff -- same "no ADMIN fallback" convention as
-// getPhysiotherapyStaff, since an admin login is never the person who
-// actually took a nursing chart entry. Carries branch_id (like
-// getAllStaffWithBranch) because the form filters client-side once a
-// resident/branch is picked.
-export async function getNursingStaff(): Promise<(LookupOption & { branch_id: number })[]> {
+// The Nursing Chart tab's "entered by" picker is restricted to nursing and
+// medical staff (same "no ADMIN fallback" convention as getPhysiotherapyStaff).
+// Carries branch_id and branch_function like getAllStaffWithBranch; HQ users
+// have HQ-branch entries merged in at the component level before the picker
+// renders, so this list stays department-restricted for non-HQ branches.
+export async function getNursingStaff(): Promise<(LookupOption & { branch_id: number; branch_function: string })[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (supabase as any)
     .from("tbl_staff")
-    .select("id:StaffID, staff_name, branch_id")
+    .select("id:StaffID, staff_name, branch_id, tbl_branches(Function)")
     .eq("status", "ACTIVE")
     .in("department", ["Nursing", "Medical"])
     .order("staff_name");
-  return (data ?? []).map((r) => ({ id: r.id, label: r.staff_name, branch_id: r.branch_id }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    label: r.staff_name,
+    branch_id: r.branch_id,
+    branch_function: r.tbl_branches?.Function ?? "",
+  }));
 }
 
 // Treatment types + their credit-hour value, e.g. "Full Physio (1hr)" -> 1.

@@ -21,7 +21,7 @@ type Resident = {
 
 type Props = {
   residents: Resident[];
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   lookups: ClinicalLookups;
   feedingTypes: LookupOption[];
   presetResidentId?: string;
@@ -60,7 +60,7 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
   const { markDirty, markClean } = useFormDirtyTracking("hospital-referral-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
-  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId || s.branch_function === 'HQ');
 
   useEffect(() => {
     if (!residentId) {
