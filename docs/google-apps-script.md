@@ -218,8 +218,10 @@ Entry points:
   targeted path called by the webapp bridge. Syncs one row, and rebuilds the
   summary for the current resident *and* the previous one if `ResidentID`
   changed. If the row is gone from the Sheet, it mirrors the deletion.
-- `syncAllMedicationOrdersToSupabase()` — full 24-hour reconciliation,
-  also deletes orders in Supabase that are missing from the Sheet.
+- `syncAllMedicationOrdersToSupabase()` — full order reconciliation,
+  also deletes orders in Supabase that are missing from the Sheet. Run daily
+  by `dailyMedicationReconciliation()` (`MedicationDailyRebuild.gs`), which
+  then calls `rebuildAllCurrentMedications()`.
 - `rebuildCurrentMedication(residentID)` / `rebuildAllCurrentMedications()`.
 
 ### How deletions are detected
@@ -263,7 +265,7 @@ the sheet's `RxOrderID`.
 | Summary edit | `onMedicationSummaryEdit` | on edit | `setupMedicationSummaryTrigger()` |
 | Summary change | `onMedicationSummaryChange` | on change | same |
 | Summary heartbeat | `medicationSummaryHeartbeat` | every **1 minute** | same |
-| Reconciliation | `syncAllMedicationOrdersToSupabase` | every **24 hours** | `setupMedicationReconciliationTrigger()` |
+| Reconciliation + summary rebuild | `dailyMedicationReconciliation` (`MedicationDailyRebuild.gs`) | daily, **03:00** | `setupDailyMedicationReconciliationTrigger()` (replaces the old orders-only `setupMedicationReconciliationTrigger()` — don't run that one any more) |
 | Stock heartbeat | `medicationStockHeartbeat` (`MedicationStock.gs`) | every **1 minute**, works only when the stock tab's fingerprint changed | `setupMedicationStockTriggers()` |
 | Stock reconciliation | `syncAllMedicationStockToSupabase` | every **24 hours**; mirrors deletions only after a zero-failure pass | same |
 
@@ -275,6 +277,16 @@ when the fingerprint changed.
 **The 24-hour reconciliation + 1-minute heartbeat are what actually make
 "s sync must not fail" true.** The fast path in `syncOrderAndSummary_` is
 only a fast path. If those triggers are not installed, nothing retries.
+
+**A failed summary rebuild is only repaired by the daily job.** Every
+targeted save stores the new Sheet fingerprint, so when its
+`rebuildCurrentMedication` fails the heartbeat sees no change and never
+retries it. The old daily trigger only reconciled orders, so such a
+resident's `current_medication_list` stayed stale indefinitely (2026-10-02:
+BMN-0153 empty with 6 active orders, BGN-0178 missing one).
+`dailyMedicationReconciliation` adds `rebuildAllCurrentMedications()`, which
+rewrites only the summaries that differ. To repair one immediately, run
+`rebuildAllCurrentMedications()` from the editor.
 
 ### Failure handling
 
@@ -525,7 +537,7 @@ Per project:
   Supabase properties (`setMedicationSupabaseProperties`); run
   `setupMedicationSupabaseTrigger()`,
   `setupMedicationSummaryTrigger()`,
-  `setupMedicationReconciliationTrigger()`, and
+  `setupDailyMedicationReconciliationTrigger()`, and
   `setupMedicationStockTriggers()`.
 - **wound-photo-drive** — paste as `Code.gs`, replace `SHARED_SECRET`, deploy
   as "Me" / "Anyone".

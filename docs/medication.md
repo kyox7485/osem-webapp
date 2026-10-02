@@ -73,9 +73,11 @@ must match Vercel's `MEDICATION_ORDER_SCRIPT_SECRET`).
   retries `syncMedicationOrderAndSummaryNow` (from `MedicationSummary.gs`)
   a couple of times inline, then falls back to two automatic safety nets
   if it still fails: `MedicationSummary.gs`'s 1-minute heartbeat and
-  `MedicationSync.gs`'s 24-hour reconciliation
-  (`syncAllMedicationOrdersToSupabase`). Both must actually be installed
-  (`setupMedicationSummaryTrigger()` / `setupMedicationReconciliationTrigger()`
+  the daily `dailyMedicationReconciliation` (`MedicationDailyRebuild.gs`:
+  order reconciliation + rebuild of every resident's summary — the only thing
+  that repairs a summary whose targeted rebuild failed). Both must actually
+  be installed (`setupMedicationSummaryTrigger()` /
+  `setupDailyMedicationReconciliationTrigger()`
   run once each) for "the sync must not fail" to actually hold. A sync
   failure is also written to the visible `tbl_MedicationSyncLog` sheet,
   not just the Apps Script execution transcript.
