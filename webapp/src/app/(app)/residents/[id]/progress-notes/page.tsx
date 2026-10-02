@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getStaffRoster, getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
+import { getAllStaffWithBranch, getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
+import { getCurrentUser } from "@/lib/current-user";
 import { formatMedicalHistory } from "@/lib/medical-history";
 import { ProgressNotesTabs } from "./progress-notes-tabs";
 import { PageTitle } from "@/components/page-header";
@@ -20,6 +21,8 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const supabase = await createClient();
   const { t } = await getServerTranslator();
+  const currentUser = await getCurrentUser();
+  const isHqUser = currentUser?.branch_function === "HQ";
 
   const { data: resident } = await supabase
     .from("tbl_residents")
@@ -44,7 +47,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
       .select("*, tbl_staff!created_by(staff_name)")
       .eq("resident_id", id)
       .order("entry_timestamp", { ascending: false }),
-    getStaffRoster(resident.branch_id),
+    getAllStaffWithBranch(),
     // The dashboard's BP/HR/Temp/SpO2 cards plot 7 daily averages and its
     // history modal reaches back 28 days, so a fixed "last 10 rows" limit
     // (the old behaviour) couldn't support either. Vitals are charted
@@ -139,7 +142,7 @@ export default async function ProgressNotesPage({ params }: { params: Promise<{ 
 
       <ProgressNotesTabs
         residentId={resident.id}
-        staffOptions={staffOptions}
+        staffOptions={staffOptions.filter((s) => s.branch_id === resident.branch_id || (isHqUser && s.branch_function === "HQ"))}
         notes={noteRows}
         notesError={notesError?.message ?? null}
         dashboard={{

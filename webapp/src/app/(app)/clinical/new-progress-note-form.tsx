@@ -16,7 +16,7 @@ type Resident = {
 
 type Props = {
   residents: Resident[];
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   // Pre-selects the resident picker when opened from a filtered context,
   // but the user can change it if needed.
   presetResidentId?: string;
@@ -43,7 +43,7 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
   const { markDirty, markClean } = useFormDirtyTracking("progress-note-new", submitForm);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
-  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId || s.branch_function === 'HQ');
 
   useEffect(() => {
     if (!residentId) {

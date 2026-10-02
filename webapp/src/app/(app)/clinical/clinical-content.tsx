@@ -92,10 +92,11 @@ type Props = {
   branches: LookupOption[];
   /** Currently selected branch id as a string, or "" for "All branches". */
   currentBranch: string;
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   // Nursing Chart's "entered by" picker only -- restricted to Nursing/
   // Medical department staff, unlike the other tabs which use allStaff.
-  nursingStaff: (LookupOption & { branch_id: number })[];
+  nursingStaff: (LookupOption & { branch_id: number; branch_function: string })[];
+  isHqUser: boolean;
   vitals: Vital[];
   notes: ProgressNote[];
   nursingChartEntries: NursingChartEntry[];
@@ -126,6 +127,7 @@ export function ClinicalContent({
   currentBranch,
   allStaff,
   nursingStaff,
+  isHqUser,
   vitals,
   notes,
   nursingChartEntries,
@@ -147,6 +149,10 @@ export function ClinicalContent({
   truncated,
 }: Props) {
   const push = useNavPush();
+  // HQ staff are in allStaff but not in nursingStaff (Nursing/Medical only).
+  // Merge them in for HQ users so they can enter nursing/observation chart entries.
+  const hqStaff = isHqUser ? allStaff.filter((s) => s.branch_function === "HQ") : [];
+  const effectiveNursingStaff = isHqUser ? [...nursingStaff, ...hqStaff] : nursingStaff;
   const t = useTranslation();
   const searchParams = useSearchParams();
   const { guardedAction } = useSafeNavigation();
@@ -204,7 +210,7 @@ export function ClinicalContent({
             residents={residents}
             branches={branches}
             currentBranch={currentBranch}
-            allStaff={nursingStaff}
+            allStaff={effectiveNursingStaff}
             lookups={nursingChartLookups}
             currentResident={currentResident}
             currentStart={currentStart}
@@ -220,7 +226,7 @@ export function ClinicalContent({
             completedEpisodes={completedObservationEpisodes}
             branches={branches}
             currentBranch={currentBranch}
-            allStaff={nursingStaff}
+            allStaff={effectiveNursingStaff}
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}

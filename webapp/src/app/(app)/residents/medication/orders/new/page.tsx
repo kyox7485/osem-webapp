@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, canAccessAllBranches, canAccessAdmissionAnalytics } from "@/lib/current-user";
-import { getDemoBranchIds } from "@/lib/lookups";
+import { getDemoBranchIds, getAllStaffWithBranch } from "@/lib/lookups";
 import { PageTitle } from "@/components/page-header";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { ResidentsModuleTabs } from "../../../module-tabs";
@@ -15,6 +15,7 @@ export default async function NewMedicationOrderPage() {
   if (!currentUser) redirect("/");
 
   const admin = canAccessAllBranches(currentUser);
+  const isHqUser = currentUser.branch_function === "HQ";
   const supabase = await createClient();
 
   const demoBranchIds = await getDemoBranchIds();
@@ -61,35 +62,20 @@ export default async function NewMedicationOrderPage() {
   }));
 
   // ── Staff for Noted By picker ────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let staffQuery: any = supabase
-    .from("tbl_staff")
-    .select('staff_name, branch_id, staffId:StaffID')
-    .order("staff_name");
-
-  if (admin) {
-    if (excludedBranchIds.length > 0) {
-      staffQuery = staffQuery.not(
-        "branch_id",
-        "in",
-        `(${excludedBranchIds.join(",")})`
-      );
-    }
-  } else {
-    staffQuery = staffQuery.eq("branch_id", currentUser.branch_id);
-  }
-
-  const { data: staffRaw } = await staffQuery;
-
-  type StaffRow = { staff_name: string; branch_id: number; staffId: string };
-
-  const staffOptions: StaffEntry[] = ((staffRaw ?? []) as StaffRow[]).map(
-    (s) => ({
-      staffId: s.staffId,
-      name: s.staff_name,
+  // getAllStaffWithBranch already excludes Physiotherapy and inactive staff.
+  const allStaff = await getAllStaffWithBranch();
+  const staffOptions: StaffEntry[] = allStaff
+    .filter((s) =>
+      (admin
+        ? excludedBranchIds.length === 0 || !excludedBranchIds.includes(s.branch_id)
+        : s.branch_id === currentUser.branch_id || (isHqUser && s.branch_function === "HQ"))
+    )
+    .map((s) => ({
+      staffId: String(s.id),
+      name: s.label,
       branchId: s.branch_id,
-    })
-  );
+      branchFunction: s.branch_function,
+    }));
 
   return (
     <div>

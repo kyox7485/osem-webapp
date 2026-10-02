@@ -27,7 +27,7 @@ import { useDirtyForm } from "@/lib/dirty-form-context";
 import { isRedirectSignal } from "@/lib/redirect-signal";
 import { AdmissionMedicationsSection, type MedicationDraft } from "@/components/admission-medications";
 
-type StaffOption = LookupOption & { branch_id: number };
+type StaffOption = LookupOption & { branch_id: number; branch_function: string };
 
 type Props = {
   resident?: Resident;
@@ -41,6 +41,7 @@ type Props = {
   existingDiagnoses?: ExistingDiagnosis[];
   defaultBranchId: number | null;
   isAdmin: boolean;
+  isHqUser: boolean;
   action: (formData: FormData) => Promise<{ error?: string } | void>;
   backHref?: string;
   // Idempotency key for createResident (new-resident mode only) — generated
@@ -241,6 +242,7 @@ export function ResidentForm({
   existingDiagnoses = [],
   defaultBranchId,
   isAdmin,
+  isHqUser,
   action,
   backHref,
   submissionId,
@@ -343,7 +345,7 @@ export function ResidentForm({
   // Assessment collapse (expanded for new, collapsed for edit/readmit)
   const [assessmentExpanded, setAssessmentExpanded] = useState(!resident && !prefill);
 
-  const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId);
+  const staffForBranch = allStaff.filter((s) => String(s.branch_id) === branchId || (isHqUser && s.branch_function === "HQ"));
   const isMalaysian = malaysiaId != null && String(malaysiaId) === nationalityId;
   const [reviewedBy, setReviewedBy] = useState(resident?.reviewed_by ?? "");
   const [reviewedByOther, setReviewedByOther] = useState(resident?.reviewed_by_other ?? "");

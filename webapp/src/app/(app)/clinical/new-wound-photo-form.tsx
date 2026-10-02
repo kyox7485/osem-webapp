@@ -34,7 +34,7 @@ type CaptureStage = "idle" | "previewing" | "compressing";
 
 type Props = {
   residents: Resident[];
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   bodyParts: WoundBodyPart[];
   presetResidentId?: string;
   onSaved: () => void;
@@ -92,7 +92,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   }, [isDirty]);
 
   const selectedResidentBranchId = residents.find((r) => String(r.id) === residentId)?.branch_id;
-  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId);
+  const staffOptions = allStaff.filter((s) => s.branch_id === selectedResidentBranchId || s.branch_function === 'HQ');
   const residentLocked = sessionId !== null || photos.length > 0;
 
   useEffect(() => {

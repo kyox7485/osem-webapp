@@ -37,6 +37,7 @@ export type StaffEntry = {
   staffId: string;
   name: string;
   branchId: number;
+  branchFunction: string;
 };
 
 type Props =
@@ -255,13 +256,13 @@ export function OrderForm(props: Props) {
   const notedByStaffOptions: LookupOption[] = useMemo(() => {
     if (!staffFilterBranchId) return [];
     return props.staffOptions
-      .filter((s) => s.branchId === staffFilterBranchId)
+      .filter((s) => s.branchId === staffFilterBranchId || s.branchFunction === "HQ")
       .map((s) => ({ id: s.name, label: s.name }));
   }, [props.staffOptions, staffFilterBranchId]);
 
   const stockStaffOptions = useMemo(() => {
     if (!staffFilterBranchId) return [];
-    return props.staffOptions.filter((s) => s.branchId === staffFilterBranchId);
+    return props.staffOptions.filter((s) => s.branchId === staffFilterBranchId || s.branchFunction === "HQ");
   }, [props.staffOptions, staffFilterBranchId]);
 
   // Auto-fill stock unit from order unit (unless user manually overrode it).

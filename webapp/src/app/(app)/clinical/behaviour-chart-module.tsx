@@ -32,7 +32,7 @@ type Props = {
   residents: Resident[];
   branches: LookupOption[];
   currentBranch: string;
-  allStaff: (LookupOption & { branch_id: number })[];
+  allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   currentResident: string;
   currentStart: string;
   currentEnd: string;
