@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canCreatePhysioEntry, CROSS_DEPARTMENT_ENTRY_DENIED } from "@/lib/current-user";
 import { getPhysioIpBranchIds } from "@/lib/lookups";
 import { revalidatePath } from "next/cache";
 import {
@@ -34,6 +34,11 @@ export async function createOpPatient(
   const account = await getCurrentUser();
   if (!account) {
     return { success: false, error: "Not authenticated" };
+  }
+  // Department split: a non-physiotherapy login may not author physiotherapy
+  // records. A hidden button is not the guard -- this is.
+  if (!canCreatePhysioEntry(account)) {
+    return { success: false, error: CROSS_DEPARTMENT_ENTRY_DENIED };
   }
 
   const patientName = input.patientName.trim();
@@ -92,6 +97,11 @@ export async function createPhysioAssessment(
   const account = await getCurrentUser();
   if (!account) {
     return { success: false, error: "Not authenticated" };
+  }
+  // Department split: a non-physiotherapy login may not author physiotherapy
+  // records. A hidden button is not the guard -- this is.
+  if (!canCreatePhysioEntry(account)) {
+    return { success: false, error: CROSS_DEPARTMENT_ENTRY_DENIED };
   }
 
   if (!input.documentedBy && !input.documentedByOther) {

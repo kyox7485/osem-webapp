@@ -99,6 +99,40 @@ one-line prop flip. Editors are marked `data-standalone-editor` so the
 progress-note form's `onChangeCapture` skips them — typing in an editor and
 pressing Cancel must not raise an unsaved-changes prompt for the note.
 
+## Cross-department entry creation
+
+A physiotherapist may create records only in the physiotherapy module, and a
+nursing/medical login only in the clinical module. **Viewing is never
+restricted** — both sides read every existing entry, because a physiotherapist
+still needs the resident's clinical notes and vice versa. Hiding a "New
+Entry" button hides creation only.
+
+The rule lives in `lib/current-user.ts` as two mirror helpers,
+`canCreateClinicalEntry()` and `canCreatePhysioEntry()`. Both treat everyone
+above plain STAFF as exempt (HQ accounts, and every MODERATOR/ADMIN
+regardless of branch) so supervision and correction stay possible.
+
+**Department is inferred from `tbl_branches.Function`, not
+`tbl_staff.department`.** `tbl_user_accounts` carries only `rights` +
+`branch_id` and has no link to the staff roster — the schema keeps those two
+deliberately decoupled, since a login may be shared by several people at a
+branch. So a physiotherapist working out of a nursing branch reads as NUR and
+keeps clinical create rights. That is the accepted trade-off for needing no
+migration. **If per-person departments are ever required, add a
+`department staff_dept` column to `tbl_user_accounts`** (not a join to the
+roster — it would contradict the schema's stated design) and swap the
+`isPhysioDepartment` predicate.
+
+**Enforced in both layers, deliberately.** Each clinical module receives a
+`canCreateEntry` prop and hides its New Entry button; each of the six clinical
+Server Actions (`createVital`, `createProgressNote`, `createNursingChartEntry`,
+`createObservationChart`, `createBehaviourChart`, `createHospitalReferral`)
+re-checks `canCreateClinicalEntry()` and returns
+`CROSS_DEPARTMENT_ENTRY_DENIED`. The physiotherapy side does the same via
+`canCreate` on `PhysioAssessmentTabs` and a check in `createPhysioAssessment`
+/ `createOpPatient`. **Hiding the button is never the guard** — a Server
+Action is reachable directly, so the action check is the real one.
+
 ## Accounts tab UX
 
 Rows are clickable (entire row, not just the username link). Clicking a

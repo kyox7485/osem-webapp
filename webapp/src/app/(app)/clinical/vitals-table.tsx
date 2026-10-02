@@ -65,9 +65,13 @@ type Props = {
   error: string | null;
   /** The server hit its row cap -- the list below is the most recent N, not all. */
   truncated?: boolean;
+  /** False blocks entry creation for plain-STAFF logins in the other
+   * department (see canCreateClinicalEntry in lib/current-user.ts). View
+   * access to existing entries is never affected. */
+  canCreateEntry?: boolean;
 };
 
-export function VitalsTable({ vitals, residents, branches, currentBranch, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated }: Props) {
+export function VitalsTable({ vitals, residents, branches, currentBranch, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated, canCreateEntry = true }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
@@ -178,13 +182,15 @@ export function VitalsTable({ vitals, residents, branches, currentBranch, allSta
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-2 lg:flex-row lg:items-end">
-            <button
+            {canCreateEntry && (
+              <button
               type="button"
               onClick={() => setShowForm(true)}
               className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
               {t("Add Entry")}
             </button>
+            )}
             {currentResident ? (
               <a
                 href={`/api/reports/vital-signs?${pdfParams.toString()}`}

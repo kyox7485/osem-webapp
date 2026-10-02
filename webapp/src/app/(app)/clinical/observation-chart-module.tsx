@@ -22,9 +22,13 @@ type Props = {
   currentStart: string;
   currentEnd: string;
   error: string | null;
+  /** False blocks entry creation for plain-STAFF logins in the other
+   * department (see canCreateClinicalEntry in lib/current-user.ts). View
+   * access to existing entries is never affected. */
+  canCreateEntry?: boolean;
 };
 
-export function ObservationChartModule({ entries, activeEpisodes, completedEpisodes, branches, currentBranch, allStaff, currentStart, currentEnd, error }: Props) {
+export function ObservationChartModule({ entries, activeEpisodes, completedEpisodes, branches, currentBranch, allStaff, currentStart, currentEnd, error, canCreateEntry = true }: Props) {
   const router = useRouter();
   const t = useTranslation();
   const { guardedAction } = useSafeNavigation();
@@ -47,9 +51,12 @@ export function ObservationChartModule({ entries, activeEpisodes, completedEpiso
         <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => guardedAction(() => setInnerTab("review"))}>
           {t("Review Notes")}
         </TabButton>
-        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
+        {canCreateEntry && (
+          <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
           {t("New Entry")}
         </TabButton>
+        )}
+
       </TabRow>
 
       {innerTab === "review" ? (

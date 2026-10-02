@@ -32,6 +32,10 @@ type Props = {
   error: string | null;
   /** The server hit its row cap -- the list below is the most recent N, not all. */
   truncated?: boolean;
+  /** False blocks entry creation for plain-STAFF logins in the other
+   * department (see canCreateClinicalEntry in lib/current-user.ts). View
+   * access to existing entries is never affected. */
+  canCreateEntry?: boolean;
 };
 
 type PhotoGroup = {
@@ -81,7 +85,7 @@ function pluralSessions(t: (s: string) => string, n: number) {
 // Three nested levels of collapsible sections. Every one starts closed, so
 // the module renders as a text-only outline and issues zero requests for
 // photo bytes until the user asks for a specific day.
-export function WoundPhotoModule({ sessions, residents, branches, currentBranch, allStaff, bodyParts, currentResident, currentStart, currentEnd, error, truncated }: Props) {
+export function WoundPhotoModule({ sessions, residents, branches, currentBranch, allStaff, bodyParts, currentResident, currentStart, currentEnd, error, truncated, canCreateEntry = true }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
@@ -185,9 +189,12 @@ export function WoundPhotoModule({ sessions, residents, branches, currentBranch,
         <TabButton icon={TrendingUp} size="sm" active={innerTab === "progression"} onClick={() => guardedAction(() => setInnerTab("progression"))}>
           {t("Wound Progression")}
         </TabButton>
-        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
+        {canCreateEntry && (
+          <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
           {t("New Entry")}
         </TabButton>
+        )}
+
       </TabRow>
 
       {innerTab === "progression" ? (

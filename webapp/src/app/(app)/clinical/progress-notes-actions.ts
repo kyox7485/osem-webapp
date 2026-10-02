@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getDiagnosisOptions, getResidentDiagnoses } from "@/lib/lookups";
 import { formatMedicalHistory } from "@/lib/medical-history";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canCreateClinicalEntry, CROSS_DEPARTMENT_ENTRY_DENIED } from "@/lib/current-user";
 import { getServerLanguage } from "@/lib/i18n/server";
 import { revalidatePath } from "next/cache";
 import type { DiagnosisOption } from "@/lib/types";
@@ -165,6 +165,11 @@ export async function createProgressNote(input: CreateProgressNoteInput): Promis
   const account = await getCurrentUser();
   if (!account) {
     return { success: false, error: "Not authenticated" };
+  }
+  // Department split: a physiotherapy login may not author clinical
+  // records. A hidden button is not the guard -- this is.
+  if (!canCreateClinicalEntry(account)) {
+    return { success: false, error: CROSS_DEPARTMENT_ENTRY_DENIED };
   }
 
   const supabase = await createClient();

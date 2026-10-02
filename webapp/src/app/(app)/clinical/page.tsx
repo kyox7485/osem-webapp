@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches, isHqAdmin } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, isHqAdmin, canCreateClinicalEntry } from "@/lib/current-user";
 import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds, getBranches } from "@/lib/lookups";
 import { getObservationChartsForResidents } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
@@ -556,6 +556,7 @@ export default async function ClinicalPage({
         allStaff={allStaff}
         nursingStaff={nursingStaff}
         isHqUser={isHqUser}
+        canCreateEntry={canCreateClinicalEntry(account)}
         vitals={vitals}
         notes={notes}
         nursingChartEntries={nursingChartEntries}

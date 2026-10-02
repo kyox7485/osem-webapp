@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslator } from "@/lib/i18n/server";
-import { getCurrentUser, canAccessPhysioOp, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessPhysioOp, canAccessAllBranches, canCreatePhysioEntry } from "@/lib/current-user";
 import { getPhysiotherapyStaff, getPhysioTreatmentTypes, getPhysioIpBranchIds, getDemoBranchIds, getBranches } from "@/lib/lookups";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { redirect } from "next/navigation";
@@ -168,7 +168,7 @@ export default async function PhysiotherapyPage({
           />
         </div>
 
-        {careSetting === "OP" && <NewOpPatientForm />}
+        {careSetting === "OP" && canCreatePhysioEntry(account) && <NewOpPatientForm />}
 
         <div className="mt-4">
           {/* Keyed by patient (or "all") so switching fully remounts (fresh
@@ -283,7 +283,8 @@ async function AllPatientsReview({
   return (
     <>
       {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error.message}</p>}
-      <PhysioAssessmentTabs
+              <PhysioAssessmentTabs
+        canCreate={canCreatePhysioEntry(account)}
         residentId={null}
         residentName={null}
         icNumber={null}
@@ -460,7 +461,8 @@ async function PhysiotherapyContent({
     <>
       {assessmentsError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{assessmentsError.message}</p>}
 
-      <PhysioAssessmentTabs
+              <PhysioAssessmentTabs
+        canCreate={canCreatePhysioEntry(account)}
         residentId={resident.id}
         residentName={residentName}
         icNumber={resident.ic_number}

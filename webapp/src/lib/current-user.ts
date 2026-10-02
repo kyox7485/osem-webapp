@@ -125,3 +125,56 @@ export function canAccessPhysioOp(account: CurrentUser | null): boolean {
   if (!account) return false;
   return account.rights === "ADMIN" || account.branch_function === "PHY";
 }
+
+// --- Department split on clinical entry creation -----------------------------
+//
+// A physiotherapy login may create records only in the physiotherapy module,
+// and a nursing/medical login only in the clinical module. Both sides keep
+// full READ access -- the restriction is on creating, never on viewing
+// history, because a physiotherapist still needs to read the resident's
+// clinical notes and vice versa.
+//
+// Department is inferred from tbl_branches.Function, NOT from
+// tbl_staff.department: tbl_user_accounts carries only rights + branch_id and
+// has no link to the staff roster (the schema keeps the two deliberately
+// decoupled -- logins may be shared by several people at a branch). So a
+// physiotherapist working out of a nursing branch reads as NUR here. That is
+// the accepted trade-off; if per-person departments are ever needed, add a
+// `department staff_dept` column to tbl_user_accounts rather than joining the
+// roster (see docs/clinical.md).
+//
+// Everyone above plain STAFF is exempt: HQ accounts, plus every MODERATOR and
+// ADMIN regardless of branch, so supervision and correction stay possible.
+const isPhysioDepartment = (account: {
+  rights: string;
+  branch_function: string | null;
+}): boolean => account.branch_function === "PHY";
+
+// May this account create records in the Clinical module (nursing chart,
+// observation chart, behaviour chart, progress notes, hospital referral,
+// vitals, wound photo)? False only for a plain STAFF login at a physio hub.
+export function canCreateClinicalEntry(account: {
+  rights: string;
+  branch_function: string | null;
+} | null): boolean {
+  if (!account) return false;
+  if (account.rights !== "STAFF") return true;
+  return !isPhysioDepartment(account);
+}
+
+// Mirror image of canCreateClinicalEntry, for the Physiotherapy module.
+export function canCreatePhysioEntry(account: {
+  rights: string;
+  branch_function: string | null;
+} | null): boolean {
+  if (!account) return false;
+  if (account.rights !== "STAFF") return true;
+  return isPhysioDepartment(account);
+}
+
+// Single shared message for both denials, returned from the Server Actions.
+// Not translated: Server Action error strings are plain English throughout
+// ("Not authenticated", "Access denied") and are rendered raw by the forms --
+// see the known Server-Action-errors gap in docs/i18n.md.
+export const CROSS_DEPARTMENT_ENTRY_DENIED =
+  "You do not have permission to create entries in this module.";

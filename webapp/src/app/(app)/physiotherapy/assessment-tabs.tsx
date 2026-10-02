@@ -31,6 +31,10 @@ type Props = {
   reviewAssessments: ReviewAssessment[];
   /** Per-assessment score bundles, computed server-side. */
   scoresByAssessment: ReviewScoresByAssessment;
+  /** False blocks entry creation for plain-STAFF logins outside the
+   * physiotherapy department (see canCreatePhysioEntry in
+   * lib/current-user.ts). Viewing past assessments is unaffected. */
+  canCreate?: boolean;
 };
 
 export function PhysioAssessmentTabs({
@@ -47,6 +51,7 @@ export function PhysioAssessmentTabs({
   previous,
   reviewAssessments,
   scoresByAssessment,
+  canCreate = true,
 }: Props) {
   const t = useTranslation();
   const { guardedAction } = useSafeNavigation();
@@ -63,9 +68,11 @@ export function PhysioAssessmentTabs({
         <TabButton icon={ListChecks} active={tab === "review"} onClick={() => guardedAction(() => setTab("review"))}>
           {t("Review Notes")}
         </TabButton>
-        <TabButton icon={Plus} active={tab === "new"} onClick={() => setTab("new")}>
+        {canCreate && (
+          <TabButton icon={Plus} active={tab === "new"} onClick={() => setTab("new")}>
           {t("New Entry")}
         </TabButton>
+        )}
       </TabRow>
 
       {tab === "review" ? (

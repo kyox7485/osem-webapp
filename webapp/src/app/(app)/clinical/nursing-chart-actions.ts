@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, canAccessAllBranches } from "@/lib/current-user";
+import { getCurrentUser, canAccessAllBranches, canCreateClinicalEntry, CROSS_DEPARTMENT_ENTRY_DENIED } from "@/lib/current-user";
 import { revalidatePath } from "next/cache";
 
 type HygieneEpisodeInput = { assistanceLevel: "By Self" | "With Assistance"; activityIds: number[] };
@@ -46,6 +46,11 @@ export async function createNursingChartEntry(
   const account = await getCurrentUser();
   if (!account) {
     return { success: false, error: "Not authenticated" };
+  }
+  // Department split: a physiotherapy login may not author clinical
+  // records. A hidden button is not the guard -- this is.
+  if (!canCreateClinicalEntry(account)) {
+    return { success: false, error: CROSS_DEPARTMENT_ENTRY_DENIED };
   }
 
   if (!input.createdBy && !input.createdByOther) {

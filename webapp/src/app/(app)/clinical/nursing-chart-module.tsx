@@ -88,6 +88,10 @@ type Props = {
   error: string | null;
   /** The server hit its row cap -- the list below is the most recent N, not all. */
   truncated?: boolean;
+  /** False blocks entry creation for plain-STAFF logins in the other
+   * department (see canCreateClinicalEntry in lib/current-user.ts). View
+   * access to existing entries is never affected. */
+  canCreateEntry?: boolean;
 };
 
 function todayMYT(): string {
@@ -125,7 +129,7 @@ const TAG_GROUPS: [keyof NursingChartEntry, string][] = [
   ["hygiene_labels", "Hygiene care"],
 ];
 
-export function NursingChartModule({ entries, residents, branches, currentBranch, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated }: Props) {
+export function NursingChartModule({ entries, residents, branches, currentBranch, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated, canCreateEntry = true }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
@@ -171,9 +175,12 @@ export function NursingChartModule({ entries, residents, branches, currentBranch
         <TabButton icon={ListChecks} size="sm" active={innerTab === "review"} onClick={() => guardedAction(() => setInnerTab("review"))}>
           {t("Review Notes")}
         </TabButton>
-        <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
+        {canCreateEntry && (
+          <TabButton icon={Plus} size="sm" active={innerTab === "new"} onClick={() => guardedAction(() => setInnerTab("new"))}>
           {t("New Entry")}
         </TabButton>
+        )}
+
       </TabRow>
 
       {innerTab === "review" ? (

@@ -97,6 +97,9 @@ type Props = {
   // Medical department staff, unlike the other tabs which use allStaff.
   nursingStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   isHqUser: boolean;
+  // Plain STAFF logins at a physiotherapy hub may read clinical history but
+  // not create it -- see canCreateClinicalEntry in lib/current-user.ts.
+  canCreateEntry?: boolean;
   vitals: Vital[];
   notes: ProgressNote[];
   nursingChartEntries: NursingChartEntry[];
@@ -125,6 +128,7 @@ export function ClinicalContent({
   residents,
   branches,
   currentBranch,
+  canCreateEntry = true,
   allStaff,
   nursingStaff,
   isHqUser,
@@ -217,6 +221,7 @@ export function ClinicalContent({
             currentEnd={currentEnd}
             error={error}
             truncated={truncated}
+            canCreateEntry={canCreateEntry}
           />
         )}
         {activeTab === "observation-chart" && (
@@ -230,6 +235,7 @@ export function ClinicalContent({
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}
+            canCreateEntry={canCreateEntry}
           />
         )}
         {activeTab === "behaviour-chart" && (
@@ -246,6 +252,7 @@ export function ClinicalContent({
             currentPrev={currentPrev}
             error={error}
             truncated={truncated}
+            canCreateEntry={canCreateEntry}
           />
         )}
         {activeTab === "vitals" && (
@@ -261,6 +268,7 @@ export function ClinicalContent({
             currentEnd={currentEnd}
             error={error}
             truncated={truncated}
+            canCreateEntry={canCreateEntry}
           />
         )}
         {activeTab === "wound-photo" && (
@@ -276,6 +284,7 @@ export function ClinicalContent({
             currentEnd={currentEnd}
             error={error}
             truncated={truncated}
+            canCreateEntry={canCreateEntry}
           />
         )}
         {activeTab === "progress-notes" && (
@@ -290,6 +299,7 @@ export function ClinicalContent({
             currentEnd={currentEnd}
             error={error}
             truncated={truncated}
+            canCreateEntry={canCreateEntry}
           />
         )}
         {activeTab === "hospital-referral" && (
@@ -306,6 +316,7 @@ export function ClinicalContent({
             currentEnd={currentEnd}
             error={error}
             truncated={truncated}
+            canCreateEntry={canCreateEntry}
           />
         )}
       </div>
