@@ -30,7 +30,7 @@ import {
   type StockOrder,
   type StockStatus,
 } from "@/lib/medication-stock";
-import { recordStockEntryAction } from "./stock-actions";
+import { recordStockEntryAction, type StockEntryInput, type StockEntryResult } from "./stock-actions";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 import { Combobox } from "@/components/combobox";
 
@@ -72,6 +72,13 @@ export type StockHistoryRow = {
 };
 
 type EntryType = "Stock Count" | "Stock Received";
+
+type OptimisticEntry = {
+  rxOrderId: string;
+  newStatus: StockStatus;
+  lastStockDate: string;
+  staffName: string | null;
+};
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 
@@ -253,13 +260,14 @@ function Modal({ title, subtitle, onClose, children, wide }: {
 
 // ── Stock Count / Stock Received ──────────────────────────────────────────────
 
-function EntryModal({ row, entryType, staffOptions, history, onClose, onSaved }: {
+function EntryModal({ row, entryType, staffOptions, history, onClose, onOptimistic, onComplete }: {
   row: StockOrderRow;
   entryType: EntryType;
   staffOptions: StaffPick[];
   history: StockHistoryRow[];
   onClose: () => void;
-  onSaved: (pendingSync: boolean) => void;
+  onOptimistic: (data: OptimisticEntry) => void;
+  onComplete: (rxOrderId: string, result: StockEntryResult) => void;
 }) {
   const t = useTranslation();
   const current = row.status;
@@ -308,26 +316,35 @@ function EntryModal({ row, entryType, staffOptions, history, onClose, onSaved }:
     if (!unit) return Promise.resolve({ success: false, error: t("Unit is required") });
     if (!registeredBy) return Promise.resolve({ success: false, error: t("Registered By is required") });
 
-    return new Promise((resolve) => {
-      startTransition(async () => {
-        const result = await recordStockEntryAction({
-          rxOrderId: row.rxOrderId,
-          entryType,
-          quantity: qty,
-          unit,
-          registeredBy,
-          entryDate: entryIso,
-        });
-        if (!result.success) {
-          setError(result.error ?? "Unknown error");
-          resolve({ success: false, error: result.error });
-          return;
-        }
-        markClean();
-        onSaved(!!result.pendingSync);
-        resolve({ success: true });
-      });
+    // Compute the optimistic status to show in the card while the save runs.
+    const newStatus = computeStockStatus(
+      { balance: newBalance!, unit, stock_date: entryIso },
+      row.schedule,
+      new Date()
+    );
+    const staffName = staffOptions.find((s) => s.staffId === registeredBy)?.name ?? null;
+
+    // Close the modal immediately — the user doesn't wait for Apps Script.
+    markClean();
+    onOptimistic({ rxOrderId: row.rxOrderId, newStatus, lastStockDate: entryIso, staffName });
+
+    const actionInput: StockEntryInput = {
+      rxOrderId: row.rxOrderId,
+      entryType,
+      quantity: qty,
+      unit,
+      registeredBy,
+      entryDate: entryIso,
+    };
+
+    // Run the Server Action in the background; this component may unmount first.
+    // onComplete is a stable parent reference so it still fires after unmount.
+    startTransition(async () => {
+      const result = await recordStockEntryAction(actionInput);
+      onComplete(row.rxOrderId, result);
     });
+
+    return Promise.resolve({ success: true });
   }
 
   // Wire into the app-wide unsaved-changes guard while anything is entered.
@@ -721,6 +738,38 @@ export function StockModule({ residents, selectedResidentId, branches, currentBr
   const [active, setActive] = useState<{ row: StockOrderRow; action: EntryType | "History" } | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "info" | "error"; text: string } | null>(null);
 
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, OptimisticEntry>>({});
+
+  function handleEntryOptimistic(data: OptimisticEntry) {
+    setActive(null);
+    setOptimisticStatuses((prev) => ({ ...prev, [data.rxOrderId]: data }));
+    setNotice({ kind: "info", text: t("Saving to Google Sheet...") });
+  }
+
+  function handleEntryComplete(rxOrderId: string, result: StockEntryResult) {
+    setOptimisticStatuses((prev) => {
+      const next = { ...prev };
+      delete next[rxOrderId];
+      return next;
+    });
+    if (result.success) {
+      setNotice(
+        result.pendingSync
+          ? { kind: "info", text: t("Saved to the Google Sheet. It will appear here after the automatic sync (about 1 minute).") }
+          : { kind: "success", text: t("Stock saved.") }
+      );
+    } else {
+      setNotice({ kind: "error", text: result.error ?? t("Failed to save stock. Please try again.") });
+    }
+  }
+
+  // Merge optimistic balance overrides for cards/table while the SA is in flight.
+  const displayOrders = orders.map((o) => {
+    const opt = optimisticStatuses[o.rxOrderId];
+    if (!opt) return o;
+    return { ...o, status: opt.newStatus, lastStockDate: opt.lastStockDate, lastRegisteredBy: opt.staffName };
+  });
+
   const index = residents.findIndex((r) => r.id === selectedResidentId);
   const selected = index >= 0 ? residents[index] : null;
 
@@ -881,7 +930,7 @@ export function StockModule({ residents, selectedResidentId, branches, currentBr
             <>
               {/* Mobile: cards */}
               <ul className="divide-y divide-line-subtle md:hidden">
-                {orders.map((o) => (
+                {displayOrders.map((o) => (
                   <li key={o.rxOrderId} className="space-y-2 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -922,7 +971,7 @@ export function StockModule({ residents, selectedResidentId, branches, currentBr
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => (
+                    {displayOrders.map((o) => (
                       <tr key={o.rxOrderId} className="border-b border-line-subtle align-top last:border-0">
                         <td className="px-4 py-3 font-medium text-fg">{drugLabel(o)}</td>
                         <td className="px-3 py-3 text-fg-secondary">{scheduleLabel(o, t)}</td>
@@ -959,14 +1008,8 @@ export function StockModule({ residents, selectedResidentId, branches, currentBr
           staffOptions={staffOptions}
           history={history[active.row.rxOrderId] ?? []}
           onClose={() => setActive(null)}
-          onSaved={(pendingSync) => {
-            setActive(null);
-            setNotice(
-              pendingSync
-                ? { kind: "info", text: t("Saved to the Google Sheet. It will appear here after the automatic sync (about 1 minute).") }
-                : { kind: "success", text: t("Stock saved.") }
-            );
-          }}
+          onOptimistic={handleEntryOptimistic}
+          onComplete={handleEntryComplete}
         />
       )}
     </div>
