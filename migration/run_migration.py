@@ -112,6 +112,11 @@ def main() -> int:
             # agree with how the app renders these values.
             with pg_conn.cursor() as cur:
                 cur.execute("set time zone 'Asia/Kuala_Lumpur'")
+                # Skip tbl_audit_log for this session (see
+                # schema/025_audit_skip_for_bulk_import.sql). Auditing every
+                # imported row filled the free-tier database and forced it
+                # read-only, which broke all logins.
+                cur.execute("select set_config('osem.skip_audit', 'on', false)")
             pg_conn.commit()
 
             # ensure_schema() runs `create schema/table if not exists` and
