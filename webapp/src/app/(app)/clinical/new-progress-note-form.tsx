@@ -173,7 +173,6 @@ export function NewProgressNoteForm({ residents, allStaff, presetResidentId, onS
         residents={residents}
         value={residentId}
         onChange={(id) => {
-          markDirty();
           setResidentId(id);
           setCreatedBy("");
           setCreatedByOtherName("");

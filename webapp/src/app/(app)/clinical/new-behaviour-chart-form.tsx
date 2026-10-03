@@ -404,11 +404,8 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
           <ResidentCombobox
             residents={residents}
             value={residentId}
-            onChange={(id) => {
-              markDirty();
-              setResidentId(id);
-            }}
-            required
+            onChange={setResidentId}
+            showRequired
           />
           <div>
             <label className={labelCls}>{t("Date & time")}</label>

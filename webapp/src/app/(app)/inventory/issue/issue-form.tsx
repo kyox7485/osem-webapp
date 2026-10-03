@@ -77,7 +77,7 @@ export function IssueForm({
           </select>
         </Field>
         {effectiveTarget === "RESIDENT" ? (
-          <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} onTouch={state.touch} />
+          <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} />
         ) : (
           <Field label={t("Expense note")}>
             <input className={INPUT_CLS} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />

@@ -237,7 +237,6 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
         residents={residents}
         value={residentId}
         onChange={(id) => {
-          markDirty();
           setResidentId(id);
           setEnteredBy("");
           setEnteredByOtherName("");

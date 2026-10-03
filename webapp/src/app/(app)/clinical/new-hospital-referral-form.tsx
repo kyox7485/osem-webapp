@@ -192,7 +192,6 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
         residents={residents}
         value={residentId}
         onChange={(id) => {
-          markDirty();
           setResidentId(id);
           setReviewedBy("");
           setReviewedByOtherName("");

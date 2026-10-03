@@ -329,7 +329,7 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
         value={residentId}
         disabled={residentLocked}
         onChange={setResidentId}
-        required
+        showRequired
       />
 
       <div>

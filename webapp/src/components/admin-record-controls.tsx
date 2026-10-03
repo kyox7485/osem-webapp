@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, X, TriangleAlert, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "@/components/language-provider";
+import { Combobox } from "@/components/combobox";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 import {
   ADMIN_RECORDS,
@@ -561,16 +562,36 @@ function FieldInput({
     control = (
       <textarea id={id} rows={3} value={text} onChange={(e) => onChange(e.target.value)} disabled={disabled} required={field.required} className={inputCls} />
     );
-  } else if (field.type === "select" || field.type === "staff") {
-    let options = field.type === "staff" ? staffOptions ?? [] : field.options ?? [];
+  } else if (field.type === "staff") {
+    let options = staffOptions ?? [];
     // Keep a current value that is no longer in the list (e.g. inactive staff).
     if (text && !options.some((o) => o.value === text)) options = [{ value: text, label: text }, ...options];
     control = (
+      <Combobox
+        id={id}
+        hideLabel
+        label={t(field.label)}
+        value={text}
+        onChange={(v) => onChange(v)}
+        options={options.map((o) => ({ id: o.value, label: o.label }))}
+        placeholder={staffOptions === null ? t("Loading...") : t("-- None --")}
+        emptyMessage={t("No matching staff")}
+        disabled={disabled}
+        required={field.required}
+        clearable={!field.required}
+        inputClassName={inputCls}
+      />
+    );
+  } else if (field.type === "select") {
+    let options = field.options ?? [];
+    // Keep a current value that is no longer in the list.
+    if (text && !options.some((o) => o.value === text)) options = [{ value: text, label: text }, ...options];
+    control = (
       <select id={id} value={text} onChange={(e) => onChange(e.target.value)} disabled={disabled} required={field.required} className={inputCls}>
-        <option value="">{field.type === "staff" && staffOptions === null ? t("Loading...") : t("-- None --")}</option>
+        <option value="">{t("-- None --")}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
-            {field.type === "staff" ? o.label : t(o.label)}
+            {t(o.label)}
           </option>
         ))}
       </select>

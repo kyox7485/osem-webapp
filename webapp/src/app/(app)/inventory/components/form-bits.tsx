@@ -74,16 +74,19 @@ export function StaffSelect({
       ? t("No active Head Nurse, Assist. Head Nurse or Nursing Director on this branch's staff list. Add one under Staff first.")
       : t("Head Nurse, Assist. Head Nurse or Nursing Director");
   return (
-    <Field label={label ?? t("Performed by")} required hint={hint}>
-      <select className={INPUT_CLS} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{t("Select staff")}</option>
-        {options.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
-    </Field>
+    <div className="text-sm">
+      <Combobox
+        label={label ?? t("Performed by")}
+        showRequired
+        value={value}
+        onChange={onChange}
+        options={options.map((s) => ({ id: s.id, label: s.name }))}
+        placeholder={t("Select staff")}
+        emptyMessage={t("No matching staff")}
+        inputClassName={INPUT_CLS}
+      />
+      {hint && <span className="mt-0.5 block text-xs text-fg-subtle">{hint}</span>}
+    </div>
   );
 }
 
@@ -91,17 +94,11 @@ export function ResidentSelect({
   residents,
   value,
   onChange,
-  onTouch,
   required = true,
 }: {
   residents: InvResident[];
   value: string;
   onChange: (v: string) => void;
-  /**
-   * The form's dirty/touch handler. Picking from the combobox fires no native
-   * change event, so the form's onChangeCapture never sees it -- call it here.
-   */
-  onTouch?: () => void;
   required?: boolean;
 }) {
   const t = useTranslation();
@@ -112,12 +109,9 @@ export function ResidentSelect({
   return (
     <Combobox
       label={t("Resident")}
-      required={required}
+      showRequired={required}
       value={value}
-      onChange={(v) => {
-        onTouch?.();
-        onChange(v);
-      }}
+      onChange={onChange}
       options={options}
       emptyMessage={t("No matching resident")}
       inputClassName={INPUT_CLS}

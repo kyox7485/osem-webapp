@@ -74,7 +74,7 @@ export function AdjustmentRequestForm({
             ))}
           </select>
         </Field>
-        {isTransit && <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} onTouch={state.touch} />}
+        {isTransit && <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} />}
         <Field label={t("Reason")} required>
           <select className={INPUT_CLS} value={reason} onChange={(e) => setReason(e.target.value)}>
             <option value="">{t("Select reason")}</option>

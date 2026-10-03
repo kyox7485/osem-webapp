@@ -159,7 +159,6 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             residents={residents}
             value={residentId}
             onChange={(id) => {
-              markDirty();
               setResidentId(id);
               setReviewedBy("");
               setReviewedByOtherName("");

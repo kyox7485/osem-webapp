@@ -467,12 +467,16 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
               <label htmlFor="restock-prepared" className={labelCls}>
                 {t("Prepared By")}<span className="ml-0.5 text-red-500"> *</span>
               </label>
-              <select id="restock-prepared" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} className={selectCls}>
-                <option value="">{t("Select staff")}</option>
-                {staffOptions.map((s) => (
-                  <option key={s.staffId} value={s.staffId}>{s.name}{s.ownBranch ? "" : ` (${t("HQ")})`}</option>
-                ))}
-              </select>
+              <Combobox
+                id="restock-prepared"
+                hideLabel
+                label={t("Prepared By")}
+                value={preparedBy}
+                onChange={setPreparedBy}
+                options={staffOptions.map((s) => ({ id: s.staffId, label: s.name, hint: s.ownBranch ? undefined : t("HQ") }))}
+                placeholder={t("Select staff")}
+                emptyMessage={t("No matching staff")}
+              />
             </div>
             <button type="button" onClick={resetAll} disabled={isPending} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 py-2 text-sm font-medium text-fg-secondary shadow-sm hover:bg-hover disabled:opacity-40 sm:min-h-10">
               <RotateCcw className="h-4 w-4" aria-hidden />

@@ -503,7 +503,7 @@ export function OrderForm(props: Props) {
               <div className="sm:col-span-2 relative">
                 <Combobox
                   label={t("Resident")}
-                  required
+                  showRequired
                   inputClassName={inputCls}
                   value={residentId}
                   onChange={(id) => {
@@ -891,20 +891,20 @@ export function OrderForm(props: Props) {
                 </Field>
 
                 <Field label={t("Registered By")}>
-                  <select
+                  <Combobox
+                    hideLabel
+                    label={t("Registered By")}
                     value={stockRegisteredBy}
-                    onChange={(e) => {
-                      setStockRegisteredBy(e.target.value);
+                    onChange={(id) => {
+                      setStockRegisteredBy(id);
                       mark();
                     }}
                     disabled={!staffFilterBranchId}
-                    className={inputCls + " cursor-pointer disabled:bg-surface-muted disabled:text-fg-faint"}
-                  >
-                    <option value="">{t("Select staff")}</option>
-                    {stockStaffOptions.map((s) => (
-                      <option key={s.staffId} value={s.staffId}>{s.name}</option>
-                    ))}
-                  </select>
+                    options={stockStaffOptions.map((s) => ({ id: s.staffId, label: s.name }))}
+                    placeholder={t("Select staff")}
+                    emptyMessage={t("No matching staff")}
+                    inputClassName={inputCls}
+                  />
                   {!residentId && (
                     <p className="mt-1 text-xs text-fg-faint">
                       {t("Select a resident first.")}

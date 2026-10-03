@@ -212,7 +212,6 @@ function KindForm({
             )}
             value={residentId}
             onChange={setResidentId}
-            onTouch={state.touch}
           />
         )}
         {op === "RELEASE" && (

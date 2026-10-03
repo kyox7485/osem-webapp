@@ -101,10 +101,7 @@ export function OpeningForm({
                     inputClassName={SMALL_INPUT_CLS}
                     fixedPopup
                     value={l.extra.resident ?? ""}
-                    onChange={(id) => {
-                      state.touch();
-                      setV(id);
-                    }}
+                    onChange={setV}
                     options={residentOptions}
                     emptyMessage={t("No matching resident")}
                   />

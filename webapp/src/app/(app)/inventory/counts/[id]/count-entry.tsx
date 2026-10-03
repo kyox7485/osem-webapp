@@ -242,7 +242,7 @@ export function CountEntry({
           <div className="flex flex-wrap items-end gap-2">
             <Combobox
               label={`${t("Resident")} (${transitProduct.name})`}
-              required
+              showRequired
               inputClassName={INPUT_CLS}
               value={transitResident}
               onChange={setTransitResident}

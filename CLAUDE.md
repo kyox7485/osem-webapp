@@ -160,7 +160,9 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   Script redeploy).
 - `docs/theming.md` — Light/Dark/System architecture, token cheat-sheet,
   coloured-status `dark:` convention, testing checklist.
-- `docs/staff-pickers.md` — **mandatory rules for every staff picker**: (1)
+- `docs/staff-pickers.md` — **mandatory rules for every staff picker**: (0)
+  always a combobox (`StaffPickerWithOther` accepts a typed name not on the
+  roster as the old "Others"); (1)
   never raw-query `tbl_staff` — use `getAllStaffWithBranch()` /
   `getNursingStaff()` / `getStaffRoster()` to get Physiotherapy excluded and
   `branch_function` populated; (2) client filter must be

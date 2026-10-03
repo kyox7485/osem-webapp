@@ -590,12 +590,17 @@ export function InventoryModule({ view, residents, selectedResidentId, branches,
               <label htmlFor="cons-staff" className={labelCls}>
                 {t("Counted By")}<span className="ml-0.5 text-red-500"> *</span>
               </label>
-              <select id="cons-staff" value={countedBy} onChange={(e) => setCountedBy(e.target.value)} className={inputCls}>
-                <option value="">{t("Select staff")}</option>
-                {staffOptions.map((s) => (
-                  <option key={s.staffId} value={s.staffId}>{s.name}{s.ownBranch ? "" : ` (${t("HQ")})`}</option>
-                ))}
-              </select>
+              <Combobox
+                id="cons-staff"
+                hideLabel
+                label={t("Counted By")}
+                value={countedBy}
+                onChange={setCountedBy}
+                options={staffOptions.map((s) => ({ id: s.staffId, label: s.name, hint: s.ownBranch ? undefined : t("HQ") }))}
+                placeholder={t("Select staff")}
+                emptyMessage={t("No matching staff")}
+                inputClassName={inputCls}
+              />
             </div>
           </div>
 

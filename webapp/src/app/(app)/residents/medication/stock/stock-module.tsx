@@ -443,14 +443,17 @@ function EntryModal({ row, entryType, staffOptions, history, onClose, onSaved }:
             {t("Registered By")}
             <span className="ml-0.5 text-red-500"> *</span>
           </label>
-          <select id="stock-staff" value={registeredBy} onChange={(e) => setRegisteredBy(e.target.value)} className={inputCls}>
-            <option value="">{t("Select staff")}</option>
-            {staffOptions.map((s) => (
-              <option key={s.staffId} value={s.staffId}>
-                {s.name}{s.ownBranch ? "" : ` (${t("HQ")})`}
-              </option>
-            ))}
-          </select>
+          <Combobox
+            id="stock-staff"
+            hideLabel
+            label={t("Registered By")}
+            value={registeredBy}
+            onChange={setRegisteredBy}
+            options={staffOptions.map((s) => ({ id: s.staffId, label: s.name, hint: s.ownBranch ? undefined : t("HQ") }))}
+            placeholder={t("Select staff")}
+            emptyMessage={t("No matching staff")}
+            inputClassName={inputCls}
+          />
         </div>
 
         <div className="rounded-md bg-surface-muted px-3 py-2 text-sm text-fg-secondary">

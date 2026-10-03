@@ -18,8 +18,12 @@ const INPUT_CLS =
 
 export type ComboboxChangeReason = "select" | "clear" | "type";
 
-/** A combobox option; `hint` is shown dimmed beside the label and is searchable. */
-export type ComboboxOption = LookupOption & { hint?: string };
+/**
+ * A combobox option. `hint` is shown dimmed beside the label and is
+ * searchable; `pinned` keeps the option listed whatever is typed (e.g. a
+ * trailing "Others (specify below)").
+ */
+export type ComboboxOption = LookupOption & { hint?: string; pinned?: boolean };
 
 type Props = {
   /** Selected option id as a string ("" = nothing selected). */
@@ -47,8 +51,21 @@ type Props = {
    * a placeholder, a toolbar row) and would grow an extra line otherwise.
    */
   hideLabel?: boolean;
-  /** Marks the field required (red asterisk + aria-required). Validation stays with the caller. */
+  /**
+   * Red asterisk + aria-required, and native form validation: submitting the
+   * surrounding <form> with nothing selected is blocked with a browser bubble
+   * on this field, like a required <select>.
+   */
   required?: boolean;
+  /**
+   * Red asterisk + aria-required only, no native validation -- for fields the
+   * caller already validates (disabled submit, server error codes) and that
+   * were never browser-enforced. Don't switch these to `required`: it would
+   * add a blocking check the form never had.
+   */
+  showRequired?: boolean;
+  /** Renders a hidden input with this name carrying `value`, for FormData submits. */
+  name?: string;
   disabled?: boolean;
   /**
    * Shows an × button that clears the selection -- for filters where ""
@@ -67,6 +84,12 @@ type Props = {
    * where the option list alone cannot express the new value.
    */
   onQueryChange?: (query: string) => void;
+  /**
+   * Free-text mode: while no option is selected, the box shows this caller-
+   * owned text (keep it in sync from onQueryChange). Lets a picker accept a
+   * name that isn't on the list and restore it when the form reopens.
+   */
+  freeText?: string;
 };
 
 /**
@@ -90,10 +113,13 @@ export function Combobox({
   inputClassName,
   hideLabel,
   required,
+  showRequired,
+  name,
   disabled,
   clearable,
   fixedPopup,
   onQueryChange,
+  freeText,
 }: Props) {
   const t = useTranslation();
   const generatedId = useId();
@@ -105,7 +131,7 @@ export function Combobox({
   // While an option is selected the input shows that option's label; typing
   // clears the selection first (see handleChange) so the user can search
   // without the old name snapping back on every keystroke.
-  const [query, setQuery] = useState(selected ? selected.label : "");
+  const [query, setQuery] = useState(selected ? selected.label : (freeText ?? ""));
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -128,8 +154,14 @@ export function Combobox({
   const [typedOver, setTypedOver] = useState(false);
   if (selected?.id !== seenSelectedId) {
     setSeenSelectedId(selected?.id);
-    if (selected || !typedOver) setQuery(selected ? selected.label : "");
+    if (selected || !typedOver) setQuery(selected ? selected.label : (freeText ?? ""));
     setTypedOver(false);
+  }
+  // Free-text mode: follow the caller's text (e.g. a form reset clearing it).
+  const [seenFreeText, setSeenFreeText] = useState(freeText);
+  if (freeText !== seenFreeText) {
+    setSeenFreeText(freeText);
+    if (!selected && freeText !== undefined) setQuery(freeText);
   }
 
   // No cap on the list: with an empty box the user must be able to scroll to
@@ -139,7 +171,7 @@ export function Combobox({
     const q = query.trim().toLowerCase();
     if (!q) return options;
     return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || (o.hint?.toLowerCase().includes(q) ?? false)
+      (o) => o.pinned || o.label.toLowerCase().includes(q) || (o.hint?.toLowerCase().includes(q) ?? false)
     );
   }, [options, query, hasQuery]);
 
@@ -181,6 +213,35 @@ export function Combobox({
     };
   }, [fixedPopup, isOpen]);
 
+  // Native validation for `required`: the visible input holds search text, not
+  // the value, so its own `required` would pass on a half-typed name.
+  const invalidMessage = t("Please select an option from the list.");
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(required && !value ? invalidMessage : "");
+  }, [required, value, invalidMessage]);
+
+  // Picking an option changes no text the user typed, so React fires no
+  // onChange and an ancestor's onChangeCapture (the app-wide dirty guard,
+  // inventory's state.touch) would never hear about it -- a plain <select>
+  // fired one. Emit a real input event so every such form keeps working
+  // unchanged. Setting the value through the prototype setter bypasses
+  // React's value tracker, so React treats it as a user edit; our own
+  // handleChange ignores it via `emittingRef`.
+  const emittingRef = useRef(false);
+  function emitChange(text: string) {
+    const el = inputRef.current;
+    if (!el) return;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (!setter) return;
+    emittingRef.current = true;
+    try {
+      setter.call(el, text);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    } finally {
+      emittingRef.current = false;
+    }
+  }
+
   // Keep the arrowed-to option scrolled into view inside the listbox.
   useEffect(() => {
     if (activeIndex < 0 || !listRef.current) return;
@@ -193,6 +254,7 @@ export function Combobox({
     setQuery(option.label);
     setIsOpen(false);
     setActiveIndex(-1);
+    emitChange(option.label);
   }
 
   function clear() {
@@ -200,9 +262,11 @@ export function Combobox({
     setQuery("");
     onQueryChange?.("");
     setActiveIndex(-1);
+    emitChange("");
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (emittingRef.current) return;
     const text = e.target.value;
     setQuery(text);
     setIsOpen(true);
@@ -277,9 +341,10 @@ export function Combobox({
         className={`mb-1 block text-sm font-medium text-fg-secondary ${hideLabel ? "sr-only" : ""}`}
       >
         {label}
-        {required && <span className="text-red-500"> *</span>}
+        {(required || showRequired) && <span className="text-red-500"> *</span>}
       </label>
       <div className="relative">
+        {name && <input type="hidden" name={name} value={value} />}
         <input
           ref={inputRef}
           id={inputId}
@@ -289,7 +354,7 @@ export function Combobox({
           aria-controls={listboxId}
           aria-autocomplete="list"
           aria-activedescendant={activeId}
-          aria-required={required || undefined}
+          aria-required={required || showRequired || undefined}
           value={query}
           disabled={disabled}
           onChange={handleChange}

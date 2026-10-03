@@ -299,10 +299,7 @@ export function ReceiveForm({
                   inputClassName={SMALL_INPUT_CLS}
                   fixedPopup
                   value={l.extra.resident ?? ""}
-                  onChange={(id) => {
-                    state.touch();
-                    setV(id);
-                  }}
+                  onChange={setV}
                   options={residentOptions}
                   placeholder={t("Store (no allocation)")}
                   clearable

@@ -45,7 +45,7 @@ export function ServiceChargeForm({
   return (
     <form className="space-y-4" onChangeCapture={state.touch} onSubmit={onSubmit}>
       <div className={`${CARD_CLS} grid gap-3 sm:grid-cols-2`}>
-        <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} onTouch={state.touch} />
+        <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} />
         <Field label={t("Date")} required>
           <input type="date" className={INPUT_CLS} max={todayKL()} value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>

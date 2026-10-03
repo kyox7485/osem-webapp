@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { dischargeResident } from "../actions";
 import { useTranslation } from "@/components/language-provider";
+import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker-with-other";
 
 type StaffOption = { id: number | string; label: string };
 
@@ -18,8 +19,9 @@ export function DischargeButton({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [staffValue, setStaffValue] = useState("");
+  const [staffOther, setStaffOther] = useState("");
 
-  const isOthers = staffValue === "__others__";
+  const isOthers = staffValue === OTHERS_SENTINEL;
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -76,31 +78,24 @@ export function DischargeButton({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-fg-muted mb-1">
+                <label htmlFor="discharged-by" className="block text-xs font-medium text-fg-muted mb-1">
                   {t("Recorded by")} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="discharged_by"
+                {/* Same FormData fields as before: discharged_by, plus
+                    discharged_by_other only when the name isn't on the list. */}
+                <input type="hidden" name="discharged_by" value={staffValue} />
+                {isOthers && <input type="hidden" name="discharged_by_other" value={staffOther} />}
+                <StaffPickerWithOther
+                  id="discharged-by"
+                  label={t("Recorded by")}
                   value={staffValue}
-                  onChange={(e) => setStaffValue(e.target.value)}
-                  required={!isOthers}
+                  otherName={staffOther}
+                  onValueChange={setStaffValue}
+                  onOtherNameChange={setStaffOther}
+                  staffOptions={allStaff}
+                  required
                   className={inputCls}
-                >
-                  <option value="" disabled>{t("Select staff")}</option>
-                  {allStaff.map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                  <option value="__others__">{t("Others")}</option>
-                </select>
-                {isOthers && (
-                  <input
-                    name="discharged_by_other"
-                    type="text"
-                    required
-                    placeholder={t("Enter name")}
-                    className={`${inputCls} mt-2`}
-                  />
-                )}
+                />
               </div>
 
               {error && (

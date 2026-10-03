@@ -3,6 +3,7 @@
 import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { TabRow, TabButton } from "@/components/tabs";
+import { Combobox } from "@/components/combobox";
 import type { PeriodKey } from "./data";
 
 type Props = {
@@ -104,19 +105,22 @@ export function DashboardFilters({ period, start, end, branch, view, therapist, 
 
         {view === "individual" && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-fg-secondary">{t("Therapist")}</label>
-            <select
+            <label htmlFor="dashboard-therapist" className="mb-1 block text-xs font-medium text-fg-secondary">{t("Therapist")}</label>
+            <Combobox
+              id="dashboard-therapist"
+              hideLabel
+              label={t("Therapist")}
               value={therapist}
-              onChange={(e) => navigate({ therapist: e.target.value })}
-              className="w-full rounded-md border border-line-strong bg-input text-fg px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">{t("Select therapist")}</option>
-              {therapists.map((th) => (
-                <option key={th.id} value={th.id}>
-                  {th.label}
-                </option>
-              ))}
-            </select>
+              // URL filter: navigate on a pick or clear, not while typing.
+              onChange={(id, reason) => {
+                if (reason !== "type") navigate({ therapist: id });
+              }}
+              options={therapists}
+              placeholder={t("Select therapist")}
+              emptyMessage={t("No matching staff")}
+              clearable
+              inputClassName="w-full rounded-md border border-line-strong bg-input text-fg px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
           </div>
         )}
       </div>

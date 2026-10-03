@@ -20,13 +20,10 @@ Medication Charts used to, and both were migrated onto `Combobox`.
 
 1. **Show the resident ID as `hint`** when you have it (`AMN-0138`). It is
    rendered dimmed beside the name and is searchable.
-2. **Forms with a dirty guard must mark dirty in `onChange`.** Picking an option
-   fires no native change event, so `onChangeCapture={markDirty}` /
-   `state.touch` never sees it:
-   ```tsx
-   <ResidentCombobox ... onChange={(id) => { markDirty(); setResidentId(id); }} />
-   <ResidentSelect ... onTouch={state.touch} />
-   ```
+2. **Dirty guards work automatically.** Picking or clearing emits a real
+   `input` event, so a form's `onChangeCapture={markDirty}` / `state.touch`
+   hears it exactly like a native `<select>` change. Don't add manual
+   `markDirty()` calls for the picker.
 3. **URL-driven filters must ignore `reason === "type"`.** `Combobox.onChange`
    is `(id, reason)` where reason is `"select" | "clear" | "type"`. Typing over
    the current name reports `("", "type")`; navigating on it would reload the
@@ -42,8 +39,15 @@ Medication Charts used to, and both were migrated onto `Combobox`.
 5. **Labels:** the combobox renders its own `<label>`. Don't wrap it in another
    `<label>` (e.g. inventory `Field`). If the layout already has a visible
    label, pass `hideLabel` and keep the same `id` so `htmlFor` still points at
-   the input. `required` adds the red asterisk only — validation stays in the
-   submit handler.
+   the input.
+   **Validation — keep whatever the field had before:**
+   - was a native `required` `<select>` → `required` (blocks submit with
+     "Please select an option from the list.");
+   - only showed an asterisk and the form validated it itself → `showRequired`
+     (asterisk only). Switching these to `required` adds a check the form never
+     had.
+   - FormData submits: pass `name` (hidden input) or keep the caller's own
+     hidden inputs.
 6. **Locked selection:** pass `disabled` (e.g. wound photo after the first
    upload).
 7. All text goes through `t()`; `"No matching resident"` and

@@ -1,5 +1,28 @@
 # Staff Pickers — rules for every new picker
 
+## Rule 0 — always a combobox, never a plain `<select>`
+
+Every staff picker uses the shared combobox (scroll the roster or type to
+narrow it); the mechanics, validation and dirty-guard rules are the same as
+`docs/resident-picker.md`.
+
+| Situation | Use |
+|---|---|
+| Clinical / physio / residents / medication "by" fields that also accept a name not on the roster | `StaffPickerWithOther` |
+| Inventory forms (`InvStaff[]`) | `StaffSelect` in `inventory/components/form-bits.tsx` |
+| Anything else | `Combobox` (`hint: t("HQ")` for HQ staff where the list mixes branches) |
+
+`StaffPickerWithOther` has **no "Others (specify below)" item any more** — the
+user just types a name. A typed name that exactly matches a roster entry
+(case-insensitive) selects that staff member; any other non-blank text is
+reported exactly as the old Others choice was: `value = OTHERS_SENTINEL` and
+the text via `onOtherNameChange`. So callers' validation
+(`!value || (value === OTHERS_SENTINEL && !otherName.trim())`) and payloads
+are unchanged. Native `required` is preserved (blank box blocks submit).
+Existing "other" names re-display in the box via the `freeText` prop.
+
+---
+
 Every `<StaffPickerWithOther>` (and any future equivalent) in this project
 must follow the two rules below. Both rules were applied project-wide in
 October 2026 and are verified by TypeScript: any picker that breaks the

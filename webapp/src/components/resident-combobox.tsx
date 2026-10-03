@@ -17,7 +17,10 @@ type Props = {
    * or the × button does -- so a URL-driven filter never navigates mid-search.
    */
   filterPlaceholder?: string;
+  /** Native browser validation (the field was a `required` <select>). */
   required?: boolean;
+  /** Asterisk only; the form validates the resident itself. */
+  showRequired?: boolean;
   disabled?: boolean;
   hideLabel?: boolean;
   id?: string;
@@ -27,9 +30,7 @@ type Props = {
 
 /**
  * The resident picker used across Clinical: scroll the full list or type part
- * of a name to narrow it. Selection callbacks fire no native change event, so
- * a form relying on onChangeCapture for its dirty guard must mark itself
- * dirty in `onChange`.
+ * of a name to narrow it. See docs/resident-picker.md.
  */
 export function ResidentCombobox({ residents, value, onChange, label, filterPlaceholder, ...rest }: Props) {
   const t = useTranslation();

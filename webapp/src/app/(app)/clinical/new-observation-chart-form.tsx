@@ -226,11 +226,8 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
           <ResidentCombobox
             residents={residents}
             value={residentId}
-            onChange={(id) => {
-              markDirty();
-              setResidentId(id);
-            }}
-            required
+            onChange={setResidentId}
+            showRequired
           />
           <div>
             <label className={labelCls}>{t("Date & time")}</label>

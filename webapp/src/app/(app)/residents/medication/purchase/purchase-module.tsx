@@ -473,20 +473,16 @@ export function PurchaseModule({
                 {t("Prepared By")}
                 <span className="ml-0.5 text-red-500">*</span>
               </label>
-              <select
+              <Combobox
                 id="purchase-prepared-by"
+                hideLabel
+                label={t("Prepared By")}
                 value={preparedBy}
-                onChange={(e) => setPreparedBy(e.target.value)}
-                className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">{t("Select staff")}</option>
-                {staffOptions.map((s) => (
-                  <option key={s.staffId} value={s.staffId}>
-                    {s.name}
-                    {s.ownBranch ? "" : ` (${t("HQ")})`}
-                  </option>
-                ))}
-              </select>
+                onChange={setPreparedBy}
+                options={staffOptions.map((s) => ({ id: s.staffId, label: s.name, hint: s.ownBranch ? undefined : t("HQ") }))}
+                placeholder={t("Select staff")}
+                emptyMessage={t("No matching staff")}
+              />
             </div>
             <button
               type="button"
