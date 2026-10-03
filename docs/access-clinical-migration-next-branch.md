@@ -23,6 +23,7 @@ transfer — they are specific to AMN's people.
 | 4 | Dry-run first, and actually read the report | The skip reasons in the report are the review material. A dry run is the only place a 156-row misattribution is visible before it is committed. |
 | 5 | Check whether the master list has duplicate registrations | Both `tbl_residents` and `tbl_physio_op_patients` had people entered 2–3× under one IC. This is the single largest source of "ambiguous name" false alarms. |
 | 6 | **Pin the session timezone before writing any timestamp** | §1a. Its absence silently displaced 15,653 clinical timestamps by 8 hours. |
+| 7 | **Check database size, and that imports skip the audit log** | `run_migration.py` sets `osem.skip_audit` (honoured by `fn_audit_trigger` only for `session_user = 'postgres'`, `schema/025_audit_skip_for_bulk_import.sql`). Before it, every imported row was also copied into `tbl_audit_log`: 864 MB of a 1,125 MB DB, which forced the free-tier project read-only and broke **every login** on 2026-10-03. Any *other* bulk script must set it too. Check `pg_database_size` stays well under the plan limit (500 MB on Free) before and after each branch. |
 
 ---
 
