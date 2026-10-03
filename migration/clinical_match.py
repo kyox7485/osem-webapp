@@ -88,6 +88,10 @@ RESIDENT_OVERRIDES: dict[str, int] = {
     "SHUM": 649,                 # note on 2025-03-30, his discharge day; only Shum on record
     "LOH MUY CHUNG": 745,        # LOH MOOI CUNG; note 2025-03-10 = admission day
     "KUMAR": 716,                # PULAMI KUMAR; the only Kumar resident on 2024-12-16
+    # BMN (branch BMN), owner-confirmed 2026-10-03
+    "LIM BEE HUAN": 251,         # LIM BEE HUAH, misspelled; her 31 chart rows
+                                  # run 2023-07-05..11, inside admission
+                                  # 2023-07-06..2023-08-05 (deceased)
 }
 
 # Access staff names that are not the person's name. 'patricia' is Teoh Ying
@@ -162,6 +166,52 @@ BRANCH_STAFF_ALIASES: dict[str, dict[str, str]] = {
         # typed into the wrong box. Left unattributed by owner decision.
         "alice": UNATTRIBUTED,
     },
+    # BMN (branch BMN), owner-confirmed 2026-10-03. The roster holds a
+    # second person of the same name at another branch for every entry
+    # below except 'aliyatul' (no second Aliya); the branch pick is
+    # therefore required, not optional.
+    "BMN": {
+        # Ros worked at BMN and subsequently at AMN -- the BMN chart rows
+        # are hers, but the roster also holds BGN-0035 and AMN-0020.
+        "ros": "BMN-0024",
+        # Aliyatul is how Access writes Aliya (BMN-0003).
+        "aliyatul": "BMN-0003",
+        # Deborah is now at BGN (BGN-0033); the BMN rows predate the
+        # transfer and belong to her BMN registration (BMN-0018).
+        "deborah": "BMN-0018",
+        # Yanie likewise exists at BGN (BGN-0006) and BMN (BMN-0010);
+        # the BMN chart rows are the BMN registration.
+        "yanie": "BMN-0010",
+        # 'j.ranjeetha' / 'SN J.RANJEETHA': Ranjeetha with an initial and
+        # the staff-nurse prefix written in. Normalisation drops the '.' but
+        # keeps the initial, so a generic rule never matches.
+        "j ranjeetha": "BMN-0017",
+        "sn j ranjeetha": "BMN-0017",
+        # Rubeni on locum from BGN (BGN-0007 is her home registration).
+        "locum rubeni": "BGN-0007",
+        # HQ staff charting at BMN by given name: 'teoh' is Teoh Ying
+        # Ying (HQ-0003, the Nursing Director who reviews at every branch),
+        # 'suying' is Hoo Suying (HQ-0004). Neither given name is on the
+        # BMN roster, so the cross-branch index would report both as
+        # unknown; the pick is asserted here.
+        "teoh": "HQ-0003",
+        "suying": "HQ-0004",
+        # 'CG AMIRA' / 'cg amira' (no dash): Fatin Amira (BMN-0001). The
+        # dashed form resolves through _LEADING_ROLE_RE; the bare one does
+        # not, so it is asserted.
+        "cg amira": "BMN-0001",
+        "amira": "BMN-0001",
+        # 'SN HIDAYAH' / 'SN ALIYA' / 'SN SHAFIRAH' / 'SHUHADA' variants:
+        # the SN prefix with no dash. 'shafirah' is Nur Shafirah (AMN-0028)
+        # -- she is the only Shafirah on the roster.
+        "sn hidayah": "BMN-0004",
+        "sn aliya": "BMN-0003",
+        "sn shafirah": "AMN-0028",
+        "shafirah": "AMN-0028",
+        # 'Hassan' appears on BMN charts but is on no roster: a part-time
+        # or locum nurse. Left for the part-time review, NOT aliased --
+        # two people can share the given name.
+    },
 }
 
 # Names that match no roster entry and that the owner APPROVED, one by one, to
@@ -173,6 +223,19 @@ APPROVED_PART_TIME: dict[str, dict[str, str]] = {
         "asyiqin": "Asyiqin",
         "ayu": "Ayu",
         "siti": "Siti",
+    },
+    # BMN: treat unmatched staff as part-time (owner instruction 2026-10-03).
+    # Names below appear on chart/review notes but are not in tbl_staff.
+    # Each is approved individually from the dry-run report (18 total).
+    "BMN": {
+        "cg rose": "Rose",
+        "fatin": "Fatin",
+        "aisyah": "Aisyah",
+        "marshitah": "Marshitah",
+        "shuhada": "Shuhada",
+        "hassan": "Hassan",
+        "suhana": "Suhana",
+        "aliyatul": "Aliyatul",  # already aliased; keep as fallback
     },
 }
 
@@ -218,9 +281,13 @@ _HONORIFIC_PREFIX_RE = re.compile(r"^(?:nur|sr|enrolled)\b\s*", re.IGNORECASE)
 
 # A job title written in front of the name rather than after it, in the
 # separator style Access used for the same thing elsewhere: 'physiotherapist -
-# Athirah', 'Dr - Lim'. Stripped, leaving the person.
+# Athirah', 'Dr - Lim'. Stripped, leaving the person. The BMN exports also
+# write 'Nurse - Dahlia', 'CG - Fatin Amira' and 'MA - Osman' (caregiver /
+# medical assistant), so those titles are included -- with the dash separator
+# required, a name that merely starts with one of these words is untouched.
 _LEADING_ROLE_RE = re.compile(
-    r"^(?:dr|physiotherapist|physiotherapy|physio|therapist)\b\.?\s*[-–—|]\s+",
+    r"^(?:dr|physiotherapist|physiotherapy|physio|therapist"
+    r"|nurse|cg|ma)\b\.?\s*[-–—|]\s+",
     re.IGNORECASE,
 )
 
@@ -315,14 +382,48 @@ def _resident_override(raw_name: str | None) -> tuple[int, str] | None:
 # 2025-12-14. Her 21 NursingChart rows split 15 (Jan 2025) / 6 (Dec 2025); the
 # undated RESIDENT_OVERRIDES entry would have put all 21 on 738. Used only when
 # the caller passes the note's date; otherwise RESIDENT_OVERRIDES applies.
+#
+# BMN additions (owner-confirmed 2026-10-03). The chart holds no IC column,
+# so the same-name registrations can only be separated by date:
+#
+#   LIM POH CHENG is TWO PEOPLE with different ICs (591129075079 / 440709075018).
+#   id 315 was admitted 2025-01-21 and discharged 2025-02-23; id 343 was
+#   admitted 2026-02-12 and is ACTIVE. The 1,528 chart rows split cleanly:
+#   165 inside 315's window, 1,363 inside 343's, none after 315's discharge
+#   until 343's admission.
+#
+#   TAN CHUNG TIAN was admitted twice, with a 5-month gap (discharged
+#   2026-01-31, re-admitted 2026-07-06, discharged 2026-09-10). The ICs are
+#   350119025273 and 35119025273 -- the second is missing a digit, so they do
+#   not read as the same person; the gap and the two windows settle it. 293 rows
+#   in the first admission, 367 in the second.
+#
+#   LIM CHOON YAM is ONE PERSON re-admitted: the SAME IC 630527075110 on both
+#   registrations (293 admitted 2024-07-14..18, 347 admitted 2026-03-12..16).
+#   The generic duplicate-collapse would wrongly pick 293 for every row; the
+#   admission window picks the right one (30 rows vs 26).
+#
+#   LIM JIN KEW @ LIM AH KEW is ONE PERSON re-admitted too (IC 480801075009 on
+#   both 217 and 327): 6,929 chart rows under the full name, plus 2 progress
+#   notes and 3 chart rows under the bare alias 'LIM AH KEW'. The alias is not
+#   a master-list name key (only the pre-'@' primary is), so it also needs an
+#   asserted entry. First admission 2023-01-01..2025-05-31, second from
+#   2025-06-11, ACTIVE.
 ADMISSION_WINDOW_OVERRIDES: dict[str, tuple[int, ...]] = {
     "QUAH CHEOW GUAT": (738, 778),
+    # BMN
+    "LIM POH CHENG": (315, 343),
+    "TAN CHUNG TIAN": (339, 357),
+    "LIM CHOON YAM": (293, 347),
+    "LIM JIN KEW @ LIM AH KEW": (217, 327),
+    "LIM AH KEW": (217, 327),
 }
 
 SPELLING_OVERRIDES: frozenset[str] = frozenset({
     "HANG MA SANG", "THE SOCK LEK", "TAN HUA SHE", "LEE SHEAU HUEY", "HG AH HUAH",
     "TANG SAW YING", "TAN GUEK LAN", "NG WILLL JEAH", "SHUM UM CHIN CHOON", "SHUM",
     "LOH MUY CHUNG", "KUMAR",
+    "LIM BEE HUAN",  # BMN: misspelling of LIM BEE HUAH (id 251)
 })
 
 
@@ -445,9 +546,16 @@ class ResidentIndex:
             self.ids.add(rid)
             self.admitted[rid] = admitted
             if ic:
-                normalised = IC_ALIASES.get(str(ic).strip(), str(ic).strip())
-                self.by_ic.setdefault(normalised, rid)
-                self.ic_of[rid] = normalised
+                # The DB stores some ICs with dashes ('630527-07-5110')
+                # while the Access exports hold the same number bare
+                # ('630527075110'). clean_ic() strips to digits on BOTH
+                # sides, which is what makes the IC match work at all for
+                # those residents; the AMN run matched only the
+                # already-bare DB values by accident of their formatting.
+                normalised = clean_ic(ic)
+                if normalised:
+                    self.by_ic.setdefault(normalised, rid)
+                    self.ic_of[rid] = normalised
             for key in resident_match_keys(name):
                 self.by_name[key].add(rid)
         self.total = len(rows)

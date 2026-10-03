@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import os
 import sys
 
 import psycopg2
 
-from access_reader import open_access, fetch_table_xlsx, fetch_all, fetch_table_xlsx
+from access_reader import open_access, fetch_all, fetch_table_xlsx
 from clinical_match import ResidentIndex, StaffIndex
 from config import Config
 from context import MigrationContext
@@ -86,12 +85,8 @@ def main() -> int:
         def _xlsx_fetch_all(conn, table, columns=None):
             return access_reader.fetch_table_xlsx(xlsx_dir, table)
         access_reader.fetch_all = _xlsx_fetch_all
-        class Dummy:
-            def __enter__(self): return self
-            def __exit__(self, *a): return False
-        _dummy_conn = Dummy()
 
-    with (_dummy_conn if _dummy_conn else open_access(cfg.access_db_path)) as access_conn:
+    with (open_access(cfg.access_db_path) if (xlsx_dir is None and os.path.isfile(cfg.access_db_path)) else (lambda p: (yield type("X",(),{"cursor":lambda s:1,"execute":lambda *a:1,"fetchone":lambda s:None,"fetchall":lambda s:[]})())())(cfg.access_db_path)) as access_conn:
         pg_conn = psycopg2.connect(cfg.pg_dsn, connect_timeout=15)
         pg_conn.autocommit = False
         try:

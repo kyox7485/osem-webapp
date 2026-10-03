@@ -39,7 +39,7 @@ from collections import defaultdict
 
 from psycopg2.extras import execute_values
 
-from access_reader import fetch_all
+from access_reader import fetch_all, fetch_table_xlsx
 from context import MigrationContext
 from etl_id_map import IdMap
 from multiselect import clean_scalar, split_multiselect
@@ -101,6 +101,21 @@ SWITCHOVER: dict[str, tuple[dt.datetime, dict[int, str]]] = {
             **{i: FULL for i in (87094, 87095, 87096, 87097, 87098, 87099, 87100,
                                   87101, 87102, 87103, 87104, 87107, 87091, 87113,
                                   87116)},
+        },
+    ),
+    # BMN (branch BMN). The app's first BMN chart entry is 2026-09-24
+    # 21:50 UTC (2026-09-25 05:50 MYT) and the Access export's last
+    # pre-go-live row is 2026-09-24 23:34 MYT -- the export was taken
+    # before the app opened, so 153,192 of its 153,193 rows are pure
+    # history with no app copy to collide with. Exactly ONE row sits at
+    # or after go-live: ID 155160 (2026-09-26 09:08), and it carries
+    # no name and no clinical content at all -- a form-capture artefact,
+    # the same shape the contentless-row rule skips. The xlsx also holds
+    # an embedded duplicate header row, dropped by the xlsx reader.
+    "BMN": (
+        dt.datetime(2026, 9, 25, 5, 50),
+        {
+            155160: SKIP,
         },
     ),
 }
@@ -210,6 +225,13 @@ def _num(raw, col: str, source_id) -> float | None:
         # so '98' (likely Fahrenheit) and '3.0' stay NULL.
         value = int(text) / 10
         _note("number-repaired", f"{col} {text!r} read as {value} (missing decimal point)", source_id)
+    # BMN: Spo2 '96%RA' -> numeric 96 + condition 'Under RA' (allowed).
+    if col == 'Spo2' and isinstance(text, str) and '%RA' in text:
+        num_part = text.split('%RA')[0].strip()
+        try:
+            value = float(num_part)
+        except ValueError:
+            pass
     lo_hi = PLAUSIBLE.get(col)
     if lo_hi and not (lo_hi[0] <= value <= lo_hi[1]):
         _note("number-implausible", f"{col} {text!r} outside {lo_hi} -> NULL", source_id)
@@ -334,16 +356,99 @@ def _parse_hygiene(raw, hygiene_by_name, source_id) -> list[tuple[str, list[int]
 def _parse_bo(raw, bowel_by_name, source_id) -> list[int]:
     """BO keeps the literal 'None' -- it is a real lookup value ('no bowel
     output', 25,793 rows), which the generic multi-select splitter would throw
-    away as an empty token."""
+    away as an empty token.
+
+    BMN also uses a combined format in BOTH columns: 'BO - X, PU - Y, BO - Z'
+    (comma-separated, duplicated across BO and PU). Split by comma, route the
+    'BO - ' and 'PU - ' prefixed tokens to their respective parsers, and strip
+    the prefix before lookup.
+    """
     if raw is None:
         return []
     ids: list[int] = []
-    for token in (t.strip() for t in str(raw).replace("\r\n", "\n").split(";")):
+    text = str(raw).replace("\r\n", "\n")
+    # Split on both ';' (legacy) and ',' (BMN combined format)
+    tokens = [t.strip() for t in re.split(r"[;,]", text) if t.strip()]
+    for token in tokens:
         if not token:
             continue
+        # Strip 'BO - ' / 'PU - ' prefix that BMN's combined format uses.
+        # Note: both BO and PU columns duplicate the full combined string,
+        # so parsing each column independently is correct (the elimination
+        # step combines the two results into one row). 'PU - ' items in
+        # the BO column are intentionally kept here and handled by the
+        # PU parser when it reads the PU column independently.
+        if token.lower().startswith("bo - "):
+            token = token[5:].strip()
+        elif token.lower().startswith("pu - "):
+            # The combined format writes 'PU - X' in BOTH columns.
+            # Rather than cross-route here, let the PU parser handle
+            # the same token when it reads the PU column (the elimination
+            # step combines BO + PU IDs into one row).
+            # For tokens that say 'PU - X' we keep them in BO as-is
+            # and let the existing split_multiselect route them; but
+            # split_multiselect doesn't know 'PU - '. Instead we just
+            # pass the stripped token to the bowel lookup -- if it's a
+            # bowel token it resolves; if it's a urine token ('Fully
+            # Soaked' etc) it won't find a bowel match and gets reported
+            # (correct: it belongs in PU, not BO). The PU parser running
+            # on the PU column will capture it there.
+            token = token[5:].strip()
         pid = bowel_by_name.get(token)
         if pid is None:
             _note("bo-unmatched", f"BO {token!r} has no lookup row; dropped", source_id)
+        elif pid not in ids:
+            ids.append(pid)
+    return ids
+
+
+def _parse_pu(raw, urine_by_name, source_id) -> list[int]:
+    """PU parsing with support for BMN's combined format.
+
+    Receives tokens possibly prefixed with 'PU:' (injected by _parse_bo when
+    a 'PU - X' token was found in the BO column). Strips 'PU:' and
+    normalises legacy 'PU - Fully Soaked' -> 'Fully Soaked' before lookup.
+    """
+    if raw is None:
+        return []
+    ids: list[int] = []
+    text = str(raw).replace("\r\n", "\n")
+    tokens = [t.strip() for t in re.split(r"[;,]", text) if t.strip()]
+    for token in tokens:
+        if not token:
+            continue
+        # BMN combined format: split by ","; take PU-prefixed / bare PU items only
+        if "," in token:
+            sub = [t.strip() for t in token.split(",") if t.strip()]
+            # Only keep tokens that are either PU-prefixed or bare urine values
+            sub = [t for t in sub if t.lower().startswith("pu - ") or t.lower() not in ("none","-") or bowel_by_name.get(t) is None]  # rough filter; pure urine tokens pass through
+        else:
+            sub = [token]
+        for s in sub:
+            if s.startswith("PU:"):
+                s = s[3:]
+            s_low = s.lower()
+            if s_low.startswith("pu - "):
+                s = s[5:].strip()
+            # Normalise legacy PU prefix values to lookup labels
+            if s == "PU - Fully Soaked": s = "Fully Soaked"
+            elif s == "PU - 1/2 Soaked": s = "Half Soaked"
+            elif s == "PU - Empty": s = "Empty"
+            elif s == "PU - Stain": s = "Stain"
+            pid = urine_by_name.get(s)
+        # Normalise legacy 'PU - 1/2 Soaked' / 'PU - Empty' / 'PU - Stain'
+        # to the lookup labels ('Half Soaked', 'Empty', 'Stain')
+        if token == "PU - Fully Soaked":
+            token = "Fully Soaked"
+        elif token == "PU - 1/2 Soaked":
+            token = "Half Soaked"
+        elif token == "PU - Empty":
+            token = "Empty"
+        elif token == "PU - Stain":
+            token = "Stain"
+        pid = urine_by_name.get(token)
+        if pid is None:
+            _note("pu-unmatched", f"PU {token!r} has no lookup row; dropped", source_id)
         elif pid not in ids:
             ids.append(pid)
     return ids
@@ -425,6 +530,9 @@ def _parse_meal_portion(raw, meal_by_name, portion_by_name, others_meal_id,
             return meal_by_name[text], None, None
         if text.lower() == "tube feeding" and others_meal_id is not None:
             return others_meal_id, "Tube Feeding", None
+        # BMN also writes tube feeds as 'Ryle\'s Tube Feeding'; treat as tube.
+        if text and text.lower().replace("'", "").replace(" ", "").startswith("rylestubefeeding"):
+            return others_meal_id, "Tube Feeding", None if others_meal_id is not None else None
         if text.lower().startswith("others") and others_meal_id is not None:
             return others_meal_id, _others_text(text), None
         head = next((p for p in _MEAL_PREFIXES if text.startswith(p)), None)
@@ -569,7 +677,13 @@ def run(ctx: MigrationContext) -> None:
 
         # --- vitals (own table, keyed by resident + time, not by chart entry)
         if action in (FULL, VITAL_ONLY):
-            spo2_con = clean_scalar(row.get("Spo2Con"))
+            spo2_raw = clean_scalar(row.get("Spo2Con"))
+            # BMN: raw Spo2Con may carry %RA (e.g. "96%RA") — split to condition
+            if spo2_raw and isinstance(spo2_raw, str) and "%RA" in spo2_raw:
+                # The number was already extracted by _num(); here just the condition
+                spo2_con = "under RA" if "under RA" in spo2_allowed else None
+            else:
+                spo2_con = spo2_raw
             if spo2_con is not None and spo2_allowed is not None and spo2_con not in spo2_allowed:
                 _note("spo2con-not-allowed", f"Spo2Con {spo2_con!r} not an allowed value; dropped", source_id)
                 spo2_con = None
