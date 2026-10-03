@@ -9,6 +9,7 @@ import { useTranslation } from "@/components/language-provider";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { Plus, Trash2, Clock } from "lucide-react";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 const VERBAL_OPTIONS = ["Quiet", "Shouting", "Scolding Staff", "Incoherent Speech"];
 const PHYSICAL_OPTIONS = ["Calm", "Restless", "Walking Around", "Hitting Staff"];
@@ -400,21 +401,15 @@ export function NewBehaviourChartForm({ residents, allStaff, presetResidentId, o
       {/* Patient + Timestamp */}
       <div className={sectionCls}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>
-              {t("Resident")} <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={residentId}
-              onChange={(e) => setResidentId(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">{t("Select resident")}</option>
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>{r.resident_name}</option>
-              ))}
-            </select>
-          </div>
+          <ResidentCombobox
+            residents={residents}
+            value={residentId}
+            onChange={(id) => {
+              markDirty();
+              setResidentId(id);
+            }}
+            required
+          />
           <div>
             <label className={labelCls}>{t("Date & time")}</label>
             <input

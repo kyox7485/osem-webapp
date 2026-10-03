@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import { Combobox } from "@/components/combobox";
 import { useTranslation } from "@/components/language-provider";
 import { messageForCode, type InvResident, type InvStaff } from "@/lib/inventory/core";
 
@@ -89,26 +91,37 @@ export function ResidentSelect({
   residents,
   value,
   onChange,
+  onTouch,
   required = true,
 }: {
   residents: InvResident[];
   value: string;
   onChange: (v: string) => void;
+  /**
+   * The form's dirty/touch handler. Picking from the combobox fires no native
+   * change event, so the form's onChangeCapture never sees it -- call it here.
+   */
+  onTouch?: () => void;
   required?: boolean;
 }) {
   const t = useTranslation();
+  const options = useMemo(
+    () => residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentCode ?? undefined })),
+    [residents]
+  );
   return (
-    <Field label={t("Resident")} required={required}>
-      <select className={INPUT_CLS} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{t("Select resident")}</option>
-        {residents.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.name}
-            {r.residentCode ? ` (${r.residentCode})` : ""}
-          </option>
-        ))}
-      </select>
-    </Field>
+    <Combobox
+      label={t("Resident")}
+      required={required}
+      value={value}
+      onChange={(v) => {
+        onTouch?.();
+        onChange(v);
+      }}
+      options={options}
+      emptyMessage={t("No matching resident")}
+      inputClassName={INPUT_CLS}
+    />
   );
 }
 

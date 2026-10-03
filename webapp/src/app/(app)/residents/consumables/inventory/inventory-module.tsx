@@ -37,6 +37,7 @@ import {
 import { recordConsumableCountAction } from "./inventory-actions";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 import { TabRow, TabButton } from "@/components/tabs";
+import { Combobox } from "@/components/combobox";
 
 export type InventoryResident = { id: number; name: string; residentTextId: string; branchId: number };
 export type InventoryView = "new" | "previous";
@@ -492,17 +493,18 @@ export function InventoryModule({ view, residents, selectedResidentId, branches,
 
         <label htmlFor="cons-resident" className={labelCls}>{t("Resident")}</label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <select
+          <Combobox
             id="cons-resident"
+            hideLabel
+            label={t("Resident")}
+            className="sm:flex-1"
             value={selected ? String(selected.id) : ""}
-            onChange={(e) => goTo(e.target.value ? Number(e.target.value) : null)}
-            className="min-h-10 w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:flex-1"
-          >
-            <option value="">{t("Select resident")}</option>
-            {residents.map((r) => (
-              <option key={r.id} value={r.id}>{r.name} ({r.residentTextId})</option>
-            ))}
-          </select>
+            onChange={(id, reason) => {
+              if (reason !== "type") goTo(id ? Number(id) : null);
+            }}
+            options={residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentTextId }))}
+            emptyMessage={t("No matching resident")}
+          />
           <div className="flex gap-2">
             <button type="button" className={navBtn} disabled={index <= 0} onClick={() => goTo(residents[index - 1].id)}>
               <ChevronLeft className="h-4 w-4" aria-hidden />

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
 import { User, Building2, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
 import { TabRow, TabButton } from "@/components/tabs";
+import { Combobox } from "@/components/combobox";
+import { useTranslation } from "@/components/language-provider";
 import { MEDICATION_CHART_SCRIPT_URL } from "@/config/medication-chart";
 
 type ResidentOption = {
@@ -49,10 +51,6 @@ export function MedicationChartsModule({
 
   // ── Resident chart state ─────────────────────────────────────────────────
   const [selectedResidentId, setSelectedResidentId] = useState<string>("");
-  const [selectedResidentName, setSelectedResidentName] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // ── Branch chart state ───────────────────────────────────────────────────
   const [selectedBranchId, setSelectedBranchId] = useState<number | "">(
@@ -77,55 +75,9 @@ export function MedicationChartsModule({
     defaultYear + 1,
   ];
 
-  // ── Resident search ──────────────────────────────────────────────────────
-  const filteredResidents = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return residents.slice(0, 60);
-    return residents
-      .filter(
-        (r) =>
-          r.name.toLowerCase().includes(q) ||
-          r.residentId.toLowerCase().includes(q)
-      )
-      .slice(0, 60);
-  }, [residents, searchQuery]);
-
-  const inputDisplayValue = selectedResidentId
-    ? selectedResidentName
-    : searchQuery;
-
-  function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
-    setSearchQuery(e.target.value);
-    setSelectedResidentId("");
-    setSelectedResidentName("");
-    setDropdownOpen(true);
+  function handleResidentChange(residentId: string) {
+    setSelectedResidentId(residentId);
     setMessage(null);
-  }
-
-  function handleSelectResident(r: ResidentOption) {
-    setSelectedResidentId(r.residentId);
-    setSelectedResidentName(r.name);
-    setSearchQuery("");
-    setDropdownOpen(false);
-    setMessage(null);
-  }
-
-  function handleSearchFocus() {
-    if (!selectedResidentId) setDropdownOpen(true);
-  }
-
-  function handleSearchBlur() {
-    // Delay so mouseDown on a list item fires first.
-    setTimeout(() => setDropdownOpen(false), 150);
-  }
-
-  function clearResident() {
-    setSelectedResidentId("");
-    setSelectedResidentName("");
-    setSearchQuery("");
-    setDropdownOpen(false);
-    setMessage(null);
-    searchInputRef.current?.focus();
   }
 
   // ── Generate resident chart ───────────────────────────────────────────────
@@ -226,19 +178,11 @@ export function MedicationChartsModule({
         {mode === "resident" && (
           <ResidentChartForm
             residents={residents}
-            filteredResidents={filteredResidents}
-            inputDisplayValue={inputDisplayValue}
             selectedResidentId={selectedResidentId}
-            dropdownOpen={dropdownOpen}
-            searchInputRef={searchInputRef}
             year={year}
             month={month}
             yearOptions={yearOptions}
-            onSearchInput={handleSearchInput}
-            onSearchFocus={handleSearchFocus}
-            onSearchBlur={handleSearchBlur}
-            onSelectResident={handleSelectResident}
-            onClearResident={clearResident}
+            onResidentChange={handleResidentChange}
             onYearChange={setYear}
             onMonthChange={setMonth}
             onGenerate={generateResidentChart}
@@ -295,113 +239,48 @@ export function MedicationChartsModule({
 
 type ResidentFormProps = {
   residents: ResidentOption[];
-  filteredResidents: ResidentOption[];
-  inputDisplayValue: string;
   selectedResidentId: string;
-  dropdownOpen: boolean;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
   year: number;
   month: number;
   yearOptions: number[];
-  onSearchInput: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSearchFocus: () => void;
-  onSearchBlur: () => void;
-  onSelectResident: (r: ResidentOption) => void;
-  onClearResident: () => void;
+  onResidentChange: (residentId: string) => void;
   onYearChange: (y: number) => void;
   onMonthChange: (m: number) => void;
   onGenerate: () => void;
 };
 
 function ResidentChartForm({
-  filteredResidents,
-  inputDisplayValue,
+  residents,
   selectedResidentId,
-  dropdownOpen,
-  searchInputRef,
   year,
   month,
   yearOptions,
-  onSearchInput,
-  onSearchFocus,
-  onSearchBlur,
-  onSelectResident,
-  onClearResident,
+  onResidentChange,
   onYearChange,
   onMonthChange,
   onGenerate,
 }: ResidentFormProps) {
+  const t = useTranslation();
+  const residentOptions = useMemo(
+    () => residents.map((r) => ({ id: r.residentId, label: r.name, hint: r.residentId })),
+    [residents]
+  );
   return (
     <div className="space-y-5">
       {/* Resident selector */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-fg-secondary">
-          Resident
-        </label>
-        <div className="relative">
-          <div className="relative flex items-center">
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={inputDisplayValue}
-              placeholder="Search by name or resident ID…"
-              autoComplete="off"
-              className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
-                selectedResidentId
-                  ? "border-indigo-300 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-fg focus:border-indigo-500 focus:ring-indigo-500"
-                  : "border-line-strong bg-input text-fg focus:border-indigo-500 focus:ring-indigo-500"
-              }`}
-              onChange={onSearchInput}
-              onFocus={onSearchFocus}
-              onBlur={onSearchBlur}
-            />
-            {selectedResidentId && (
-              <button
-                type="button"
-                className="absolute right-2 text-fg-faint hover:text-fg-muted"
-                onClick={onClearResident}
-                tabIndex={-1}
-                aria-label="Clear selection"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Selected badge */}
-          {selectedResidentId && (
-            <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
-              ID: {selectedResidentId}
-            </p>
-          )}
-
-          {/* Dropdown */}
-          {dropdownOpen && (
-            <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-line bg-elevated py-1 shadow-lg">
-              {filteredResidents.length === 0 ? (
-                <li className="px-3 py-2 text-sm text-fg-faint">
-                  No residents found.
-                </li>
-              ) : (
-                filteredResidents.map((r) => (
-                  <li
-                    key={r.residentId}
-                    className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
-                    onMouseDown={(e) => {
-                      e.preventDefault(); // keep input focus until selection
-                      onSelectResident(r);
-                    }}
-                  >
-                    <span className="font-medium text-fg">{r.name}</span>
-                    <span className="ml-3 shrink-0 text-xs text-fg-faint">
-                      {r.residentId}
-                    </span>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </div>
+        <Combobox
+          label={t("Resident")}
+          value={selectedResidentId}
+          onChange={onResidentChange}
+          options={residentOptions}
+          placeholder={t("Search by name or ID...")}
+          emptyMessage={t("No matching resident")}
+          clearable
+        />
+        {selectedResidentId && (
+          <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">ID: {selectedResidentId}</p>
+        )}
       </div>
 
       {/* Chart period */}

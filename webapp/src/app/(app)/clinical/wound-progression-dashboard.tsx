@@ -5,6 +5,7 @@ import { useTranslation } from "@/components/language-provider";
 import type { WoundBodyPart } from "./wound-body-diagram";
 import type { WoundProgressionData, WoundProgressionFrequency } from "@/lib/wound-progression-data";
 import { FileDown, ImageOff } from "lucide-react";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -84,17 +85,7 @@ export function WoundProgressionDashboard({ residents, bodyParts, presetResident
     <div className="space-y-4">
       <div className="rounded-md border border-line bg-surface p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Resident")}</label>
-            <select value={residentId} onChange={(e) => setResidentId(e.target.value)} className="w-full rounded-md border border-line-strong px-3 py-2 text-sm">
-              <option value="">{t("Select resident")}</option>
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.resident_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ResidentCombobox residents={residents} value={residentId} onChange={setResidentId} />
           <div>
             <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Start date")}</label>
             <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="w-full rounded-md border border-line-strong px-3 py-2 text-sm" />

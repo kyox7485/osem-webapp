@@ -13,6 +13,7 @@ import { useIsHqAdmin } from "@/components/admin-record-controls";
 import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
 import { ProgressNotesTimeline, type ProgressNoteRow } from "./progress-notes-timeline";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type ProgressNote = {
   id: number;
@@ -201,24 +202,13 @@ export function ProgressNotesModule({
                 onChange={(branchId) => applyFilters("", currentStart, currentEnd, branchId)}
                 id="pn-branch-filter"
               />
-              <div>
-                <label htmlFor="resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
-                  {t("Resident")}
-                </label>
-                <select
-                  id="resident-filter"
-                  value={currentResident}
-                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd, currentBranch)}
-                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">{t("All residents")}</option>
-                  {residents.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.resident_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <ResidentCombobox
+                id="resident-filter"
+                residents={residents}
+                value={currentResident}
+                onChange={(id) => applyFilters(id, currentStart, currentEnd, currentBranch)}
+                filterPlaceholder={t("All residents")}
+              />
             </div>
 
             {/* Duration selector */}

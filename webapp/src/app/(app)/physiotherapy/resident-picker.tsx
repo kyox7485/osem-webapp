@@ -5,7 +5,7 @@ import { useNavPush } from "@/components/nav-loading";
 import { usePhysioDirty } from "./physio-dirty-context";
 import type { PhysioCareSetting } from "@/lib/physio-scoring";
 import { useTranslation } from "@/components/language-provider";
-import { Combobox } from "@/components/combobox";
+import { Combobox, type ComboboxChangeReason } from "@/components/combobox";
 import type { LookupOption } from "@/lib/types";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
@@ -55,7 +55,10 @@ export function ResidentPicker({ residents, currentResident, careSetting, label 
     push(`/physiotherapy?${params.toString()}`);
   }
 
-  function handleChange(value: string) {
+  function handleChange(value: string, reason: ComboboxChangeReason) {
+    // Typing over the current name is a search, not a switch -- navigating on
+    // it would leave the page mid-keystroke.
+    if (reason === "type") return;
     setDisplayValue(value);
     if (!isDirty) {
       navigateTo(value);

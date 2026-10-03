@@ -9,6 +9,7 @@ import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker
 import { useTranslation } from "@/components/language-provider";
 import { Camera, ChevronLeft, RotateCcw, Check, X, Loader2 } from "lucide-react";
 import { useDirtyForm } from "@/lib/dirty-form-context";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -300,10 +301,6 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
   }
 
   const finishBusy = finishing || waitingForUploads;
-  // Resident and Uploaded By are stacked in the same left-aligned column at
-  // a matched width, rather than one full-width and one auto-width, so the
-  // two dropdowns visually line up as one field group.
-  const fieldClass = "w-full rounded-md border border-line-strong px-3 py-2 text-sm disabled:bg-surface-strong sm:max-w-xs";
   // Both bottom-of-page CTAs share this size/weight so they read as an
   // equally prominent pair (≥44px tall touch target either way) -- "Finish
   // Session" is filled/primary since it's the action that actually closes
@@ -325,19 +322,15 @@ export function NewWoundPhotoForm({ residents, allStaff, bodyParts, presetReside
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-fg-secondary">
-          {t("Resident")} <span className="text-red-500">*</span>
-        </label>
-        <select value={residentId} disabled={residentLocked} onChange={(e) => setResidentId(e.target.value)} className={fieldClass}>
-          <option value="">{t("Select resident")}</option>
-          {residents.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.resident_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Same sm:max-w-xs as "Uploaded by" below so the two line up as one field group. */}
+      <ResidentCombobox
+        className="sm:max-w-xs"
+        residents={residents}
+        value={residentId}
+        disabled={residentLocked}
+        onChange={setResidentId}
+        required
+      />
 
       <div>
         <label className="mb-1 block text-sm font-medium text-fg-secondary">

@@ -12,6 +12,7 @@ import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type Resident = {
   id: number;
@@ -185,29 +186,19 @@ export function NewHospitalReferralForm({ residents, allStaff, lookups, feedingT
 
   return (
     <div className="space-y-4" onChangeCapture={markDirty}>
-      <div>
-        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-fg-secondary">
-          {t("Resident")} <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="resident"
-          value={residentId}
-          onChange={(e) => {
-            setResidentId(e.target.value);
-            setReviewedBy("");
-            setReviewedByOtherName("");
-          }}
-          required
-          className="w-full max-w-md rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        >
-          <option value="">{t("Select resident")}</option>
-          {residents.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.resident_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ResidentCombobox
+        id="resident"
+        className="max-w-md"
+        residents={residents}
+        value={residentId}
+        onChange={(id) => {
+          markDirty();
+          setResidentId(id);
+          setReviewedBy("");
+          setReviewedByOtherName("");
+        }}
+        required
+      />
 
       {residentId && particularsLoading && (
         <p className="text-sm text-fg-faint">{t("Loading resident particulars...")}</p>

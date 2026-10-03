@@ -8,6 +8,7 @@ import { StaffPickerWithOther, OTHERS_SENTINEL } from "@/components/staff-picker
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 type Meal = {
@@ -230,29 +231,19 @@ export function NewNursingChartForm({ residents, allStaff, lookups, presetReside
 
   return (
     <div className="space-y-4" onChangeCapture={markDirty}>
-      <div>
-        <label htmlFor="resident" className="mb-1 block text-sm font-medium text-fg-secondary">
-          {t("Resident")} <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="resident"
-          value={residentId}
-          onChange={(e) => {
-            setResidentId(e.target.value);
-            setEnteredBy("");
-            setEnteredByOtherName("");
-          }}
-          required
-          className={`max-w-md ${selectCls}`}
-        >
-          <option value="">{t("Select resident")}</option>
-          {residents.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.resident_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ResidentCombobox
+        id="resident"
+        className="max-w-md"
+        residents={residents}
+        value={residentId}
+        onChange={(id) => {
+          markDirty();
+          setResidentId(id);
+          setEnteredBy("");
+          setEnteredByOtherName("");
+        }}
+        required
+      />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300">{error}</div>}

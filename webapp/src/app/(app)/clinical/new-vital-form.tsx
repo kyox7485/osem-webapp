@@ -8,6 +8,7 @@ import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type Resident = {
   id: number;
@@ -153,29 +154,18 @@ export function NewVitalForm({ residents, allStaff, lookups, onClose, onSaved }:
             {error && <div className="mb-4 rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300">{error}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-4" id="vital-signs-form">
-          <div>
-            <label htmlFor="resident" className="mb-1 block text-sm font-medium text-fg-secondary">
-              {t("Resident")} <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="resident"
-              value={residentId}
-              onChange={(e) => {
-                setResidentId(e.target.value);
-                setReviewedBy("");
-                setReviewedByOtherName("");
-              }}
-              required
-              className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">{t("Select resident")}</option>
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.resident_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ResidentCombobox
+            id="resident"
+            residents={residents}
+            value={residentId}
+            onChange={(id) => {
+              markDirty();
+              setResidentId(id);
+              setReviewedBy("");
+              setReviewedByOtherName("");
+            }}
+            required
+          />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>

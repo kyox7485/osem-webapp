@@ -93,6 +93,7 @@ export function ReceiveForm({
   });
   const set = (k: keyof Header) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setH({ ...h, [k]: e.target.value });
 
+  const residentOptions = useMemo(() => residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentCode ?? undefined })), [residents]);
   const supplierOptions = useMemo<LookupOption[]>(
     () =>
       [...suppliers.map((s) => ({ id: s.id, label: s.name })), ...extraSuppliers].sort((a, b) =>
@@ -292,14 +293,21 @@ export function ReceiveForm({
               label: t("Allocate to resident"),
               width: "w-44",
               render: (l, setV) => (
-                <select className={SMALL_INPUT_CLS} value={l.extra.resident ?? ""} onChange={(e) => setV(e.target.value)}>
-                  <option value="">{t("Store (no allocation)")}</option>
-                  {residents.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
+                <Combobox
+                  hideLabel
+                  label={t("Allocate to resident")}
+                  inputClassName={SMALL_INPUT_CLS}
+                  fixedPopup
+                  value={l.extra.resident ?? ""}
+                  onChange={(id) => {
+                    state.touch();
+                    setV(id);
+                  }}
+                  options={residentOptions}
+                  placeholder={t("Store (no allocation)")}
+                  clearable
+                  emptyMessage={t("No matching resident")}
+                />
               ),
             },
           ]}

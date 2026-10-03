@@ -24,6 +24,7 @@ import {
   NursingTimeline,
   OverviewSection,
 } from "./nursing-overview";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 export type RawMeal = {
   meal_type_id: number | null;
@@ -194,22 +195,13 @@ export function NursingChartModule({ entries, residents, branches, currentBranch
                 onChange={(branchId) => applyFilters("", currentStart, currentEnd, branchId)}
                 id="nc-branch-filter"
               />
-              <div>
-                <label htmlFor="nc-resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
-                  {t("Resident")}
-                </label>
-                <select
-                  id="nc-resident-filter"
-                  value={currentResident}
-                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd, currentBranch)}
-                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">{t("All residents")}</option>
-                  {residents.map((r) => (
-                    <option key={r.id} value={r.id}>{r.resident_name}</option>
-                  ))}
-                </select>
-              </div>
+              <ResidentCombobox
+                id="nc-resident-filter"
+                residents={residents}
+                value={currentResident}
+                onChange={(id) => applyFilters(id, currentStart, currentEnd, currentBranch)}
+                filterPlaceholder={t("All residents")}
+              />
             </div>
 
             {/* Duration presets — shown for all views */}

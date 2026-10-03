@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "@/components/language-provider";
 import {
   LOCATION_KIND_OPTIONS,
@@ -14,6 +14,7 @@ import {
 import { useInvSubmit } from "../components/use-inv-submit";
 import { LineEditor, type EditorLine } from "../components/line-editor";
 import { CARD_CLS, Field, FormStatus, INPUT_CLS, SMALL_INPUT_CLS, StaffSelect, SubmitButton } from "../components/form-bits";
+import { Combobox } from "@/components/combobox";
 
 export function OpeningForm({
   locations,
@@ -32,6 +33,7 @@ export function OpeningForm({
   const [remarks, setRemarks] = useState("");
   const [lines, setLines] = useState<EditorLine[]>([]);
   const state = useInvSubmit("inv_post_opening_balance", "inv-opening", () => setLines([]));
+  const residentOptions = useMemo(() => residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentCode ?? undefined })), [residents]);
   const kindOf = (id: string) => locations.find((l) => String(l.id) === id)?.kind;
 
   function handleSubmit(e: React.FormEvent) {
@@ -93,14 +95,19 @@ export function OpeningForm({
               width: "w-40",
               render: (l, setV) =>
                 kindOf(l.extra.location || defaultLoc) === "TRANSIT" ? (
-                  <select className={SMALL_INPUT_CLS} value={l.extra.resident ?? ""} onChange={(e) => setV(e.target.value)}>
-                    <option value="">{t("Select resident")}</option>
-                    {residents.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Combobox
+                    hideLabel
+                    label={t("Resident (Transit)")}
+                    inputClassName={SMALL_INPUT_CLS}
+                    fixedPopup
+                    value={l.extra.resident ?? ""}
+                    onChange={(id) => {
+                      state.touch();
+                      setV(id);
+                    }}
+                    options={residentOptions}
+                    emptyMessage={t("No matching resident")}
+                  />
                 ) : null,
             },
             {

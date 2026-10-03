@@ -25,6 +25,7 @@ import {
   type PurchaseListStaff,
   type ResidentMedicineOption,
 } from "@/lib/medication-purchase-core";
+import { Combobox } from "@/components/combobox";
 
 type BranchOption = { id: number; name: string };
 type ResidentOption = { id: number; name: string; residentTextId: string | null };
@@ -369,26 +370,22 @@ export function PurchaseModule({
               <label className="mb-1.5 block text-xs font-medium text-fg-muted" htmlFor="purchase-add-resident">
                 {t("Resident")}
               </label>
-              <select
+              <Combobox
                 id="purchase-add-resident"
-                value={newResidentId}
-                onChange={(e) => {
-                  setNewResidentId(e.target.value === "" ? "" : Number(e.target.value));
+                hideLabel
+                label={t("Resident")}
+                value={String(newResidentId)}
+                onChange={(id) => {
+                  setNewResidentId(id === "" ? "" : Number(id));
                   // A medicine chosen for the previous resident is not valid
                   // for this one — clear it.
                   setNewOption("");
                   setCustomName("");
                   setCustomDose("");
                 }}
-                className="w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">{t("Select a resident…")}</option>
-                {residents.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+                options={residents.map((r) => ({ id: r.id, label: r.name }))}
+                emptyMessage={t("No matching resident")}
+              />
             </div>
 
             <div className="min-w-[200px] flex-1">

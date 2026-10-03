@@ -1,26 +1,37 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/components/language-provider";
 import type { LookupOption } from "@/lib/types";
 
 // Long lists make a plain <select> unusable -- the user has to scroll through
 // every entry to find one name. This is a filterable text input with a
-// dropdown of matches instead: type two letters, pick from a short list.
+// dropdown of matches instead: either scroll the full list, or type a few
+// letters to narrow it down.
 //
-// Filtering is substring-on-label, case-insensitive. Option ids stay the
-// canonical values -- the filter text is never persisted, so a search term
-// never reaches the database.
-const MAX_VISIBLE = 30;
+// Filtering is substring-on-label (and on the optional hint, e.g. a resident
+// ID), case-insensitive. Option ids stay the canonical values -- the filter
+// text is never persisted, so a search term never reaches the database.
 
 const INPUT_CLS =
   "w-full rounded-md border border-line-strong bg-input px-3 py-2 text-sm text-fg focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
+export type ComboboxChangeReason = "select" | "clear" | "type";
+
+/** A combobox option; `hint` is shown dimmed beside the label and is searchable. */
+export type ComboboxOption = LookupOption & { hint?: string };
+
 type Props = {
   /** Selected option id as a string ("" = nothing selected). */
   value: string;
-  onChange: (id: string) => void;
-  options: LookupOption[];
+  /**
+   * `reason` says why: "select" (an option was picked), "clear" (the ×
+   * button), or "type" (typing/backspacing over the selected label, which
+   * deselects it while the user searches). URL-driven filters usually ignore
+   * "type" so a search doesn't navigate away mid-keystroke.
+   */
+  onChange: (id: string, reason: ComboboxChangeReason) => void;
+  options: ComboboxOption[];
   /** Accessible name for the input; also used as the visible label. */
   label: string;
   placeholder?: string;
@@ -28,12 +39,28 @@ type Props = {
   emptyMessage?: string;
   id?: string;
   className?: string;
+  /** Replaces the default input classes, e.g. for compact table-row pickers. */
+  inputClassName?: string;
   /**
    * Keep `label` as the input's accessible name but render no visible label
    * text -- for layouts that already say what the field is (a card heading,
    * a placeholder, a toolbar row) and would grow an extra line otherwise.
    */
   hideLabel?: boolean;
+  /** Marks the field required (red asterisk + aria-required). Validation stays with the caller. */
+  required?: boolean;
+  disabled?: boolean;
+  /**
+   * Shows an × button that clears the selection -- for filters where ""
+   * means "all" (pair it with a placeholder such as "All residents").
+   */
+  clearable?: boolean;
+  /**
+   * Position the dropdown with `position: fixed` so it escapes a scrolling
+   * ancestor (e.g. a table inside `overflow-x-auto`) that would otherwise clip
+   * it. Opens upward when there is more room above the field.
+   */
+  fixedPopup?: boolean;
   /**
    * Reports the raw text in the box, including text that matches no option.
    * For pickers that can also create what the user typed ("add new supplier"),
@@ -60,7 +87,12 @@ export function Combobox({
   emptyMessage,
   id,
   className,
+  inputClassName,
   hideLabel,
+  required,
+  disabled,
+  clearable,
+  fixedPopup,
   onQueryChange,
 }: Props) {
   const t = useTranslation();
@@ -90,20 +122,26 @@ export function Combobox({
   // component immediately without committing the stale query to the DOM, so
   // the input never flickers the old label. This is the documented
   // "adjusting state when a prop changes" pattern.
+  // `typedOver` marks a deselection the user caused by typing over the
+  // selected label: that one must keep the text they just typed.
   const [seenSelectedId, setSeenSelectedId] = useState(selected?.id);
+  const [typedOver, setTypedOver] = useState(false);
   if (selected?.id !== seenSelectedId) {
     setSeenSelectedId(selected?.id);
-    setQuery(selected ? selected.label : "");
+    if (selected || !typedOver) setQuery(selected ? selected.label : "");
+    setTypedOver(false);
   }
 
-  const matches = useMemo(() => {
+  // No cap on the list: with an empty box the user must be able to scroll to
+  // every option, not just the first few.
+  const visible = useMemo(() => {
     if (!hasQuery) return options;
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.hint?.toLowerCase().includes(q) ?? false)
+    );
   }, [options, query, hasQuery]);
-
-  const visible = matches.slice(0, MAX_VISIBLE);
 
   // Close the popup when a pointer press lands outside the whole widget.
   // pointerdown (not click) so a press on an option is handled by the option.
@@ -117,6 +155,32 @@ export function Combobox({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [isOpen]);
 
+  // fixedPopup: track the input's viewport position while open, including
+  // while any ancestor scrolls (capture phase catches every scroll event).
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties | null>(null);
+  useLayoutEffect(() => {
+    if (!fixedPopup || !isOpen) return;
+    function place() {
+      const r = inputRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const below = window.innerHeight - r.bottom;
+      const openUp = below < 240 && r.top > below;
+      setPopupStyle({
+        position: "fixed",
+        left: r.left,
+        width: r.width,
+        ...(openUp ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+      });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [fixedPopup, isOpen]);
+
   // Keep the arrowed-to option scrolled into view inside the listbox.
   useEffect(() => {
     if (activeIndex < 0 || !listRef.current) return;
@@ -124,10 +188,17 @@ export function Combobox({
     el?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
-  function commit(option: LookupOption) {
-    onChange(String(option.id));
+  function commit(option: ComboboxOption) {
+    onChange(String(option.id), "select");
     setQuery(option.label);
     setIsOpen(false);
+    setActiveIndex(-1);
+  }
+
+  function clear() {
+    onChange("", "clear");
+    setQuery("");
+    onQueryChange?.("");
     setActiveIndex(-1);
   }
 
@@ -139,7 +210,20 @@ export function Combobox({
     onQueryChange?.(text);
     // Typing over an existing selection invalidates it -- otherwise the old
     // patient would stay selected while the user searches for a different one.
-    if (selected) onChange("");
+    if (selected) {
+      setTypedOver(true);
+      onChange("", "type");
+    }
+  }
+
+  // Leaving the field without picking drops the half-typed search, so the box
+  // never shows a name that isn't actually selected. Pickers that use the raw
+  // text themselves (onQueryChange) keep it.
+  function handleBlur() {
+    setTypedOver(false);
+    setIsOpen(false);
+    setActiveIndex(-1);
+    if (!onQueryChange) setQuery(selected ? selected.label : "");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -176,12 +260,13 @@ export function Combobox({
     }
 
     if (e.key === "Backspace" && selected) {
-      onChange("");
+      onChange("", "type");
       setQuery("");
     }
   }
 
-  const showEmpty = isOpen && hasQuery && matches.length === 0;
+  const showEmpty = isOpen && hasQuery && visible.length === 0;
+  const showClear = clearable && !disabled && (selected || query !== "");
   const activeId =
     activeIndex >= 0 && visible[activeIndex] ? `${listboxId}-opt-${visible[activeIndex].id}` : undefined;
 
@@ -192,6 +277,7 @@ export function Combobox({
         className={`mb-1 block text-sm font-medium text-fg-secondary ${hideLabel ? "sr-only" : ""}`}
       >
         {label}
+        {required && <span className="text-red-500"> *</span>}
       </label>
       <div className="relative">
         <input
@@ -203,14 +289,36 @@ export function Combobox({
           aria-controls={listboxId}
           aria-autocomplete="list"
           aria-activedescendant={activeId}
+          aria-required={required || undefined}
           value={query}
+          disabled={disabled}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsOpen(true)}
+          onBlur={handleBlur}
           placeholder={placeholder ?? t("Type to search...")}
           autoComplete="off"
-          className={INPUT_CLS}
+          className={`${inputClassName ?? INPUT_CLS} disabled:cursor-not-allowed disabled:bg-surface-strong ${
+            clearable ? "pr-8" : ""
+          }`}
         />
+
+        {showClear && (
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label={t("Clear selection")}
+            // Same mousedown trick as the options: keep focus off the button
+            // so the input's blur doesn't fire mid-clear.
+            onMouseDown={(e) => {
+              e.preventDefault();
+              clear();
+            }}
+            className="absolute inset-y-0 right-0 flex items-center px-2.5 text-fg-faint hover:text-fg-muted"
+          >
+            ×
+          </button>
+        )}
 
         {isOpen && visible.length > 0 && (
           <ul
@@ -218,7 +326,10 @@ export function Combobox({
             id={listboxId}
             role="listbox"
             aria-label={label}
-            className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-line bg-elevated py-1 shadow-lg"
+            style={fixedPopup ? (popupStyle ?? undefined) : undefined}
+            className={`${
+              fixedPopup ? "z-50" : "absolute z-30 mt-1 w-full"
+            } max-h-60 min-w-[14rem] overflow-auto rounded-md border border-line bg-elevated py-1 shadow-lg`}
           >
             {visible.map((o, i) => (
               <li
@@ -234,11 +345,12 @@ export function Combobox({
                   commit(o);
                 }}
                 onMouseEnter={() => setActiveIndex(i)}
-                className={`cursor-pointer px-3 py-2 text-sm text-fg ${
+                className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm text-fg ${
                   i === activeIndex ? "bg-indigo-50 dark:bg-indigo-950/40" : ""
-                }`}
+                } ${String(o.id) === value ? "font-medium" : ""}`}
               >
-                {o.label}
+                <span>{o.label}</span>
+                {o.hint && <span className="shrink-0 text-xs text-fg-faint">{o.hint}</span>}
               </li>
             ))}
           </ul>

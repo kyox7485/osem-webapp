@@ -15,6 +15,7 @@ import type { BehaviourEntry, BehaviourEpisode } from "./behaviour-chart-actions
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 const DISTURBANCE_LABELS: Record<number, string> = {
   0: "No disturb",
@@ -170,22 +171,14 @@ export function BehaviourChartModule({
             />
 
             {/* Resident picker */}
-            <div>
-              <label htmlFor="beh-resident-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
-                {t("Resident")}
-              </label>
-              <select
-                id="beh-resident-filter"
-                value={currentResident}
-                onChange={(e) => applyFilters(e.target.value, currentStart || daysAgoMYT(7), currentEnd || todayMYT(), currentBranch)}
-                className="w-full max-w-xs rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">{t("Select a resident")}</option>
-                {residents.map((r) => (
-                  <option key={r.id} value={r.id}>{r.resident_name}</option>
-                ))}
-              </select>
-            </div>
+            <ResidentCombobox
+              id="beh-resident-filter"
+              className="max-w-xs"
+              residents={residents}
+              value={currentResident}
+              onChange={(id) => applyFilters(id, currentStart || daysAgoMYT(7), currentEnd || todayMYT(), currentBranch)}
+              filterPlaceholder={t("Select a resident")}
+            />
 
             {/* Range buttons */}
             <div>

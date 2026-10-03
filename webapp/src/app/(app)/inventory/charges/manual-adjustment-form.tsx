@@ -64,6 +64,7 @@ export function ManualAdjustmentForm({
             setResidentId(v);
             setRelatedId("");
           }}
+          onTouch={state.touch}
         />
         <Field label={t("Related charge")} hint={`${t("Shown for the month")}: ${month}`}>
           <select className={INPUT_CLS} value={relatedId} onChange={(e) => setRelatedId(e.target.value)} disabled={residentId === ""}>

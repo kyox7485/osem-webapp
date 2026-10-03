@@ -43,6 +43,8 @@ export const dictCommon: Record<string, string> = {
   "--": "--",
   "All residents": "Semua penghuni",
   "Select resident": "Pilih penghuni",
+  "No matching resident": "Tiada penghuni sepadan",
+  "Clear selection": "Kosongkan pilihan",
   "Select staff": "Pilih kakitangan",
   Resident: "Penghuni",
   "Start date": "Tarikh mula",

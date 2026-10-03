@@ -18,7 +18,6 @@ import { useScannerCapture } from "../../components/use-scanner-capture";
 import {
   CARD_CLS,
   ErrorNotice,
-  Field,
   INPUT_CLS,
   PRIMARY_BTN_CLS,
   SECONDARY_BTN_CLS,
@@ -27,6 +26,7 @@ import {
 } from "../../components/form-bits";
 import { CancelCount } from "./cancel-count";
 import { FoundBadge } from "./count-lines-table";
+import { Combobox } from "@/components/combobox";
 
 type FoundDraft = { key: string; productId: number; residentId: string; qty: string };
 
@@ -240,17 +240,15 @@ export function CountEntry({
         </div>
         {transitProduct && (
           <div className="flex flex-wrap items-end gap-2">
-            <Field label={`${t("Resident")} (${transitProduct.name})`} required>
-              <select className={INPUT_CLS} value={transitResident} onChange={(e) => setTransitResident(e.target.value)}>
-                <option value="">{t("Select resident")}</option>
-                {residents.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                    {r.residentCode ? ` (${r.residentCode})` : ""}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <Combobox
+              label={`${t("Resident")} (${transitProduct.name})`}
+              required
+              inputClassName={INPUT_CLS}
+              value={transitResident}
+              onChange={setTransitResident}
+              options={residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentCode ?? undefined }))}
+              emptyMessage={t("No matching resident")}
+            />
             <button
               type="button"
               className={SECONDARY_BTN_CLS}

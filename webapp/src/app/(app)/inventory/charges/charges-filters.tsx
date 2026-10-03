@@ -4,6 +4,7 @@ import { useTranslation } from "@/components/language-provider";
 import { useNavPush } from "@/components/nav-loading";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { Field, INPUT_CLS } from "../components/form-bits";
+import { Combobox } from "@/components/combobox";
 
 /** Month + resident filter; a navigation, not a form, so it goes through guardedAction (CLAUDE.md). */
 export function ChargesFilters({
@@ -37,20 +38,19 @@ export function ChargesFilters({
           onChange={(e) => e.target.value && go(e.target.value, residentId)}
         />
       </Field>
-      <Field label={t("Resident")}>
-        <select
-          className={INPUT_CLS}
-          value={residentId ?? ""}
-          onChange={(e) => go(month, e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">{t("All residents")}</option>
-          {residents.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <Combobox
+        label={t("Resident")}
+        inputClassName={INPUT_CLS}
+        value={residentId ? String(residentId) : ""}
+        // A navigation per pick or clear; typing alone is just searching.
+        onChange={(id, reason) => {
+          if (reason !== "type") go(month, id ? Number(id) : null);
+        }}
+        options={residents}
+        placeholder={t("All residents")}
+        clearable
+        emptyMessage={t("No matching resident")}
+      />
     </div>
   );
 }

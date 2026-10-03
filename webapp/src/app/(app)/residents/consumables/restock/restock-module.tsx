@@ -16,6 +16,7 @@ import {
   type StaffPick,
   type Supplier,
 } from "@/lib/consumables";
+import { Combobox } from "@/components/combobox";
 
 type BranchOption = { id: number; name: string };
 type ResidentOption = { id: number; name: string; residentTextId: string | null };
@@ -295,16 +296,21 @@ export function RestockModule({ branches, selectedBranchId, residents, rows: ser
             <label htmlFor="restock-resident" className={labelCls}>
               {t("Resident")}{audience === "Family" && <span className="ml-0.5 text-red-500"> *</span>}
             </label>
-            <select id="restock-resident" value={residentFilter} onChange={(e) => { setResidentFilter(e.target.value); setNewOption(""); setMessage(null); }} className={selectCls}>
-              {audience === "Family" ? (
-                <option value="">{t("Select resident")}</option>
-              ) : (
-                <option value="">{t("All residents")}</option>
-              )}
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}{r.residentTextId ? ` (${r.residentTextId})` : ""}</option>
-              ))}
-            </select>
+            <Combobox
+              id="restock-resident"
+              hideLabel
+              label={t("Resident")}
+              value={residentFilter}
+              onChange={(id) => {
+                setResidentFilter(id);
+                setNewOption("");
+                setMessage(null);
+              }}
+              options={residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentTextId || undefined }))}
+              placeholder={audience === "Family" ? undefined : t("All residents")}
+              clearable={audience !== "Family"}
+              emptyMessage={t("No matching resident")}
+            />
           </div>
         </div>
 

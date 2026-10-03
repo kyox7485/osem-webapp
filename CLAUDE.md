@@ -166,6 +166,11 @@ Repo layout, `webapp/` internals, `migration/` scripts, and the
   `branch_function` populated; (2) client filter must be
   `s.branch_id === x || s.branch_function === 'HQ'` so HQ staff are visible
   when an HQ user is logged in. Includes a new-picker checklist.
+- `docs/resident-picker.md` — **mandatory pattern for every resident
+  picker**: never a plain `<select>`; use `ResidentCombobox` /
+  `ResidentSelect` / `Combobox` (scroll or type-to-search), mark dirty in
+  `onChange`, ignore `reason === "type"` on URL-driven filters,
+  `fixedPopup` inside scrolling tables.
 - `docs/architecture.md` — repo layout, `webapp/` internals, env vars,
   `migration/` scripts, `schema/001_init.sql`.
 - `docs/i18n.md` — full i18n architecture: dictionary-key convention,

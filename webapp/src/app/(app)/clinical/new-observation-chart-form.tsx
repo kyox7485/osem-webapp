@@ -7,6 +7,7 @@ import type { LookupOption } from "@/lib/types";
 import { useTranslation } from "@/components/language-provider";
 import { toDatetimeLocalValue } from "@/lib/format-date";
 import { useFormDirtyTracking } from "@/lib/use-form-dirty-tracking";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 const BEHAVIOR_OPTIONS = [
   "Calm",
@@ -222,21 +223,15 @@ export function NewObservationChartForm({ residents, allStaff, presetResidentId,
       {/* Resident + Timestamp */}
       <div className={sectionCls}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelCls}>
-              {t("Resident")} <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={residentId}
-              onChange={(e) => setResidentId(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">{t("Select resident")}</option>
-              {residents.map((r) => (
-                <option key={r.id} value={r.id}>{r.resident_name}</option>
-              ))}
-            </select>
-          </div>
+          <ResidentCombobox
+            residents={residents}
+            value={residentId}
+            onChange={(id) => {
+              markDirty();
+              setResidentId(id);
+            }}
+            required
+          />
           <div>
             <label className={labelCls}>{t("Date & time")}</label>
             <input

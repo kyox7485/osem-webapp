@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
+import { Combobox } from "@/components/combobox";
 import { useNavPush } from "@/components/nav-loading";
 import { useTranslation } from "@/components/language-provider";
 import { createOrderAction, updateOrderAction, type OrderFormValues } from "./order-actions";
@@ -129,9 +130,6 @@ export function OrderForm(props: Props) {
 
   // ── Resident combobox (create mode) ─────────────────────────────────────────
   const [residentId, setResidentId] = useState("");
-  const [residentSearch, setResidentSearch] = useState("");
-  const [residentDropOpen, setResidentDropOpen] = useState(false);
-  const residentInputRef = useRef<HTMLInputElement>(null);
 
   // ── Dosage form — dropdown + "Others" specify ────────────────────────────────
   const initIsOtherDosage =
@@ -232,15 +230,10 @@ export function OrderForm(props: Props) {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const residents = isCreate ? props.residents : NO_RESIDENTS;
-  const filteredResidents = useMemo(() => {
-    const q = residentSearch.toLowerCase();
-    if (!q) return residents;
-    return residents.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.residentTextId.toLowerCase().includes(q)
-    );
-  }, [residents, residentSearch]);
+  const residentOptions = useMemo(
+    () => residents.map((r) => ({ id: r.id, label: r.name, hint: r.residentTextId })),
+    [residents]
+  );
 
   const selectedResident = residents.find((r) => String(r.id) === residentId);
 
@@ -508,57 +501,19 @@ export function OrderForm(props: Props) {
 
             {isCreate ? (
               <div className="sm:col-span-2 relative">
-                <Field label={t("Resident")} required>
-                  <div className="relative">
-                    <input
-                      ref={residentInputRef}
-                      type="text"
-                      value={
-                        selectedResident
-                          ? `${selectedResident.residentTextId} – ${selectedResident.name}`
-                          : residentSearch
-                      }
-                      onChange={(e) => {
-                        if (selectedResident) setResidentId("");
-                        setResidentSearch(e.target.value);
-                        setResidentDropOpen(true);
-                        mark();
-                      }}
-                      onFocus={() => setResidentDropOpen(true)}
-                      onBlur={() =>
-                        setTimeout(() => setResidentDropOpen(false), 150)
-                      }
-                      placeholder={t("Search by name or ID...")}
-                      className={inputCls}
-                      autoComplete="off"
-                    />
-                    {residentDropOpen && filteredResidents.length > 0 && (
-                      <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-md border border-line bg-elevated shadow-lg text-sm">
-                        {filteredResidents.slice(0, 30).map((r) => (
-                          <li
-                            key={r.id}
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setResidentId(String(r.id));
-                              setResidentSearch("");
-                              setResidentDropOpen(false);
-                              residentInputRef.current?.blur();
-                              mark();
-                            }}
-                            className="cursor-pointer px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
-                          >
-                            <span className="font-medium text-fg">
-                              {r.name}
-                            </span>
-                            <span className="ml-2 text-xs text-fg-faint">
-                              {r.residentTextId}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </Field>
+                <Combobox
+                  label={t("Resident")}
+                  required
+                  inputClassName={inputCls}
+                  value={residentId}
+                  onChange={(id) => {
+                    setResidentId(id);
+                    mark();
+                  }}
+                  options={residentOptions}
+                  placeholder={t("Search by name or ID...")}
+                  emptyMessage={t("No matching resident")}
+                />
               </div>
             ) : (
               <div className="sm:col-span-2">

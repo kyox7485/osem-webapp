@@ -64,7 +64,7 @@ export function WriteOffForm({
             ))}
           </select>
         </Field>
-        {isTransit && <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} />}
+        {isTransit && <ResidentSelect residents={residents} value={residentId} onChange={setResidentId} onTouch={state.touch} />}
         <Field label={t("Reason")} required>
           <select className={INPUT_CLS} value={reason} onChange={(e) => setReason(e.target.value)}>
             <option value="">{t("Select reason")}</option>

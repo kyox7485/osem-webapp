@@ -16,6 +16,7 @@ import { ListChecks, Plus, TrendingUp, ChevronRight, Images } from "lucide-react
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
 import { BranchFilterSelect } from "./branch-filter-select";
 import { ResultNotice } from "./result-notice";
+import { ResidentCombobox } from "@/components/resident-combobox";
 
 type Resident = { id: number; resident_name: string; branch_id: number };
 
@@ -209,21 +210,12 @@ export function WoundPhotoModule({ sessions, residents, branches, currentBranch,
                 onChange={(branchId) => applyFilters("", currentStart, currentEnd, branchId)}
                 id="wp-branch-filter"
               />
-              <div>
-                <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Resident")}</label>
-                <select
-                  value={currentResident}
-                  onChange={(e) => applyFilters(e.target.value, currentStart, currentEnd, currentBranch)}
-                  className="w-full rounded-md border border-line-strong px-3 py-2 text-sm"
-                >
-                  <option value="">{t("All residents")}</option>
-                  {residents.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.resident_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <ResidentCombobox
+                residents={residents}
+                value={currentResident}
+                onChange={(id) => applyFilters(id, currentStart, currentEnd, currentBranch)}
+                filterPlaceholder={t("All residents")}
+              />
               <div>
                 <label className="mb-1 block text-sm font-medium text-fg-secondary">{t("Start date")}</label>
                 <input
