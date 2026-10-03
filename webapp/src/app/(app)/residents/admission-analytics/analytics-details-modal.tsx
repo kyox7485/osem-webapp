@@ -18,6 +18,7 @@ type Props = {
   activeResidents?: number;
   bedCapacity?: number | null;
   branchBreakdown?: Array<{ label: string; active: number; capacity: number | null }>;
+  showBranchBreakdown?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -36,6 +37,7 @@ export function AnalyticsDetailsModal({
   activeResidents = 0,
   bedCapacity,
   branchBreakdown = [],
+  showBranchBreakdown = false,
   open,
   onOpenChange,
 }: Props) {
@@ -150,7 +152,7 @@ export function AnalyticsDetailsModal({
               <h3 className="font-semibold text-fg mb-3">{t("Calculation")}</h3>
               <div className="space-y-2 text-sm mb-4">
                 <div className="flex justify-between items-center py-1 border-b border-line">
-                  <span className="text-fg-muted">{t("Active Residents")}</span>
+                  <span className="text-fg-muted">{t("Active Residents")} <span className="text-xs text-fg-faint">(24-Hr)</span></span>
                   <span className="font-semibold text-fg">{activeResidents}</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
@@ -163,7 +165,7 @@ export function AnalyticsDetailsModal({
                 </div>
               </div>
 
-              {branchBreakdown && branchBreakdown.length > 0 && (
+              {showBranchBreakdown && branchBreakdown && branchBreakdown.length > 0 && (
                 <div className="mt-4 border-t border-line pt-4">
                   <h4 className="font-semibold text-fg-secondary mb-3">{t("By Branch")}</h4>
                   <div className="space-y-3">

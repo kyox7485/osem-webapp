@@ -31,6 +31,7 @@ export type KpiCardClientProps = {
   residents: ResidentRow[];
   dateRange: { start: Date; end: Date };
   selectedBranches: Array<{ id: number; label: string; bed_capacity: number | null }>;
+  isAllBranches: boolean;
 };
 
 export function KpiCardsClient({
@@ -48,6 +49,7 @@ export function KpiCardsClient({
   residents,
   dateRange,
   selectedBranches,
+  isAllBranches,
 }: KpiCardClientProps) {
   const t = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
@@ -101,13 +103,14 @@ export function KpiCardsClient({
   };
 
   const handleOccupancyClick = () => {
-    // Calculate branch breakdown for occupancy detail
     const branchBreakdown = selectedBranches.map((b) => {
       const branchResidents = residents.filter((r) => r.branch_id === Number(b.id));
-      const active = branchResidents.filter((r) => r.status === "ACTIVE").length;
+      const active24Hr = branchResidents.filter(
+        (r) => r.status === "ACTIVE" && r.care_type !== "Daycare"
+      ).length;
       return {
         label: b.label,
-        active,
+        active: active24Hr,
         capacity: b.bed_capacity,
       };
     });
@@ -238,9 +241,10 @@ export function KpiCardsClient({
           admissions={modalData.admissions ?? 0}
           discharges={modalData.discharges ?? 0}
           occupancyPercentage={occupancyPercentage}
-          activeResidents={currentOccupancy}
+          activeResidents={occupancyByCareType.fullTime}
           bedCapacity={totalBedCapacity}
           branchBreakdown={(modalData as any).branchBreakdown ?? []}
+          showBranchBreakdown={isAllBranches}
           open={modalOpen}
           onOpenChange={setModalOpen}
         />
