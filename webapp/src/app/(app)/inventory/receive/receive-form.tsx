@@ -297,7 +297,6 @@ export function ReceiveForm({
                   hideLabel
                   label={t("Allocate to resident")}
                   inputClassName={SMALL_INPUT_CLS}
-                  fixedPopup
                   value={l.extra.resident ?? ""}
                   onChange={setV}
                   options={residentOptions}

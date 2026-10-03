@@ -33,9 +33,11 @@ Medication Charts used to, and both were migrated onto `Combobox`.
      clear button.
    - With raw `Combobox`: `onChange={(id, reason) => { if (reason !== "type") go(id); }}`
      plus `clearable` and `placeholder={t("All residents")}`.
-4. **Inside a scrolling container** (a table in `overflow-x-auto`, e.g. the
-   inventory `LineEditor`) pass `fixedPopup` so the dropdown isn't clipped,
-   and `inputClassName={SMALL_INPUT_CLS}` for compact rows.
+4. **Positioning is automatic** — don't add wrappers or `overflow-visible`
+   hacks. The list is portalled to `<body>` with `position: fixed`, opens
+   upward when there's more room above, caps its height to the visible space
+   (visual viewport, so a phone keyboard counts as covered) and clamps to the
+   screen width. Use `inputClassName={SMALL_INPUT_CLS}` for compact table rows.
 5. **Labels:** the combobox renders its own `<label>`. Don't wrap it in another
    `<label>` (e.g. inventory `Field`). If the layout already has a visible
    label, pass `hideLabel` and keep the same `id` so `htmlFor` still points at

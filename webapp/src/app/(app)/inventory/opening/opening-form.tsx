@@ -99,7 +99,6 @@ export function OpeningForm({
                     hideLabel
                     label={t("Resident (Transit)")}
                     inputClassName={SMALL_INPUT_CLS}
-                    fixedPopup
                     value={l.extra.resident ?? ""}
                     onChange={setV}
                     options={residentOptions}

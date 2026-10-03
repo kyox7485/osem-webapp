@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "@/components/language-provider";
 import type { LookupOption } from "@/lib/types";
 
@@ -73,12 +74,6 @@ type Props = {
    */
   clearable?: boolean;
   /**
-   * Position the dropdown with `position: fixed` so it escapes a scrolling
-   * ancestor (e.g. a table inside `overflow-x-auto`) that would otherwise clip
-   * it. Opens upward when there is more room above the field.
-   */
-  fixedPopup?: boolean;
-  /**
    * Reports the raw text in the box, including text that matches no option.
    * For pickers that can also create what the user typed ("add new supplier"),
    * where the option list alone cannot express the new value.
@@ -117,7 +112,6 @@ export function Combobox({
   name,
   disabled,
   clearable,
-  fixedPopup,
   onQueryChange,
   freeText,
 }: Props) {
@@ -180,38 +174,67 @@ export function Combobox({
   useEffect(() => {
     if (!isOpen) return;
     function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
       const root = inputRef.current?.closest("[data-combobox-root]");
-      if (root && !root.contains(e.target as Node)) setIsOpen(false);
+      // The list is portalled to <body>, so it is outside `root`.
+      if (listRef.current?.contains(target)) return;
+      if (root && !root.contains(target)) setIsOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [isOpen]);
 
-  // fixedPopup: track the input's viewport position while open, including
-  // while any ancestor scrolls (capture phase catches every scroll event).
+  // The list is portalled to <body> and positioned `fixed` against the
+  // field, so no scrolling ancestor, overflow-x-auto table or modal can clip
+  // it. It opens below the field, or above when there is more room there,
+  // and its height is capped to the space actually visible -- measured
+  // against the visual viewport so a phone's on-screen keyboard counts as
+  // covered space. Re-placed on every scroll (capture phase: any ancestor),
+  // resize and visual-viewport change while open.
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties | null>(null);
   useLayoutEffect(() => {
-    if (!fixedPopup || !isOpen) return;
+    if (!isOpen) return;
+    const vv = window.visualViewport;
     function place() {
       const r = inputRef.current?.getBoundingClientRect();
       if (!r) return;
-      const below = window.innerHeight - r.bottom;
-      const openUp = below < 240 && r.top > below;
+      const GAP = 4;
+      const MARGIN = 8;
+      const IDEAL = 288;
+      const viewTop = vv ? vv.offsetTop : 0;
+      const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const viewLeft = vv ? vv.offsetLeft : 0;
+      const viewWidth = vv ? vv.width : window.innerWidth;
+      const below = viewBottom - r.bottom - GAP - MARGIN;
+      const above = r.top - viewTop - GAP - MARGIN;
+      const openUp = below < Math.min(IDEAL, 160) && above > below;
+      const maxHeight = Math.max(96, Math.min(IDEAL, openUp ? above : below));
+      const width = Math.min(Math.max(r.width, 224), viewWidth - MARGIN * 2);
+      const left = Math.min(Math.max(r.left, viewLeft + MARGIN), viewLeft + viewWidth - MARGIN - width);
       setPopupStyle({
         position: "fixed",
-        left: r.left,
-        width: r.width,
-        ...(openUp ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+        left,
+        width,
+        maxHeight,
+        // Upward: anchor the list's bottom edge to the field so a short list
+        // sits right above it instead of floating at the top of the space.
+        ...(openUp
+          ? { bottom: document.documentElement.clientHeight - r.top + GAP }
+          : { top: r.bottom + GAP }),
       });
     }
     place();
     window.addEventListener("scroll", place, true);
     window.addEventListener("resize", place);
+    vv?.addEventListener("resize", place);
+    vv?.addEventListener("scroll", place);
     return () => {
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
+      vv?.removeEventListener("resize", place);
+      vv?.removeEventListener("scroll", place);
     };
-  }, [fixedPopup, isOpen]);
+  }, [isOpen]);
 
   // Native validation for `required`: the visible input holds search text, not
   // the value, so its own `required` would pass on a half-typed name.
@@ -385,16 +408,14 @@ export function Combobox({
           </button>
         )}
 
-        {isOpen && visible.length > 0 && (
+        {isOpen && visible.length > 0 && popupStyle && createPortal(
           <ul
             ref={listRef}
             id={listboxId}
             role="listbox"
             aria-label={label}
-            style={fixedPopup ? (popupStyle ?? undefined) : undefined}
-            className={`${
-              fixedPopup ? "z-50" : "absolute z-30 mt-1 w-full"
-            } max-h-60 min-w-[14rem] overflow-auto rounded-md border border-line bg-elevated py-1 shadow-lg`}
+            style={popupStyle}
+            className="z-[100] overflow-auto overscroll-contain rounded-md border border-line bg-elevated py-1 shadow-lg"
           >
             {visible.map((o, i) => (
               <li
@@ -410,7 +431,7 @@ export function Combobox({
                   commit(o);
                 }}
                 onMouseEnter={() => setActiveIndex(i)}
-                className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm text-fg ${
+                className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm text-fg max-md:min-h-11 ${
                   i === activeIndex ? "bg-indigo-50 dark:bg-indigo-950/40" : ""
                 } ${String(o.id) === value ? "font-medium" : ""}`}
               >
@@ -418,7 +439,8 @@ export function Combobox({
                 {o.hint && <span className="shrink-0 text-xs text-fg-faint">{o.hint}</span>}
               </li>
             ))}
-          </ul>
+          </ul>,
+          document.body
         )}
 
         {showEmpty && <p className="mt-1 text-xs text-fg-faint">{emptyMessage ?? t("No matches found")}</p>}
