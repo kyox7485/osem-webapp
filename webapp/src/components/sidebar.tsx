@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,6 +40,19 @@ export type SidebarFooterInfo = {
 
 const STORAGE_KEY = "osem_sidebar_collapsed";
 
+// Phones (below Tailwind's md breakpoint). There the expanded sidebar would
+// take most of the screen, so it overlays the page instead of pushing it
+// aside, starts collapsed, and collapses itself as soon as the user works
+// anywhere else. Tablet/desktop keep the persisted push-aside behaviour.
+const MOBILE_QUERY = "(max-width: 767px)";
+function subscribeMobile(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+const getMobile = () => window.matchMedia(MOBILE_QUERY).matches;
+const getMobileServer = () => false;
+
 export function Sidebar({
   items,
   homeLabel,
@@ -52,6 +65,35 @@ export function Sidebar({
   const pathname = usePathname();
   const t = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useSyncExternalStore(subscribeMobile, getMobile, getMobileServer);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
+
+  // Phone: navigating from the menu closes it ("adjusting state when a prop
+  // changes" -- no effect needed).
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (pathname !== seenPath) {
+    setSeenPath(pathname);
+    setMobileOpen(false);
+  }
+
+  // Phone: any press or focus outside the open menu -- starting an entry,
+  // scrolling the page -- collapses it. Listening (not a backdrop) lets that
+  // same tap still reach the field the user was going for.
+  useEffect(() => {
+    if (!isMobile || !mobileOpen) return;
+    function onOutside(e: Event) {
+      if (asideRef.current && !asideRef.current.contains(e.target as Node)) setMobileOpen(false);
+    }
+    document.addEventListener("pointerdown", onOutside, true);
+    document.addEventListener("focusin", onOutside, true);
+    return () => {
+      document.removeEventListener("pointerdown", onOutside, true);
+      document.removeEventListener("focusin", onOutside, true);
+    };
+  }, [isMobile, mobileOpen]);
+
+  const isCollapsed = isMobile ? !mobileOpen : collapsed;
 
   useEffect(() => {
     // Reads the persisted collapse state once on mount -- server-rendered
@@ -66,6 +108,11 @@ export function Sidebar({
   }, []);
 
   function toggle() {
+    if (isMobile) {
+      // Not persisted: on a phone the menu always starts collapsed.
+      setMobileOpen((open) => !open);
+      return;
+    }
     setCollapsed((prev) => {
       const next = !prev;
       try {
@@ -78,13 +125,17 @@ export function Sidebar({
   }
 
   return (
+    // On a phone this wrapper keeps the 68px rail's space in the layout while
+    // the expanded menu floats over the page, so the content never shifts.
+    <div className="shrink-0 max-md:w-[68px]">
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 ${
-        collapsed ? "w-[68px]" : "w-64"
-      }`}
+      ref={asideRef}
+      className={`top-0 flex h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 ${
+        isCollapsed ? "w-[68px]" : "w-64"
+      } ${isMobile && mobileOpen ? "fixed left-0 z-40 shadow-xl" : "sticky"}`}
     >
-      <div className={`relative flex flex-col items-center px-3 pt-4 pb-2 ${collapsed ? "gap-2" : ""}`}>
-        {!collapsed && (
+      <div className={`relative flex flex-col items-center px-3 pt-4 pb-2 ${isCollapsed ? "gap-2" : ""}`}>
+        {!isCollapsed && (
           // logo-dark.png is logo.png with only the black wordmark inverted to
           // white (brand colours untouched). Swapped in CSS, not JS, so the
           // right one shows on first paint with no hydration flash.
@@ -97,11 +148,12 @@ export function Sidebar({
           type="button"
           onClick={toggle}
           className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-fg-faint transition-colors hover:bg-surface-strong hover:text-fg-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
-            collapsed ? "" : "absolute right-2 top-3"
+            isCollapsed ? "" : "absolute right-2 top-3"
           }`}
-          aria-label={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
+          aria-label={isCollapsed ? t("Expand sidebar") : t("Collapse sidebar")}
+          aria-expanded={!isCollapsed}
         >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
       </div>
 
@@ -116,13 +168,13 @@ export function Sidebar({
               title={item.label}
               aria-label={item.label}
               className={`flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/40 ${
-                collapsed ? "justify-center px-0" : "justify-start px-2.5"
+                isCollapsed ? "justify-center px-0" : "justify-start px-2.5"
               } ${active ? "bg-selected text-selected-fg" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
             >
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.tint}`}>
                 <Icon className="h-4 w-4" strokeWidth={2} />
               </span>
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {!isCollapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
@@ -131,9 +183,9 @@ export function Sidebar({
       {footer && (
         <div
           className="border-t border-line px-3 py-3"
-          title={collapsed ? `${footer.username} · ${t(footer.rights)} · ${footer.branchName}` : undefined}
+          title={isCollapsed ? `${footer.username} · ${t(footer.rights)} · ${footer.branchName}` : undefined}
         >
-          {collapsed ? (
+          {isCollapsed ? (
             <div className="flex flex-col items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
                 {footer.initial}
@@ -162,5 +214,6 @@ export function Sidebar({
         </div>
       )}
     </aside>
+    </div>
   );
 }
