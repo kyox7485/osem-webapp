@@ -125,10 +125,10 @@ export default async function AdmissionAnalyticsPage({
   // ── Bed capacity & occupancy percentage ──────────────────────────────────
   // Calculate total bed capacity from selected branches (aggregated for HQ view)
   let totalBedCapacity = 0;
-  let selectedBranches = allNurBranches;
+  let selectedBranches = allNurBranches.filter((b) => !excludedBranchIds.includes(Number(b.id)));
 
   if (branchFilter !== null) {
-    selectedBranches = allNurBranches.filter((b) => Number(b.id) === branchFilter);
+    selectedBranches = selectedBranches.filter((b) => Number(b.id) === branchFilter);
   }
 
   selectedBranches.forEach((b) => {
