@@ -116,6 +116,10 @@ type Props = {
   behaviourEntries: BehaviourEntry[];
   behaviourEpisodes: BehaviourEpisode[];
   currentResident: string;
+  /** Resident status the vitals tab is scoped to (see the Status
+   * picker on the vitals tab). "ACTIVE" unless the URL says
+   * otherwise. */
+  currentStatus: string;
   currentStart: string;
   currentEnd: string;
   currentPrev?: string;
@@ -146,6 +150,7 @@ export function ClinicalContent({
   behaviourEntries,
   behaviourEpisodes,
   currentResident,
+  currentStatus,
   currentStart,
   currentEnd,
   currentPrev,
@@ -264,6 +269,7 @@ export function ClinicalContent({
             allStaff={allStaff}
             lookups={nursingChartLookups}
             currentResident={currentResident}
+            currentStatus={currentStatus}
             currentStart={currentStart}
             currentEnd={currentEnd}
             error={error}

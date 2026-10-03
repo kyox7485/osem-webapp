@@ -17,6 +17,7 @@ import {
   flagDxt,
 } from "@/lib/vital-thresholds";
 import type { LookupOption } from "@/lib/types";
+import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import type { ClinicalLookups } from "@/lib/lookups";
 import { useTranslation } from "@/components/language-provider";
 import { AdminRecordControls, useIsHqAdmin } from "@/components/admin-record-controls";
@@ -61,6 +62,9 @@ type Props = {
   allStaff: (LookupOption & { branch_id: number; branch_function: string })[];
   lookups: ClinicalLookups;
   currentResident: string;
+  /** Resident status the list is scoped to. Drives both the Status
+   * picker and the Resident picker's option set. */
+  currentStatus: string;
   currentStart: string;
   currentEnd: string;
   error: string | null;
@@ -72,17 +76,18 @@ type Props = {
   canCreateEntry?: boolean;
 };
 
-export function VitalsTable({ vitals, residents, branches, currentBranch, allStaff, lookups, currentResident, currentStart, currentEnd, error, truncated, canCreateEntry = true }: Props) {
+export function VitalsTable({ vitals, residents, branches, currentBranch, allStaff, lookups, currentResident, currentStatus, currentStart, currentEnd, error, truncated, canCreateEntry = true }: Props) {
   const router = useRouter();
   const push = useNavPush();
   const t = useTranslation();
   const isHqAdmin = useIsHqAdmin();
   const [showForm, setShowForm] = useState(false);
 
-  function applyFilters(residentId: string, start: string, end: string, branchId: string) {
+  function applyFilters(residentId: string, start: string, end: string, branchId: string, status: string) {
     const params = new URLSearchParams();
     params.set("tab", "vitals");
     if (branchId) params.set("branch", branchId);
+    if (status && status !== "ACTIVE") params.set("status", status);
     if (residentId) params.set("resident", residentId);
     if (start) params.set("start", start);
     if (end) params.set("end", end);
@@ -102,14 +107,14 @@ export function VitalsTable({ vitals, residents, branches, currentBranch, allSta
           sm:grid-cols-4 spread the three fields and the action buttons over
           the full width, which on a wide monitor left each control a lonely
           ~380px column. Below lg the fields stack 2-up and the actions stay
-          one column; at lg they become 7 tracks and the actions take the
+          one column; at lg they become 8 tracks and the actions take the
           last two, so the controls sit in a readable band on the left and
           the buttons stay together on the right. Track count tracks the
           number of rendered fields: HQ ADMIN gets the extra Branch column,
           everyone else renders one fewer field and keeps the buttons in the
           same two tracks.
         */}
-        <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isHqAdmin ? "lg:grid-cols-7" : "lg:grid-cols-6"}`}>
+        <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isHqAdmin ? "lg:grid-cols-8" : "lg:grid-cols-7"}`}>
           {/*
             Branch filter, HQ ADMIN only. The server narrows both the
             resident list and the readings to this branch, so switching it
@@ -124,7 +129,7 @@ export function VitalsTable({ vitals, residents, branches, currentBranch, allSta
               <select
                 id="branch-filter"
                 value={currentBranch}
-                onChange={(e) => applyFilters("", currentStart, currentEnd, e.target.value)}
+                onChange={(e) => applyFilters("", currentStart, currentEnd, e.target.value, currentStatus)}
                 className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">{t("All branches")}</option>
@@ -137,11 +142,37 @@ export function VitalsTable({ vitals, residents, branches, currentBranch, allSta
             </div>
           )}
 
+          <div>
+            <label htmlFor="status-filter" className="mb-1 block text-sm font-medium text-fg-secondary">
+              {t("Status")}
+            </label>
+            {/*
+              Picks which residents the Resident dropdown (and the
+              readings) cover: ACTIVE by default, or DISCHARGED /
+              DECEASED / TRANSFERRED OUT to trace readings recorded
+              before a resident left. Changing it clears the resident
+              selection -- the option set is a different population,
+              so the previously chosen id may not exist in it.
+            */}
+            <select
+              id="status-filter"
+              value={currentStatus}
+              onChange={(e) => applyFilters("", currentStart, currentEnd, currentBranch, e.target.value)}
+              className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              {RESIDENT_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {t(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <ResidentCombobox
             id="resident-filter"
             residents={residents}
             value={currentResident}
-            onChange={(id) => applyFilters(id, currentStart, currentEnd, currentBranch)}
+            onChange={(id) => applyFilters(id, currentStart, currentEnd, currentBranch, currentStatus)}
             filterPlaceholder={t("All residents")}
           />
 
@@ -153,7 +184,7 @@ export function VitalsTable({ vitals, residents, branches, currentBranch, allSta
               type="date"
               id="start-date"
               value={currentStart}
-              onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd, currentBranch)}
+              onChange={(e) => applyFilters(currentResident, e.target.value, currentEnd, currentBranch, currentStatus)}
               className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
@@ -166,7 +197,7 @@ export function VitalsTable({ vitals, residents, branches, currentBranch, allSta
               type="date"
               id="end-date"
               value={currentEnd}
-              onChange={(e) => applyFilters(currentResident, currentStart, e.target.value, currentBranch)}
+              onChange={(e) => applyFilters(currentResident, currentStart, e.target.value, currentBranch, currentStatus)}
               className="w-full rounded-md border border-line-strong px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>

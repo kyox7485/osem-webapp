@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, canAccessAllBranches, isHqAdmin, canCreateClinicalEntry } from "@/lib/current-user";
 import { getAllStaffWithBranch, getNursingStaff, getClinicalLookups, getFeedingTypes, getWoundBodyParts, getDemoBranchIds, getBranches } from "@/lib/lookups";
+import { RESIDENT_STATUS_OPTIONS } from "@/lib/types";
 import { getObservationChartsForResidents } from "./observation-chart-actions";
 import type { ObservationEntry } from "./observation-chart-actions";
 import { getActiveObservationStatuses, getCompletedObservationEpisodes } from "./observation-status-actions";
@@ -54,6 +55,11 @@ export default async function ClinicalPage({
     end?: string;
     prev?: string;
     branch?: string;
+    /** Resident status the vitals tab is scoped to -- "ACTIVE"
+     * (default) keeps the resident picker on active residents,
+     * "DISCHARGED"/"DECEASED"/"TRANSFERRED OUT" let a user trace
+     * readings recorded before the resident left. */
+    status?: string;
   }>;
 }) {
   const account = await getCurrentUser();
@@ -67,6 +73,15 @@ export default async function ClinicalPage({
   const startDate = params.start || "";
   const endDate = params.end || "";
   const prevParam = params.prev || "";
+  // Vitals-tab resident status filter. Defaults to ACTIVE -- the
+  // historical behaviour of the resident picker -- and ignores any
+  // value outside RESIDENT_STATUS_OPTIONS so a hand-edited URL can't
+  // widen the view beyond the four known statuses.
+  const rawStatus = params.status;
+  const residentStatus: string =
+    rawStatus !== undefined && RESIDENT_STATUS_OPTIONS.includes(rawStatus as (typeof RESIDENT_STATUS_OPTIONS)[number])
+      ? rawStatus
+      : "ACTIVE";
 
   const supabase = await createClient();
 
@@ -87,11 +102,15 @@ export default async function ClinicalPage({
   // to their own branch by the .eq() below.
   const branchFilter = hqAdmin ? Number(params.branch) || null : null;
 
-  // Fetch residents for both tabs
+  // Fetch residents for both tabs. The status comes from the vitals
+  // tab's Status picker, so picking DISCHARGED / DECEASED /
+  // TRANSFERRED OUT repopulates the picker with the residents who
+  // have left -- which is exactly the set a user needs to trace
+  // their historical readings.
   let residentQuery = supabase
     .from("tbl_residents")
     .select("id, resident_name, branch_id")
-    .eq("status", "ACTIVE")
+    .eq("status", residentStatus)
     .order("resident_name");
 
   if (!canAccessAllBranches(account)) {
@@ -187,11 +206,20 @@ export default async function ClinicalPage({
         avpu_id,
         reviewed_by,
         reviewed_by_other,
-        tbl_residents!resident_id(id, resident_name, branch_id),
+        tbl_residents!inner(id, resident_name, branch_id, status),
         tbl_staff!reviewed_by(StaffID, staff_name)
       `
       )
       .order("entry_timestamp", { ascending: false });
+
+    // Scope the readings to residents in the picked status. The join
+    // must be INNER (!inner) for the filter to apply to the parent
+    // vitals rows -- a plain left-join filter would only drop the
+    // embedded resident row while keeping the reading, so tracing
+    // DISCHARGED/DECEASED/TRANSFERRED OUT would still return every
+    // active resident's readings. (Same pattern as
+    // nursing-chart-actions.ts getLastFeedingVolume.)
+    vitalsQuery = vitalsQuery.eq("tbl_residents.status", residentStatus);
 
     if (!canAccessAllBranches(account)) {
       vitalsQuery = vitalsQuery.eq("branch_id", account.branch_id);
@@ -571,6 +599,7 @@ export default async function ClinicalPage({
         behaviourEntries={behaviourEntries}
         behaviourEpisodes={behaviourEpisodes}
         currentResident={residentFilter}
+        currentStatus={residentStatus}
         currentStart={appliedStart}
         currentEnd={appliedEnd}
         currentPrev={prevParam}
