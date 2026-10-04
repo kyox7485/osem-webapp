@@ -103,11 +103,18 @@ class IdMap:
         """
         if not self._pending:
             return 0
+        # Deduplicate by source_id: ON CONFLICT DO UPDATE fails if the same
+        # key appears twice within one execute_values batch. Keep the last
+        # value, which matches what _cache already holds.
+        seen: dict[str, tuple[str, int]] = {}
+        for source_id, target_table, target_id in self._pending:
+            seen[source_id] = (target_table, target_id)
+        deduped = [(sid, tt, tid) for sid, (tt, tid) in seen.items()]
         cur = self.conn.cursor()
         try:
             written = 0
-            for start in range(0, len(self._pending), BATCH):
-                chunk = self._pending[start:start + BATCH]
+            for start in range(0, len(deduped), BATCH):
+                chunk = deduped[start:start + BATCH]
                 execute_values(
                     cur,
                     """

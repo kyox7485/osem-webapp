@@ -161,7 +161,7 @@ export default async function AdmissionAnalyticsPage({
       />
 
       <div className="mb-4">
-        <ResidentsModuleTabs showAnalytics />
+        <ResidentsModuleTabs showAnalytics currentUser={account} />
       </div>
 
       <AnalyticsFilters

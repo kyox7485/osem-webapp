@@ -118,6 +118,19 @@ SWITCHOVER: dict[str, tuple[dt.datetime, dict[int, str]]] = {
             155160: SKIP,
         },
     ),
+    # BGN (branch BGN). The app's first BGN chart entry is 2026-09-25
+    # 00:41 UTC (2026-09-25 08:41 MYT). The Access export has 53 rows on
+    # 2026-09-25 at 05:33-08:38 MYT -- all before the app was first used,
+    # so no app copy to collide with. Two later rows (128115, 128117) have
+    # no name and no clinical content -- form-capture artefacts that the
+    # contentless-row check catches before this dict is consulted.
+    "BGN": (
+        dt.datetime(2026, 9, 25, 8, 41),
+        {
+            128115: SKIP,  # contentless form artefact, 2026-09-29
+            128117: SKIP,  # contentless form artefact, 2026-10-02
+        },
+    ),
 }
 
 # --- Parsing tables ----------------------------------------------------------
@@ -934,11 +947,24 @@ def _flush(cur, to_insert, to_update, idmap, vitals, meal_rows, hygiene_rows,
         for start in range(0, len(touched), BATCH):
             cur.execute(f"delete from {table} where chart_entry_id = any(%s)",
                         (touched[start:start + BATCH],))
+    # Dedup keys for each child table — source data can contain duplicate
+    # NursingChartIDs which would produce identical payload rows.  HYGIENE has
+    # a DB UNIQUE(chart_entry_id, assistance_level) that hard-errors on dupes.
+    _child_dedup_key = {
+        MEALS: lambda r: (r[0], r[2], r[3]),  # chart_entry_id, meal_type_id, meal_portion_id
+        HYGIENE: lambda r: (r[0], r[2]),       # chart_entry_id, assistance_level (DB UNIQUE)
+        ELIMINATION: lambda r: (r[0],),        # chart_entry_id (one row per entry)
+    }
     for table, cols, rows in ((MEALS, MEAL_COLS, meal_rows),
                               (HYGIENE, HYGIENE_COLS, hygiene_rows),
                               (ELIMINATION, ELIM_COLS, elim_rows)):
         payload = [(entry_id_of[str(sid)], branch_id, *(d[c] for c in cols[2:]))
                    for sid, d in rows if str(sid) in entry_id_of]
+        key_fn = _child_dedup_key[table]
+        seen: dict = {}
+        for row in payload:
+            seen[key_fn(row)] = row
+        payload = list(seen.values())
         for start in range(0, len(payload), BATCH):
             execute_values(cur, f"insert into {table} ({', '.join(cols)}) values %s",
                            payload[start:start + BATCH], page_size=BATCH)

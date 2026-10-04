@@ -8,7 +8,7 @@ import { useTranslation } from "@/components/language-provider";
 import {
   Users,
   Stethoscope,
-  Activity,
+  Dumbbell,
   IdCard,
   ShieldCheck,
   Link2,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@/components/sign-out-button";
 
-const ICONS = { Users, Stethoscope, Activity, IdCard, ShieldCheck, Link2, Package, Bell } satisfies Record<string, LucideIcon>;
+const ICONS = { Users, Stethoscope, Dumbbell, IdCard, ShieldCheck, Link2, Package, Bell } satisfies Record<string, LucideIcon>;
 
 export type SidebarItem = {
   href: string;

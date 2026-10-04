@@ -86,7 +86,7 @@ export default async function MedicationChartsPage() {
     <div>
       <PageTitle title={t("Medication")} />
       <div className="mb-4">
-        <ResidentsModuleTabs showAnalytics={canAccessAdmissionAnalytics(currentUser)} />
+        <ResidentsModuleTabs showAnalytics={canAccessAdmissionAnalytics(currentUser)} currentUser={currentUser} />
       </div>
       <div className="mb-6">
         <MedicationSubTabs />

@@ -6,13 +6,22 @@ import { useTranslation } from "@/components/language-provider";
 import { useSafeNavigation } from "@/lib/use-safe-navigation";
 import { TabRow, TabButton } from "@/components/tabs";
 import { Users, BarChart3, Pill, Package } from "lucide-react";
+import type { CurrentUser } from "@/lib/current-user";
 
 // `showAnalytics` comes from the server (an HQ-account check) so the tab is
 // hidden for branch/physio accounts rather than shown-then-refused. The page
 // itself re-checks server-side; this only decides whether the tab is offered.
 // Required rather than optional so every call site has to make that decision
 // explicitly, instead of silently hiding the tab where it was forgotten.
-export function ResidentsModuleTabs({ showAnalytics }: { showAnalytics: boolean }) {
+// Same for `currentUser`: a physio-hub (PHY) login has no medication or
+// consumables workflow of its own, so those two tabs are hidden for it.
+export function ResidentsModuleTabs({
+  showAnalytics,
+  currentUser,
+}: {
+  showAnalytics: boolean;
+  currentUser: CurrentUser;
+}) {
   const push = useNavPush();
   const { guardedAction } = useSafeNavigation();
   const pathname = usePathname();
@@ -31,12 +40,16 @@ export function ResidentsModuleTabs({ showAnalytics }: { showAnalytics: boolean 
       <TabButton icon={Users} active={!onAnalytics && !onMedication && !onConsumables} onClick={() => go("/residents")}>
         {t("Resident's Particular")}
       </TabButton>
-      <TabButton icon={Pill} active={onMedication} onClick={() => go("/residents/medication")}>
-        {t("Medication")}
-      </TabButton>
-      <TabButton icon={Package} active={onConsumables} onClick={() => go("/residents/consumables")}>
-        {t("Consumables")}
-      </TabButton>
+      {currentUser.branch_function !== "PHY" && (
+        <TabButton icon={Pill} active={onMedication} onClick={() => go("/residents/medication")}>
+          {t("Medication")}
+        </TabButton>
+      )}
+      {currentUser.branch_function !== "PHY" && (
+        <TabButton icon={Package} active={onConsumables} onClick={() => go("/residents/consumables")}>
+          {t("Consumables")}
+        </TabButton>
+      )}
       {showAnalytics && (
         <TabButton icon={BarChart3} active={onAnalytics} onClick={() => go("/residents/admission-analytics")}>
           {t("Admission Analytics")}

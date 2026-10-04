@@ -95,13 +95,11 @@ RESIDENT_OVERRIDES: dict[str, int] = {
 }
 
 # Access staff names that are not the person's name. 'patricia' is Teoh Ying
-# Ying (HQ-0003, Nursing Director) -- confirmed by the owner. 'sn syaa' is Syaa
-# at ALMA (AMN-0024); the bare name 'Syaa' is ambiguous because BGN-0018 has the
-# same name, so the explicit branch pick is required rather than optional.
+# Ying (HQ-0003, Nursing Director) -- confirmed by the owner. 'sn syaa' and
+# 'syaa' are branch-specific facts (AMN-0024 vs BGN-0018) and live in
+# BRANCH_STAFF_ALIASES, not here.
 STAFF_ALIASES: dict[str, str] = {
     "patricia": "HQ-0003",
-    "sn syaa": "AMN-0024",
-    "syaa": "AMN-0024",
     # tbl_PhyIPProgressNote's Therapist column writes Ian Cheen Yik Yuan (AMN-0033)
     # three ways, and the date spans are contiguous and non-overlapping -- one
     # person whose Access entry style changed over time:
@@ -165,6 +163,10 @@ BRANCH_STAFF_ALIASES: dict[str, dict[str, str]] = {
         # Not a staff member -- most likely the resident 'LOH POH CHAN @ ALICE'
         # typed into the wrong box. Left unattributed by owner decision.
         "alice": UNATTRIBUTED,
+        # Moved from STAFF_ALIASES (2026-10-04): 'Syaa' is ambiguous across
+        # AMN (AMN-0024) and BGN (BGN-0018), so each branch asserts its own.
+        "sn syaa": "AMN-0024",
+        "syaa": "AMN-0024",
     },
     # BMN (branch BMN), owner-confirmed 2026-10-03. The roster holds a
     # second person of the same name at another branch for every entry
@@ -212,6 +214,79 @@ BRANCH_STAFF_ALIASES: dict[str, dict[str, str]] = {
         # or locum nurse. Left for the part-time review, NOT aliased --
         # two people can share the given name.
     },
+    # BGN (branch BGN), owner-confirmed 2026-10-04.
+    "BGN": {
+        # Syaa (BGN-0018, Head Nurse) -- same given name as AMN-0024; branch
+        # pick is required. 'syaa head nurse' is the norm of 'Syaa - Head Nurse'.
+        "syaa": "BGN-0018",
+        "sn syaa": "BGN-0018",
+        "syaa head nurse": "BGN-0018",
+        "sya": "BGN-0018",
+        # Yanie (BGN-0006) -- also exists as BMN-0010; BGN chart rows are hers.
+        # 'yanie caregiver' is the norm of 'Yanie - Caregiver'.
+        "yanie": "BGN-0006",
+        "yanie caregiver": "BGN-0006",
+        "yani": "BGN-0006",
+        # Titik (BGN-0008) -- many spelling variants in Access. The dashed
+        # forms (e.g. 'tit-caregiver') have no space before '-', so
+        # _ROLE_SUFFIX_RE still strips them; the norm key includes the role
+        # word and must be aliased explicitly.
+        "titik": "BGN-0008",
+        "titil": "BGN-0008",
+        "tit": "BGN-0008",
+        "tit caregiver": "BGN-0008",
+        "tiit": "BGN-0008",
+        "tiit caregiver": "BGN-0008",
+        "tiiti": "BGN-0008",
+        "titip": "BGN-0008",
+        "titit": "BGN-0008",
+        "tititk": "BGN-0008",
+        "titk": "BGN-0008",
+        "ttiti": "BGN-0008",
+        "kak titi": "BGN-0008",
+        # Rubeni (BGN-0007) -- spelling variants and role-suffix forms.
+        "rubei": "BGN-0007",
+        "rubei staff nurse": "BGN-0007",
+        "sn rubeni": "BGN-0007",
+        "rubeni stff nurse": "BGN-0007",
+        "rubenistaff nurse": "BGN-0007",
+        "rubi": "BGN-0007",
+        "rubi staff nurse": "BGN-0007",
+        # Gevitra (BGN-0016).
+        "gevitra": "BGN-0016",
+        # Raveena (BGN-0017).
+        "raveena": "BGN-0017",
+        # SN Aini (BGN-0010) -- 'SN' prefix not stripped by _HONORIFIC_PREFIX_RE.
+        # 'eini' is a single-character typo of 'aini'.
+        "sn aini": "BGN-0010",
+        "eini": "BGN-0010",
+        # Mard (BGN-0029, Assist. Head Nurse) -- role suffix does not match the
+        # regex, so the full normalised string is the key.
+        "mard assist head nurse": "BGN-0029",
+        # Aida/Titik pairs -- '/' is not in _PAIR_SPLIT_RE; first-named (Aida,
+        # BGN-0001) is recorded by owner decision.
+        "aida titik": "BGN-0001",
+        "aida titi": "BGN-0001",
+        "aida titil": "BGN-0001",
+        "aida tititk": "BGN-0001",
+        "aida titk": "BGN-0001",
+        "aida itik": "BGN-0001",
+        # Dahlia (BMN-0022) -- charting at BGN on locum.
+        "sn dahlia": "BMN-0022",
+        "dahlia": "BMN-0022",
+        # Aleif (HQ-0005) -- HQ staff reviewing at BGN.
+        "sn aleif": "HQ-0005",
+        "aleif": "HQ-0005",
+        # Ranjeetha (BMN-0017) -- on locum at BGN as at BMN. '.' in 'j.ranjeetha'
+        # becomes a space after _norm.
+        "j ranjeetha": "BMN-0017",
+        "j ranjeethaa": "BMN-0017",
+        "sn j ranjeetha": "BMN-0017",
+        # Ng Gao Fu (HQ-0001, Pharmacist) -- the role suffix in Access
+        # ('Ng Gao Fu - Pharmacist') prevents roster lookup; asserted here.
+        "ng gao fu pharmacist": "HQ-0001",
+        "ng gao fu": "HQ-0001",
+    },
 }
 
 # Names that match no roster entry and that the owner APPROVED, one by one, to
@@ -236,6 +311,46 @@ APPROVED_PART_TIME: dict[str, dict[str, str]] = {
         "hassan": "Hassan",
         "suhana": "Suhana",
         "aliyatul": "Aliyatul",  # already aliased; keep as fallback
+    },
+    # BGN: owner-approved part-time / unmatched names (2026-10-04).
+    "BGN": {
+        # Leang Su Ying -- 'SUYING'/'su ying' in Access; confirmed as a
+        # different person from HQ-0004 Hoo Suying who charts at BMN.
+        "suying": "Leang Su Ying",
+        "su ying": "Leang Su Ying",
+        "suyng": "Leang Su Ying",
+        "sying": "Leang Su Ying",
+        "suiyng": "Leang Su Ying",
+        "suyihng": "Leang Su Ying",
+        "suyijng": "Leang Su Ying",
+        # Long string: 'suying. Reenter for wrongly enter the previous record'
+        # -- staff name field contaminated with a free-text note; person is Su Ying.
+        "suying reenter for wrongly enter the previous record": "Leang Su Ying",
+        # Nabilah S.
+        "nabilahs": "Nabilah",
+        "nabilah s": "Nabilah",
+        "vnabilahs": "Nabilah",
+        # Mieyna -- 'mina'/'locum mina' confirmed as the same person.
+        "mieyna": "Mieyna",
+        "sn mieyna": "Mieyna",
+        "mina": "Mieyna",
+        "locum mina": "Mieyna",
+        # Elis.
+        "elis": "Elis",
+        "ellis": "Elis",
+        "elis caregiver": "Elis",
+        # Erni -- 'eni' confirmed as the same person. 'eny' is a typo.
+        "erni": "Erni",
+        "eni": "Erni",
+        "eny": "Erni",
+        "erni caregiver": "Erni",
+        # Yana -- different from Yanie (BGN-0006).
+        "yana": "Yana",
+        # Nurin.
+        "nurin": "Nurin",
+        # Srie and Fira -- unmatched BGN caregivers, approved as part-time.
+        "srie": "Srie",
+        "fira": "Fira",
     },
 }
 

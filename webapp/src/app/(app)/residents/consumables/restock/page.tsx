@@ -127,7 +127,7 @@ export default async function ConsumablesRestockPage({
     <div>
       <PageTitle title={t("Consumables")} />
       <div className="mb-4">
-        <ResidentsModuleTabs showAnalytics={canAccessAdmissionAnalytics(account)} />
+        <ResidentsModuleTabs showAnalytics={canAccessAdmissionAnalytics(account)} currentUser={account} />
       </div>
       <div className="mb-6">
         <ConsumablesSubTabs />
